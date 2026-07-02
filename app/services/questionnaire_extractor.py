@@ -37,7 +37,80 @@ RULES:
 - "Employment: None" or "N/A" → has_employment = false
 - Extract employer names exactly as written, in Title Case
 
+OUTPUT SHAPE:
+- Return a single JSON object covering the whole household.
+- If multiple applicants are listed, set each boolean to true when ANY \
+applicant discloses it (these flags drive household-level verification, \
+not per-applicant tracking).
+- Do NOT return a top-level JSON list, even if the form has separate \
+sections per applicant.
+
 Return ONLY valid JSON matching the schema above."""
+
+
+# Boolean fields on QuestionnaireDisclosures, used when merging a
+# list-shaped LLM response into a single household record.
+_QUESTIONNAIRE_BOOL_FIELDS: tuple[str, ...] = (
+    "has_employment",
+    "has_student_status",
+    "has_ssa_benefits",
+    "has_checking_account",
+    "has_savings_account",
+    "has_child_support",
+    "has_pension",
+    "has_self_employment",
+    "has_other_income",
+    "has_real_estate",
+    "has_life_insurance",
+)
+
+
+def _merge_applicant_disclosures(items: list) -> dict:
+    """Merge per-applicant disclosure entries into a single household record.
+
+    Some LLM responses return a JSON list with one entry per applicant
+    instead of the single object the schema expects. For each boolean
+    field, True wins over False over None — verification triggers
+    (validate_affirmative_responses) operate at household scope, so the
+    household "has employment" if any applicant disclosed it.
+    """
+    merged: dict = {}
+    for field in _QUESTIONNAIRE_BOOL_FIELDS:
+        values = [
+            item.get(field) for item in items if isinstance(item, dict)
+        ]
+        if any(v is True for v in values):
+            merged[field] = True
+        elif any(v is False for v in values):
+            merged[field] = False
+        else:
+            merged[field] = None
+    employers: list[str] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        for e in (item.get("employers") or []):
+            if e and e not in employers:
+                employers.append(e)
+    merged["employers"] = employers
+    return merged
+
+
+def _coerce_to_disclosures(result) -> QuestionnaireDisclosures:
+    """Validate LLM result, tolerating both single-object and list shapes.
+
+    When the LLM returns a top-level list (one entry per applicant), merge
+    into a single household record before validation. This avoids silently
+    dropping disclosures on multi-member households when the LLM drifts
+    off the requested object shape.
+    """
+    if isinstance(result, list):
+        logger.info(
+            "Questionnaire LLM returned a list (%d entries) — merging into "
+            "household record", len(result),
+        )
+        result = _merge_applicant_disclosures(result)
+    return QuestionnaireDisclosures.model_validate(result)
 
 
 def extract_questionnaire_disclosures(
@@ -69,7 +142,7 @@ def extract_questionnaire_disclosures(
 
     result = call_llm_json(QUESTIONNAIRE_DISCLOSURE_PROMPT, user_prompt, settings)
     logger.info("Extracted questionnaire disclosures")
-    return QuestionnaireDisclosures.model_validate(result)
+    return _coerce_to_disclosures(result)
 
 
 def validate_affirmative_responses(

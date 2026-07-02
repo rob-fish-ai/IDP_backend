@@ -83,3 +83,83 @@ def clean_extracted_value(value: str | None) -> str | None:
         return None
 
     return val
+
+
+def _strip_markup_only(value: str | None) -> str | None:
+    """Sibling of clean_extracted_value that preserves short legitimate values.
+
+    Strips HTML tags / entities / OCR escapes and collapses whitespace, but
+    does NOT impose a minimum length. Single-character flag values ('Y'/'N')
+    and small numeric strings ('1', '2') must survive — they're legitimate
+    values for fields like head/disabled/student/numberOfBedrooms.
+
+    Returns None only when the result is empty or purely punctuation/markup
+    leftover. Use this for bulk recursive scrubbing; use
+    clean_extracted_value() for fields where a sub-2-char value would
+    always be noise (regex-matched document names, source labels, etc.).
+    """
+    if value is None:
+        return None
+    val = str(value).strip()
+    if not val:
+        return None
+    val = re.sub(r"<[^>]+>", "", val)
+    val = val.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
+    val = val.replace("&#x27;", "'").replace("&quot;", '"').replace("&#39;", "'")
+    val = val.replace("&nbsp;", " ")
+    val = re.sub(r"\\+[()]", "", val)
+    val = re.sub(r"\s+", " ", val).strip()
+    if not val or all(c in ".,;:!?- " for c in val):
+        return None
+    return val
+
+
+def scrub_extracted_dict(data):
+    """Recursively clean every string leaf in an LLM-extracted structure.
+
+    Walks dicts and lists, stripping HTML tags / entities / OCR escapes
+    from each string. Values that reduce to empty or pure-punctuation are
+    replaced with None so downstream validators see absence rather than
+    markup. Returns a new structure of the same shape; the input is not
+    mutated.
+
+    Defense in depth against OCR'd HTML-rendered PDFs whose tag fragments
+    would otherwise propagate into structured fields. Uses the
+    short-value-tolerant cleaner so legitimate single-character values
+    ('Y'/'N' flags, '1'/'2' counts) survive — record-level identity
+    gating is the right place to drop garbage records, not field-level
+    length minimums.
+    """
+    if isinstance(data, dict):
+        return {k: scrub_extracted_dict(v) for k, v in data.items()}
+    if isinstance(data, list):
+        return [scrub_extracted_dict(item) for item in data]
+    if isinstance(data, str):
+        return _strip_markup_only(data)
+    return data
+
+
+def drop_records_without_identity(
+    records: list,
+    identity_fields: tuple[str, ...],
+) -> tuple[list, int]:
+    """Drop list entries whose identity fields are all empty/None.
+
+    A record with no usable identity field can't be linked to a member or
+    source downstream, so every per-field finding generated against it is
+    derivative noise. Returns (kept, dropped_count). Non-dict entries are
+    passed through untouched.
+    """
+    if not records:
+        return records, 0
+    kept: list = []
+    dropped = 0
+    for r in records:
+        if not isinstance(r, dict):
+            kept.append(r)
+            continue
+        if any(r.get(f) for f in identity_fields):
+            kept.append(r)
+        else:
+            dropped += 1
+    return kept, dropped

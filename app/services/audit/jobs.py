@@ -90,6 +90,21 @@ def _is_retryable_error(exc: BaseException) -> bool:
     except ImportError:
         pass
 
+    # requests-based clients (simple_salesforce, OCR proxy, etc.) —
+    # transient TCP/network failures. RemoteDisconnected from a stale
+    # keep-alive socket surfaces here as ConnectionError, which the
+    # message-substring path below would miss.
+    try:
+        import requests
+        if isinstance(exc, (
+            requests.exceptions.ConnectionError,
+            requests.exceptions.Timeout,
+            requests.exceptions.ChunkedEncodingError,
+        )):
+            return True
+    except ImportError:
+        pass
+
     # Generic transient-error fingerprints (httpx/network/RunPod proxy)
     transient_markers = (
         "rate limit",

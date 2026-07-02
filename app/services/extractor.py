@@ -13,6 +13,10 @@ from app.schemas.extraction import (
 )
 from app.services.llm_service import call_llm_json
 from app.services import validation
+from app.services.text_sanitizer import (
+    drop_records_without_identity,
+    scrub_extracted_dict,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -517,6 +521,23 @@ def extract_demographics(
     result = call_llm_json(DEMOGRAPHICS_SYSTEM_PROMPT, user_prompt, settings)
     result = validation.validate_household(result)
 
+    # Strip HTML tags and entity-only/punctuation-only values from every
+    # extracted string. Then drop members with no usable name — those
+    # records can't be linked downstream and would generate per-field
+    # noise findings against junk identifiers.
+    result = scrub_extracted_dict(result) or {}
+    if isinstance(result.get("houseHold"), list):
+        kept, dropped = drop_records_without_identity(
+            result["houseHold"],
+            identity_fields=("FirstName", "LastName", "MiddleName"),
+        )
+        if dropped:
+            logger.warning(
+                "Demographics: dropped %d member record(s) with no usable name "
+                "(HTML/markup-only or empty after sanitization)", dropped,
+            )
+        result["houseHold"] = kept
+
     members = result.get("houseHold", [])
     logger.info("Extracted %d household members", len(members))
     return HouseholdDemographics.model_validate(result)
@@ -582,6 +603,9 @@ def extract_certification_info(
     # Overwrite any LLM guess with the authoritative value.
     if certification_type:
         cert_info_dict["certificationType"] = certification_type
+
+    # Strip HTML/markup leakage from field values before schema validation.
+    cert_info_dict = scrub_extracted_dict(cert_info_dict) or {}
 
     logger.info(
         "Extracted certification info: type=%s",
@@ -779,6 +803,27 @@ def extract_income(
             logger.info("Income retry recovered amounts for %d record(s)", recovered)
 
     _retry_if_incomplete("Income amounts", gate=_amt_gate, fill=_amt_fill)
+
+    # Scrub HTML/markup from extracted strings, then drop records lacking
+    # any usable identity (no member AND no source name). Such records
+    # would otherwise propagate as junk findings against tag fragments.
+    result = scrub_extracted_dict(result) or {}
+    si = result.get("sourceIncome") if isinstance(result.get("sourceIncome"), dict) else {}
+    for bucket in ("verificationIncome", "payStub"):
+        recs = si.get(bucket) if isinstance(si, dict) else None
+        if isinstance(recs, list):
+            kept, dropped = drop_records_without_identity(
+                recs, identity_fields=("memberName", "sourceName"),
+            )
+            if dropped:
+                logger.warning(
+                    "Income: dropped %d %s record(s) with no member/source name "
+                    "(HTML/markup-only or empty after sanitization)",
+                    dropped, bucket,
+                )
+            si[bucket] = kept
+    if isinstance(si, dict):
+        result["sourceIncome"] = si
 
     logger.info(
         "Extracted %d pay stubs, %d verification income records",
@@ -1089,6 +1134,21 @@ def extract_assets(
             )
 
     _retry_if_incomplete("Assets", gate=_gate, fill=_fill)
+
+    # Scrub HTML/markup, then drop assets with no usable source identity
+    # (matches the gate used on members and income records).
+    result = scrub_extracted_dict(result) or {}
+    if isinstance(result.get("assetInformation"), list):
+        kept, dropped = drop_records_without_identity(
+            result["assetInformation"],
+            identity_fields=("sourceName", "accountType"),
+        )
+        if dropped:
+            logger.warning(
+                "Assets: dropped %d asset record(s) with no source/account-type "
+                "identity (HTML/markup-only or empty after sanitization)", dropped,
+            )
+        result["assetInformation"] = kept
 
     return AssetExtraction.model_validate(result)
 
