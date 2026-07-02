@@ -67,7 +67,7 @@ PDF
      └─ preprocess images (OpenCV → 1280×1920)
          └─ OCR (external OCR service; Claude Vision fallback for low-quality pages)
              └─ page_texts ──► run_extraction_pipeline:
-                 1. Two-pass classify + group        (keyword pass, then one LLM pass)
+                 1. Classify + group pages           (single Haiku call, no keyword rules)
                  2. Route document groups by category (demographics / cert / income / asset)
                  3. LLM extraction (one call per schema):
                       • household demographics
@@ -82,8 +82,42 @@ PDF
 ```
 
 LLM calls go through `app/services/llm_service.py` (Anthropic Claude). Extraction
-runs on Sonnet; classification runs on Haiku (separate capacity pool, cheaper for
-a constrained labeling task).
+runs on Sonnet 4.6 (`claude-sonnet-4-6`); classification runs on Haiku 4.5
+(`claude-haiku-4-5-20251001`) — a separate capacity pool, cheaper for a
+constrained labeling task.
+
+### How documents are filtered
+
+Filtering is layered. Only the outermost layer looks at page count and title;
+everything after that is content-driven.
+
+| Layer | Where | Rule | What it protects against |
+|---|---|---|---|
+| **1. PDF selection** | `salesforce/client.py::get_pdf_for_case` | `FileExtension='pdf'` + title denylist (`certification review`, `review report`, `audit`, `findings`, `ai file audit`, `review notes`, `review comments`) + `min_pdf_pages` (default 4) | Picking a Certification Review PDF or a cover-sheet fragment as if it were the source packet |
+| **2. Page pre-filter** | `two_pass_classifier.py::_prefilter_and_snippet` | Drop pages with **no text at all AND no OCR-failure flag**. Watermark / low-quality pages are kept and forwarded with their OCR flags. | Silently deleting a real form the OCR struggled on |
+| **3. Per-page LLM classify** | `two_pass_classifier.py::_llm_classify_and_group` | Haiku 4.5 reads a ~450-char snippet per live page and assigns each page a canonical `document_type` **and** a category (`include`, `compliance`, `ignore`). Multi-page forms are grouped in the same call. | Everything downstream — this is where a paystub gets called a paystub |
+| **4. Deterministic split** | same file, post-group pass | Cert forms with two different effective dates on different pages are force-split; older = `<Type> (Previous)`, category `ignore`. | Auditing against the previous cert instead of the current one |
+| **5. Extractor routing** | `extractor.py`, `questionnaire_extractor.py` | Each extractor iterates the groups and picks by substring on `document_type` (e.g. `"application" in dt or "questionnaire" in dt`), skipping `category == "ignore"`. | Feeding a bank statement to the demographics extractor |
+
+So the answer to "does it filter by page count and name" is: **only Layer 1
+does** — and that's just a coarse gate to keep obvious junk out. Layers 2–5
+are content-based. Places where classification accuracy could be improved
+without redoing the pipeline:
+
+- **The title denylist is substring-only.** A file called `Q2 Review Notes.pdf`
+  is caught (`review notes`), but `Reviewed 2026-06-15.pdf` isn't.
+- **Extractor routing uses substring matching on `document_type`.** If the
+  classifier labels something `"Sworn Statement of Anticipated Income"` and
+  the prompt example nudges it toward `"Application / Housing Questionnaire"`,
+  a rename in the label list silently orphans the record.
+- **Salesforce case metadata is not fed into the classifier.** `CertType__c`
+  and `Funding_Program2__c` are known before classification runs, but the
+  Haiku prompt doesn't see them, so it can't use them as priors to disambiguate
+  a HUD 50059 from a TIC on a borderline page.
+- **`min_pdf_pages` is coarse.** The floor has to stay low (packet fragments
+  exist), so a short-but-real garbage packet still enters the pipeline.
+- **No title↔content cross-check.** If a document is *titled*
+  `"HUD 50059.pdf"` but its content is a paystub, nothing flags the mismatch.
 
 ### Self-healing retries
 
@@ -260,7 +294,7 @@ Settings load from environment variables / `.env` with the **`IDP_` prefix**
 ```bash
 # LLM (Anthropic Claude)
 IDP_ANTHROPIC_API_KEY=sk-ant-...
-IDP_LLM_MODEL=claude-sonnet-4-20250514
+IDP_LLM_MODEL=claude-sonnet-4-6                 # Sonnet 4 (claude-sonnet-4-20250514) was retired
 IDP_LLM_CLASSIFY_MODEL=claude-haiku-4-5-20251001
 
 # OCR service (external)
@@ -317,7 +351,80 @@ under `IDP_MIN_PDF_PAGES` (default 4) are rejected as non-source documents.
 
 ---
 
-## 11. Glossary
+## 11. Current issues and known limitations
+
+Live-service state as of 2026-07. Sorted by blast radius, not urgency.
+
+### Deployment / operations
+
+- **`--reload` does not actually reload on the RunPod pod.** The uvicorn
+  worker keeps the same PID across file edits, so pushed code changes require
+  a manual `kill && nohup uvicorn ...` restart to take effect. Do not assume
+  a commit is running just because it's on master.
+- **No `.gitignore`.** `.env` (Anthropic + Salesforce + webhook credentials)
+  and `.venv/` and `uvicorn.log` are protected only by discipline. Never
+  `git add -A` / `git add .` — always name files. Adding a `.gitignore` is
+  outstanding.
+- **RunPod proxy URL is pod-lifetime scoped.** When the pod is recycled the
+  proxy hostname changes, and the frontend `VITE_API_URL` / `NEXT_PUBLIC_API_URL`
+  in Vercel must be updated by hand. A "CORS error" on the frontend is almost
+  always this, not a real CORS misconfiguration.
+
+### Extraction / classification
+
+- **Filtering is coarse at the outer layer** (see §3 "How documents are
+  filtered" for the details and improvement ideas).
+- **Classifier prompt has no case-metadata priors.** Salesforce already knows
+  the case's `CertType__c` and `Funding_Program2__c`; wiring them into the
+  Haiku prompt would resolve most HUD-50059-vs-TIC / RD-3560-vs-worksheet
+  borderline calls.
+- **Extractor↔classifier coupling is by substring.** A rename of a
+  `document_type` label in the classifier prompt silently orphans downstream
+  extractors. There's no registry / enum enforcement.
+- **LLM shape drift on multi-applicant forms.** The questionnaire extractor
+  now tolerates a list-shaped response by merging (True wins over False wins
+  over None), but the same drift can happen on any list-typed schema; the
+  tolerance is not generalized.
+- **Field-level HTML/markup leakage.** OCR of HTML-rendered PDFs can leave
+  tag fragments (`</strong></td>`) inside string fields. `text_sanitizer`
+  scrubs at extraction boundaries and drops records with no usable identity;
+  the sanitizer is defense-in-depth, not a fix for the underlying OCR output.
+
+### Reconciliation
+
+- **MuleSoft field mislabeling is worked around, not eliminated.** The
+  comparator has member-agnostic passes (source + amount) to survive
+  MuleSoft putting a funding-program name in the member field. Genuine
+  mismatches on those fields are noise-suppressed, not resolved.
+- **Confidence is heuristic.** `0.6 × extraction_score + 0.4 × agreement_rate`
+  with a high-severity cap. Thresholds (`0.85`, `0.65`) are hand-tuned to
+  the shadow-mode sample, not learned.
+
+### Salesforce integration
+
+- **Session reuse can go stale on the 4th+ sequential SOQL call.** Surfaces as
+  `requests.ConnectionError: RemoteDisconnected`. `_is_retryable_error` now
+  classifies typed `requests` exceptions as transient so the watchdog
+  re-queues them; the root-cause session refresh is not implemented.
+- **Findings field has a 32k-char cap.** `IDP_Testing_Results__c` is a Long
+  Text Area; anything longer is truncated with a `[TRUNCATED — see IDP logs
+  for full findings]` marker. Not observed in practice, but the ceiling is
+  fixed by the schema, not by us.
+- **Writeback is single-field.** Every finding lands in one text blob; the
+  UI does its own parsing of `[CRITICAL] / [REVIEW] / [NOTES]` prefixes.
+
+### Data model
+
+- **JobStore is SQLite, single-file, single-node.** ~2.2k rows, ~464 MB
+  post-VACUUM. Fine for shadow mode, not intended for HA. If the pod dies
+  mid-write the row can be left in an intermediate state — the watchdog
+  handles this, but it's the reason the watchdog exists.
+- **`extraction_result` blobs are large** (~212 KB/row avg). Retention
+  sweep (`IDP_AUDIT_RETENTION_DAYS=7`) is what keeps the DB bounded.
+
+---
+
+## 12. Glossary
 
 - **TIC** — Tenant Income Certification.
 - **HUD 50059 / RD 3560-8** — agency certification forms.
