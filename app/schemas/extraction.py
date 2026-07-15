@@ -240,6 +240,7 @@ class IncomeCalculationResult(BaseModel):
     """Result of one income calculation method for one source."""
     memberName: Optional[str] = None
     sourceName: Optional[str] = None
+    incomeType: Optional[str] = None  # benefit program / income category from the VI record
     method: Optional[str] = None  # self-declared, voi-based, ytd-based, paystub-based
     annualIncome: Optional[str] = None  # numeric string, 2 decimals
     details: Optional[str] = None  # explanation of calculation

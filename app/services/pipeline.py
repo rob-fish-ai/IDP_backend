@@ -1098,8 +1098,42 @@ def _generate_findings(
                     f"Missing required compliance document: {description}"
                 )
 
+    # --- 6b. Certification form presence + unreadable pages ---
+    # A packet with no current cert form at all is the single most
+    # important thing to tell the analyst — every downstream field
+    # finding (rent not extracted, date mismatches vs MuleSoft, unsigned
+    # cert) is derivative noise without this context.
+    cert_markers = ("50059", "tenant income certification", "(tic)", "3560")
+    cert_form_present = any(
+        any(m in g.document_type.lower() for m in cert_markers)
+        for g in document_groups
+        if g.category != "ignore" and "(Previous)" not in g.document_type
+    )
+    ocr_failed_pages = sorted(
+        p for g in document_groups if g.document_type == "OCR Failed"
+        for p in g.pages
+    )
+    if not cert_form_present:
+        hidden_hint = (
+            f" — it may be among the {len(ocr_failed_pages)} page(s) that "
+            f"failed OCR" if ocr_failed_pages else ""
+        )
+        findings.append(
+            "Missing required certification form: no current TIC / HUD 50059 "
+            f"/ RD 3560 found in packet{hidden_hint}. Extraction is based on "
+            "secondary documents only (EIV, correspondence, etc.)"
+        )
+    if ocr_failed_pages:
+        findings.append(
+            f"{len(ocr_failed_pages)} page(s) could not be read by OCR "
+            f"(pages {', '.join(str(p) for p in ocr_failed_pages)}) — "
+            f"content unavailable to the audit; manual review recommended"
+        )
+
     # --- 7. Unsigned certification form ---
-    if certification_info and certification_info.isSigned == "No":
+    # Only meaningful when a cert form actually exists — with no form in
+    # the packet, "not signed" misstates the real problem (form missing).
+    if cert_form_present and certification_info and certification_info.isSigned == "No":
         findings.append(
             "Certification form (TIC/HUD 50059) is NOT signed — "
             "resubmission required per Section 11"

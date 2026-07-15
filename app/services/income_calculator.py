@@ -227,6 +227,9 @@ def calculate_all_methods(
     )
 
     income_type = (vi_entry.incomeType or "").lower() if vi_entry else ""
+    # Raw (uncased) type carried onto each calc record so the comparator
+    # can key benefit income by program rather than payer.
+    income_type_raw = vi_entry.incomeType if vi_entry else None
     calc_mode = _classify_income_mode(income_type)
 
     # Determine the authoritative method for this source.
@@ -274,6 +277,7 @@ def calculate_all_methods(
             results.append(IncomeCalculationResult(
                 memberName=member_name,
                 sourceName=source_name,
+                incomeType=income_type_raw,
                 method="paystub-based",
                 annualIncome=ps_annual,
                 details=ps_details,
@@ -287,6 +291,7 @@ def calculate_all_methods(
                 results.append(IncomeCalculationResult(
                     memberName=member_name,
                     sourceName=source_name,
+                    incomeType=income_type_raw,
                     method="voi-based",
                     annualIncome=f"{annual:.2f}",
                     details=f"Fixed monthly: {monthly:.2f} × 12 = {annual:.2f}",
@@ -306,6 +311,7 @@ def calculate_all_methods(
                 results.append(IncomeCalculationResult(
                     memberName=member_name,
                     sourceName=source_name,
+                    incomeType=income_type_raw,
                     method="voi-based",
                     annualIncome=voi_annual,
                     details=voi_details,
@@ -320,6 +326,7 @@ def calculate_all_methods(
                     results.append(IncomeCalculationResult(
                         memberName=member_name,
                         sourceName=source_name,
+                        incomeType=income_type_raw,
                         method="voi-based",
                         annualIncome=f"{annual:.2f}",
                         details=f"{rate:.2f} × {mult} periods = {annual:.2f}",
@@ -337,6 +344,7 @@ def calculate_all_methods(
             results.append(IncomeCalculationResult(
                 memberName=member_name,
                 sourceName=source_name,
+                incomeType=income_type_raw,
                 method="self-declared",
                 annualIncome=f"{annual:.2f}",
                 details=f"Self-declared annual: {annual:.2f}",
@@ -358,6 +366,7 @@ def calculate_all_methods(
                 results.append(IncomeCalculationResult(
                     memberName=member_name,
                     sourceName=source_name,
+                    incomeType=income_type_raw,
                     method="ytd-based",
                     annualIncome=ytd_annual,
                     details=f"[audit] {ytd_details}",

@@ -410,7 +410,20 @@ def _compare_members(
                 detail={"key": list(k), "count": len(group)},
             ))
 
-    ai_keys = {_member_key(m): m for m in ai_members if _member_key(m) != ("", "")}
+    ai_keys: dict[tuple[str, str], dict] = {}
+    for i, m in enumerate(ai_members):
+        k = _member_key(m)
+        if k == ("", ""):
+            # No DOB/SSN extracted. A named member must still reach the
+            # name-based fuzzy fallback below — dropping them here turns
+            # every OCR-degraded packet into a false "AI missed member" +
+            # a silently vanished AI member. The synthetic key keeps
+            # multiple no-identity members distinct and can never collide
+            # with a real SF key, so strict matching is unaffected.
+            if not _member_name_key(m):
+                continue    # neither identity nor name — nothing to match on
+            k = ("", f"~noid{i}")
+        ai_keys[k] = m
     sf_keys_set = {k for k in sf_keys if k != ("", "")}
 
     matched = ai_keys.keys() & sf_keys_set
@@ -480,14 +493,16 @@ def _compare_members(
     for k in ai_only:
         m = ai_keys[k]
         name = f"{m.get('FirstName', '')} {m.get('LastName', '')}".strip()
+        ssn4 = k[1] if not str(k[1]).startswith("~noid") else None
         findings.append(Finding(
             category=MISSING_MEMBER,
             severity="high",
             message=(
                 f"MuleSoft missing household member — {name} "
-                f"(DOB: {m.get('DOB')}, SSN: ***-**-{k[1]})"
+                f"(DOB: {m.get('DOB')}, "
+                f"SSN: {'***-**-' + ssn4 if ssn4 else 'not extracted'})"
             ),
-            detail={"name": name, "dob": m.get("DOB"), "ssn4": k[1]},
+            detail={"name": name, "dob": m.get("DOB"), "ssn4": ssn4},
         ))
 
     for k in sf_only:
@@ -557,20 +572,58 @@ def _compare_members(
 # Income comparison
 # ---------------------------------------------------------------------------
 
+# Canonical benefit programs (values of _INCOME_SOURCE_SYNONYMS) for which
+# the PROGRAM is the income's identity, not the payer. SSA pays both
+# retirement Social Security and SSI — keying those by payer collides two
+# distinct benefits for the same member into one key, so one amount
+# silently overwrites the other and the comparison diffs mismatched pairs.
+_BENEFIT_PROGRAM_KEYS = frozenset({
+    "social security administration",
+    "supplemental security income",
+    "social security disability",
+    "state supplement program",
+    "temporary assistance",
+})
+
+
 def _income_key(rec: dict) -> tuple[str, str]:
-    """Source name (normalized through synonym table) + member name.
+    """Benefit program (for government benefits) or source name + member.
 
     AI extracts full names ('social security administration'), MuleSoft
     often uses abbreviations ('ssa'). Both go through the same synonym
-    map so they match correctly.
+    map so they match correctly. For benefit income the normalized
+    income TYPE is the identity — see _BENEFIT_PROGRAM_KEYS.
     """
     source = rec.get("sourceName") or rec.get("Source_Name__c")
+    income_type = rec.get("incomeType") or rec.get("Income_Type__c")
     member = rec.get("memberName") or rec.get("House_Member_Name__c") or ""
     # Normalize member: trim middle initial / 'r.' / 'jr' suffixes for fuzzy match.
     member_clean = _norm(member).replace(".", "").strip()
     member_tokens = [t for t in member_clean.split() if len(t) > 1]
     member_key = " ".join(member_tokens) if member_tokens else member_clean
+
+    type_norm = _normalize_income_source(income_type)
+    if type_norm in _BENEFIT_PROGRAM_KEYS:
+        return (type_norm, member_key)
     return (_normalize_income_source(source), member_key)
+
+
+def _sf_group_amount(group: list[dict]) -> float | None:
+    """Comparable annual amount for MuleSoft rows sharing one income key.
+
+    Distinct amounts are separate payments of the same benefit — sum them.
+    Identical amounts are duplicate rows — count once (the duplicate is
+    flagged separately; double-counting it would manufacture a mismatch).
+    """
+    amounts = [
+        a for a in (_money(r.get("Gross_Member_Income__c")) for r in group)
+        if a is not None
+    ]
+    if not amounts:
+        return None
+    if len({round(a, 2) for a in amounts}) == 1:
+        return amounts[0]
+    return sum(amounts)
 
 
 def _compare_income(
@@ -585,9 +638,17 @@ def _compare_income(
     # (synonym-applied) when looking up a matched record.
     ai_annual: dict[tuple[str, str], float] = {}
     for calc in ai_calculations or []:
+        # Audit-method rows ([audit] YTD cross-checks) duplicate the
+        # primary calculation for the same source — never sum them in.
+        if (calc.get("details") or "").startswith("[audit]"):
+            continue
         amt = _money(calc.get("annualIncome"))
         if amt is not None:
-            ai_annual[_income_key(calc)] = amt
+            k = _income_key(calc)
+            # Two records under one key are separate payments of the same
+            # benefit/source (e.g. retirement + survivor Social Security)
+            # — their annual total is what MuleSoft should agree with.
+            ai_annual[k] = (ai_annual.get(k) or 0.0) + amt
 
     # SF dedup check
     sf_keys: dict[tuple, list[dict]] = {}
@@ -595,9 +656,41 @@ def _compare_income(
         k = _income_key(inc)
         sf_keys.setdefault(k, []).append(inc)
 
-    # Detect SF duplicates within the same canonical source name
+    # "Zero Income" rows are declarations ("member reported no income"),
+    # not income sources the AI could have missed — pull them out of
+    # matching entirely. When the same member ALSO has real income rows,
+    # the declaration is contradictory upstream data worth a note, not a
+    # "missed income source" finding against the AI.
+    members_with_real_income = {
+        k[1] for k, group in sf_keys.items()
+        if k[0] and k[0] != "zero income"
+        and any((_money(r.get("Gross_Member_Income__c")) or 0) > 0 for r in group)
+    } | {k[1] for k, amt in ai_annual.items() if amt and amt > 0}
+    for k in [k for k in sf_keys if k[0] == "zero income"]:
+        del sf_keys[k]
+        if k[1] in members_with_real_income:
+            findings.append(Finding(
+                category=EXTRACTION_NOTE,
+                severity="info",
+                message=(
+                    f"MuleSoft has a Zero Income declaration for "
+                    f"'{k[1] or 'household'}' alongside actual income "
+                    f"records — contradictory upstream data"
+                ),
+            ))
+
+    # Detect SF duplicates within the same canonical source name. Only
+    # rows with the SAME amount are duplicates — distinct amounts under
+    # one key are separate payments of the same benefit (retirement +
+    # survivor Social Security), which are summed at comparison time.
     for k, group in sf_keys.items():
         if len(group) > 1 and k[0]:
+            amounts = {
+                round(_money(r.get("Gross_Member_Income__c")) or 0.0, 2)
+                for r in group
+            }
+            if len(amounts) > 1:
+                continue
             findings.append(Finding(
                 category=DUPLICATE_INCOME,
                 severity="high",
@@ -608,6 +701,36 @@ def _compare_income(
             ))
 
     ai_keys = set(_income_key(r) for r in ai_income)
+
+    # Symmetric zero-income handling: AI-side Zero Income records (from
+    # unemployment affidavits / zero-income certs) are declarations, not
+    # sources MuleSoft "misses". When MuleSoft shows real income for the
+    # declaring member, that contradiction IS the audit finding — a
+    # member who signed an affidavit saying no income while MuleSoft
+    # holds income records needs analyst verification.
+    ai_zero_keys = {k for k in ai_keys if k[0] == "zero income"}
+    if ai_zero_keys:
+        sf_member_totals: dict[str, float] = {}
+        for k, group in sf_keys.items():
+            for r in group:
+                amt = _money(r.get("Gross_Member_Income__c")) or 0
+                if amt > 0:
+                    sf_member_totals[k[1]] = sf_member_totals.get(k[1], 0) + amt
+        for k in ai_zero_keys:
+            ai_keys.discard(k)
+            total = sf_member_totals.get(k[1])
+            if total:
+                findings.append(Finding(
+                    category=VALUE_MISMATCH,
+                    severity="medium",
+                    message=(
+                        f"ZERO-INCOME CONTRADICTION — "
+                        f"'{(k[1] or 'household').title()}' declared zero "
+                        f"income in the packet but MuleSoft shows "
+                        f"${total:,.2f}/yr in income records — verify"
+                    ),
+                ))
+
     matched = ai_keys & set(sf_keys.keys())
     ai_only_keys = ai_keys - set(sf_keys.keys())
     sf_only_keys = set(sf_keys.keys()) - ai_keys
@@ -630,7 +753,7 @@ def _compare_income(
         for sf_k in sf_only_keys:
             if sf_k in amount_matched_sf or sf_k[0] != ai_k[0]:
                 continue
-            sf_amt = _money(sf_keys[sf_k][0].get("Gross_Member_Income__c"))
+            sf_amt = _sf_group_amount(sf_keys[sf_k])
             # Same tolerance the exact-match income comparison uses (0.01),
             # not the asset tolerance — keep one income-amount tolerance.
             if sf_amt is not None and sf_amt > 0 and _close(ai_amt, sf_amt, tolerance=0.01):
@@ -689,7 +812,7 @@ def _compare_income(
 
     for k in matched:
         ai_amt = ai_annual.get(k)
-        sf_amt = _money(sf_keys[k][0].get("Gross_Member_Income__c"))
+        sf_amt = _sf_group_amount(sf_keys[k])
         if ai_amt is not None and sf_amt is not None and sf_amt > 0:
             if _close(ai_amt, sf_amt, tolerance=0.01):
                 agreements += 1
@@ -718,7 +841,7 @@ def _compare_income(
     for ai_k, sf_k in fuzzy_pairs:
         sf_rec = sf_keys[sf_k][0]
         ai_amt = ai_annual.get(ai_k)
-        sf_amt = _money(sf_rec.get("Gross_Member_Income__c"))
+        sf_amt = _sf_group_amount(sf_keys[sf_k])
         amount_diff = (
             ai_amt is not None and sf_amt is not None and sf_amt > 0
             and not _close(ai_amt, sf_amt, tolerance=0.01)
@@ -840,12 +963,44 @@ _SF_ASSET_BALANCE_FIELDS = (
 
 
 def _sf_asset_balance(rec: dict) -> float | None:
-    """First populated balance/value across MuleSoft's asset balance fields."""
+    """Balance/value across MuleSoft's asset balance fields.
+
+    First NON-ZERO value wins; 0.0 is returned only when every populated
+    field is zero. MuleSoft rows routinely carry 0.0 in higher-priority
+    fields (Cash_Value__c = 0.0) while the real balance sits further down
+    (Asset_Cash_Value__c = 1600.0) — treating zero as "populated" masks
+    the real balance and makes the record unmatchable by amount.
+    """
+    zero_seen = False
     for f in _SF_ASSET_BALANCE_FIELDS:
         val = _money(rec.get(f))
-        if val is not None:
+        if val is None:
+            continue
+        if val != 0:
             return val
-    return None
+        zero_seen = True
+    return 0.0 if zero_seen else None
+
+
+def _ai_asset_balance(rec: dict) -> float | None:
+    """First populated balance on an AI asset record.
+
+    Verified balance first, self-declared as fallback (mirrors
+    _sf_asset_balance, including its zero-skipping). Asset
+    self-certifications put the amount in selfDeclaredAmount — every
+    consumer (matching, comparison, findings) must read the same fields
+    or a record becomes unmatchable by the tier scorer while the
+    findings renderer still shows its amount.
+    """
+    zero_seen = False
+    for f in ("currentBalance", "selfDeclaredAmount"):
+        val = _money(rec.get(f))
+        if val is None:
+            continue
+        if val != 0:
+            return val
+        zero_seen = True
+    return 0.0 if zero_seen else None
 
 
 def _asset_key(rec: dict) -> tuple[str, str, str]:
@@ -860,7 +1015,7 @@ def _asset_key(rec: dict) -> tuple[str, str, str]:
         # distinct accounts whose balances share trailing digits.
         bal = _sf_asset_balance(rec)
         if bal is None:
-            bal = _money(rec.get("currentBalance"))
+            bal = _ai_asset_balance(rec)
         stub = f"~{bal}" if bal is not None else "~"
         return (src, acct_type, stub.lower())
     last4 = acct_num[-4:].lower() if len(acct_num) >= 4 else acct_num.lower()
@@ -936,7 +1091,7 @@ def _compare_assets(
         ai_rec = ai_keys[ai_k]
         ai_src_norm = _normalize_org_name(ai_k[0])
         ai_type = ai_k[1]
-        ai_bal = _money(ai_rec.get("currentBalance"))
+        ai_bal = _ai_asset_balance(ai_rec)
         if not ai_src_norm and ai_bal is None:
             continue   # nothing to match on
         for sf_k in sf_only_list:
@@ -985,7 +1140,7 @@ def _compare_assets(
     disagreements = 0
 
     for k in matched:
-        ai_bal = _money(ai_keys[k].get("currentBalance"))
+        ai_bal = _ai_asset_balance(ai_keys[k])
         sf_bal = _sf_asset_balance(sf_keys[k][0])
         if ai_bal is not None and sf_bal is not None:
             if _close(ai_bal, sf_bal, tolerance=0.02):
@@ -1015,7 +1170,7 @@ def _compare_assets(
         sf_rec = sf_keys[sf_k][0]
         ai_src = ai_rec.get("sourceName") or "(unnamed)"
         sf_src = sf_rec.get("Source_Name__c") or "(unnamed)"
-        ai_bal = _money(ai_rec.get("currentBalance"))
+        ai_bal = _ai_asset_balance(ai_rec)
         sf_bal = _sf_asset_balance(sf_rec)
 
         # Determine the right phrasing
@@ -1053,9 +1208,7 @@ def _compare_assets(
     ai_only_clean = {k for k in ai_only if (k[0] or k[2])}
     for k in ai_only_clean:
         rec = ai_keys[k]
-        bal = _money(rec.get("currentBalance"))
-        if bal is None:
-            bal = _money(rec.get("selfDeclaredAmount"))
+        bal = _ai_asset_balance(rec)
         # A zero-value asset carries nothing material — surface as a NOTE, not
         # a CRITICAL, so an empty placeholder (e.g. 'Self-Declared Cash $0.00')
         # doesn't head the analyst's critical list. Unknown balance (None) is
@@ -1130,6 +1283,25 @@ def _norm_unit(v: Any) -> str:
         return ""
     tokens = [t for t in re.split(r"[\s\-#/]+", raw) if t]
     return tokens[-1] if tokens else raw
+
+
+# Document types that count as THE certification form. "(Previous)"
+# variants are excluded — a packet containing only the prior year's cert
+# has no current cert to compare.
+_CERT_FORM_MARKERS = ("50059", "tenant income certification", "(tic)", "3560")
+
+
+def _cert_form_present(extraction: dict) -> bool:
+    """True when the packet contains a current certification form group."""
+    for g in extraction.get("document_groups") or []:
+        if not isinstance(g, dict):
+            continue
+        dt = str(g.get("document_type") or "").lower()
+        if g.get("category") == "ignore" or "(previous)" in dt:
+            continue
+        if any(m in dt for m in _CERT_FORM_MARKERS):
+            return True
+    return False
 
 
 def _compare_certification(
@@ -1323,9 +1495,11 @@ def _idp_internal_findings(extraction: dict) -> list[Finding]:
         ))
 
     # Belt-and-suspenders: also flag unsigned TIC if the IDP findings
-    # list didn't include it but the cert_info says isSigned=No.
+    # list didn't include it but the cert_info says isSigned=No. Only
+    # when a cert form actually exists — otherwise the real problem is
+    # the missing form, which has its own finding.
     cert = extraction.get("certification_info") or {}
-    if str(cert.get("isSigned") or "").lower() == "no":
+    if str(cert.get("isSigned") or "").lower() == "no" and _cert_form_present(extraction):
         unsigned_msg = "UNSIGNED TIC — TIC form not signed. Resubmission required."
         if unsigned_msg not in seen_messages and not any(
             "not signed" in f.message.lower() for f in findings
@@ -1460,6 +1634,24 @@ def compare(extraction: dict, sf_data: dict) -> ComparisonResult:
     asset_findings, asset_stats = _compare_assets(
         ai_assets, sf_assets, ir_scoped=ir_scoped)
     cert_findings, cert_stats = _compare_certification(ai_cert, sf_review)
+    if not _cert_form_present(extraction):
+        # The AI's cert scalars were harvested from secondary documents
+        # (EIV report, correspondence) — e.g. an EIV references the LAST
+        # completed cert, so its effective date legitimately differs from
+        # the new cert MuleSoft holds. Comparing them as if cert-vs-cert
+        # produces false CRITICALs and craters the agreement rate, so the
+        # comparison becomes advisory: findings drop to NOTES and none of
+        # it counts toward agreement/disagreement.
+        for f in cert_findings:
+            if f.severity in ("high", "medium"):
+                f.severity = "low"
+                f.message += (
+                    " (advisory — no certification form in packet; AI value "
+                    "comes from secondary documents)"
+                )
+        cert_stats = {
+            "agreements": 0, "disagreements": 0, "ai_only": 0, "sf_only": 0,
+        }
     idp_findings = _idp_internal_findings(extraction)
 
     comparison_findings = (

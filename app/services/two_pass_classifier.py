@@ -163,6 +163,7 @@ CANONICAL DOCUMENT TYPES (use these exact names):
     - SSA Benefit Letter
     - SSI Benefit Letter
     - SSDI Benefit Letter
+    - Verification of Disability Benefits    (private LTD/STD insurer benefit letters)
     - Pension Statement
     - TANF Verification
     - Child Support Statement
@@ -229,6 +230,13 @@ CRITICAL CLASSIFICATION RULES:
 
 - "Correspondence" means letters, emails, notices — NOT any form containing
   legal or boilerplate language.
+
+- A DISABILITY BENEFIT letter from an insurance company (Unum, MetLife,
+  Aetna, The Hartford, ...) stating a monthly LTD/STD benefit amount =
+  "Verification of Disability Benefits", INCLUDE. Do NOT classify it as
+  "Life Insurance Policy" — a life insurance policy is an ASSET; a
+  disability benefit is INCOME. The insurer's name alone does not make a
+  document a life insurance policy.
 
 - "Sworn Statement of Anticipated Income and Assets" = "Application / Housing
   Questionnaire".
