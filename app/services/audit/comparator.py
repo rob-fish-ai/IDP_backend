@@ -585,6 +585,25 @@ _BENEFIT_PROGRAM_KEYS = frozenset({
     "temporary assistance",
 })
 
+# SSA-family programs: one system often records a program-specific
+# benefit (SSDI, SSI) under the generic payer ("Social Security"), so
+# generic↔specific pairs within this family are amount-matchable — the
+# program keys differ but member + annual amount agreement means it's
+# the same income.
+_SSA_FAMILY = frozenset({
+    "social security administration",
+    "social security disability",
+    "supplemental security income",
+    "state supplement program",
+})
+
+
+def _income_sources_compatible(a: str, b: str) -> bool:
+    """Same canonical source, or generic↔specific within the SSA family."""
+    if a == b:
+        return True
+    return a in _SSA_FAMILY and b in _SSA_FAMILY
+
 
 def _income_key(rec: dict) -> tuple[str, str]:
     """Benefit program (for government benefits) or source name + member.
@@ -600,7 +619,14 @@ def _income_key(rec: dict) -> tuple[str, str]:
     # Normalize member: trim middle initial / 'r.' / 'jr' suffixes for fuzzy match.
     member_clean = _norm(member).replace(".", "").strip()
     member_tokens = [t for t in member_clean.split() if len(t) > 1]
-    member_key = " ".join(member_tokens) if member_tokens else member_clean
+    if len(member_tokens) >= 2:
+        # First + last token only: middle names appear inconsistently
+        # across records ('Dana Gann' on the VOI, 'Dana Kay Gann' on the
+        # benefit letter) and would split one member's income across
+        # unjoinable keys.
+        member_key = f"{member_tokens[0]} {member_tokens[-1]}"
+    else:
+        member_key = " ".join(member_tokens) if member_tokens else member_clean
 
     type_norm = _normalize_income_source(income_type)
     if type_norm in _BENEFIT_PROGRAM_KEYS:
@@ -751,7 +777,7 @@ def _compare_income(
         if ai_amt is None or ai_amt <= 0:
             continue
         for sf_k in sf_only_keys:
-            if sf_k in amount_matched_sf or sf_k[0] != ai_k[0]:
+            if sf_k in amount_matched_sf or not _income_sources_compatible(sf_k[0], ai_k[0]):
                 continue
             sf_amt = _sf_group_amount(sf_keys[sf_k])
             # Same tolerance the exact-match income comparison uses (0.01),
@@ -890,6 +916,15 @@ def _compare_income(
                     f"Income member differs — '{ai_k[0]}': AI member "
                     f"'{ai_member}' vs MuleSoft '{sf_member}' "
                     f"(matched by source + amount)"
+                ),
+            ))
+        if ai_k[0] != sf_k[0]:
+            findings.append(Finding(
+                category=VALUE_MISMATCH,
+                severity="low",
+                message=(
+                    f"Income program variant — AI '{ai_k[0]}' vs MuleSoft "
+                    f"'{sf_k[0]}' (same SSA-family benefit matched by amount)"
                 ),
             ))
 
