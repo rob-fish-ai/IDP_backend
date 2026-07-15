@@ -217,28 +217,38 @@ def _normalize_org_name(name: str | None) -> str:
 
 
 def _name_similarity(a: str, b: str) -> float:
-    """Best-of full-string and per-token similarity.
+    """Best-of full-string and token-coverage similarity.
 
     Full-string ratio handles "Walt Disney Company" vs "The Walt Disney
     Company" cleanly. But OCR errors like "chilts" vs "chilis bar & grill"
-    fail the full-string check (extra tokens drag the ratio down). Per-
-    token best-pair similarity catches those.
+    fail the full-string check (extra tokens drag the ratio down).
+
+    The token score averages each token's best match across the other
+    name's tokens (over the shorter token list). A single shared surname
+    or generic word ("Ana Lopez" vs "Carlos Lopez", "ABC Staffing" vs
+    "XYZ Staffing") is diluted by the non-matching tokens instead of
+    scoring the whole pair 1.0 — while a lone OCR-mangled token still
+    scores on its best pair.
     """
     if not a or not b:
         return 0.0
     full_ratio = SequenceMatcher(None, a, b).ratio()
 
-    # Per-token best pair: split both, find the best matching pair.
     a_tokens = [t for t in a.split() if len(t) > 2]
     b_tokens = [t for t in b.split() if len(t) > 2]
-    best_token = 0.0
-    for ta in a_tokens:
-        for tb in b_tokens:
-            r = SequenceMatcher(None, ta, tb).ratio()
-            if r > best_token:
-                best_token = r
+    token_score = 0.0
+    if a_tokens and b_tokens:
+        short, long_ = (
+            (a_tokens, b_tokens) if len(a_tokens) <= len(b_tokens)
+            else (b_tokens, a_tokens)
+        )
+        best_ratios = [
+            max(SequenceMatcher(None, ts, tl).ratio() for tl in long_)
+            for ts in short
+        ]
+        token_score = sum(best_ratios) / len(best_ratios)
 
-    return max(full_ratio, best_token)
+    return max(full_ratio, token_score)
 
 
 def _normalize_account_type(t: str | None) -> str:
@@ -844,11 +854,15 @@ def _asset_key(rec: dict) -> tuple[str, str, str]:
     acct_type = _norm(rec.get("accountType") or rec.get("Account_Type__c"))
     acct_num = str(rec.get("accountNumber") or "").strip()
     if not acct_num:
-        # Fall back to a balance-based stub for SF records without account #
+        # Fall back to a balance-based stub for SF records without account #.
+        # Keep the stub whole — last-4 truncation would strip the '~' marker
+        # (breaking every startswith("~") stub check downstream) and collide
+        # distinct accounts whose balances share trailing digits.
         bal = _sf_asset_balance(rec)
         if bal is None:
             bal = _money(rec.get("currentBalance"))
-        acct_num = f"~{bal}" if bal is not None else "~"
+        stub = f"~{bal}" if bal is not None else "~"
+        return (src, acct_type, stub.lower())
     last4 = acct_num[-4:].lower() if len(acct_num) >= 4 else acct_num.lower()
     return (src, acct_type, last4)
 

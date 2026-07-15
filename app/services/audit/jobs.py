@@ -239,6 +239,14 @@ def watchdog_sweep(settings: Settings) -> int:
                     case_number, state, err,
                 ),
             )
+            # Terminalize the local row. Without this it stays in a
+            # wedge-prone state, gets re-listed by every sweep (re-writing
+            # the SF marker each time), and the retention sweep — which
+            # only deletes terminal states — can never remove it.
+            if state == EXTRACTING:
+                store.mark_extraction_failed(case_id, err)
+            else:
+                store.mark_comparison_failed(case_id, err)
 
     return len(wedged)
 
@@ -325,14 +333,27 @@ def run_extraction(case_id: str) -> None:
             # Transient (rate limit, credit balance, server error, timeout).
             # Don't write a failure marker or flip IDP_Audit_Complete__c —
             # leave the SF flag FALSE so the next poll cycle re-fetches and
-            # tries again. Local row stays in extraction_failed for context;
-            # upsert_pending will overwrite it on the next attempt.
-            logger.warning(
-                "Retryable extraction error for case=%s — leaving for next "
-                "poll cycle (no Salesforce writeback): %s",
-                case_number, error_str,
+            # tries again — but under the shared retry budget. Without a
+            # cap, a deterministically-"transient" failure (e.g. a PDF that
+            # always times out) re-runs at full OCR+LLM cost every poll
+            # tick forever, and because failures never advance the case's
+            # LastModifiedDate, it pins the ORDER BY ... ASC poll batch and
+            # starves newer cases.
+            attempts = store.increment_retry(case_id)
+            cap = settings.audit_watchdog_max_retries
+            if attempts < cap:
+                logger.warning(
+                    "Retryable extraction error for case=%s (attempt %d/%d) "
+                    "— leaving for next poll cycle (no Salesforce "
+                    "writeback): %s",
+                    case_number, attempts, cap, error_str,
+                )
+                return
+            logger.error(
+                "Retryable extraction error for case=%s exceeded retry cap "
+                "(%d/%d) — finalizing as permanently failed",
+                case_number, attempts, cap,
             )
-            return
 
         # Permanent failure — write marker + flip flag. Local row remains
         # in EXTRACTION_FAILED state so the dashboard can surface it.
@@ -492,12 +513,25 @@ def run_comparison(case_id: str) -> None:
         case_number = (job.get("case_number") if job else None) or case_id
 
         if _is_retryable_error(exc):
-            logger.warning(
-                "Retryable comparison error for case=%s — leaving for next "
-                "poll cycle (no Salesforce writeback): %s",
-                case_number, f"{type(exc).__name__}: {exc}",
+            # Same bounded retry budget as the extraction path — see the
+            # comment there for why an uncapped retryable loop starves the
+            # poll batch.
+            attempts = store.increment_retry(case_id)
+            cap = settings.audit_watchdog_max_retries
+            if attempts < cap:
+                logger.warning(
+                    "Retryable comparison error for case=%s (attempt %d/%d) "
+                    "— leaving for next poll cycle (no Salesforce "
+                    "writeback): %s",
+                    case_number, attempts, cap,
+                    f"{type(exc).__name__}: {exc}",
+                )
+                return
+            logger.error(
+                "Retryable comparison error for case=%s exceeded retry cap "
+                "(%d/%d) — finalizing as permanently failed",
+                case_number, attempts, cap,
             )
-            return
 
         _finalize_case(
             case_id, case_number, settings,

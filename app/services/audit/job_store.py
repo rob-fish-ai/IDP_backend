@@ -460,6 +460,26 @@ class JobStore:
             """, (PENDING, now, case_id))
             return cur.rowcount > 0
 
+    def increment_retry(self, case_id: str) -> int:
+        """Bump retry_count and return the new value (0 if row missing).
+
+        Used by the retryable-failure paths so automated re-attempts share
+        one bounded budget with the watchdog (reset_to_pending also
+        increments). upsert_pending deliberately preserves retry_count, so
+        the count survives poll-cycle re-queues.
+        """
+        with self._lock, self._connect() as conn:
+            conn.execute(
+                "UPDATE audit_jobs SET retry_count = retry_count + 1 "
+                "WHERE case_id = ?",
+                (case_id,),
+            )
+            row = conn.execute(
+                "SELECT retry_count FROM audit_jobs WHERE case_id = ?",
+                (case_id,),
+            ).fetchone()
+            return int(row["retry_count"]) if row else 0
+
 
 _SINGLETON: JobStore | None = None
 _SINGLETON_LOCK = threading.Lock()
