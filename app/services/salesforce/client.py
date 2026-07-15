@@ -5,8 +5,10 @@ back to the Case via update_case_findings (Long Text Area field).
 """
 import io
 import logging
+import re
 import threading
 import time
+from difflib import SequenceMatcher
 from typing import Any
 
 import fitz  # PyMuPDF — used to count pages before pushing into the pipeline
@@ -20,6 +22,74 @@ logger = logging.getLogger(__name__)
 def _escape_soql(value: str) -> str:
     """Escape a value for inclusion in a SOQL string literal."""
     return value.replace("\\", "\\\\").replace("'", "\\'")
+
+
+# ---------------------------------------------------------------------------
+# Multi-part packet grouping
+#
+# Property managers sometimes upload one certification packet as several
+# PDFs ("... part 1"/"part 2", "... 1 of 2", "....1"/".2"). Each part on
+# its own can fall below the min-pages gate even though the whole packet
+# passes, so parts must be recognized and merged before gating.
+#
+# Detection is convention-agnostic: two titles are parts of the same
+# packet when they differ by exactly ONE numeric fragment. That groups
+# every numbering style (including ones we haven't seen) while refusing
+# to group version-style siblings ("... Approved" vs "... File for
+# signatures"), whose differences are words, not digits. An unnumbered
+# base file next to a numbered one ("X" vs "X.1" — a re-upload, not a
+# part) is also refused, because that diff is an insertion, not a
+# numeric replacement.
+# ---------------------------------------------------------------------------
+
+def _normalize_title(title: str) -> str:
+    t = (title or "").strip().lower()
+    if t.endswith(".pdf"):
+        t = t[:-4]
+    return re.sub(r"\s+", " ", t)
+
+
+def _numeric_part_diff(a: str, b: str) -> tuple[int, int] | None:
+    """Return (num_a, num_b) when two titles differ only by one numeric
+    fragment; None otherwise."""
+    diffs = [
+        op for op in SequenceMatcher(None, a, b).get_opcodes()
+        if op[0] != "equal"
+    ]
+    if len(diffs) != 1:
+        return None
+    tag, i1, i2, j1, j2 = diffs[0]
+    if tag != "replace":
+        return None
+    frag_a, frag_b = a[i1:i2], b[j1:j2]
+    if not (frag_a.isdigit() and frag_b.isdigit()):
+        return None
+    return int(frag_a), int(frag_b)
+
+
+def _group_packet_parts(candidates: list[dict]) -> list[list[dict]]:
+    """Cluster a case's PDF candidates into packet-part groups.
+
+    candidates: [{"cd_id", "title", ...}], any order. Returns groups in
+    first-seen order; non-part files come back as 1-element groups. Part
+    group members gain a "part_no" key.
+    """
+    groups: list[list[dict]] = []
+    for cand in candidates:
+        norm = _normalize_title(cand["title"])
+        attached = False
+        for group in groups:
+            rep = group[0]
+            diff = _numeric_part_diff(_normalize_title(rep["title"]), norm)
+            if diff is not None:
+                rep.setdefault("part_no", diff[0])
+                cand["part_no"] = diff[1]
+                group.append(cand)
+                attached = True
+                break
+        if not attached:
+            groups.append([cand])
+    return groups
 
 
 # Module-level singleton — re-using the auth handshake across jobs avoids
@@ -194,7 +264,21 @@ class SalesforceClient:
         }
 
     def download_pdf(self, content_document_id: str) -> bytes:
-        """Download the latest PDF version for a ContentDocument."""
+        """Download the latest PDF version for a ContentDocument.
+
+        Applies the min-pages gate — use for standalone packets. Multi-part
+        merging goes through _download_content_version so the gate can be
+        applied to the merged whole instead of each fragment.
+        """
+        pdf_bytes, title = self._download_content_version(content_document_id)
+        self._check_min_pages(pdf_bytes, title)
+        return pdf_bytes
+
+    def _download_content_version(
+        self, content_document_id: str,
+    ) -> tuple[bytes, str]:
+        """Download the latest version bytes + title, without the
+        min-pages gate. Denylist and extension checks still apply."""
         cd_id_s = _escape_soql(content_document_id)
         versions = self.sf.query(f"""
             SELECT Id, Title, FileExtension, VersionData
@@ -236,8 +320,7 @@ class SalesforceClient:
                 headers={"Authorization": f"Bearer {self.sf.session_id}"},
             )
             if response.status_code == 200 and len(response.content) > 1000:
-                self._check_min_pages(response.content, version.get("Title"))
-                return response.content
+                return response.content, version.get("Title") or ""
             logger.warning(
                 "PDF download attempt %d failed: status=%d size=%d",
                 attempt + 1, response.status_code, len(response.content),
@@ -246,6 +329,39 @@ class SalesforceClient:
         raise RuntimeError(
             f"Failed to download PDF {content_document_id} after 3 attempts"
         )
+
+    def _download_merged_parts(
+        self, group: list[dict], case_id: str,
+    ) -> tuple[bytes, str]:
+        """Download a packet-part group and merge into one PDF, in part
+        order. The min-pages gate applies to the merged whole — each part
+        alone may legitimately be below it. Returns (bytes, cd_id of the
+        first part)."""
+        parts = sorted(group, key=lambda c: c["part_no"])
+        nums = [c["part_no"] for c in parts]
+        if nums != list(range(nums[0], nums[0] + len(nums))):
+            logger.warning(
+                "Packet parts for case %s are non-contiguous (%s) — merging "
+                "the parts that exist, in order: %s",
+                case_id, nums, [c["title"] for c in parts],
+            )
+        merged = fitz.open()
+        try:
+            for part in parts:
+                data, _title = self._download_content_version(part["cd_id"])
+                with fitz.open(stream=io.BytesIO(data), filetype="pdf") as doc:
+                    merged.insert_pdf(doc)
+            merged_bytes = merged.tobytes()
+            page_count = merged.page_count
+        finally:
+            merged.close()
+        titles = " + ".join(c["title"] for c in parts)
+        self._check_min_pages(merged_bytes, titles)
+        logger.info(
+            "Merged %d-part packet for case %s (%d pages): %s",
+            len(parts), case_id, page_count, titles,
+        )
+        return merged_bytes, parts[0]["cd_id"]
 
     def _check_min_pages(self, pdf_bytes: bytes, title: str | None) -> None:
         """Reject PDFs below settings.min_pdf_pages.
@@ -360,36 +476,54 @@ class SalesforceClient:
             ORDER BY ContentDocument.CreatedDate DESC
         """).get("records", [])
 
-        skipped_titles: list[str] = []
+        denylisted: list[str] = []
+        rejected: list[str] = []  # "title: reason" for non-denylist skips
+        candidates: list[dict] = []
         for link in links:
             cd = link.get("ContentDocument") or {}
-            title = (cd.get("Title") or "").lower()
-            cd_id = link["ContentDocumentId"]
-
-            if any(token in title for token in self._PDF_TITLE_DENYLIST):
-                skipped_titles.append(cd.get("Title") or cd_id)
+            title = cd.get("Title") or link["ContentDocumentId"]
+            if any(t in title.lower() for t in self._PDF_TITLE_DENYLIST):
+                denylisted.append(title)
                 continue
+            candidates.append(
+                {"cd_id": link["ContentDocumentId"], "title": title}
+            )
 
+        # Cluster multi-part packets. Candidates arrive newest-first, so
+        # groups are tried newest-first too — same precedence as before.
+        for group in _group_packet_parts(candidates):
+            title = group[0]["title"]
             try:
-                pdf_bytes = self.download_pdf(cd_id)
-                if skipped_titles:
+                is_part_set = (
+                    len(group) >= 2
+                    and len({c["part_no"] for c in group}) == len(group)
+                )
+                if is_part_set:
+                    pdf_bytes, cd_id = self._download_merged_parts(
+                        group, case_id,
+                    )
+                else:
+                    cd_id = group[0]["cd_id"]
+                    pdf_bytes = self.download_pdf(cd_id)
+                if denylisted or rejected:
                     logger.info(
-                        "Picked PDF '%s' for case %s; skipped non-source: %s",
-                        cd.get("Title"), case_id, skipped_titles,
+                        "Picked PDF '%s' for case %s; skipped — "
+                        "denylisted: %s, rejected: %s",
+                        title, case_id, denylisted, rejected,
                     )
                 return pdf_bytes, cd_id
-            except ValueError as exc:
-                # download_pdf raises ValueError when the candidate is not a
-                # source packet: wrong file extension, denylisted title, or
-                # below the min-pages threshold. Move on to the next PDF.
+            except (ValueError, RuntimeError) as exc:
+                # Not a usable source packet (too short, download failed,
+                # corrupt/non-PDF bytes) — move on to the next candidate.
                 logger.info(
                     "Skipped candidate PDF '%s' for case %s: %s",
-                    cd.get("Title") or cd_id, case_id, exc,
+                    title, case_id, exc,
                 )
-                skipped_titles.append(cd.get("Title") or cd_id)
+                rejected.append(f"{title}: {exc}")
                 continue
 
         raise ValueError(
-            f"No source PDF attachment found for case {case_id} "
-            f"(skipped {len(skipped_titles)} review/audit document(s))"
+            f"No usable source PDF found for case {case_id} — "
+            f"{len(denylisted)} denylisted title(s) {denylisted or ''}, "
+            f"{len(rejected)} rejected candidate(s) {rejected or ''}"
         )
