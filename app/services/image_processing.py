@@ -101,3 +101,32 @@ def _deskew(image: np.ndarray) -> np.ndarray:
         image, rotation_matrix, (w, h), flags=cv2.INTER_CUBIC, borderValue=255,
     )
     return rotated
+
+
+# Content-loss detection thresholds, calibrated on a real half-lost page:
+# a dense form page that OCR'd completely yielded ~0.014 chars per ink
+# pixel; the page whose top half was silently dropped yielded ~0.003.
+_CONTENT_LOSS_MIN_INK_RATIO = 0.03
+_CONTENT_LOSS_CHARS_PER_INK = 0.006
+
+
+def suspected_content_loss(image_path: str, text_len: int) -> bool:
+    """True when a page's ink volume implies far more text than OCR returned.
+
+    Catches the failure mode where OCR returns clean-looking text for PART
+    of a dense form page and silently drops the rest — the quality
+    composite stays above the vision threshold because the text it did
+    return is coherent, so nothing else flags the page. Only fires on
+    clearly dense pages (ink ratio above _CONTENT_LOSS_MIN_INK_RATIO);
+    sparse letters and near-blank pages are never suspected.
+    """
+    try:
+        img = cv2.imread(str(image_path), cv2.IMREAD_GRAYSCALE)
+        if img is None or img.size == 0:
+            return False
+        ink_px = int((img < 128).sum())
+        if ink_px / img.size < _CONTENT_LOSS_MIN_INK_RATIO:
+            return False
+        return text_len < ink_px * _CONTENT_LOSS_CHARS_PER_INK
+    except Exception:
+        return False

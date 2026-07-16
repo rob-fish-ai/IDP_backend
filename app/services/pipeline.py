@@ -11,6 +11,7 @@ from app.schemas.extraction import (
     ExtractionResult,
     HouseholdDemographics,
     IncomeExtraction,
+    PageOcrRecord,
     PreviousCertification,
     PreviousCertIncomeSource,
     VerificationIncomeEntry,
@@ -479,6 +480,33 @@ def run_extraction_pipeline(
     elapsed = time.perf_counter() - start
     logger.info("Extraction pipeline complete in %.2fs", elapsed)
 
+    # Persist per-page OCR provenance (flag, score, char count, text) so a
+    # post-hoc review can tell OCR failures from LLM-extraction failures.
+    # OCR is nondeterministic — re-running it later proves nothing about
+    # what THIS run's extractors actually saw.
+    page_ocr: list[PageOcrRecord] = []
+    for pt in page_texts:
+        score = pt.get("ocr_score")
+        if isinstance(score, dict):
+            score = score.get("composite")
+        flag_names: list[str] = []
+        for f in pt.get("ocr_flag_details") or []:
+            if isinstance(f, str):
+                flag_names.append(f)
+            elif isinstance(f, dict):
+                name = f.get("type") or f.get("flag") or f.get("name") or f.get("code")
+                if name:
+                    flag_names.append(str(name))
+        text = pt.get("text") or ""
+        page_ocr.append(PageOcrRecord(
+            page=pt["page"],
+            flag=pt.get("ocr_flag"),
+            score=float(score) if isinstance(score, (int, float)) else None,
+            chars=len(text.strip()),
+            flags=flag_names,
+            text=text or None,
+        ))
+
     return ExtractionResult(
         classification=classification,
         document_groups=document_groups,
@@ -493,6 +521,7 @@ def run_extraction_pipeline(
         questionnaire_disclosures=questionnaire_disclosures,
         findings=findings,
         field_scores=score_summary,
+        page_ocr=page_ocr,
     )
 
 

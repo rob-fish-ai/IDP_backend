@@ -311,6 +311,23 @@ class PreviousCertification(BaseModel):
         return v
 
 
+class PageOcrRecord(BaseModel):
+    """Per-page OCR provenance persisted for post-hoc diagnosis.
+
+    Without this, a review of "why did extraction miss field X" cannot
+    distinguish an OCR failure (value never reached the LLM) from an
+    extraction failure (value was in the text and the LLM skipped it) —
+    OCR is nondeterministic, so re-running it later proves nothing about
+    what the original run saw.
+    """
+    page: int
+    flag: Optional[str] = None       # green | yellow | red
+    score: Optional[float] = None    # composite quality score
+    chars: int = 0
+    flags: list[str] = []            # blank_page, vision_fallback, suspected_content_loss, ...
+    text: Optional[str] = None       # the sanitized text extraction actually consumed
+
+
 class ExtractionResult(BaseModel):
     """Complete pipeline output combining all MuleSoft schemas."""
     classification: ClassificationResult
@@ -326,6 +343,7 @@ class ExtractionResult(BaseModel):
     questionnaire_disclosures: Optional[QuestionnaireDisclosures] = None
     findings: list[str] = []
     field_scores: Optional["ExtractionScoreSummary"] = None
+    page_ocr: list[PageOcrRecord] = []
 
 
 # Deferred import to avoid circular dependency

@@ -7,7 +7,7 @@ from PIL import Image
 
 from app.core.config import Settings
 from app.core.exceptions import ProcessingError
-from app.services.image_processing import preprocess_for_ocr
+from app.services.image_processing import preprocess_for_ocr, suspected_content_loss
 from app.services.ocr_service import ocr_single_image
 from app.services.pipeline import run_extraction_pipeline
 
@@ -130,9 +130,30 @@ def process_pdf(pdf_bytes: bytes, settings: Settings) -> dict:
     # text re-extracted via Claude Vision (reads directly from the page
     # image, bypassing OCR entirely). The replacement text flows into
     # classification and extraction so every downstream step benefits.
+    #
+    # Besides the OCR service's own quality flag, a page is also queued
+    # when its ink density implies far more text than OCR returned —
+    # OCR can silently drop half a dense form page while the text it
+    # DID return looks clean, keeping the quality score above the
+    # threshold (observed: a TIC rent/signature page reduced to its
+    # boilerplate paragraphs, losing every rent field).
+    path_by_page = {pn: str(p) for pn, p in processed_paths}
     low_quality_pages = []
     for page_num, ocr_result in ocr_results.items():
         if ocr_result.get("needs_external_ocr"):
+            low_quality_pages.append(page_num)
+            continue
+        text_len = len((ocr_result.get("text") or "").strip())
+        img_path = path_by_page.get(page_num)
+        if img_path and suspected_content_loss(img_path, text_len):
+            logger.warning(
+                "Page %d: OCR returned %d chars but the page's ink density "
+                "implies far more — suspected content loss, queueing vision "
+                "fallback", page_num, text_len,
+            )
+            flags = ocr_result.setdefault("flag_details", [])
+            if isinstance(flags, list) and "suspected_content_loss" not in flags:
+                flags.append("suspected_content_loss")
             low_quality_pages.append(page_num)
 
     if low_quality_pages:
@@ -151,8 +172,6 @@ def process_pdf(pdf_bytes: bytes, settings: Settings) -> dict:
             "- Preserve form field numbers (e.g., '12. Effective Date', '86. Total Annual Income')\n"
             "Return ONLY the extracted text, no commentary."
         )
-
-        path_by_page = {pn: str(p) for pn, p in processed_paths}
 
         def _vision_one(page_num: int) -> tuple[int, str | None]:
             img_path = path_by_page.get(page_num)
