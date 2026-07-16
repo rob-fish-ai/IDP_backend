@@ -389,6 +389,15 @@ def _member_name_key(rec: dict) -> str:
     return f"{first} {last}".strip()
 
 
+
+def _display_name(rec: dict, first_key: str = "FirstName", last_key: str = "LastName") -> str:
+    """Join name parts, skipping None/empty — a partial record must render
+    'Pictrantonio', not 'None Pictrantonio'."""
+    return " ".join(
+        str(p) for p in (rec.get(first_key), rec.get(last_key)) if p
+    ) or "(unknown)"
+
+
 def _compare_members(
     ai_members: list[dict], sf_members: list[dict], *, ir_scoped: bool = False,
 ) -> tuple[list[Finding], dict]:
@@ -402,7 +411,7 @@ def _compare_members(
 
     for k, group in sf_keys.items():
         if len(group) > 1 and k != ("", ""):
-            name = f"{group[0].get('First_Name__c', '')} {group[0].get('Last_Name__c', '')}".strip()
+            name = _display_name(group[0], "First_Name__c", "Last_Name__c")
             findings.append(Finding(
                 category=DUPLICATE_MEMBER,
                 severity="high",
@@ -492,7 +501,7 @@ def _compare_members(
 
     for k in ai_only:
         m = ai_keys[k]
-        name = f"{m.get('FirstName', '')} {m.get('LastName', '')}".strip()
+        name = _display_name(m)
         ssn4 = k[1] if not str(k[1]).startswith("~noid") else None
         findings.append(Finding(
             category=MISSING_MEMBER,
@@ -507,7 +516,7 @@ def _compare_members(
 
     for k in sf_only:
         m = sf_keys[k][0]
-        name = f"{m.get('First_Name__c', '')} {m.get('Last_Name__c', '')}".strip()
+        name = _display_name(m, "First_Name__c", "Last_Name__c")
         if ir_scoped:
             sev, msg = "info", (
                 f"{name} is in MuleSoft's full-case record but not the interim "
@@ -536,7 +545,7 @@ def _compare_members(
                 category=VALUE_MISMATCH,
                 severity="medium",
                 message=(
-                    f"Disability mismatch — {ai_m.get('FirstName')} {ai_m.get('LastName')}: "
+                    f"Disability mismatch — {_display_name(ai_m)}: "
                     f"AI={ai_dis} MuleSoft={sf_dis}"
                 ),
             ))
@@ -554,7 +563,7 @@ def _compare_members(
                 category=VALUE_MISMATCH,
                 severity="medium",
                 message=(
-                    f"Head-of-household mismatch — {ai_m.get('FirstName')} {ai_m.get('LastName')}: "
+                    f"Head-of-household mismatch — {_display_name(ai_m)}: "
                     f"AI={'head' if ai_head == 'y' else 'not head'} "
                     f"MuleSoft={'head' if sf_head == 'y' else 'not head'}"
                 ),
@@ -595,6 +604,18 @@ _SSA_FAMILY = frozenset({
     "social security disability",
     "supplemental security income",
     "state supplement program",
+})
+
+# Generic bucket names one system uses when the payer's actual name wasn't
+# captured. These never anchor missing/missed findings on their own — a
+# record keyed to a placeholder is matched by income type + member instead.
+_PLACEHOLDER_INCOME_SOURCES = frozenset({
+    "other non wage source",
+    "other non-wage source",
+    "other income",
+    "other",
+    "anticipated income",
+    "non wage source",
 })
 
 
@@ -829,6 +850,39 @@ def _compare_income(
             fuzzy_matched_ai.add(ai_k)
             fuzzy_matched_sf.add(best_sf_k)
             fuzzy_pairs.append((ai_k, best_sf_k))
+
+    # Generic-placeholder pass: MuleSoft sometimes books income under a
+    # placeholder source ("Other Non Wage Source") instead of the payer's
+    # name. When the income TYPE and member agree and one side's source
+    # is a placeholder, it's the same income. Without this, a terminated
+    # employment record — which has no amounts, so the amount pass can't
+    # fire — becomes a false missing/missed CRITICAL pair.
+    ai_types = {}
+    for r in ai_income:
+        t = r.get("incomeType")
+        if t:
+            ai_types.setdefault(_income_key(r), _norm(t).rstrip("s"))
+    for ai_k in list(ai_only_keys - fuzzy_matched_ai):
+        ai_type = ai_types.get(ai_k)
+        if not ai_type:
+            continue
+        for sf_k in list(sf_only_keys - fuzzy_matched_sf):
+            if (
+                ai_k[0] not in _PLACEHOLDER_INCOME_SOURCES
+                and sf_k[0] not in _PLACEHOLDER_INCOME_SOURCES
+            ):
+                continue
+            if (
+                ai_k[1] and sf_k[1] and ai_k[1] != sf_k[1]
+                and _name_similarity(ai_k[1], sf_k[1]) < 0.82
+            ):
+                continue
+            sf_type = _norm(sf_keys[sf_k][0].get("Income_Type__c")).rstrip("s")
+            if sf_type and sf_type == ai_type:
+                fuzzy_matched_ai.add(ai_k)
+                fuzzy_matched_sf.add(sf_k)
+                fuzzy_pairs.append((ai_k, sf_k))
+                break
 
     ai_only = ai_only_keys - fuzzy_matched_ai
     sf_only = sf_only_keys - fuzzy_matched_sf
@@ -1429,17 +1483,34 @@ def _compare_certification(
     # which is often the contract/market rent (a different concept that would
     # false-flag).
     sf_gross = _money(sf_review.get("Gross_Rent__c"))
+    ai_gross = _money(ai_cert.get("grossRent"))
     ai_tenant = _money(ai_cert.get("tenantRent"))
     ai_ua = _money(ai_cert.get("utilityAllowance"))
-    if sf_gross is not None and sf_gross > 0 and ai_tenant is not None and ai_ua is not None:
-        ai_gross_equiv = ai_tenant + ai_ua
-        _emit(_close(ai_gross_equiv, sf_gross, tolerance=0.02), Finding(
-            category=VALUE_MISMATCH,
-            severity=_value_mismatch_severity(ai_gross_equiv, sf_gross),
-            message=(f"GROSS RENT MISMATCH — AI ${ai_gross_equiv:,.2f} "
-                     f"(tenant ${ai_tenant:,.2f} + utility ${ai_ua:,.2f}) "
-                     f"vs MuleSoft ${sf_gross:,.2f}"),
-        ))
+    if sf_gross is not None and sf_gross > 0:
+        if ai_gross is not None and ai_gross > 0:
+            # Compare the form's own gross rent directly when extracted.
+            # Reconstructing gross as tenant+UA is only valid for LIHTC
+            # (tenant pays the full rent); on HUD S8 gross = contract rent
+            # + UA while the tenant pays an income-based share, so the
+            # reconstruction manufactures a mismatch (tenant $469 + UA $11
+            # = $480 "vs" $2,300) even when both systems agree on $2,300.
+            _emit(_close(ai_gross, sf_gross, tolerance=0.02), Finding(
+                category=VALUE_MISMATCH,
+                severity=_value_mismatch_severity(ai_gross, sf_gross),
+                message=(f"GROSS RENT MISMATCH — AI ${ai_gross:,.2f} "
+                         f"vs MuleSoft ${sf_gross:,.2f}"),
+            ))
+        elif ai_tenant is not None and ai_ua is not None:
+            # Fallback reconstruction — only meaningful where tenant rent
+            # approximates gross (LIHTC-style, no rental assistance).
+            ai_gross_equiv = ai_tenant + ai_ua
+            _emit(_close(ai_gross_equiv, sf_gross, tolerance=0.02), Finding(
+                category=VALUE_MISMATCH,
+                severity=_value_mismatch_severity(ai_gross_equiv, sf_gross),
+                message=(f"GROSS RENT MISMATCH — AI ${ai_gross_equiv:,.2f} "
+                         f"(tenant ${ai_tenant:,.2f} + utility ${ai_ua:,.2f}) "
+                         f"vs MuleSoft ${sf_gross:,.2f}"),
+            ))
 
     return findings, {
         "agreements": agreements,
@@ -1692,6 +1763,26 @@ def compare(extraction: dict, sf_data: dict) -> ComparisonResult:
     comparison_findings = (
         member_findings + income_findings + asset_findings + cert_findings
     )
+
+    # IR packets deliberately contain only the change documents. When low
+    # extraction quality disables ir_scoped mode, the comparison runs
+    # against MuleSoft's FULL case record — everything not in the interim
+    # packet then surfaces as "AI may have missed X". Those are expected
+    # absences, not audit signal; keep them visible but out of the
+    # analyst's action buckets. (AI-only findings keep their severity:
+    # something in the packet that MuleSoft lacks IS change-related.)
+    if str(cert_type).upper() == "IR" and not ir_scoped:
+        for f in comparison_findings:
+            if (
+                f.category in (IDP_MISSED_MEMBER, IDP_MISSED_INCOME, IDP_MISSED_ASSET)
+                and f.severity in ("high", "medium")
+            ):
+                f.severity = "low"
+                f.message += (
+                    " (interim packet compared against full case record — "
+                    "verify only if related to the interim change)"
+                )
+
     findings = comparison_findings + idp_findings
     confidence = _calculate_confidence(
         extraction, member_stats, income_stats, asset_stats, cert_stats,

@@ -542,6 +542,15 @@ def _post_group_split(
                 r"[Ee]ffective\s*(?:[Dd]ate)?[:\s]*(\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4})",
                 r"[Cc]ertification\s*[Dd]ate[:\s]*(\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4})",
                 r"[Ee]ffective\s*[Dd]ate[:\s]*(\d{4}[/\-]\d{1,2}[/\-]\d{1,2})",
+                # Table-linearized fallback: OCR flattens form tables
+                # row-major, so labels and values separate ("12. Effective
+                # Date 13. Anticipated Voucher Date 14. Next Recert Date
+                # 08/01/2025 10/01/2025 ..."). The FIRST full date within
+                # a short window after the label is the effective date,
+                # because values appear in the same order as their labels.
+                # The window must be able to cross other field NUMBERS
+                # ("13.", "14.") — only a complete date pattern stops it.
+                r"[Ee]ffective\s*[Dd]ate[\s\S]{0,80}?(\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4})",
             ]:
                 m = re.search(pat, clean)
                 if m:
@@ -549,10 +558,20 @@ def _post_group_split(
                     break
 
             income_total = None
+            # Amounts must look like real dollar figures (4+ digit chars or
+            # cents) — a bare short number is more likely the NEXT field's
+            # label number ("Total Annual Income 87. Low Income Limit")
+            # than a household income, and a wrongly-captured value here
+            # causes false previous-cert splits.
             for pat in [
-                r"(?:86\.?\s*)?Total\s*(?:Annual\s*)?Income[:\s]*\$?\s*([\d,]+\.?\d*)",
-                r"TOTAL\s*INCOME\s*\(E\)[:\s]*\$?\s*([\d,]+\.?\d*)",
+                r"(?:86\.?\s*)?Total\s*(?:Annual\s*)?Income[:\s]*\$?\s*([\d,]{4,}(?:\.\d{2})?|\d+\.\d{2})",
+                r"TOTAL\s*INCOME\s*\(E\)[:\s]*\$?\s*([\d,]{4,}(?:\.\d{2})?|\d+\.\d{2})",
                 r"Total\s*Income[:\s]*\$\s*([\d,]+\.\d{2})",
+                # Table-linearized fallback (see effective-date comment).
+                # The amount must look like a real dollar figure (4+ digit
+                # chars or cents) so an intervening field number ("87.")
+                # can never be captured; fails safe to None otherwise.
+                r"Total\s*Annual\s*Income[^0-9]{0,40}?([\d,]{4,}(?:\.\d{2})?|\d+\.\d{2})",
             ]:
                 m = re.search(pat, clean, re.IGNORECASE)
                 if m:

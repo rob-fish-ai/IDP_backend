@@ -467,6 +467,18 @@ _AR_SC_NA_FIELDS = {
     "type_of_VOI", "dateReceived",
 }
 
+# Terminated employment: the record documents that income STOPPED, so
+# ongoing-pay fields are definitionally absent — a termination VOE with
+# no rate/hours/YTD is the expected state, not an extraction gap.
+# terminationDate is deliberately NOT here: that field IS expected on a
+# terminated record (the "Terminated but no termination date" rule fires).
+_TERMINATED_NA_FIELDS = {
+    "rateOfPay", "frequencyOfPay", "hoursPerPayPeriod",
+    "overtimeRate", "overtimeFrequency",
+    "ytdAmount", "ytdStartDate", "ytdEndDate",
+    "hireDate",
+}
+
 
 def score_business_rules(
     cards: list[RecordScoreCard],
@@ -502,10 +514,17 @@ def _score_income_rules(card: RecordScoreCard, cert_type: str | None) -> None:
     # records aren't excused — a Social Security row with no benefit figure is
     # still a real gap. When an amount IS present (in any field), a null
     # selfDeclaredAmount is not a gap, so mark it N/A instead of false-RED.
+    is_terminated = "terminated" in (vals.get("employmentStatus") or "").lower()
     if any(vals.get(f) for f in _INCOME_AMOUNT_FIELDS):
         for fs in card.fields:
             if fs.field_name == "selfDeclaredAmount" and fs.value is None:
                 fs.mark_na("Amount captured in another field")
+    elif is_terminated:
+        # A termination record with no amount documents that income
+        # stopped — that IS its content, not a gap.
+        for fs in card.fields:
+            if fs.field_name == "selfDeclaredAmount" and fs.value is None:
+                fs.mark_na("Terminated employment — no ongoing amount expected")
     else:
         update_field_score(
             card, "selfDeclaredAmount", stage="business_rule", score=0.0,
@@ -533,6 +552,16 @@ def _score_income_rules(card: RecordScoreCard, cert_type: str | None) -> None:
         for fs in card.fields:
             if fs.field_name in _AR_SC_NA_FIELDS and fs.value is None:
                 fs.mark_na("Not applicable for AR-SC (TIC is source of truth)")
+
+    # Terminated employment: ongoing-pay fields are expected-null (see
+    # _TERMINATED_NA_FIELDS). Without this, one termination VOE produces
+    # 8 RED findings and drags the extraction score low enough to disable
+    # IR scoping — exactly on the packets whose whole point is the
+    # termination.
+    if is_terminated:
+        for fs in card.fields:
+            if fs.field_name in _TERMINATED_NA_FIELDS and fs.value is None:
+                fs.mark_na("Terminated employment — ongoing pay fields not applicable")
 
     income_type = (vals.get("incomeType") or "").lower()
 
