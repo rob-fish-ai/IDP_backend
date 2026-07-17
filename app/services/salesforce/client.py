@@ -3,6 +3,7 @@
 Reads case context, audit data, and PDF attachments. Writes audit findings
 back to the Case via update_case_findings (Long Text Area field).
 """
+import calendar
 import io
 import logging
 import re
@@ -372,7 +373,19 @@ class SalesforceClient:
         threshold = self._settings.min_pdf_pages
         with fitz.open(stream=io.BytesIO(pdf_bytes), filetype="pdf") as doc:
             page_count = doc.page_count
+            first_page_text = doc[0].get_text().lower() if page_count else ""
         if page_count < threshold:
+            # Digital PDFs carry embedded text — check it against the
+            # denylist so a review report uploaded under a neutral title
+            # ("...AR-Correction...") is named for what it is instead of
+            # just "too short". Scanned PDFs (no embedded text) skip this.
+            for token in self._PDF_TITLE_DENYLIST:
+                if token in first_page_text:
+                    raise ValueError(
+                        f"Not a source packet: document content matches "
+                        f"denylisted class ('{token}' in page text) "
+                        f"(title: {title or '?'})"
+                    )
             raise ValueError(
                 f"PDF too short to be a source packet: {page_count} page(s) "
                 f"< minimum {threshold} (title: {title or '?'})"
@@ -404,6 +417,40 @@ class SalesforceClient:
         if not result:
             return None
         return result[0]
+
+    def newest_pdf_created_at(self, case_id: str) -> float | None:
+        """Epoch of the most recently created PDF on a Case; None if none.
+
+        Used by the failed-case revisit sweep to detect documents that
+        arrived after an audit failed for lack of a source packet.
+        """
+        case_id_s = _escape_soql(case_id)
+        recs = self.sf.query(f"""
+            SELECT ContentDocument.CreatedDate
+            FROM ContentDocumentLink
+            WHERE LinkedEntityId = '{case_id_s}'
+              AND ContentDocument.FileExtension = 'pdf'
+            ORDER BY ContentDocument.CreatedDate DESC
+            LIMIT 1
+        """).get("records", [])
+        if not recs:
+            return None
+        raw = (recs[0].get("ContentDocument") or {}).get("CreatedDate") or ""
+        try:
+            # Salesforce format: 2026-07-16T17:13:00.000+0000 (UTC)
+            return float(calendar.timegm(time.strptime(raw[:19], "%Y-%m-%dT%H:%M:%S")))
+        except ValueError:
+            return None
+
+    def reset_audit_complete(self, case_id: str) -> None:
+        """Flip IDP_Audit_Complete__c back to False so the poller re-fetches
+        the case — used when new documents arrive after a failed audit."""
+        result = self.sf.Case.update(case_id, {"IDP_Audit_Complete__c": False})
+        if isinstance(result, int) and result >= 400:
+            raise RuntimeError(
+                f"reset_audit_complete returned {result} for {case_id}"
+            )
+        logger.info("Reset IDP_Audit_Complete=false on Case %s", case_id)
 
     def update_case_findings(self, case_id: str, findings_text: str) -> None:
         """Write findings to Case.IDP_Testing_Results__c and flip

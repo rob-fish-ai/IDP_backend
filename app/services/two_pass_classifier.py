@@ -17,6 +17,7 @@ import logging
 import re
 
 from app.core.config import Settings
+from app.core.exceptions import ClassificationUnavailableError
 from app.schemas.extraction import ClassificationResult, DocumentGroup, PageClassification
 from app.services.llm_service import call_llm_json
 from app.services.text_sanitizer import sanitize_for_extraction, strip_html
@@ -192,6 +193,8 @@ CANONICAL DOCUMENT TYPES (use these exact names):
 
   IGNORE — not processed:
     - Income Calculation Worksheet           (INTERNAL staff calc sheet ONLY)
+    - Certification Review                   (reviewer/auditor findings & correction reports)
+    - Receipt / Purchase Documentation       (retail receipts, order summaries, billing receipts)
     - File Order Form
     - Blank Page
     - Blank Form
@@ -230,6 +233,17 @@ CRITICAL CLASSIFICATION RULES:
 
 - "Correspondence" means letters, emails, notices — NOT any form containing
   legal or boilerplate language.
+
+- A document titled/headed "CERTIFICATION REVIEW" listing review findings,
+  corrections needed, or a review status (Approved/Rejected) is a REVIEWER'S
+  REPORT about a cert, not a cert = "Certification Review", ignore. Never
+  extract data from it.
+
+- Retail receipts, online order summaries (Amazon, etc.), credit-card
+  transaction printouts, and medical/pharmacy billing receipts =
+  "Receipt / Purchase Documentation", ignore. They are expense evidence,
+  NOT bank statements — do NOT classify them as "Bank Statement" just
+  because they show dollar amounts or a card number.
 
 - A DISABILITY BENEFIT letter from an insurance company (Unum, MetLife,
   Aetna, The Hartford, ...) stating a monthly LTD/STD benefit amount =
@@ -322,9 +336,15 @@ def _llm_classify_and_group(
             model=settings.llm_classify_model,
         )
         return result.get("groups", [])
-    except Exception:
+    except Exception as exc:
         logger.exception("LLM classify+group call failed")
-        return None
+        # Do NOT fall back to Unknown singletons: with zero classified
+        # pages the pipeline produces a confident-looking garbage audit
+        # and marks the case complete in Salesforce. Surface the failure
+        # as retryable so the case is re-processed on a later cycle.
+        raise ClassificationUnavailableError(
+            f"Classification LLM call failed — {type(exc).__name__}: {exc}"
+        ) from exc
 
 
 # ---------------------------------------------------------------------------

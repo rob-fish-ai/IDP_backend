@@ -24,6 +24,7 @@ from app.core.dependencies import get_settings
 from app.services.audit.job_store import EXTRACTED, get_job_store
 from app.services.audit.jobs import (
     retention_sweep,
+    revisit_failed_cases,
     run_comparison,
     run_extraction,
     watchdog_sweep,
@@ -295,6 +296,7 @@ def _run_maintenance_loop(stop_event: threading.Event) -> None:
         try:
             retention_sweep(settings)
             watchdog_sweep(settings)
+            revisit_failed_cases(settings)
         except Exception:
             logger.exception("Maintenance sweep failed — will retry next interval")
         if stop_event.wait(interval):

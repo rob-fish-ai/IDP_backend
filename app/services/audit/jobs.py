@@ -16,6 +16,7 @@ from datetime import date
 
 from app.core.config import Settings
 from app.core.dependencies import get_settings
+from app.core.exceptions import ClassificationUnavailableError
 from app.services.audit.comparator import compare
 from app.services.audit.formatter import format_findings
 from app.services.audit.job_store import (
@@ -67,6 +68,14 @@ def _is_retryable_error(exc: BaseException) -> bool:
     since some 400s carry billing/throttling info despite the strict type.
     """
     msg = str(exc).lower()
+
+    # Total classification failure: without classified pages the pipeline
+    # can only produce a garbage audit, and the cause is an LLM call that
+    # failed (transient far more often than not). Always retry under the
+    # shared budget; a persistent failure caps out and finalizes with the
+    # accurate error message.
+    if isinstance(exc, ClassificationUnavailableError):
+        return True
 
     # Anthropic SDK typed exceptions — most precise signal
     try:
@@ -156,6 +165,68 @@ def _finalize_case(
 # died (deploy mid-extraction, OOM, etc.) — we need to either retry it
 # or surface it as failed.
 _WEDGE_PRONE_STATES: tuple[str, ...] = (EXTRACTING, EXTRACTED, COMPARING)
+
+
+# Error fingerprints of "the case had no processable packet" failures —
+# the class that can heal itself when documents arrive later.
+_NO_SOURCE_PDF_MARKERS = ("No usable source PDF", "No source PDF attachment")
+
+
+def revisit_failed_cases(settings: Settings) -> int:
+    """Re-queue extraction_failed cases whose attachments changed since.
+
+    Correction rounds attach the reviewer's rejection report first; the
+    corrected packet arrives days later. By then the failure marker has
+    flipped IDP_Audit_Complete__c=True, so the poller never re-fetches the
+    case and the late-arriving packet would silently never be audited.
+
+    For each no-source-PDF failure, check whether a NEW PDF was attached
+    after the failure; if so, flip the Salesforce flag back and reset the
+    local row — the next poll cycle picks the case up normally.
+
+    Converges naturally: a re-queued case that fails again gets a fresh
+    updated_at newer than the attachment, so it won't re-trigger until
+    ANOTHER document arrives. Retention deletes failed rows after
+    audit_retention_days, which bounds how long any case is revisited.
+    """
+    store = get_job_store(settings.audit_job_db)
+    failed = [
+        row for row in store.list_by_state(EXTRACTION_FAILED)
+        if any(m in (row.get("error") or "") for m in _NO_SOURCE_PDF_MARKERS)
+    ]
+    if not failed:
+        return 0
+
+    sf = get_salesforce_client(settings)
+    requeued = 0
+    for row in failed:
+        case_id = row["case_id"]
+        case_number = row.get("case_number") or case_id
+        failed_at = float(row.get("updated_at") or 0)
+        try:
+            newest = sf.newest_pdf_created_at(case_id)
+        except Exception:
+            logger.exception(
+                "Revisit sweep: attachment check failed for %s", case_number,
+            )
+            continue
+        if newest is None or newest <= failed_at:
+            continue
+        try:
+            sf.reset_audit_complete(case_id)
+        except Exception:
+            logger.exception(
+                "Revisit sweep: could not reset IDP_Audit_Complete for %s",
+                case_number,
+            )
+            continue
+        store.reset_to_pending(case_id)
+        requeued += 1
+        logger.info(
+            "Revisit sweep: new PDF attached to case=%s after failed audit "
+            "— re-queued for the next poll cycle", case_number,
+        )
+    return requeued
 
 
 def retention_sweep(settings: Settings) -> int:

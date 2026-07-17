@@ -21,6 +21,19 @@ class ProcessingError(IDPBaseError):
     """Raised when PDF/image processing fails."""
 
 
+class ClassificationUnavailableError(ProcessingError):
+    """Raised when the classification LLM call fails outright.
+
+    Without classification NOTHING downstream can work — every page would
+    be 'Unknown', extraction would see zero documents, and the pipeline
+    would emit a confident-looking garbage audit (observed: 7% RED with
+    48 per-page noise findings written to Salesforce as a real verdict).
+    This error is classified retryable, so the case stays unprocessed and
+    the next poll cycle retries — a transient API blip costs a minute,
+    not a false audit.
+    """
+
+
 # ---------- HTTP error mapping ----------
 
 _STATUS_MAP: dict[type[IDPBaseError], int] = {

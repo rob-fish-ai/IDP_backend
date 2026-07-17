@@ -396,9 +396,14 @@ def run_extraction_pipeline(
             g.document_type for g in document_groups
             if g.category != "ignore" and g.document_type != "Unknown"
         })
+        # Only relocate the section-6 compliance-form findings this dedup
+        # was built for. A substring match ("missing required"/"not found")
+        # silently swallowed the "Missing required certification form"
+        # headline into a field the findings text never renders — the one
+        # finding that explains every derivative RED on a no-cert packet.
         missing_forms = [
             f for f in findings
-            if "missing required" in f.lower() or "not found" in f.lower()
+            if f.startswith("Missing required compliance document")
         ]
         certification_info.formsPresent = sorted(forms_present)
         certification_info.missingForms = missing_forms
