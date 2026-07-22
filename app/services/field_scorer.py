@@ -563,6 +563,19 @@ def _score_income_rules(card: RecordScoreCard, cert_type: str | None) -> None:
             if fs.field_name in _TERMINATED_NA_FIELDS and fs.value is None:
                 fs.mark_na("Terminated employment — ongoing pay fields not applicable")
 
+    # Self-certified income: when the record's ONLY amount basis is
+    # selfDeclaredAmount, wage-verification fields (rate/hours/YTD) don't
+    # exist by design — a self-cert annual figure IS the whole disclosure.
+    # Keyed on the record's basis, not the cert-type label: 421-A-style
+    # self-cert recerts arrive labeled plain "AR", so the AR-SC exemption
+    # never fires and a perfect-agreement packet scores 14 false REDs.
+    if vals.get("selfDeclaredAmount") and not any(
+        vals.get(f) for f in ("rateOfPay", "ytdAmount", "overtimeRate")
+    ):
+        for fs in card.fields:
+            if fs.field_name in _AR_SC_NA_FIELDS and fs.value is None:
+                fs.mark_na("Self-declared income — wage verification fields not applicable")
+
     income_type = (vals.get("incomeType") or "").lower()
 
     # Mark N/A fields for fixed-income types
@@ -655,6 +668,19 @@ def _score_income_rules(card: RecordScoreCard, cert_type: str | None) -> None:
 
 def _score_asset_rules(card: RecordScoreCard) -> None:
     vals = {f.field_name: f.value for f in card.fields}
+
+    # Self-certified assets store the amount in selfDeclaredAmount, not
+    # currentBalance — the comparator already reads both (mirroring
+    # _ai_asset_balance); the scorer must too, or a fully-captured
+    # self-cert asset gets a false RED on the empty sibling field.
+    # Self-certifications also don't itemize per-asset income, so
+    # incomeAmount is expected-null there.
+    if vals.get("selfDeclaredAmount") and not vals.get("currentBalance"):
+        for fs in card.fields:
+            if fs.field_name == "currentBalance" and fs.value is None:
+                fs.mark_na("Balance captured in selfDeclaredAmount")
+            if fs.field_name == "incomeAmount" and fs.value is None:
+                fs.mark_na("Self-declared asset — per-asset income not itemized")
 
     # currentBalance: numeric >= 0
     balance = vals.get("currentBalance")

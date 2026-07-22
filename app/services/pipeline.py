@@ -196,6 +196,27 @@ def run_extraction_pipeline(
     if certification_info:
         _supplement_cert_info_from_rent_change(certification_info, document_groups)
 
+    # Vision-verify "not signed": handwriting never survives OCR, so a
+    # text-level isSigned=No is unreliable (wet-signed and blank forms
+    # look identical in text). One targeted vision call settles it and
+    # also detects draft watermarks ("not a final document").
+    draft_watermark = False
+    if certification_info and certification_info.isSigned == "No":
+        verdict = _verify_cert_signature_vision(cert_groups, page_texts, settings)
+        if verdict:
+            if verdict["signed"]:
+                logger.info(
+                    "Vision found signatures on cert page %s — overriding "
+                    "text-level isSigned=No", verdict["page"],
+                )
+                certification_info.isSigned = "Yes"
+            draft_watermark = verdict["draft_watermark"]
+            if draft_watermark:
+                logger.info(
+                    "Vision detected draft watermark on cert page %s",
+                    verdict["page"],
+                )
+
     # Income
     income = _llm_fallback(
         "Income", extract_income,
@@ -389,6 +410,12 @@ def run_extraction_pipeline(
         previous_certification=previous_certification,
     )
     findings.extend(name_findings)
+    if draft_watermark:
+        findings.append(
+            "Certification form is a watermarked DRAFT ('not a final "
+            "document') — signed final version required; resubmission "
+            "required per Section 11"
+        )
 
     # Step 5b: Populate compliance tracking on certification_info
     if certification_info:
@@ -592,6 +619,81 @@ def _link_questionnaire_to_income(
                 employmentStatus="Flagged — disclosed on questionnaire but no VOI/paystub found",
             )
             vi_entries.append(stub)
+
+
+_SIGNATURE_VISION_PROMPT = """\
+You are inspecting a housing certification form page for signatures.
+
+Look at the Signature / Tenant Signatures / Owner-Agent Signature areas.
+- A signature counts if there is ANY handwritten signature (cursive ink
+  marks), signed name, or electronic-signature stamp on or near a
+  signature line. A typed label "Signature" next to an EMPTY line does
+  NOT count.
+- Also check whether the page carries a diagonal draft watermark such as
+  "This is Not a Final Document" / "watermark will be removed upon
+  completion".
+
+Return STRICT JSON only:
+{"signed": true/false, "draft_watermark": true/false, "evidence": "<one short sentence>"}"""
+
+
+def _verify_cert_signature_vision(cert_groups, page_texts, settings) -> dict | None:
+    """Vision-verify a text-level isSigned=No on the cert form.
+
+    OCR cannot see handwriting: a wet-signed TIC and a blank one both OCR
+    to empty signature cells, so text-based isSigned=No is a coin flip
+    (measured: fires on 82% of cases with zero correlation to human
+    reviewer rejections). Only the page image can tell. Checks the cert
+    group's signature pages (pages whose text mentions 'signature',
+    falling back to the group's last page).
+
+    Returns {"signed": bool, "draft_watermark": bool, "page": int} or
+    None when no page could be checked (missing images, vision failure)
+    — callers keep the text-based verdict in that case.
+    """
+    from app.services.llm_service import call_llm_vision_json
+
+    group = next(
+        (g for g in cert_groups
+         if "(previous)" not in g.document_type.lower()
+         and any(m in g.document_type.lower()
+                 for m in ("50059", "tenant income certification", "(tic)", "3560"))),
+        None,
+    )
+    if not group:
+        return None
+    paths = {pt["page"]: pt.get("image_path") for pt in page_texts}
+    texts = {pt["page"]: (pt.get("text") or "").lower() for pt in page_texts}
+    sig_pages = [p for p in group.pages if "signature" in texts.get(p, "")]
+    if not sig_pages:
+        sig_pages = [group.pages[-1]]
+    signed = watermark = False
+    checked = 0
+    best_page = None
+    for pn in sig_pages[:2]:
+        img = paths.get(pn)
+        if not img:
+            continue
+        try:
+            verdict = call_llm_vision_json(
+                _SIGNATURE_VISION_PROMPT,
+                f"Inspect this certification form page (packet page {pn}).",
+                [str(img)], settings,
+            )
+        except Exception:
+            logger.exception("Signature vision check failed for page %d", pn)
+            continue
+        checked += 1
+        if verdict.get("signed") and not signed:
+            signed = True
+            best_page = pn
+        if verdict.get("draft_watermark"):
+            watermark = True
+            best_page = best_page or pn
+    if not checked:
+        return None
+    return {"signed": signed, "draft_watermark": watermark,
+            "page": best_page or sig_pages[0]}
 
 
 def _supplement_cert_info_from_rent_change(

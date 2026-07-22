@@ -708,12 +708,24 @@ def _compare_income(
     # matching entirely. When the same member ALSO has real income rows,
     # the declaration is contradictory upstream data worth a note, not a
     # "missed income source" finding against the AI.
+    def _is_zero_income_key(k: tuple, rows: list[dict]) -> bool:
+        # Detect by key OR by the rows' income type: extraction sometimes
+        # puts the affiant's own name in sourceName ("William Smith paid
+        # by William Smith"), which evades a source-only check and turns
+        # the declaration into a false missing-source CRITICAL.
+        if k[0] == "zero income":
+            return True
+        return any(
+            _norm(r.get("incomeType") or r.get("Income_Type__c")) == "zero income"
+            for r in rows
+        )
+
     members_with_real_income = {
         k[1] for k, group in sf_keys.items()
-        if k[0] and k[0] != "zero income"
+        if k[0] and not _is_zero_income_key(k, group)
         and any((_money(r.get("Gross_Member_Income__c")) or 0) > 0 for r in group)
     } | {k[1] for k, amt in ai_annual.items() if amt and amt > 0}
-    for k in [k for k in sf_keys if k[0] == "zero income"]:
+    for k in [k for k in sf_keys if _is_zero_income_key(k, sf_keys[k])]:
         del sf_keys[k]
         if k[1] in members_with_real_income:
             findings.append(Finding(
@@ -755,7 +767,13 @@ def _compare_income(
     # declaring member, that contradiction IS the audit finding — a
     # member who signed an affidavit saying no income while MuleSoft
     # holds income records needs analyst verification.
-    ai_zero_keys = {k for k in ai_keys if k[0] == "zero income"}
+    ai_rows_by_key: dict[tuple, list[dict]] = {}
+    for rec in ai_income:
+        ai_rows_by_key.setdefault(_income_key(rec), []).append(rec)
+    ai_zero_keys = {
+        k for k in ai_keys
+        if _is_zero_income_key(k, ai_rows_by_key.get(k, []))
+    }
     if ai_zero_keys:
         sf_member_totals: dict[str, float] = {}
         for k, group in sf_keys.items():
@@ -997,6 +1015,22 @@ def _compare_income(
     for cluster in sf_only_clusters:
         rep = cluster[0]
         member = rep[1] or "household"
+        # Zero-materiality: a MuleSoft-only source whose amount is $0.00
+        # (or unknown) changes nothing if missed — keep it visible as a
+        # note, not an analyst action item.
+        cluster_amount = max(
+            (_sf_group_amount(sf_keys[k]) or 0) for k in cluster
+        )
+        if cluster_amount <= 0:
+            findings.append(Finding(
+                category=IDP_MISSED_INCOME,
+                severity="info",
+                message=(
+                    f"AI may have missed income source — '{rep[0]}' for "
+                    f"{member} (MuleSoft amount is $0.00 — no materiality)"
+                ),
+            ))
+            continue
         if ir_scoped:
             sev = "info"
             msg = (
@@ -1151,6 +1185,53 @@ def _compare_assets(
                     f"({group[0].get('Account_Type__c')}) appears {len(group)} times"
                 ),
             ))
+
+    # Collapse ambiguous-row double extraction: self-cert forms have a
+    # combined "Checking/Savings $X" line that the LLM sometimes emits as
+    # BOTH a Checking and a Savings record with the identical balance and
+    # no account number / source. One real account, two records — the
+    # unmatched twin then becomes a phantom "MuleSoft missing asset".
+    _SIBLING_TYPES = {"checking", "savings"}
+    sf_type_bals = {
+        (k2[1], round(_sf_asset_balance(grp[0]) or -1, 2))
+        for k2, grp in sf_keys.items()
+    }
+    deduped_ai: list[dict] = []
+    seen_sibling: dict[tuple, dict] = {}
+    for a in ai_assets:
+        atype = _norm(a.get("accountType"))
+        bal = _ai_asset_balance(a)
+        if (
+            atype in _SIBLING_TYPES and bal and bal > 0
+            and not (a.get("accountNumber") or "").strip()
+            and not (a.get("sourceName") or "").strip()
+        ):
+            sib_key = (_norm(a.get("assetOwner")), round(bal, 2))
+            if sib_key in seen_sibling:
+                kept = seen_sibling[sib_key]
+                kept_type = _norm(kept.get("accountType"))
+                # Keep whichever twin MuleSoft corroborates (same type +
+                # balance on the SF side) so the collapse preserves the
+                # real match instead of the phantom.
+                if (
+                    (atype, round(bal, 2)) in sf_type_bals
+                    and (kept_type, round(bal, 2)) not in sf_type_bals
+                ):
+                    deduped_ai[deduped_ai.index(kept)] = a
+                    seen_sibling[sib_key] = a
+                findings.append(Finding(
+                    category=EXTRACTION_NOTE,
+                    severity="info",
+                    message=(
+                        f"Collapsed duplicate extraction: Checking/Savings "
+                        f"with identical balance ${bal:,.2f} read as two "
+                        f"accounts — treated as one"
+                    ),
+                ))
+                continue
+            seen_sibling[sib_key] = a
+        deduped_ai.append(a)
+    ai_assets = deduped_ai
 
     ai_keys = {_asset_key(a): a for a in ai_assets}
     matched = ai_keys.keys() & set(sf_keys.keys())
@@ -1307,7 +1388,8 @@ def _compare_assets(
             category=MISSING_ASSET,
             severity=severity,
             message=(
-                f"MuleSoft missing asset — '{rec.get('sourceName')}' "
+                f"MuleSoft missing asset — "
+                f"'{rec.get('sourceName') or '(unnamed)'}' "
                 f"({rec.get('accountType')}) ${bal or 0:,.2f}"
             ),
         ))
@@ -1372,6 +1454,23 @@ def _norm_unit(v: Any) -> str:
         return ""
     tokens = [t for t in re.split(r"[\s\-#/]+", raw) if t]
     return tokens[-1] if tokens else raw
+
+
+def _unit_keys(v: Any) -> set[str]:
+    """Candidate canonical forms of a unit number.
+
+    Units match when ANY form matches, covering both conventions:
+      - punctuation-joined: '211-A' ≡ '211A'  (last-token would yield 'a')
+      - prefix-stripped last token: 'Bldg 2 Unit 27' ≡ '27', '1-408' ≡ '408'
+    """
+    raw = _norm(v)
+    if not raw:
+        return set()
+    keys = {re.sub(r"[^a-z0-9]", "", raw)}
+    last = _norm_unit(raw)
+    if last:
+        keys.add(last)
+    return {k for k in keys if k}
 
 
 # Document types that count as THE certification form. "(Previous)"
@@ -1443,11 +1542,11 @@ def _compare_certification(
             message=f"CERT TYPE MISMATCH — AI '{ai_ct.upper()}' vs MuleSoft '{sf_ct.upper()}'",
         ))
 
-    # --- Unit number (prefix-normalized) ---
-    ai_unit = _norm_unit(ai_cert.get("unitNumber"))
-    sf_unit = _norm_unit(sf_review.get("Unit_Number__c"))
+    # --- Unit number (prefix- and punctuation-normalized) ---
+    ai_unit = _unit_keys(ai_cert.get("unitNumber"))
+    sf_unit = _unit_keys(sf_review.get("Unit_Number__c"))
     if ai_unit and sf_unit:
-        _emit(ai_unit == sf_unit, Finding(
+        _emit(bool(ai_unit & sf_unit), Finding(
             category=VALUE_MISMATCH, severity="low",
             message=(f"UNIT NUMBER MISMATCH — AI '{ai_cert.get('unitNumber')}' "
                      f"vs MuleSoft '{sf_review.get('Unit_Number__c')}'"),

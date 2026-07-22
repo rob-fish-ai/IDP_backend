@@ -73,22 +73,38 @@ def validate_signatures(
         if not cit_docs:
             # Also check alternate names
             cit_docs = by_type.get("Citizenship Declaration", [])
-        signed_count = sum(1 for d in cit_docs if d.isSigned == "Yes")
-        if member_count > 0 and signed_count < member_count:
+        # Form absent entirely = hard compliance gap. Form present but
+        # "unsigned" = unverifiable, not proven-missing: handwritten
+        # signatures never survive OCR, so text-level signed-counts fired
+        # on 99% of cases with zero correlation to reviewer rejections.
+        if member_count > 0 and not cit_docs:
             findings.append(
-                f"Citizenship Declaration (Section 214): {signed_count} signed of "
-                f"{member_count} required (one per household member) — Section 11"
+                "Missing required compliance document: Citizenship "
+                "Declaration (Section 214) — one per household member "
+                "(Section 11)"
+            )
+        elif member_count > 0 and sum(1 for d in cit_docs if d.isSigned == "Yes") < member_count:
+            findings.append(
+                "Citizenship Declaration (Section 214) present but "
+                "signatures could not be verified from document text "
+                "(handwritten signatures are not machine-readable) — "
+                "verify signatures visually (Section 11)"
             )
 
     # --- 6. Race and Ethnic Data Form: one per member, signed, dated ---
     race_docs = by_type.get("Race and Ethnic Data Reporting Form", [])
     if not race_docs:
         race_docs = by_type.get("Race and Ethnic Data Form", [])
-    signed_count = sum(1 for d in race_docs if d.isSigned == "Yes")
-    if member_count > 0 and signed_count < member_count:
+    if member_count > 0 and not race_docs:
         findings.append(
-            f"Race and Ethnic Data Form: {signed_count} signed of "
-            f"{member_count} required (one per household member) — Section 11"
+            "Missing required compliance document: Race and Ethnic Data "
+            "Form — one per household member (Section 11)"
+        )
+    elif member_count > 0 and sum(1 for d in race_docs if d.isSigned == "Yes") < member_count:
+        findings.append(
+            "Race and Ethnic Data Form present but signatures could not "
+            "be verified from document text (handwritten signatures are "
+            "not machine-readable) — verify signatures visually (Section 11)"
         )
 
     # --- 7. HUD 92006: completed, signed, dated ---

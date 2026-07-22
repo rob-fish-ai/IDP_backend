@@ -190,16 +190,26 @@ def revisit_failed_cases(settings: Settings) -> int:
     audit_retention_days, which bounds how long any case is revisited.
     """
     store = get_job_store(settings.audit_job_db)
-    failed = [
+    candidates = [
         row for row in store.list_by_state(EXTRACTION_FAILED)
         if any(m in (row.get("error") or "") for m in _NO_SOURCE_PDF_MARKERS)
     ]
-    if not failed:
+    # Done-but-unauditable: the audit "completed" but the packet had no
+    # certification form (correction rounds attach the reviewer's report
+    # and support docs before the corrected packet exists). These rows
+    # are terminal with IDP_Audit_Complete=True, so without this branch
+    # the corrected packet arrives to a case that will never re-audit —
+    # it stays frozen at a garbage-input verdict.
+    candidates += [
+        row for row in store.list_by_state(DONE)
+        if "Missing required certification form" in (row.get("findings_text") or "")
+    ]
+    if not candidates:
         return 0
 
     sf = get_salesforce_client(settings)
     requeued = 0
-    for row in failed:
+    for row in candidates:
         case_id = row["case_id"]
         case_number = row.get("case_number") or case_id
         failed_at = float(row.get("updated_at") or 0)
