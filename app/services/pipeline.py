@@ -1067,9 +1067,14 @@ def _extract_previous_cert(document_groups: list) -> PreviousCertification | Non
 
     # Per-source income from employment summary table
     # Pattern: "Name | Employer | Annual salary" (common in RD 3560-8, TIC page 3)
+    # Word counts are bounded and the name/employer groups cannot absorb
+    # whitespace runs: lazy whitespace-inclusive groups here backtrack in
+    # O(n^3) on OCR text with no decimal amounts, holding the GIL for hours.
     income_sources: list[PreviousCertIncomeSource] = []
     for m in re.finditer(
-        r"([A-Z][a-z][\w\s-]+?)\s+([A-Z][\w\s&]+?)\s+([\d,]+\.\d{2})\s+",
+        r"([A-Z][a-z][\w.'-]*(?:[ \t][\w.'-]+){0,4}?)[ \t]+"
+        r"([A-Z][\w&.'-]*(?:[ \t][\w&.'-]+){0,5}?)[ \t]+"
+        r"\$?([\d,]+\.\d{2})(?=\s|$)",
         clean,
     ):
         name = m.group(1).strip()
