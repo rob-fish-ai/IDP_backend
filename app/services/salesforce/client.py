@@ -332,11 +332,12 @@ class SalesforceClient:
         )
 
     def _download_merged_parts(
-        self, group: list[dict], case_id: str,
+        self, group: list[dict], case_id: str, *, check_pages: bool = True,
     ) -> tuple[bytes, str]:
         """Download a packet-part group and merge into one PDF, in part
         order. The min-pages gate applies to the merged whole — each part
-        alone may legitimately be below it. Returns (bytes, cd_id of the
+        alone may legitimately be below it (pass check_pages=False when the
+        caller gates the final merge itself). Returns (bytes, cd_id of the
         first part)."""
         parts = sorted(group, key=lambda c: c["part_no"])
         nums = [c["part_no"] for c in parts]
@@ -357,7 +358,8 @@ class SalesforceClient:
         finally:
             merged.close()
         titles = " + ".join(c["title"] for c in parts)
-        self._check_min_pages(merged_bytes, titles)
+        if check_pages:
+            self._check_min_pages(merged_bytes, titles)
         logger.info(
             "Merged %d-part packet for case %s (%d pages): %s",
             len(parts), case_id, page_count, titles,
@@ -497,20 +499,33 @@ class SalesforceClient:
         "review comments",
     )
 
-    def get_pdf_for_case(self, case_id: str) -> tuple[bytes, str]:
-        """Find and download the source PDF for a Case.
+    def get_pdf_for_case(
+        self, case_id: str,
+    ) -> tuple[bytes, str, list[dict]]:
+        """Download and merge ALL source PDFs attached to a Case.
 
-        Strategy when content_document_id wasn't passed in the webhook:
-          1. Query ContentVersion (latest) joined to the case, filtered to
-             FileExtension='pdf' so non-PDF attachments don't waste cycles.
-          2. Order by CreatedDate DESC — the file MuleSoft just processed
-             is overwhelmingly the newest one.
-          3. Skip titles matching the denylist (certification reviews,
-             audit reports, etc.) since those aren't source packets.
-          4. Download the first survivor.
+        A case accumulates documents over the review lifecycle: the original
+        packet, then supplements uploaded after rejections ("Updated
+        Application", clarifications, extra verifications). Picking any
+        single file risks auditing a supplement instead of the packet — so
+        every non-denylisted PDF is merged into one document, newest file
+        first, and classification routes the pages. Duplicate current cert
+        forms from stale resubmissions are demoted downstream using the
+        source-file boundaries returned here (newest-first order means the
+        first cert form seen is the current one).
 
-        This is best-effort; the only authoritative way is for Salesforce
-        to include content_document_id in the webhook payload.
+          1. Query case PDFs, newest first.
+          2. Skip denylisted titles (certification reviews, audit reports)
+             and candidates whose embedded first-page text matches the
+             denylist (a review report under a neutral title).
+          3. Cluster multi-part sets and merge each in part order.
+          4. Merge everything else newest-first, up to
+             settings.max_merged_pages total pages.
+
+        Returns (merged_bytes, primary_cd_id, source_files) where
+        primary_cd_id is the newest included document and source_files is
+        [{"start_page": int, "title": str}, ...] (1-indexed) marking where
+        each source file begins in the merged PDF.
         """
         case_id_s = _escape_soql(case_id)
         links = self.sf.query(f"""
@@ -536,41 +551,103 @@ class SalesforceClient:
                 {"cd_id": link["ContentDocumentId"], "title": title}
             )
 
-        # Cluster multi-part packets. Candidates arrive newest-first, so
-        # groups are tried newest-first too — same precedence as before.
-        for group in _group_packet_parts(candidates):
-            title = group[0]["title"]
-            try:
-                is_part_set = (
-                    len(group) >= 2
-                    and len({c["part_no"] for c in group}) == len(group)
-                )
-                if is_part_set:
-                    pdf_bytes, cd_id = self._download_merged_parts(
-                        group, case_id,
+        page_cap = self._settings.max_merged_pages
+        merged = fitz.open()
+        source_files: list[dict] = []
+        primary_cd_id: str | None = None
+        try:
+            # Cluster multi-part packets. Candidates arrive newest-first,
+            # so files land in the merge newest-first too.
+            for group in _group_packet_parts(candidates):
+                title = group[0]["title"]
+                try:
+                    is_part_set = (
+                        len(group) >= 2
+                        and len({c["part_no"] for c in group}) == len(group)
                     )
-                else:
-                    cd_id = group[0]["cd_id"]
-                    pdf_bytes = self.download_pdf(cd_id)
-                if denylisted or rejected:
+                    if is_part_set:
+                        pdf_bytes, cd_id = self._download_merged_parts(
+                            group, case_id, check_pages=False,
+                        )
+                        title = " + ".join(
+                            c["title"] for c in
+                            sorted(group, key=lambda c: c["part_no"])
+                        )
+                    else:
+                        cd_id = group[0]["cd_id"]
+                        pdf_bytes, _ = self._download_content_version(cd_id)
+                except (ValueError, RuntimeError) as exc:
                     logger.info(
-                        "Picked PDF '%s' for case %s; skipped — "
-                        "denylisted: %s, rejected: %s",
-                        title, case_id, denylisted, rejected,
+                        "Skipped candidate PDF '%s' for case %s: %s",
+                        title, case_id, exc,
                     )
-                return pdf_bytes, cd_id
-            except (ValueError, RuntimeError) as exc:
-                # Not a usable source packet (too short, download failed,
-                # corrupt/non-PDF bytes) — move on to the next candidate.
-                logger.info(
-                    "Skipped candidate PDF '%s' for case %s: %s",
-                    title, case_id, exc,
-                )
-                rejected.append(f"{title}: {exc}")
-                continue
+                    rejected.append(f"{title}: {exc}")
+                    continue
 
-        raise ValueError(
-            f"No usable source PDF found for case {case_id} — "
-            f"{len(denylisted)} denylisted title(s) {denylisted or ''}, "
-            f"{len(rejected)} rejected candidate(s) {rejected or ''}"
+                try:
+                    doc = fitz.open(
+                        stream=io.BytesIO(pdf_bytes), filetype="pdf",
+                    )
+                except Exception as exc:
+                    rejected.append(f"{title}: unreadable PDF ({exc})")
+                    continue
+                with doc:
+                    # Content sniff: a digital review report uploaded under
+                    # a neutral title must not pollute the merge.
+                    first_text = (
+                        doc[0].get_text().lower() if doc.page_count else ""
+                    )
+                    hit = next(
+                        (t for t in self._PDF_TITLE_DENYLIST
+                         if t in first_text), None,
+                    )
+                    if hit:
+                        rejected.append(
+                            f"{title}: content matches denylisted "
+                            f"class ('{hit}' in page text)"
+                        )
+                        continue
+                    if (
+                        source_files
+                        and merged.page_count + doc.page_count > page_cap
+                    ):
+                        rejected.append(
+                            f"{title}: over {page_cap}-page merge cap "
+                            f"({merged.page_count} + {doc.page_count})"
+                        )
+                        continue
+                    source_files.append(
+                        {"start_page": merged.page_count + 1, "title": title}
+                    )
+                    merged.insert_pdf(doc)
+                if primary_cd_id is None:
+                    primary_cd_id = cd_id
+
+            if primary_cd_id is None:
+                raise ValueError(
+                    f"No usable source PDF found for case {case_id} — "
+                    f"{len(denylisted)} denylisted title(s) "
+                    f"{denylisted or ''}, "
+                    f"{len(rejected)} rejected candidate(s) {rejected or ''}"
+                )
+            merged_bytes = merged.tobytes()
+            page_count = merged.page_count
+        finally:
+            merged.close()
+
+        # Min-pages applies to the merged whole: a short supplement rides
+        # along with the packet, but a case whose entire content is below
+        # the gate still can't be a complete packet.
+        self._check_min_pages(
+            merged_bytes, " | ".join(s["title"] for s in source_files),
         )
+        logger.info(
+            "Merged %d source file(s) for case %s (%d pages): %s%s%s",
+            len(source_files), case_id, page_count,
+            ", ".join(
+                f"'{s['title']}' @p{s['start_page']}" for s in source_files
+            ),
+            f"; denylisted: {denylisted}" if denylisted else "",
+            f"; rejected: {rejected}" if rejected else "",
+        )
+        return merged_bytes, primary_cd_id, source_files

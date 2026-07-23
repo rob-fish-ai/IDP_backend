@@ -59,6 +59,7 @@ def run_extraction_pipeline(
     *,
     funding_program: str | None = None,
     certification_type: str | None = None,
+    source_files: list[dict] | None = None,
 ) -> ExtractionResult:
     """Run the full extraction pipeline on OCR results.
 
@@ -99,6 +100,12 @@ def run_extraction_pipeline(
     # Pass 2: LLM correct + group (one call, sees full file context)
     logger.info("Steps 1-2/6: Two-pass classification + grouping")
     classification, document_groups = classify_and_group(page_texts, settings)
+
+    # With all case PDFs merged newest-first, a stale resubmission's cert
+    # form appears further down the page order than the current one —
+    # demote it so extraction never reads superseded numbers.
+    if source_files and len(source_files) > 1:
+        _demote_superseded_cert_groups(document_groups, source_files)
 
     # Step 3: Extract structured data — LLM handles ALL extraction
     # Classification routes documents, LLM reads content and maps to schema.
@@ -1012,6 +1019,56 @@ def _deduplicate_household_members(household) -> list[str]:
 
     return findings
 
+
+
+_CURRENT_CERT_FORM_TYPES = (
+    "HUD 50059", "Tenant Income Certification (TIC)", "HUD 3560 Form",
+)
+
+
+def _source_file_of(page: int, source_files: list[dict]) -> str | None:
+    """Title of the merged-source file a 1-indexed page belongs to."""
+    title = None
+    for sf in sorted(source_files, key=lambda s: s["start_page"]):
+        if page >= sf["start_page"]:
+            title = sf["title"]
+    return title
+
+
+def _demote_superseded_cert_groups(
+    document_groups: list, source_files: list[dict],
+) -> None:
+    """Demote duplicate current cert forms from stale resubmissions.
+
+    Source files are merged newest-first, so for each cert form type the
+    group starting earliest in the merged page order is the current one.
+    A same-type group is demoted only when it starts in a DIFFERENT
+    source file — a duplicate within one file is a classifier split of
+    one physical form (e.g. its signature page), not a resubmission, and
+    is left alone. "(Previous)" groups carry a different document_type
+    and are never touched.
+    """
+    kept: dict[str, tuple[int, str | None]] = {}
+    duplicates = sorted(
+        (g for g in document_groups
+         if g.document_type in _CURRENT_CERT_FORM_TYPES
+         and g.category != "ignore" and g.pages),
+        key=lambda g: min(g.pages),
+    )
+    for g in duplicates:
+        src = _source_file_of(min(g.pages), source_files)
+        if g.document_type not in kept:
+            kept[g.document_type] = (min(g.pages), src)
+            continue
+        kept_page, kept_src = kept[g.document_type]
+        if src != kept_src:
+            logger.info(
+                "Demoting superseded %s at pages %s (file %r) — current "
+                "copy starts at page %d in newer file %r",
+                g.document_type, g.pages, src, kept_page, kept_src,
+            )
+            g.document_type += " (Superseded)"
+            g.category = "ignore"
 
 
 def _extract_previous_cert(document_groups: list) -> PreviousCertification | None:

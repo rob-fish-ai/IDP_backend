@@ -82,6 +82,12 @@ class Settings(BaseSettings):
     # partial upload, or a non-source doc the title denylist missed.
     min_pdf_pages: int = 4
 
+    # Cap on the total page count when merging all of a case's source
+    # PDFs into one packet. Files are merged newest-first; candidates
+    # that would push past the cap are skipped (and logged), so the
+    # newest packet always gets in whole.
+    max_merged_pages: int = 150
+
     # ------------------------------------------------------------------
     # Salesforce integration
     # ------------------------------------------------------------------

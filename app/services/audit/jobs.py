@@ -363,10 +363,11 @@ def run_extraction(case_id: str) -> None:
         # Resolve PDF: prefer the content_document_id from the webhook,
         # fall back to scanning the case for the most recent attachment.
         cd_id = job.get("content_document_id")
+        source_files = None
         if cd_id:
             pdf_bytes = sf.download_pdf(cd_id)
         else:
-            pdf_bytes, cd_id = sf.get_pdf_for_case(case_id)
+            pdf_bytes, cd_id, source_files = sf.get_pdf_for_case(case_id)
             logger.info("Resolved PDF for %s via case scan: %s", case_id, cd_id)
 
         cert_type = job.get("cert_type") or None
@@ -381,6 +382,7 @@ def run_extraction(case_id: str) -> None:
             settings,
             funding_program=funding,
             certification_type=cert_type,
+            source_files=source_files,
         )
 
         # Convert pydantic ExtractionResult to dict for storage

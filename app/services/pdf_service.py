@@ -266,6 +266,7 @@ def process_pdf_full(
     *,
     funding_program: str | None = None,
     certification_type: str | None = None,
+    source_files: list[dict] | None = None,
 ) -> dict:
     """Full pipeline: OCR all pages, then classify, extract, and validate.
 
@@ -300,6 +301,7 @@ def process_pdf_full(
         settings,
         funding_program=funding_program,
         certification_type=certification_type,
+        source_files=source_files,
     )
 
     # Save extraction result for local testing / debugging
