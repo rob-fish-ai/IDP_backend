@@ -744,7 +744,11 @@ def _compare_income(
     for calc in ai_calculations or []:
         # Audit-method rows ([audit] YTD cross-checks) duplicate the
         # primary calculation for the same source — never sum them in.
-        if (calc.get("details") or "").startswith("[audit]"):
+        # [historical] rows are stale EIV/Work Number wage history (job
+        # likely ended) — real for the record, but not current income to
+        # hold against MuleSoft; the pipeline emits a REVIEW finding
+        # naming them instead.
+        if (calc.get("details") or "").startswith(("[audit]", "[historical]")):
             continue
         amt = _money(calc.get("annualIncome"))
         if amt is not None:

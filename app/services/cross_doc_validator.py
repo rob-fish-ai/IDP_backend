@@ -440,6 +440,11 @@ def validate_tic_totals(
     for calc in income_calculations:
         if not calc.annualIncome:
             continue
+        # [audit] rows duplicate a primary method; [historical] rows are
+        # stale EIV/Work Number wage history (job likely ended) — neither
+        # belongs in the current-income total held against the TIC.
+        if (calc.details or "").startswith(("[audit]", "[historical]")):
+            continue
         try:
             val = float(calc.annualIncome)
         except ValueError:

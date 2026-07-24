@@ -107,6 +107,7 @@ class PayStubEntry(BaseModel):
     grossPay: Optional[str] = None
     payDate: Optional[str] = None
     payInterval: Optional[str] = None
+    ytdGross: Optional[str] = None
 
 
 class Address(BaseModel):

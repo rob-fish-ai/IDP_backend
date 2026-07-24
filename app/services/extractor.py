@@ -243,6 +243,9 @@ PAYSTUB FIELDS:
 - grossPay: exact dollar amount with cents, numeric string ("1250.00"), no $ or commas
 - payDate: YYYY-MM-DD
 - payInterval: lowercase (weekly / bi-weekly / semi-monthly / monthly)
+- ytdGross: year-to-date gross on the stub ("YTD Gross", "YTD Earnings"),
+  numeric string, no $ or commas. null if the document shows no YTD figure
+  (EIV/Work Number quarterly rows have none).
 
 SPECIAL PAYSTUB RULES:
 - Work Number/Equifax: take the 6 most current entries only

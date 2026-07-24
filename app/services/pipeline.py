@@ -345,8 +345,19 @@ def run_extraction_pipeline(
         ps_entries = income.sourceIncome.payStub
         ps_map = match_paystubs_to_sources(ps_entries, vi_entries)
 
+        # Effective date anchors the stale-wage guard: EIV / Work Number
+        # wage-history quarters years before the cert must not be
+        # annualized into current income.
+        from app.services.income_calculator import _parse_date as _parse_ic_date
+        reference_date = _parse_ic_date(
+            certification_info.effectiveDate if certification_info else None
+        )
+
         for i, vi in enumerate(vi_entries):
-            results = calculate_all_methods(vi, ps_map.get(i, []), ctx.funding_program)
+            results = calculate_all_methods(
+                vi, ps_map.get(i, []), ctx.funding_program,
+                reference_date=reference_date,
+            )
             income_calculations.extend(results)
 
         # Handle paystubs not matched to any VI entry
@@ -358,7 +369,10 @@ def run_extraction_pipeline(
                 key = (ps.sourceName or "Unknown").lower()
                 by_source.setdefault(key, []).append(ps)
             for source_ps in by_source.values():
-                results = calculate_all_methods(None, source_ps, ctx.funding_program)
+                results = calculate_all_methods(
+                    None, source_ps, ctx.funding_program,
+                    reference_date=reference_date,
+                )
                 income_calculations.extend(results)
 
     # Step 4: Build document inventories (deterministic — no LLM)
@@ -423,6 +437,15 @@ def run_extraction_pipeline(
             "document') — signed final version required; resubmission "
             "required per Section 11"
         )
+    for calc in income_calculations:
+        details = calc.details or ""
+        if details.startswith("[historical]"):
+            note = details[len("[historical] "):].split(";")[0]
+            findings.append(
+                f"Income source '{calc.sourceName}': {note} — excluded "
+                f"from current-income comparison; verify employment "
+                f"status (Section 9)"
+            )
 
     # Step 5b: Populate compliance tracking on certification_info
     if certification_info:

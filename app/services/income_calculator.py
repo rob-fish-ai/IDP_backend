@@ -199,10 +199,42 @@ def calculate_paystub_based(
 # Main orchestrator — compute all applicable methods for one income source
 # ---------------------------------------------------------------------------
 
+# Wage evidence whose newest pay date is older than this (relative to the
+# certification effective date) is treated as historical, not current
+# income: EIV / Work Number reports carry multi-year wage HISTORY tables,
+# and a terminated job's old quarters must not be annualized into today's
+# household income. 15 months tolerates EIV's normal reporting lag.
+_STALE_WAGE_MONTHS = 15
+
+
+def _stale_wage_note(
+    paystubs: list[PayStubEntry], reference_date: date | None,
+) -> str | None:
+    """Note describing why this wage evidence is historical, or None."""
+    if not reference_date:
+        return None
+    dates = [d for d in (_parse_date(ps.payDate) for ps in paystubs) if d]
+    if not dates:
+        return None
+    latest = max(dates)
+    months = (
+        (reference_date.year - latest.year) * 12
+        + reference_date.month - latest.month
+    )
+    if months <= _STALE_WAGE_MONTHS:
+        return None
+    return (
+        f"latest pay date {latest.isoformat()} is {months} months before "
+        f"effective date {reference_date.isoformat()} — wage history "
+        f"appears historical (EIV/Work Number), not current income"
+    )
+
+
 def calculate_all_methods(
     vi_entry: VerificationIncomeEntry | None,
     matching_paystubs: list[PayStubEntry],
     funding_program: str | None = None,
+    reference_date: date | None = None,
 ) -> list[IncomeCalculationResult]:
     """Compute annual income for one source using SOURCE-OF-TRUTH routing.
 
@@ -274,6 +306,9 @@ def calculate_all_methods(
     if primary_method == "paystub-based":
         ps_annual, ps_details = calculate_paystub_based(matching_paystubs)
         if ps_annual:
+            stale = _stale_wage_note(matching_paystubs, reference_date)
+            if stale:
+                ps_details = f"[historical] {stale}; {ps_details}"
             results.append(IncomeCalculationResult(
                 memberName=member_name,
                 sourceName=source_name,
