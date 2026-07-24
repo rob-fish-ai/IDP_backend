@@ -96,6 +96,11 @@ def _close(a: float, b: float, tolerance: float = 0.05) -> bool:
 _MISMATCH_REL_GAP = 0.25       # relative gap (|a-b| / larger) at/above this, AND
 _MISMATCH_ABS_GAP = 1000.0     # absolute gap (dollars) at/above this -> CRITICAL
 
+# One-sided assets below this balance are reported as NOTES, not
+# CRITICAL/REVIEW: their imputed income is cents, and analysts routinely
+# skip entering prepaid cards / near-empty accounts into MuleSoft.
+_ASSET_MATERIALITY_USD = 100.0
+
 
 def _value_mismatch_severity(
     a: float, b: float,
@@ -1379,18 +1384,25 @@ def _compare_assets(
     for k in ai_only_clean:
         rec = ai_keys[k]
         bal = _ai_asset_balance(rec)
-        # A zero-value asset carries nothing material — surface as a NOTE, not
-        # a CRITICAL, so an empty placeholder (e.g. 'Self-Declared Cash $0.00')
-        # doesn't head the analyst's critical list. Unknown balance (None) is
-        # kept as high — it might be material, we just couldn't read it.
-        severity = "info" if bal == 0 else "high"
+        # A trivial-balance asset carries nothing material — prepaid cards
+        # and near-empty accounts that analysts routinely skip entering.
+        # Surface as a NOTE, not a CRITICAL, so a $2.00 prepaid card doesn't
+        # head the analyst's critical list (its imputed income is cents).
+        # Unknown balance (None) is kept as high — it might be material, we
+        # just couldn't read it.
+        immaterial = bal is not None and bal < _ASSET_MATERIALITY_USD
+        severity = "info" if immaterial else "high"
+        suffix = (
+            f" (below ${_ASSET_MATERIALITY_USD:,.0f} materiality)"
+            if immaterial and bal else ""
+        )
         findings.append(Finding(
             category=MISSING_ASSET,
             severity=severity,
             message=(
                 f"MuleSoft missing asset — "
                 f"'{rec.get('sourceName') or '(unnamed)'}' "
-                f"({rec.get('accountType')}) ${bal or 0:,.2f}"
+                f"({rec.get('accountType')}) ${bal or 0:,.2f}{suffix}"
             ),
         ))
 
@@ -1419,11 +1431,17 @@ def _compare_assets(
                 f"is in MuleSoft ({len(cluster)} variant spellings: {variants})"
             )
         else:
-            # Single zero-value MuleSoft asset is immaterial — NOTE, not REVIEW.
-            severity = "info" if rep_bal == 0 else "medium"
+            # A trivial-balance MuleSoft asset is immaterial — NOTE, not REVIEW.
+            immaterial = (
+                rep_bal is not None and rep_bal < _ASSET_MATERIALITY_USD
+            )
+            severity = "info" if immaterial else "medium"
             msg = (
                 f"AI may have missed asset — '{rep_rec.get('Source_Name__c')}' "
                 f"is in MuleSoft"
+                + (f" (${rep_bal:,.2f} — below "
+                   f"${_ASSET_MATERIALITY_USD:,.0f} materiality)"
+                   if immaterial and rep_bal else "")
             )
         findings.append(Finding(
             category=IDP_MISSED_ASSET,
@@ -1527,11 +1545,34 @@ def _compare_certification(
     ai_eff = str(ai_cert.get("effectiveDate") or "")[:10]
     sf_eff = str(sf_review.get("Effective_Date__c") or "")[:10]
     if ai_eff and sf_eff:
-        _emit(ai_eff == sf_eff, Finding(
-            category=VALUE_MISMATCH, severity="high",
-            message=f"EFFECTIVE DATE MISMATCH — AI {ai_eff} vs MuleSoft {sf_eff}",
-            detail={"field": "effectiveDate", "ai": ai_eff, "sf": sf_eff},
-        ))
+        # Same month/day but the year off by exactly one is the signature
+        # of the extractor reading the adjacent "Move-in Date" header line
+        # or a previous year's cert — an extraction artifact, not evidence
+        # MuleSoft entered the wrong date. Still a disagreement (the
+        # extraction did miss), but routed to REVIEW instead of CRITICAL.
+        year_off = (
+            len(ai_eff) == 10 and len(sf_eff) == 10
+            and ai_eff[4:] == sf_eff[4:]
+            and ai_eff[:4].isdigit() and sf_eff[:4].isdigit()
+            and abs(int(ai_eff[:4]) - int(sf_eff[:4])) == 1
+        )
+        if year_off:
+            _emit(False, Finding(
+                category=VALUE_MISMATCH, severity="medium",
+                message=(
+                    f"EFFECTIVE DATE MISMATCH — AI {ai_eff} vs MuleSoft "
+                    f"{sf_eff} (same month/day, one year apart — AI likely "
+                    f"read the move-in date or a previous year's form; "
+                    f"verify against the current certification header)"
+                ),
+                detail={"field": "effectiveDate", "ai": ai_eff, "sf": sf_eff},
+            ))
+        else:
+            _emit(ai_eff == sf_eff, Finding(
+                category=VALUE_MISMATCH, severity="high",
+                message=f"EFFECTIVE DATE MISMATCH — AI {ai_eff} vs MuleSoft {sf_eff}",
+                detail={"field": "effectiveDate", "ai": ai_eff, "sf": sf_eff},
+            ))
 
     # --- Certification type (case-insensitive, exact) ---
     ai_ct = _norm(ai_cert.get("certificationType"))

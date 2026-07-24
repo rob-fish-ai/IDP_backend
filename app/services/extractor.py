@@ -154,6 +154,13 @@ than a value that's off by 100×.
 FIELDS TO EXTRACT:
 - certificationType: Certification type code. Values: "MI" (Move-In/Initial), "AR" (Annual Recertification), "AR-SC" (Annual Recert Self-Certification), "IR" (Interim Recertification). Look for: "Type of Certification" field, checkboxes for Initial/Annual/Interim, or coded fields on the form.
 - effectiveDate: Effective date of the certification. YYYY-MM-DD format.
+  CAUTION: TIC headers show "Effective Date" and "Move-in Date" stacked
+  next to each other and OCR often interleaves them. Take the value on the
+  "Effective Date" line ONLY. On a Recertification (AR/IR) the move-in
+  date is an EARLIER year than the effective date — if your candidate
+  date is a year (or more) before the certification period, you likely
+  grabbed the move-in date; re-read the header. Never use a previous
+  year's certification form for this field when a current one is present.
 - numberOfBedrooms: Number of bedrooms. Numeric string.
 - grossRent: Total tenant payment or gross rent amount. Numeric string with 2 decimals, no $ or commas.
 - tenantRent: Tenant rent portion. Numeric string with 2 decimals.
@@ -167,7 +174,7 @@ FIELDS TO EXTRACT:
 - applicationSignDate: Application sign date if present. YYYY-MM-DD.
 
 DOCUMENT-SPECIFIC GUIDANCE:
-- TIC Form: Cert type is in the header area (checkboxes for Initial/Annual/Interim/Other). Effective date is labeled "Effective Date". Income is in Part III "Income". Rent fields are in Part IV "Rent".
+- TIC Form: Cert type is in the header area (checkboxes for Initial/Annual/Interim/Other). Effective date is labeled "Effective Date" — the adjacent "Move-in Date" line is a DIFFERENT field; do not confuse them (on recertifications they differ by one or more years). Income is in Part III "Income". Rent fields are in Part IV "Rent".
 - HUD 50059: Cert type is field 2b "Type of Action" (1=Initial, 2=Annual, 3=Interim, etc.). Effective date is field 2a. Field 29 = Contract Rent, Field 30 = Utility Allowance, Field 31 = Gross Rent (this is the true grossRent, NOT field 29). Field 110 = Tenant Rent. Field 86 = Total Annual Income.
 - HUD 3560 (RD 3560-8 / USDA): Line 30.a = Note Rate Rent (use as tenantRent or grossRent depending on form), Line 30.b = Utility Allowance, Line 30.c = Gross Note Rate Rent (use as grossRent). Line 33 = Final NTC (Net Tenant Contribution = tenantRent). Line 18.f = Monthly Income, Line 20 = Adjusted Annual Income.
 - HUD Model Lease: Gross Rent = Contract Rent + Utility Allowance. Record grossRent from the "Gross Rent" line if shown, otherwise compute Contract Rent + UA. "Tenant Rent" / tenant's portion = tenantRent. "Utility Allowance" = utilityAllowance. "Unit" / dwelling unit number = unitNumber. Lease commencement date = effectiveDate. Signature date on the lease = signatureDate.
