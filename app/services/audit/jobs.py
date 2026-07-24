@@ -377,13 +377,22 @@ def run_extraction(case_id: str) -> None:
             "Running IDP extraction for case=%s cert=%s funding=%s",
             job.get("case_number"), cert_type, funding,
         )
-        result = process_pdf_full(
-            pdf_bytes,
-            settings,
-            funding_program=funding,
-            certification_type=cert_type,
-            source_files=source_files,
-        )
+        # Per-job work dir: page images/texts are named by page number
+        # only, so concurrent extractions must not share a directory.
+        # Removed after the run — page_ocr text persists on the job row.
+        import shutil
+        work_dir = settings.output_dir / f"job_{case_id}"
+        try:
+            result = process_pdf_full(
+                pdf_bytes,
+                settings,
+                funding_program=funding,
+                certification_type=cert_type,
+                source_files=source_files,
+                work_dir=work_dir,
+            )
+        finally:
+            shutil.rmtree(work_dir, ignore_errors=True)
 
         # Convert pydantic ExtractionResult to dict for storage
         extraction = result["extraction"]

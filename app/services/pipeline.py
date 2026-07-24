@@ -446,6 +446,8 @@ def run_extraction_pipeline(
                 f"from current-income comparison; verify employment "
                 f"status (Section 9)"
             )
+    from app.services.income_calculator import ytd_divergence_findings
+    findings.extend(ytd_divergence_findings(income_calculations))
 
     # Step 5b: Populate compliance tracking on certification_info
     if certification_info:

@@ -14,15 +14,21 @@ from app.services.pipeline import run_extraction_pipeline
 logger = logging.getLogger(__name__)
 
 
-def process_pdf(pdf_bytes: bytes, settings: Settings) -> dict:
+def process_pdf(
+    pdf_bytes: bytes, settings: Settings, work_dir=None,
+) -> dict:
     """Split PDF into pages, pre-process images, run OCR, and save text per page.
 
-    Output structure:
-        output/processed/page_1.png, page_2.png, ...
-        output/texts/page_1.txt, page_2.txt, ...
+    Output structure (under work_dir, default settings.output_dir):
+        <work_dir>/processed/page_1.png, page_2.png, ...
+        <work_dir>/texts/page_1.txt, page_2.txt, ...
+
+    Concurrent jobs MUST pass distinct work_dirs — page files are named
+    by page number only and would collide in a shared directory.
     """
-    processed_dir = settings.output_dir / "processed"
-    texts_dir = settings.output_dir / "texts"
+    work_dir = work_dir or settings.output_dir
+    processed_dir = work_dir / "processed"
+    texts_dir = work_dir / "texts"
     processed_dir.mkdir(parents=True, exist_ok=True)
     texts_dir.mkdir(parents=True, exist_ok=True)
 
@@ -267,13 +273,14 @@ def process_pdf_full(
     funding_program: str | None = None,
     certification_type: str | None = None,
     source_files: list[dict] | None = None,
+    work_dir=None,
 ) -> dict:
     """Full pipeline: OCR all pages, then classify, extract, and validate.
 
     Returns both the OCR results and the structured MuleSoft extraction.
     """
     # Stage 1: OCR
-    ocr_result = process_pdf(pdf_bytes, settings)
+    ocr_result = process_pdf(pdf_bytes, settings, work_dir=work_dir)
 
     # Stage 2: Extraction pipeline — include OCR quality scores + image paths
     page_texts = []
@@ -306,7 +313,7 @@ def process_pdf_full(
 
     # Save extraction result for local testing / debugging
     import json
-    result_path = settings.output_dir / "extraction_result.json"
+    result_path = (work_dir or settings.output_dir) / "extraction_result.json"
     with open(result_path, "w", encoding="utf-8") as f:
         json.dump(extraction.model_dump(), f, indent=2, default=str)
     logger.info("Saved extraction result to %s", result_path)

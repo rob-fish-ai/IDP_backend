@@ -1,6 +1,7 @@
 """Income calculation engine — computes annual income using four methods (Section 9)."""
 
 import logging
+import re
 from datetime import date, datetime
 
 from app.schemas.extraction import (
@@ -419,6 +420,54 @@ def calculate_all_methods(
                 ))
 
     return results
+
+
+# The audit YTD projection is evidence; the primary is the answer. When
+# they diverge beyond this, income likely changed mid-year (raise, cut
+# hours, job change) or a basis was misread — either way an analyst
+# should look. Young YTDs annualize too noisily to judge, so windows
+# under 90 days never fire.
+_YTD_DIVERGENCE_REL = 0.25
+_YTD_MIN_ELAPSED_DAYS = 90
+
+
+def ytd_divergence_findings(
+    calcs: list[IncomeCalculationResult],
+) -> list[str]:
+    """Compare each source's primary projection to its [audit] YTD row."""
+    primaries: dict[tuple[str, str], IncomeCalculationResult] = {}
+    audits: dict[tuple[str, str], IncomeCalculationResult] = {}
+    for c in calcs:
+        d = c.details or ""
+        key = ((c.memberName or "").lower(), (c.sourceName or "").lower())
+        if d.startswith("[audit]"):
+            audits.setdefault(key, c)
+        elif not d.startswith("[historical]"):
+            primaries.setdefault(key, c)
+
+    findings: list[str] = []
+    for key, aud in audits.items():
+        pri = primaries.get(key)
+        if not pri or not pri.annualIncome or not aud.annualIncome:
+            continue
+        try:
+            p, a = float(pri.annualIncome), float(aud.annualIncome)
+        except ValueError:
+            continue
+        if p <= 0 or a <= 0:
+            continue
+        m = re.search(r"/\s*(\d+)\s*days", aud.details or "")
+        if m and int(m.group(1)) < _YTD_MIN_ELAPSED_DAYS:
+            continue
+        rel = abs(p - a) / max(p, a)
+        if rel > _YTD_DIVERGENCE_REL:
+            findings.append(
+                f"Income source '{pri.sourceName}' ({pri.memberName}): "
+                f"projected annual ${p:,.2f} ({pri.method}) vs YTD-implied "
+                f"${a:,.2f} — differs {rel:.0%}; income may have changed "
+                f"mid-year — verify calculation basis (Section 9)"
+            )
+    return findings
 
 
 # ---------------------------------------------------------------------------

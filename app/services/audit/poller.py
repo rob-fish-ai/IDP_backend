@@ -163,21 +163,31 @@ def poll_once(settings: Settings) -> int:
 
     logger.info("Poll cycle: fetched %d ready case(s)", len(cases))
 
-    processed = 0
-    for case in cases:
-        # No local pre-filter needed — Salesforce's IDP_Audit_Complete__c
-        # filter excludes already-audited cases, and process_case() defers
-        # to JobStore.upsert_pending for in-flight dedup. If a writeback
-        # previously failed, the SOQL re-fetches and we auto-retry.
+    # No local pre-filter needed — Salesforce's IDP_Audit_Complete__c
+    # filter excludes already-audited cases, and process_case() defers
+    # to JobStore.upsert_pending for in-flight dedup. If a writeback
+    # previously failed, the SOQL re-fetches and we auto-retry.
+    #
+    # Cases run concurrently (bounded pool): pipelines are network-bound
+    # (external OCR, LLM calls), so one large packet no longer serializes
+    # the whole batch behind it.
+    def _one(case: dict) -> bool:
         try:
             process_case(case, settings)
-            processed += 1
+            return True
         except Exception:
             logger.exception(
                 "Unhandled error processing case %s",
                 case.get("CaseNumber") or case.get("Id"),
             )
-    return processed
+            return False
+
+    workers = max(1, settings.audit_pipeline_concurrency)
+    if workers == 1 or len(cases) == 1:
+        return sum(_one(c) for c in cases)
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        return sum(pool.map(_one, cases))
 
 
 def run_poll_loop(stop_event: threading.Event | None = None) -> None:
