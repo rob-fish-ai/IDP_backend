@@ -335,22 +335,33 @@ def calculate_all_methods(
                 pass
 
     elif primary_method == "self-declared" and vi_entry and vi_entry.selfDeclaredAmount:
-        # selfDeclaredAmount is treated as ALREADY ANNUAL.
-        # This is true for: TIC Part III (annual columns), self-employment
-        # affidavits (Schedule C net income), cash gift affidavits, child
-        # support self-cert. The schema convention is annual.
-        try:
-            annual = float(vi_entry.selfDeclaredAmount)
+        # selfDeclaredAmount is annual by schema convention (TIC Part III
+        # columns, Schedule C net, gift/child-support affidavits) — but
+        # benefit letters state MONTHLY amounts and extraction records that
+        # basis in frequencyOfPay. Honor it: a monthly $1,098 SSA benefit
+        # is $13,176/year, not $1,098. Self-employment (annual_net) stays
+        # as-is — Schedule C net is annual regardless of any stray
+        # frequency value.
+        freq = None if calc_mode == "annual_net" else vi_entry.frequencyOfPay
+        annual_str = calculate_self_declared(vi_entry.selfDeclaredAmount, freq)
+        if annual_str:
+            mult = get_frequency_multiplier(freq) if freq else None
+            if mult and mult > 1:
+                details = (
+                    f"Self-declared {freq.strip().lower()}: "
+                    f"{float(vi_entry.selfDeclaredAmount):.2f} × {mult} "
+                    f"= {annual_str}"
+                )
+            else:
+                details = f"Self-declared annual: {annual_str}"
             results.append(IncomeCalculationResult(
                 memberName=member_name,
                 sourceName=source_name,
                 incomeType=income_type_raw,
                 method="self-declared",
-                annualIncome=f"{annual:.2f}",
-                details=f"Self-declared annual: {annual:.2f}",
+                annualIncome=annual_str,
+                details=details,
             ))
-        except ValueError:
-            pass
 
     # Audit methods — run for cross-validation but don't override primary.
     # These help findings layer flag discrepancies without affecting sums.

@@ -660,6 +660,58 @@ def _income_key(rec: dict) -> tuple[str, str]:
     return (_normalize_income_source(source), member_key)
 
 
+# Pay-period multiples: monthly, semi-monthly, bi-weekly, weekly.
+_PERIOD_RATIOS = (12.0, 24.0, 26.0, 52.0)
+
+
+def _income_mismatch_finding(
+    prefix: str, ai_amt: float, sf_amt: float,
+    basis: dict | None, detail: dict,
+) -> Finding:
+    """Build an INCOME MISMATCH finding, pay-frequency-basis aware.
+
+    When the two amounts differ by almost exactly a pay-period multiple
+    (×12/24/26/52, either direction), the dollars actually agree — one
+    side is per-period and the other annual — so the finding routes to
+    REVIEW naming the basis instead of a CRITICAL accusing either system.
+    The AI row's frequencyOfPay and ytdAmount ride along so the analyst
+    sees the captured basis without opening the packet.
+    """
+    lo, hi = sorted((ai_amt, sf_amt))
+    ratio = (hi / lo) if lo > 0 else None
+    period = next(
+        (m for m in _PERIOD_RATIOS if ratio and abs(ratio - m) / m <= 0.02),
+        None,
+    )
+    extras = []
+    if basis and basis.get("freq"):
+        extras.append(f"frequencyOfPay: {basis['freq']}")
+    if basis and basis.get("ytd") is not None:
+        extras.append(f"YTD: ${basis['ytd']:,.2f}")
+    suffix = f" [AI {', '.join(extras)}]" if extras else ""
+    detail = dict(detail)
+    detail["ai_frequency"] = (basis or {}).get("freq")
+    detail["ai_ytd"] = (basis or {}).get("ytd")
+    if period:
+        detail["basis_ratio"] = period
+        return Finding(
+            category=VALUE_MISMATCH, severity="medium",
+            message=(
+                f"{prefix}AI ${ai_amt:,.2f} vs MuleSoft ${sf_amt:,.2f} — "
+                f"amounts agree on a per-period ↔ annual basis "
+                f"(×{period:.0f}); pay frequency captured inconsistently, "
+                f"verify basis{suffix}"
+            ),
+            detail=detail,
+        )
+    return Finding(
+        category=VALUE_MISMATCH,
+        severity=_value_mismatch_severity(ai_amt, sf_amt),
+        message=f"{prefix}AI ${ai_amt:,.2f} vs MuleSoft ${sf_amt:,.2f}{suffix}",
+        detail=detail,
+    )
+
+
 def _sf_group_amount(group: list[dict]) -> float | None:
     """Comparable annual amount for MuleSoft rows sharing one income key.
 
@@ -707,6 +759,18 @@ def _compare_income(
     for inc in sf_income:
         k = _income_key(inc)
         sf_keys.setdefault(k, []).append(inc)
+
+    # Per-key extraction basis (pay frequency + YTD) from the raw VI rows —
+    # shown on mismatch findings so the analyst sees the captured basis.
+    ai_basis: dict[tuple, dict] = {}
+    for r in ai_income:
+        b = ai_basis.setdefault(_income_key(r), {})
+        if not b.get("freq") and r.get("frequencyOfPay"):
+            b["freq"] = r.get("frequencyOfPay")
+        if b.get("ytd") is None:
+            y = _money(r.get("ytdAmount"))
+            if y is not None:
+                b["ytd"] = y
 
     # "Zero Income" rows are declarations ("member reported no income"),
     # not income sources the AI could have missed — pull them out of
@@ -921,14 +985,10 @@ def _compare_income(
                 agreements += 1
             else:
                 disagreements += 1
-                findings.append(Finding(
-                    category=VALUE_MISMATCH,
-                    severity=_value_mismatch_severity(ai_amt, sf_amt),
-                    message=(
-                        f"INCOME MISMATCH — {sf_keys[k][0].get('Source_Name__c')}: "
-                        f"AI ${ai_amt:,.2f} vs MuleSoft ${sf_amt:,.2f}"
-                    ),
-                    detail={
+                findings.append(_income_mismatch_finding(
+                    f"INCOME MISMATCH — {sf_keys[k][0].get('Source_Name__c')}: ",
+                    ai_amt, sf_amt, ai_basis.get(k),
+                    {
                         "source": sf_keys[k][0].get("Source_Name__c"),
                         "ai_amount": ai_amt,
                         "sf_amount": sf_amt,
@@ -952,15 +1012,13 @@ def _compare_income(
 
         if amount_diff:
             disagreements += 1
-            findings.append(Finding(
-                category=VALUE_MISMATCH,
-                severity=_value_mismatch_severity(ai_amt, sf_amt),
-                message=(
+            findings.append(_income_mismatch_finding(
+                (
                     f"INCOME MISMATCH — '{sf_rec.get('Source_Name__c')}' "
                     f"(matched to AI '{ai_k[0]}'): "
-                    f"AI ${ai_amt:,.2f} vs MuleSoft ${sf_amt:,.2f}"
                 ),
-                detail={
+                ai_amt, sf_amt, ai_basis.get(ai_k),
+                {
                     "source": sf_rec.get("Source_Name__c"),
                     "ai_source": ai_k[0],
                     "ai_amount": ai_amt,
