@@ -378,10 +378,11 @@ class SalesforceClient:
             first_page_text = doc[0].get_text().lower() if page_count else ""
         if page_count < threshold:
             # Digital PDFs carry embedded text — check it against the
-            # denylist so a review report uploaded under a neutral title
-            # ("...AR-Correction...") is named for what it is instead of
-            # just "too short". Scanned PDFs (no embedded text) skip this.
-            for token in self._PDF_TITLE_DENYLIST:
+            # content denylist so a review report uploaded under a neutral
+            # title ("...AR-Correction...") is named for what it is instead
+            # of just "too short". Scanned PDFs (no embedded text) skip
+            # this. Content tokens only — see _PDF_CONTENT_DENYLIST.
+            for token in self._PDF_CONTENT_DENYLIST:
                 if token in first_page_text:
                     raise ValueError(
                         f"Not a source packet: document content matches "
@@ -499,6 +500,21 @@ class SalesforceClient:
         "review comments",
     )
 
+    # Content sniffing (matching page TEXT, not titles) uses only the
+    # distinctive multi-word phrases: bare tokens like 'audit' or
+    # 'findings' appear in ordinary packet cover sheets ("this is the
+    # file that will serve as your audit file") and must never reject a
+    # source packet. And only short files are sniffed at all — reviewer
+    # reports run a handful of pages; a long file cannot be one.
+    _PDF_CONTENT_DENYLIST = (
+        "certification review",
+        "review report",
+        "ai file audit",
+        "review notes",
+        "review comments",
+    )
+    _CONTENT_SNIFF_MAX_PAGES = 15
+
     def get_pdf_for_case(
         self, case_id: str,
     ) -> tuple[bytes, str, list[dict]]:
@@ -593,12 +609,15 @@ class SalesforceClient:
                     continue
                 with doc:
                     # Content sniff: a digital review report uploaded under
-                    # a neutral title must not pollute the merge.
+                    # a neutral title must not pollute the merge. Long
+                    # files are never sniffed — they can't be reports.
                     first_text = (
-                        doc[0].get_text().lower() if doc.page_count else ""
+                        doc[0].get_text().lower()
+                        if 0 < doc.page_count <= self._CONTENT_SNIFF_MAX_PAGES
+                        else ""
                     )
                     hit = next(
-                        (t for t in self._PDF_TITLE_DENYLIST
+                        (t for t in self._PDF_CONTENT_DENYLIST
                          if t in first_text), None,
                     )
                     if hit:
