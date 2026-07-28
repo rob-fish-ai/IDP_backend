@@ -14,6 +14,28 @@ from app.services.pipeline import run_extraction_pipeline
 logger = logging.getLogger(__name__)
 
 
+_IMAGE_REGION_RE = None
+
+
+def _skipped_region_fraction(ocr_text: str) -> float:
+    """Fraction of the page area DeepSeek-OCR skipped as image regions.
+
+    DeepSeek emits `<|ref|>image<|/ref|><|det|>[[x1, y1, x2, y2]]<|/det|>`
+    for regions it did not transcribe, with coordinates on a 0-1000 grid.
+    """
+    global _IMAGE_REGION_RE
+    import re as _re
+    if _IMAGE_REGION_RE is None:
+        _IMAGE_REGION_RE = _re.compile(
+            r"<\|ref\|>image<\|/ref\|><\|det\|>\[\[(\d+),\s*(\d+),\s*(\d+),\s*(\d+)\]\]<\|/det\|>"
+        )
+    area = 0
+    for m in _IMAGE_REGION_RE.finditer(ocr_text):
+        x1, y1, x2, y2 = (int(g) for g in m.groups())
+        area += max(0, x2 - x1) * max(0, y2 - y1)
+    return min(1.0, area / 1_000_000)
+
+
 def process_pdf(
     pdf_bytes: bytes, settings: Settings, work_dir=None,
 ) -> dict:
@@ -160,6 +182,25 @@ def process_pdf(
             flags = ocr_result.setdefault("flag_details", [])
             if isinstance(flags, list) and "suspected_content_loss" not in flags:
                 flags.append("suspected_content_loss")
+            low_quality_pages.append(page_num)
+            continue
+        # DeepSeek-OCR marks regions it could not read as
+        # <|ref|>image<|/ref|> with a bounding box. A large skipped
+        # region on a form page is unread content (typically the
+        # handwritten fill-in block on a self-cert) even when the
+        # printed boilerplate keeps char counts and quality scores
+        # high. Coordinates are on a 0-1000 grid: area is normalized
+        # by 1000x1000.
+        skipped = _skipped_region_fraction(ocr_result.get("text") or "")
+        if skipped >= 0.12:
+            logger.warning(
+                "Page %d: OCR skipped ~%.0f%% of the page as unread "
+                "image region(s) — queueing vision fallback",
+                page_num, skipped * 100,
+            )
+            flags = ocr_result.setdefault("flag_details", [])
+            if isinstance(flags, list) and "unread_region" not in flags:
+                flags.append("unread_region")
             low_quality_pages.append(page_num)
 
     if low_quality_pages:

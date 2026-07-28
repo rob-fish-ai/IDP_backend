@@ -264,15 +264,18 @@ class SalesforceClient:
             "assets": assets,
         }
 
-    def download_pdf(self, content_document_id: str) -> bytes:
+    def download_pdf(
+        self, content_document_id: str, *, min_pages: int | None = None,
+    ) -> bytes:
         """Download the latest PDF version for a ContentDocument.
 
         Applies the min-pages gate — use for standalone packets. Multi-part
         merging goes through _download_content_version so the gate can be
-        applied to the merged whole instead of each fragment.
+        applied to the merged whole instead of each fragment. min_pages
+        overrides the global gate (AR-SC self-certs are 2-3 pages).
         """
         pdf_bytes, title = self._download_content_version(content_document_id)
-        self._check_min_pages(pdf_bytes, title)
+        self._check_min_pages(pdf_bytes, title, threshold=min_pages)
         return pdf_bytes
 
     def _download_content_version(
@@ -366,13 +369,16 @@ class SalesforceClient:
         )
         return merged_bytes, parts[0]["cd_id"]
 
-    def _check_min_pages(self, pdf_bytes: bytes, title: str | None) -> None:
-        """Reject PDFs below settings.min_pdf_pages.
+    def _check_min_pages(
+        self, pdf_bytes: bytes, title: str | None,
+        threshold: int | None = None,
+    ) -> None:
+        """Reject PDFs below settings.min_pdf_pages (or `threshold`).
 
         Counting locally with PyMuPDF is ~milliseconds and avoids burning OCR
         + LLM tokens on documents that can't possibly be a complete packet.
         """
-        threshold = self._settings.min_pdf_pages
+        threshold = threshold or self._settings.min_pdf_pages
         with fitz.open(stream=io.BytesIO(pdf_bytes), filetype="pdf") as doc:
             page_count = doc.page_count
             first_page_text = doc[0].get_text().lower() if page_count else ""
@@ -516,7 +522,7 @@ class SalesforceClient:
     _CONTENT_SNIFF_MAX_PAGES = 15
 
     def get_pdf_for_case(
-        self, case_id: str,
+        self, case_id: str, *, min_pages: int | None = None,
     ) -> tuple[bytes, str, list[dict]]:
         """Download and merge ALL source PDFs attached to a Case.
 
@@ -659,6 +665,7 @@ class SalesforceClient:
         # the gate still can't be a complete packet.
         self._check_min_pages(
             merged_bytes, " | ".join(s["title"] for s in source_files),
+            threshold=min_pages,
         )
         logger.info(
             "Merged %d source file(s) for case %s (%d pages): %s%s%s",

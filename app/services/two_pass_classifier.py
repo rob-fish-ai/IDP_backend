@@ -178,6 +178,7 @@ CANONICAL DOCUMENT TYPES (use these exact names):
     - HomeBASE Verification
     - Unemployment Affidavit
     - Notice of Rent Change
+    - Identity Document                      (driver license / state ID / SSN card pages)
 
   COMPLIANCE — required forms, not data-extracted:
     - HUD 9887
@@ -201,6 +202,8 @@ CANONICAL DOCUMENT TYPES (use these exact names):
     - Correspondence
     - Fax Cover Sheet
     - Credit Screening Report
+    - Screening Affidavit
+    - Maintenance / Inspection Form
     - Unknown
 
 CRITICAL CLASSIFICATION RULES:
@@ -256,6 +259,26 @@ CRITICAL CLASSIFICATION RULES:
   Questionnaire".
 
 - "Alternate Certification" / "AR-SC" forms = "Tenant Income Certification (TIC)".
+
+- SELF-CERTIFICATION INCOME FORMS ARE CERTIFICATION FORMS, not
+  questionnaires. "Self-Certification of Household Annual Income" (OHCS),
+  "NY AR Self Certification Form", "Owner's Eligibility Determination",
+  "Annual Self Certification" (and its checklist cover page), and any form
+  where the RESIDENT certifies household members + gross annual income and
+  the OWNER/management determines eligibility (income limit, rent, effective
+  date, signatures) = "Tenant Income Certification (TIC)", INCLUDE. Never
+  classify these as "Application / Housing Questionnaire" — on AR-SC files
+  this form IS the certification and the source of truth.
+
+- PHOTO IDs AND SOCIAL SECURITY CARDS: pages showing driver licenses,
+  state IDs, passports, or Social Security cards = "Identity Document",
+  INCLUDE. These carry the authoritative DOB and SSN for household members.
+
+- Criminal history / sex offender affidavits, background screening
+  authorizations = "Screening Affidavit", ignore (screening paperwork, not
+  certification data). Maintenance and inspection paperwork (apartment
+  inspection checklists, work orders, unit condition statements) =
+  "Maintenance / Inspection Form", ignore.
 
 - Blank VOI (employer section empty) = "Blank Form", compliance.
 

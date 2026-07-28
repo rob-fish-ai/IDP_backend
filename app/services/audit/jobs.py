@@ -77,6 +77,12 @@ def _is_retryable_error(exc: BaseException) -> bool:
     if isinstance(exc, ClassificationUnavailableError):
         return True
 
+    # Worker shutdown landed mid-run (reload or restart during a batch).
+    # Says nothing about the case — retry it instead of burying it under
+    # a permanent failure marker with the SF flag flipped.
+    if "interpreter shutdown" in msg or "cannot schedule new futures" in msg:
+        return True
+
     # Anthropic SDK typed exceptions — most precise signal
     try:
         import anthropic
@@ -364,10 +370,18 @@ def run_extraction(case_id: str) -> None:
         # fall back to scanning the case for the most recent attachment.
         cd_id = job.get("content_document_id")
         source_files = None
+        # AR-SC self-cert packets are legitimately 2-3 pages — the global
+        # min-pages gate would reject every one of them.
+        min_pages = (
+            settings.min_pdf_pages_self_cert
+            if (job.get("cert_type") or "").upper() == "AR-SC" else None
+        )
         if cd_id:
-            pdf_bytes = sf.download_pdf(cd_id)
+            pdf_bytes = sf.download_pdf(cd_id, min_pages=min_pages)
         else:
-            pdf_bytes, cd_id, source_files = sf.get_pdf_for_case(case_id)
+            pdf_bytes, cd_id, source_files = sf.get_pdf_for_case(
+                case_id, min_pages=min_pages,
+            )
             logger.info("Resolved PDF for %s via case scan: %s", case_id, cd_id)
 
         cert_type = job.get("cert_type") or None

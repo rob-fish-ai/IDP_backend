@@ -135,6 +135,7 @@ def run_extraction_pipeline(
         "HUD Model Lease",
         "Application / Housing Questionnaire", "Student Status Certification",
         "Owner Summary Sheet", "Family Summary Sheet",
+        "Identity Document",
     }
     _CERT_TYPES = {
         "HUD 50059", "Tenant Income Certification (TIC)", "HUD 3560 Form",

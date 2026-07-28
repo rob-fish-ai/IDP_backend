@@ -84,6 +84,11 @@ EXTRACTION RULES:
 - LastName: Title Case. Include suffixes (Jr., Sr., III). Preserve hyphens and multi-word names.
 - socialSecurityNumber: ALWAYS ***-**-XXXX. null if not found.
 - DOB: YYYY-MM-DD format. "01/15/1990" → "1990-01-15". If no day, default DD to 01.
+- SOURCE PRIORITY for DOB and SSN: printed identity documents (driver
+  license, state ID, Social Security card pages) are AUTHORITATIVE — when
+  an Identity Document page shows a member's DOB or SSN, use that value
+  over any handwritten application/questionnaire entry (handwriting is
+  routinely misread). Same priority for name spellings.
 - head: "H" for head of household/primary applicant. null for all others. Maximum ONE "H".
 - disabled: "Y" if member is disabled, "N" if not disabled, null if unknown/not documented.
   HUD 50059 has MULTIPLE disability indicators:
@@ -163,9 +168,16 @@ FIELDS TO EXTRACT:
   year's certification form for this field when a current one is present.
 - numberOfBedrooms: Number of bedrooms. Numeric string.
 - grossRent: Total tenant payment or gross rent amount. Numeric string with 2 decimals, no $ or commas.
+  CAUTION: values labeled "Current rent limit for this unit", "Maximum
+  Gross Rent Limit", "Current Maximum Gross Rent Limit" or similar are the
+  LIMIT, not the rent — they belong in rentLimit, NEVER in grossRent.
+  Gross rent = tenant-paid rent + utility allowance (+ rent assistance);
+  on a TIC Part IX take "Total Tenant Payment" / "Tenant rent plus utility
+  allowance", not the limit line above it.
 - tenantRent: Tenant rent portion. Numeric string with 2 decimals.
 - utilityAllowance: Utility allowance amount. Numeric string with 2 decimals.
-- rentLimit: Rent limit for the unit. Numeric string with 2 decimals.
+- rentLimit: Rent limit for the unit (incl. "Current rent limit for this
+  unit" / "Maximum Gross Rent Limit" lines). Numeric string with 2 decimals.
 - householdIncome: Total annual household income. Numeric string with 2 decimals.
 - householdSize: Number of household members. Integer as string.
 - unitNumber: Unit number or apartment number.
@@ -178,6 +190,7 @@ DOCUMENT-SPECIFIC GUIDANCE:
 - HUD 50059: Cert type is field 2b "Type of Action" (1=Initial, 2=Annual, 3=Interim, etc.). Effective date is field 2a. Field 29 = Contract Rent, Field 30 = Utility Allowance, Field 31 = Gross Rent (this is the true grossRent, NOT field 29). Field 110 = Tenant Rent. Field 86 = Total Annual Income.
 - HUD 3560 (RD 3560-8 / USDA): Line 30.a = Note Rate Rent (use as tenantRent or grossRent depending on form), Line 30.b = Utility Allowance, Line 30.c = Gross Note Rate Rent (use as grossRent). Line 33 = Final NTC (Net Tenant Contribution = tenantRent). Line 18.f = Monthly Income, Line 20 = Adjusted Annual Income.
 - HUD Model Lease: Gross Rent = Contract Rent + Utility Allowance. Record grossRent from the "Gross Rent" line if shown, otherwise compute Contract Rent + UA. "Tenant Rent" / tenant's portion = tenantRent. "Utility Allowance" = utilityAllowance. "Unit" / dwelling unit number = unitNumber. Lease commencement date = effectiveDate. Signature date on the lease = signatureDate.
+- Self-Certification forms (OHCS "Self-Certification of Household Annual Income", NY "AR Self Certification" / "Owner's Eligibility Determination" — classified as TIC): header "Effective Date" or "Recert Yr & Effective Date" = effectiveDate; "Unit Number" / "Apt #" = unitNumber; "Add Total Annual Household Income from all Sources" (a+b) = householdIncome; the owner section's "Rent" = tenantRent, "Utility Allowance" = utilityAllowance, "Current Income Limit" and "Current Maximum Gross Rent Limit" = limits (rentLimit), NOT rent; resident + owner signature blocks = isSigned/signatureDate.
 
 MULTI-SOURCE FALLBACK (CRITICAL):
 When the primary certification form (TIC / HUD 50059 / HUD 3560) has a BLANK

@@ -82,6 +82,11 @@ class Settings(BaseSettings):
     # partial upload, or a non-source doc the title denylist missed.
     min_pdf_pages: int = 4
 
+    # AR-SC self-certification packets are legitimately tiny — a complete
+    # OHCS/NY self-cert is 2-3 pages (resident page + owner determination).
+    # The global gate would reject them all; 2 still blocks 1-page strays.
+    min_pdf_pages_self_cert: int = 2
+
     # Cap on the total page count when merging all of a case's source
     # PDFs into one packet. Files are merged newest-first; candidates
     # that would push past the cap are skipped (and logged), so the

@@ -376,6 +376,17 @@ def _cluster_asset_keys(
 # Member comparison
 # ---------------------------------------------------------------------------
 
+def _parse_iso_date(value: str | None):
+    """YYYY-MM-DD -> date, else None."""
+    from datetime import datetime
+    if not value:
+        return None
+    try:
+        return datetime.strptime(str(value)[:10], "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
+
 def _member_key(rec: dict) -> tuple[str, str]:
     """Strict identity key: (DOB, last 4 of SSN)."""
     dob = rec.get("DOB") or rec.get("DOB__c") or ""
@@ -482,6 +493,53 @@ def _compare_members(
             fallback_matched_ai_keys.add(ai_k)
             fallback_matched_sf_keys.add(best_sf_key)
             fuzzy_match_pairs.append((ai_name, best_sf_name))
+
+    # Second fallback: evidence-corroborated pairing for heavily garbled
+    # names. Handwriting OCR mangles names past the 0.82 bar ("Saniyah
+    # Reddick" -> "Sanishah Reddy", "Christian Onyango" -> "O Chungo"),
+    # which used to produce a false missing-member CRITICAL plus a false
+    # missed-member REVIEW for the SAME person. A pair is accepted when a
+    # second identity signal corroborates a weaker name match:
+    #   - same SSN last-4                        -> any name similarity
+    #   - DOBs within 7 days (OCR digit slip)    -> similarity >= 0.40
+    #   - a DOB missing on either side           -> similarity >= 0.55
+    # Best-pair-first assignment: with several garbled siblings on each
+    # side, a first-qualifying loop pairs the wrong children (Reckman->
+    # Saniyah instead of Reckman->Reaghan). Score every qualifying pair,
+    # then assign strongest-first.
+    candidates: list[tuple[float, str, tuple, str, tuple]] = []
+    for ai_name, ai_k in ai_only_with_names:
+        if ai_k in fallback_matched_ai_keys or not ai_name:
+            continue
+        ai_m = ai_keys[ai_k]
+        ai_dob = _parse_iso_date(str(ai_m.get("DOB") or "")[:10])
+        ai_ssn4 = ai_k[1] if not str(ai_k[1]).startswith("~noid") else ""
+        for sf_name, sf_k in sf_only_with_names:
+            if sf_k in fallback_matched_sf_keys or not sf_name:
+                continue
+            sim = _name_similarity(ai_name, sf_name)
+            sf_dob = _parse_iso_date(sf_k[0])
+            ssn_match = bool(ai_ssn4) and ai_ssn4 == sf_k[1]
+            dob_close = (
+                ai_dob is not None and sf_dob is not None
+                and abs((ai_dob - sf_dob).days) <= 7
+            )
+            dob_absent = ai_dob is None or sf_dob is None
+            if (
+                ssn_match
+                or (dob_close and sim >= 0.40)
+                or (dob_absent and sim >= 0.55)
+            ):
+                score = sim + (1.0 if ssn_match else 0.0) + (0.5 if dob_close else 0.0)
+                candidates.append((score, ai_name, ai_k, sf_name, sf_k))
+    for score, ai_name, ai_k, sf_name, sf_k in sorted(
+        candidates, key=lambda c: -c[0]
+    ):
+        if ai_k in fallback_matched_ai_keys or sf_k in fallback_matched_sf_keys:
+            continue
+        fallback_matched_ai_keys.add(ai_k)
+        fallback_matched_sf_keys.add(sf_k)
+        fuzzy_match_pairs.append((ai_name, sf_name))
 
     ai_only = ai_only_keys - fallback_matched_ai_keys
     sf_only = sf_only_keys - fallback_matched_sf_keys
