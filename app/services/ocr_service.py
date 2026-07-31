@@ -55,12 +55,44 @@ def _call_glm_ocr(buf: io.BytesIO, image_name: str, settings: Settings) -> dict:
     }
 
 
-def ocr_single_image(image_path: Path, settings: Settings) -> dict:
+def flag_codes(flags) -> set[str]:
+    """Normalize a flag_details list to its string codes.
+
+    The OCR service emits rich dict flags ({'code': ..., 'severity': ...});
+    pipeline stages append plain strings. Membership checks must accept both.
+    """
+    codes: set[str] = set()
+    for f in flags or []:
+        if isinstance(f, str):
+            codes.add(f)
+        elif isinstance(f, dict) and f.get("code"):
+            codes.add(f["code"])
+    return codes
+
+
+def composite_of(result: dict) -> float:
+    """Extract the composite quality score from an OCR result (dict or scalar)."""
+    score = result.get("score")
+    if isinstance(score, dict):
+        score = score.get("composite")
+    try:
+        return float(score or 0.0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def ocr_single_image(
+    image_path: Path, settings: Settings, *, allow_fallback: bool = True,
+) -> dict:
     """Send a single processed image to OCR with tiered fallback.
 
     Tier 1: DeepSeek-OCR (primary)
     Tier 2: GLM-OCR (if DeepSeek fails or needs_external_ocr)
     Tier 3: Vision LLM (handled by pdf_service Phase B2)
+
+    allow_fallback=False skips the GLM tier — used by the rotation probe,
+    where a low score usually means "wrong angle" and burning the fallback
+    service on it is waste.
     """
     img = Image.open(image_path)
 
@@ -83,7 +115,7 @@ def ocr_single_image(image_path: Path, settings: Settings) -> dict:
     )
 
     # Tier 2: GLM-OCR fallback
-    if needs_fallback and settings.ocr_fallback_url:
+    if needs_fallback and allow_fallback and settings.ocr_fallback_url:
         try:
             glm_result = _call_glm_ocr(buf, image_path.name, settings)
             if glm_result.get("text", "").strip():

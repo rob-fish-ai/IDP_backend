@@ -514,6 +514,13 @@ def match_paystubs_to_sources(
 ) -> dict[int, list[PayStubEntry]]:
     """Match paystubs to verification income entries by source/member name.
 
+    A source-name match alone is NOT sufficient when both sides carry member
+    names: two household members often work for the same employer, and pooling
+    their stubs under one VOI averages two salaries into one wrong annual
+    (observed: spouses at the same employer each ~$45k/$29k pooled into a
+    single $37k figure). Member names must agree whenever both are present;
+    a missing member name on either side falls back to source-only matching.
+
     Returns:
         dict mapping vi_entry index → list of matching paystubs
     """
@@ -547,7 +554,18 @@ def match_paystubs_to_sources(
             if vi_member and ps_member:
                 member_match = vi_member == ps_member or _token_overlap(vi_member, ps_member) >= 0.5
 
-            if source_match or (member_match and not vi_source):
+            # When both sides name a member, their GIVEN names must agree —
+            # an employer match with a conflicting member is a different
+            # person's stub. Surname overlap is not agreement: household
+            # members share surnames, so whole-name token overlap calls
+            # siblings at the same employer a "match".
+            members_compatible = (
+                not vi_member
+                or not ps_member
+                or not _given_names_conflict(vi_member, ps_member)
+            )
+
+            if (source_match and members_compatible) or (member_match and not vi_source):
                 matched[i].append(ps)
             else:
                 still_unmatched.append(ps)
@@ -555,6 +573,27 @@ def match_paystubs_to_sources(
         unmatched = still_unmatched
 
     return matched
+
+
+def _given_names_conflict(a: str, b: str) -> bool:
+    """True when two member names clearly denote different people.
+
+    Compares the first (given-name) token only: "andrea carranza" vs
+    "felipe pineda carranza" conflict; "andrea carranza" vs "andrea
+    carranza jimenez" do not. Initials and truncations are treated as
+    compatible ("j smith" vs "john smith", "dan" vs "daniel")."""
+    ta = a.split()
+    tb = b.split()
+    if not ta or not tb:
+        return False
+    ga, gb = ta[0], tb[0]
+    if ga == gb:
+        return False
+    if len(ga) == 1 or len(gb) == 1:
+        return not (ga.startswith(gb) or gb.startswith(ga))
+    if len(ga) >= 3 and len(gb) >= 3 and (ga.startswith(gb) or gb.startswith(ga)):
+        return False
+    return True
 
 
 def _token_overlap(a: str, b: str) -> float:

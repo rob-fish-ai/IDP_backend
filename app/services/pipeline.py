@@ -365,9 +365,14 @@ def run_extraction_pipeline(
         matched_ps = {id(ps) for psl in ps_map.values() for ps in psl}
         unmatched_ps = [ps for ps in ps_entries if id(ps) not in matched_ps]
         if unmatched_ps:
-            by_source: dict[str, list] = {}
+            # Group by (source, member) — source alone would pool stubs from
+            # two household members who share an employer into one average.
+            by_source: dict[tuple[str, str], list] = {}
             for ps in unmatched_ps:
-                key = (ps.sourceName or "Unknown").lower()
+                key = (
+                    (ps.sourceName or "Unknown").lower(),
+                    (ps.memberName or "").lower(),
+                )
                 by_source.setdefault(key, []).append(ps)
             for source_ps in by_source.values():
                 results = calculate_all_methods(
@@ -941,15 +946,21 @@ def _deduplicate_assets(asset_records: list) -> list:
 
 
 def _resolve_duplicate_self_declarations(vi_entries: list) -> list:
-    """If multiple sources declare the same income, keep the most recent."""
+    """If multiple sources declare the same income, keep the most recent.
+
+    Duplicates are keyed by (source, member): the same employer legitimately
+    appears once per household member who works there, and collapsing on
+    source alone silently deletes the second member's income record.
+    """
     from collections import defaultdict
-    by_source: dict[str, list] = defaultdict(list)
+    by_source: dict[tuple[str, str], list] = defaultdict(list)
     non_dupes: list = []
 
     for vi in vi_entries:
         source = (vi.sourceName or "").lower().strip()
+        member = (vi.memberName or "").lower().strip()
         if source and vi.selfDeclaredAmount:
-            by_source[source].append(vi)
+            by_source[(source, member)].append(vi)
         else:
             non_dupes.append(vi)
 
