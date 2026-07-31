@@ -41,7 +41,9 @@ BORDER = Border(left=THIN, right=THIN, top=THIN, bottom=THIN)
 BOLD = Font(bold=True)
 CENTER = Alignment(horizontal="center", vertical="center")
 
-SIDE_COLS = ["Full name", "Address", "Phone", "Email", "SSN", "Income"]
+SIDE_COLS = ["Full name", "DOB", "Address", "Phone", "Email", "SSN", "Income"]
+# Column layout: A = Case ID, B-H = MuleSoft, I = spacer, J-P = AI Audit.
+_MS_BASE, _SPACER, _AI_BASE = 2, 9, 10
 
 
 def _full_name(first, last):
@@ -98,6 +100,7 @@ def _mulesoft_members(snapshot):
         income = income_by_member.get(m.get("Id"))
         rows.append({
             "name": m.get("Full_Name__c") or _full_name(m.get("First_Name__c"), m.get("Last_Name__c")),
+            "dob": m.get("DOB__c"),
             "phone": m.get("Tenant_Phone__c"),
             "email": m.get("Tenant_Email__c"),
             "ssn": m.get("SSN__c"),
@@ -140,6 +143,7 @@ def _ai_members(extraction):
                         break
         rows.append({
             "name": name,
+            "dob": m.get("DOB"),
             "phone": m.get("phone"),
             "email": m.get("email"),
             "ssn": m.get("socialSecurityNumber"),
@@ -204,17 +208,20 @@ def build_workbook(out_path, limit=None):
     ws.title = "Review"
 
     # Header rows per the requested style: merged side bands over sub-headers.
+    n_cols = len(SIDE_COLS)
     ws.cell(row=1, column=1)
-    ws.merge_cells(start_row=1, start_column=2, end_row=1, end_column=7)
-    ws.cell(row=1, column=2, value="MuleSoft").font = BOLD
-    ws.cell(row=1, column=2).alignment = CENTER
-    ws.merge_cells(start_row=1, start_column=9, end_row=1, end_column=14)
-    ws.cell(row=1, column=9, value="AI Audit").font = BOLD
-    ws.cell(row=1, column=9).alignment = CENTER
+    ws.merge_cells(start_row=1, start_column=_MS_BASE, end_row=1,
+                   end_column=_MS_BASE + n_cols - 1)
+    ws.cell(row=1, column=_MS_BASE, value="MuleSoft").font = BOLD
+    ws.cell(row=1, column=_MS_BASE).alignment = CENTER
+    ws.merge_cells(start_row=1, start_column=_AI_BASE, end_row=1,
+                   end_column=_AI_BASE + n_cols - 1)
+    ws.cell(row=1, column=_AI_BASE, value="AI Audit").font = BOLD
+    ws.cell(row=1, column=_AI_BASE).alignment = CENTER
 
     ws.cell(row=2, column=1, value="Case ID").font = BOLD
     for i, name in enumerate(SIDE_COLS):
-        for base in (2, 9):  # B..G and I..N, H is the spacer
+        for base in (_MS_BASE, _AI_BASE):
             c = ws.cell(row=2, column=base + i, value=name)
             c.font = BOLD
             c.alignment = CENTER
@@ -240,16 +247,18 @@ def build_workbook(out_path, limit=None):
         for i in range(n):
             ms = ms_rows[i] if i < len(ms_rows) else {}
             ai = ai_rows[i] if i < len(ai_rows) else {}
-            vals = {
-                1: case_number,
-                2: ms.get("name"), 3: address if ms else None, 4: ms.get("phone"),
-                5: ms.get("email"), 6: ms.get("ssn"), 7: ms.get("income"),
-                9: ai.get("name"), 10: address if ai else None, 11: ai.get("phone"),
-                12: ai.get("email"), 13: ai.get("ssn"), 14: ai.get("income"),
-            }
+            vals = {1: case_number}
+            for base, side in ((_MS_BASE, ms), (_AI_BASE, ai)):
+                vals[base] = side.get("name")
+                vals[base + 1] = side.get("dob")
+                vals[base + 2] = address if side else None
+                vals[base + 3] = side.get("phone")
+                vals[base + 4] = side.get("email")
+                vals[base + 5] = side.get("ssn")
+                vals[base + 6] = side.get("income")
             for col, v in vals.items():
                 c = ws.cell(row=row, column=col, value=v)
-                if col != 8:
+                if col != _SPACER:
                     c.border = BORDER
             row += 1
         if n > 1:
@@ -257,9 +266,9 @@ def build_workbook(out_path, limit=None):
             ws.cell(row=start, column=1).alignment = Alignment(vertical="top")
 
     # Column widths
-    widths = {1: 12, 8: 2}
-    for base in (2, 9):
-        for i, w in enumerate((22, 38, 15, 28, 13, 14)):
+    widths = {1: 12, _SPACER: 2}
+    for base in (_MS_BASE, _AI_BASE):
+        for i, w in enumerate((22, 12, 38, 15, 28, 13, 14)):
             widths[base + i] = w
     for col, w in widths.items():
         ws.column_dimensions[get_column_letter(col)].width = w
