@@ -73,9 +73,12 @@ def _check_members_without_ssn(
                 f"Household member '{name}' (age {int(age)}) has no SSN on file — "
                 f"all members over age 6 must have a Social Security number (Section 19)"
             )
-        elif ssn in ("***-**-0000", "***-**-9999"):
+        elif ssn in (
+            "***-**-0000", "***-**-9999", "000-00-0000", "999-99-9999",
+        ):
+            from app.services.validation import mask_ssn
             findings.append(
-                f"Household member '{name}' has placeholder SSN ({ssn}) — "
+                f"Household member '{name}' has placeholder SSN ({mask_ssn(ssn)}) — "
                 f"zeros entered instead of actual SSN = finding (Section 19)"
             )
 

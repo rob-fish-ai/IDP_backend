@@ -418,6 +418,10 @@ def get_case_audit(
             )
             return None, str(exc)
 
+    # SSNs are stored as captured (full when a document shows them) for
+    # compliance exports, but every audit-facing response masks them.
+    from app.services.validation import mask_ssns_deep
+
     if job is not None:
         snapshot = job.pop("mulesoft_snapshot", None)
         if snapshot is not None:
@@ -430,7 +434,7 @@ def get_case_audit(
             job["mulesoft_data_source"] = "live" if mulesoft_data is not None else None
             job["mulesoft_error"] = mulesoft_error
         job["source"] = "jobstore"
-        return job
+        return mask_ssns_deep(job)
 
     # Local miss → check Salesforce for findings + MuleSoft data.
     try:
@@ -451,7 +455,7 @@ def get_case_audit(
 
     mulesoft_data, mulesoft_error = _fetch_mulesoft()
 
-    return {
+    return mask_ssns_deep({
         "source": "salesforce",
         "case_id": record.get("Id"),
         "case_number": record.get("CaseNumber"),
@@ -463,7 +467,7 @@ def get_case_audit(
         "mulesoft_data": mulesoft_data,
         "mulesoft_data_source": "live" if mulesoft_data is not None else None,
         "mulesoft_error": mulesoft_error,
-    }
+    })
 
 
 # ---------------------------------------------------------------------------

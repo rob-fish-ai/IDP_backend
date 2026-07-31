@@ -37,6 +37,45 @@ def mask_ssn(value: str | None) -> str | None:
     return None
 
 
+def normalize_ssn(value: str | None) -> str | None:
+    """Normalize an SSN as captured, PRESERVING full digits when present.
+
+    Extraction stores the SSN exactly as the document shows it — full nine
+    digits formatted NNN-NN-NNNN when printed in full, the standard masked
+    form otherwise. Full SSNs stay internal to the job store for compliance
+    exports; every audit-facing surface (findings, Salesforce writeback,
+    API responses) masks them at egress via mask_ssns_deep()."""
+    if not value:
+        return None
+
+    m = _SSN_FULL_PATTERN.search(value)
+    if m:
+        return f"{m.group(1)}-{m.group(2)}-{m.group(3)}"
+
+    return mask_ssn(value)
+
+
+# Keys that hold SSN values across extraction results and MuleSoft
+# snapshots. mask_ssns_deep matches on exact key name.
+_SSN_KEYS = frozenset({"socialSecurityNumber", "SSN__c"})
+
+
+def mask_ssns_deep(obj):
+    """Deep-copy a JSON-ish structure with every SSN field masked to last-4.
+
+    Applied at audit-result egress (API responses, anything user-facing).
+    The stored extraction keeps SSNs as captured; nothing that leaves the
+    service does."""
+    if isinstance(obj, dict):
+        return {
+            k: (mask_ssn(v) if k in _SSN_KEYS and isinstance(v, str) else mask_ssns_deep(v))
+            for k, v in obj.items()
+        }
+    if isinstance(obj, list):
+        return [mask_ssns_deep(v) for v in obj]
+    return obj
+
+
 # ---------------------------------------------------------------------------
 # Title Case
 # ---------------------------------------------------------------------------
@@ -166,7 +205,7 @@ def validate_household(data: dict) -> dict:
         member["FirstName"] = to_title_case(member.get("FirstName"))
         member["MiddleName"] = to_title_case(member.get("MiddleName"))
         member["LastName"] = to_title_case(member.get("LastName"))
-        member["socialSecurityNumber"] = mask_ssn(member.get("socialSecurityNumber"))
+        member["socialSecurityNumber"] = normalize_ssn(member.get("socialSecurityNumber"))
         member["DOB"] = normalize_date(member.get("DOB"))
         member["phone"] = normalize_phone(member.get("phone"))
 
@@ -239,7 +278,7 @@ def validate_income(data: dict) -> dict:
     for stub in si.get("payStub", []):
         stub["memberName"] = to_title_case(stub.get("memberName"))
         stub["sourceName"] = to_title_case(stub.get("sourceName"))
-        stub["socialSecurityNumber"] = mask_ssn(stub.get("socialSecurityNumber"))
+        stub["socialSecurityNumber"] = normalize_ssn(stub.get("socialSecurityNumber"))
         stub["grossPay"] = normalize_money(stub.get("grossPay"))
         stub["payDate"] = normalize_date(stub.get("payDate"))
         if stub.get("payInterval"):
@@ -248,7 +287,7 @@ def validate_income(data: dict) -> dict:
     for vi in si.get("verificationIncome", []):
         vi["memberName"] = to_title_case(vi.get("memberName"))
         vi["sourceName"] = to_title_case(vi.get("sourceName"))
-        vi["socialSecurityNumber"] = mask_ssn(vi.get("socialSecurityNumber"))
+        vi["socialSecurityNumber"] = normalize_ssn(vi.get("socialSecurityNumber"))
         vi["rateOfPay"] = normalize_money(vi.get("rateOfPay"))
         vi["selfDeclaredAmount"] = normalize_money(vi.get("selfDeclaredAmount"))
         vi["ytdAmount"] = normalize_money(vi.get("ytdAmount"))
@@ -334,7 +373,7 @@ def validate_assets(data: dict) -> dict:
     for asset in data.get("assetInformation", []):
         asset["assetOwner"] = to_title_case(asset.get("assetOwner"))
         asset["sourceName"] = to_title_case(asset.get("sourceName"))
-        asset["socialSecurityNumber"] = mask_ssn(asset.get("socialSecurityNumber"))
+        asset["socialSecurityNumber"] = normalize_ssn(asset.get("socialSecurityNumber"))
         asset["currentBalance"] = normalize_money(asset.get("currentBalance"))
         asset["averageSixMonthBalance"] = normalize_money(asset.get("averageSixMonthBalance"))
         asset["selfDeclaredAmount"] = normalize_money(asset.get("selfDeclaredAmount"))

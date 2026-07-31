@@ -70,7 +70,9 @@ async def upload_and_extract(
         funding_program=funding_program,
         certification_type=certification_type,
     )
-    return result
+    # SSNs are stored as captured; every audit-facing response masks them.
+    from app.services.validation import mask_ssns_deep
+    return mask_ssns_deep(result)
 
 
 @router.get("/images/{filename}")

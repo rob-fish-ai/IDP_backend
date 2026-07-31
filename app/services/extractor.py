@@ -73,7 +73,7 @@ You are an expert data extractor for HUD/Affordable Housing certification docume
 Extract household member demographics from the provided document text.
 
 CRITICAL RULES:
-- SSN MASKING: NEVER output a full SSN. ALWAYS mask as ***-**-XXXX (last 4 digits only).
+- SSN: transcribe EXACTLY as the document shows it — the full nine digits when printed in full, the document's own masked form (***-**-XXXX) otherwise. NEVER invent or guess digits.
 - NAME FORMATTING: ALWAYS Title Case for ALL names.
 - If the document is a Calculation Worksheet (keywords: "Calculation", "Calculator", "Worksheet", "Calc Sheet", "PCAP", "CF-51", "LIHTC Calc"), return {"houseHold": []} immediately.
 
@@ -82,7 +82,7 @@ EXTRACTION RULES:
 - FirstName: Title Case. null if only single name field.
 - MiddleName: Title Case, or null.
 - LastName: Title Case. Include suffixes (Jr., Sr., III). Preserve hyphens and multi-word names.
-- socialSecurityNumber: ALWAYS ***-**-XXXX. null if not found.
+- socialSecurityNumber: exactly as printed (full NNN-NN-NNNN or masked ***-**-XXXX). null if not found.
 - DOB: YYYY-MM-DD format. "01/15/1990" → "1990-01-15". If no day, default DD to 01.
 - SOURCE PRIORITY for DOB and SSN: printed identity documents (driver
   license, state ID, Social Security card pages) are AUTHORITATIVE — when
@@ -214,7 +214,7 @@ You are an expert data extractor for HUD/Affordable Housing income documents.
 Extract income data from the provided document text into the MuleSoft Income schema.
 
 CRITICAL RULES:
-- SSN MASKING: ALWAYS ***-**-XXXX. No exceptions.
+- SSN: transcribe exactly as printed — full when shown in full, masked as shown otherwise. Never invent digits.
 - NAME FORMATTING: ALWAYS Title Case.
 - If document is a Calculation Worksheet, return {"sourceIncome": {"payStub": [], "verificationIncome": []}} immediately.
 
@@ -252,7 +252,7 @@ a Child Support Statement is present, the gap is almost always the child support
 PAYSTUB FIELDS:
 - sourceName: employer name, Title Case
 - memberName: employee name, Title Case
-- socialSecurityNumber: ***-**-XXXX
+- socialSecurityNumber: exactly as printed on the stub
 - grossPay: exact dollar amount with cents, numeric string ("1250.00"), no $ or commas
 - payDate: YYYY-MM-DD
 - payInterval: lowercase (weekly / bi-weekly / semi-monthly / monthly)
@@ -309,7 +309,7 @@ You are an expert data extractor for HUD/Affordable Housing asset documents.
 Extract asset data from the provided document text into the MuleSoft Asset schema.
 
 CRITICAL RULES:
-- SSN MASKING: ALWAYS ***-**-XXXX.
+- SSN: transcribe exactly as printed — full when shown in full, masked as shown otherwise.
 - NAME FORMATTING: ALWAYS Title Case.
 - If document is a Calculation Worksheet, return {"assetInformation": []} immediately.
 - PROCESS EVERY DOCUMENT separated by "---". The input may contain 5+ asset
@@ -328,7 +328,7 @@ DOCUMENT ROUTING:
 FIELDS:
 - documentType: Bank Statement — Checking, Bank Statement — Savings, Verification of Assets, Life Insurance, Investment Account, Asset Self-Certification, ABLE Account, Real Estate, Certificate of Deposit, Cryptocurrency, Prepaid Card, Annuity, Direct Express Card
 - assetOwner: account holder name, Title Case
-- socialSecurityNumber: ***-**-XXXX
+- socialSecurityNumber: exactly as printed
 - sourceName: institution name, Title Case
 - selfDeclaredAmount: from self-cert forms only
 - accountType: Checking, Savings, CD, Investment, Retirement, Life Insurance, Cryptocurrency, Prepaid Card, Peer-to-Peer, ABLE Account, Real Estate, Cash, Annuity, Direct Express
