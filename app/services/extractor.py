@@ -84,6 +84,7 @@ EXTRACTION RULES:
 - LastName: Title Case. Include suffixes (Jr., Sr., III). Preserve hyphens and multi-word names.
 - socialSecurityNumber: exactly as printed (full NNN-NN-NNNN or masked ***-**-XXXX). null if not found.
 - DOB: YYYY-MM-DD format. "01/15/1990" → "1990-01-15". If no day, default DD to 01.
+- gender: "M" or "F" when a document states it — HUD 50059 field 38 "Sex", Race and Ethnic Data forms, ID documents. null when no document states it (do NOT infer from names).
 - SOURCE PRIORITY for DOB and SSN: printed identity documents (driver
   license, state ID, Social Security card pages) are AUTHORITATIVE — when
   an Identity Document page shows a member's DOB or SSN, use that value

@@ -41,9 +41,12 @@ BORDER = Border(left=THIN, right=THIN, top=THIN, bottom=THIN)
 BOLD = Font(bold=True)
 CENTER = Alignment(horizontal="center", vertical="center")
 
-SIDE_COLS = ["Full name", "DOB", "Address", "Phone", "Email", "SSN", "Income"]
-# Column layout: A = Case ID, B-H = MuleSoft, I = spacer, J-P = AI Audit.
-_MS_BASE, _SPACER, _AI_BASE = 2, 9, 10
+SIDE_COLS = ["Full name", "DOB", "Gender", "Address", "Phone", "Email", "SSN", "Income"]
+# Column layout: A = Case ID, B-I = MuleSoft, J = spacer, K-R = AI Audit.
+# Gender: Salesforce has no gender field on Household_Member_Cert__c, so the
+# MuleSoft column stays empty; the AI side fills as documents state it
+# (50059 box 38, Race & Ethnic Data forms) for audits run after 2026-07-31.
+_MS_BASE, _SPACER, _AI_BASE = 2, 10, 11
 
 
 def _full_name(first, last):
@@ -101,6 +104,7 @@ def _mulesoft_members(snapshot):
         rows.append({
             "name": m.get("Full_Name__c") or _full_name(m.get("First_Name__c"), m.get("Last_Name__c")),
             "dob": m.get("DOB__c"),
+            "gender": None,  # not stored in Salesforce
             "phone": m.get("Tenant_Phone__c"),
             "email": m.get("Tenant_Email__c"),
             "ssn": m.get("SSN__c"),
@@ -144,6 +148,7 @@ def _ai_members(extraction):
         rows.append({
             "name": name,
             "dob": m.get("DOB"),
+            "gender": m.get("gender"),
             "phone": m.get("phone"),
             "email": m.get("email"),
             "ssn": m.get("socialSecurityNumber"),
@@ -251,11 +256,12 @@ def build_workbook(out_path, limit=None):
             for base, side in ((_MS_BASE, ms), (_AI_BASE, ai)):
                 vals[base] = side.get("name")
                 vals[base + 1] = side.get("dob")
-                vals[base + 2] = address if side else None
-                vals[base + 3] = side.get("phone")
-                vals[base + 4] = side.get("email")
-                vals[base + 5] = side.get("ssn")
-                vals[base + 6] = side.get("income")
+                vals[base + 2] = side.get("gender")
+                vals[base + 3] = address if side else None
+                vals[base + 4] = side.get("phone")
+                vals[base + 5] = side.get("email")
+                vals[base + 6] = side.get("ssn")
+                vals[base + 7] = side.get("income")
             for col, v in vals.items():
                 c = ws.cell(row=row, column=col, value=v)
                 if col != _SPACER:
@@ -268,7 +274,7 @@ def build_workbook(out_path, limit=None):
     # Column widths
     widths = {1: 12, _SPACER: 2}
     for base in (_MS_BASE, _AI_BASE):
-        for i, w in enumerate((22, 12, 38, 15, 28, 13, 14)):
+        for i, w in enumerate((22, 12, 8, 38, 15, 28, 13, 14)):
             widths[base + i] = w
     for col, w in widths.items():
         ws.column_dimensions[get_column_letter(col)].width = w

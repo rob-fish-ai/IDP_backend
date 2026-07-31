@@ -1024,7 +1024,8 @@ def _deduplicate_household_members(household) -> list[str]:
         # Score each copy: count non-null fields
         _MERGE_FIELDS = (
             "householdMemberNumber", "FirstName", "MiddleName", "LastName",
-            "socialSecurityNumber", "DOB", "head", "disabled", "student",
+            "socialSecurityNumber", "DOB", "gender", "head", "disabled",
+            "student", "email", "phone",
         )
 
         def _field_count(m) -> int:

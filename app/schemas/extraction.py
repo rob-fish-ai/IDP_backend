@@ -51,6 +51,7 @@ class HouseholdMember(BaseModel):
     LastName: Optional[str] = None
     socialSecurityNumber: Optional[str] = None
     DOB: Optional[str] = None
+    gender: Optional[str] = None
     head: Optional[str] = None
     disabled: Optional[str] = None
     student: Optional[str] = None
