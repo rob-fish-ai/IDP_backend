@@ -366,8 +366,10 @@ def _value_in_source(value: str, source_text: str) -> bool:
             if v.lower() in source_text:
                 return True
 
-    # SSN masked: check last 4 digits
-    ssn_match = re.match(r"[\*X]{3}-[\*X]{2}-(\d{4})", val)
+    # SSN (masked or full): verify by last 4 digits. Full SSNs are stored
+    # dash-formatted but documents print them with dashes, spaces, or bare
+    # digits — the last 4 are the stable verification token either way.
+    ssn_match = re.match(r"(?:[\*X]{3}-[\*X]{2}|\d{3}-\d{2})-(\d{4})$", val)
     if ssn_match:
         last4 = ssn_match.group(1)
         if last4 in source_text:

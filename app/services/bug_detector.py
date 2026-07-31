@@ -11,6 +11,14 @@ from app.schemas.extraction import (
 logger = logging.getLogger(__name__)
 
 
+def _ssn_last4(ssn: str | None) -> str | None:
+    """Last 4 SSN digits regardless of form (full, masked, partial)."""
+    if not ssn:
+        return None
+    digits = [c for c in str(ssn) if c.isdigit()]
+    return "".join(digits[-4:]) if len(digits) >= 4 else None
+
+
 def detect_known_bugs(
     classification: ClassificationResult,
     document_groups: list[DocumentGroup],
@@ -223,10 +231,12 @@ def _check_duplicate_members(household) -> list[str]:
 
             # Same DOB
             same_dob = a.DOB and b.DOB and a.DOB == b.DOB
-            # Same SSN last 4
-            same_ssn = (a.socialSecurityNumber and b.socialSecurityNumber
-                        and a.socialSecurityNumber == b.socialSecurityNumber
-                        and a.socialSecurityNumber != "***-**-0000")
+            # Same SSN last 4 — compare digits, not raw strings: the same
+            # person can be captured full from one document and masked
+            # from another ("530-38-7514" vs "***-**-7514").
+            a_ssn4 = _ssn_last4(a.socialSecurityNumber)
+            b_ssn4 = _ssn_last4(b.socialSecurityNumber)
+            same_ssn = bool(a_ssn4 and a_ssn4 == b_ssn4 and a_ssn4 != "0000")
             # Similar name (one contains the other, or share last name + first initial)
             a_lower = a_name.lower()
             b_lower = b_name.lower()
