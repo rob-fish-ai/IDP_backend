@@ -58,7 +58,7 @@ class Settings(BaseSettings):
 
     # LLM extraction (Claude API)
     anthropic_api_key: str = ""
-    llm_model: str = "claude-sonnet-4-6"
+    llm_model: str = "claude-sonnet-5"
     # Classification runs on Haiku by default — classification is a
     # constrained labeling task that Haiku handles well, and Haiku uses a
     # separate capacity pool so classification stays up when Sonnet 529s.

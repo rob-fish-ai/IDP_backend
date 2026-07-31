@@ -28,6 +28,25 @@ _TRANSIENT_EXCS = (
     anthropic.InternalServerError,
 )
 
+# Claude 5-family and Opus 4.7+ models reject the temperature parameter with
+# a 400; older models (Sonnet 4.6, Haiku 4.5) still accept it.
+_NO_TEMPERATURE_PREFIXES = (
+    "claude-sonnet-5",
+    "claude-opus-4-7",
+    "claude-opus-4-8",
+    "claude-fable",
+)
+
+
+def _request_kwargs(model: str, settings: Settings, max_tokens: int | None) -> dict:
+    kwargs: dict = {
+        "model": model,
+        "max_tokens": max_tokens or settings.llm_max_tokens,
+    }
+    if not model.startswith(_NO_TEMPERATURE_PREFIXES):
+        kwargs["temperature"] = settings.llm_temperature
+    return kwargs
+
 
 def _get_client(settings: Settings) -> anthropic.Anthropic:
     return anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=_HTTP_TIMEOUT)
@@ -56,9 +75,7 @@ def call_llm(
     for attempt in range(1, _MAX_RETRIES + 1):
         try:
             message = client.messages.create(
-                model=chosen_model,
-                max_tokens=max_tokens or settings.llm_max_tokens,
-                temperature=settings.llm_temperature,
+                **_request_kwargs(chosen_model, settings, max_tokens),
                 system=system_prompt,
                 messages=[{"role": "user", "content": user_prompt}],
             )
@@ -153,9 +170,7 @@ def call_llm_vision(
     for attempt in range(1, _MAX_RETRIES + 1):
         try:
             message = client.messages.create(
-                model=settings.llm_model,
-                max_tokens=max_tokens or settings.llm_max_tokens,
-                temperature=settings.llm_temperature,
+                **_request_kwargs(settings.llm_model, settings, max_tokens),
                 system=system_prompt,
                 messages=[{"role": "user", "content": content}],
             )
