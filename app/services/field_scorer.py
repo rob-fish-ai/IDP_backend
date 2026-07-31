@@ -395,6 +395,19 @@ def _value_in_source(value: str, source_text: str) -> bool:
 # Stage 2: Cross-document consistency
 # ---------------------------------------------------------------------------
 
+def _cross_doc_norm(field_name: str, value: str) -> str:
+    """Normalize a value for cross-document comparison.
+
+    SSNs compare by last-4 digits: the same number legitimately appears
+    full on one document and masked on another ("530-38-7514" vs
+    "***-**-7514" vs "XXX-XX-7514") — that is presentation, not conflict."""
+    if field_name == "socialSecurityNumber":
+        digits = [c for c in value if c.isdigit()]
+        if len(digits) >= 4:
+            return "".join(digits[-4:])
+    return value.lower().strip()
+
+
 def score_cross_doc_consistency(cards: list[RecordScoreCard]) -> None:
     """Compare fields across records that refer to the same entity."""
     by_label: dict[str, list[RecordScoreCard]] = {}
@@ -416,7 +429,7 @@ def score_cross_doc_consistency(cards: list[RecordScoreCard]) -> None:
             values = [v for v, _ in entries if v is not None]
             if len(values) < 2:
                 continue
-            unique = set(v.lower().strip() for v in values)
+            unique = set(_cross_doc_norm(field_name, v) for v in values)
             if len(unique) == 1:
                 for _, card in entries:
                     update_field_score(card, field_name, stage="cross_doc",
