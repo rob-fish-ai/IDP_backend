@@ -92,6 +92,12 @@ class JobStore:
     def _connect(self) -> Iterator[sqlite3.Connection]:
         conn = sqlite3.connect(str(self._db_path), timeout=10.0)
         conn.row_factory = sqlite3.Row
+        # WAL lets readers (export script, ad-hoc analysis queries) coexist
+        # with the worker's writes — in rollback-journal mode a long read
+        # blocks commits past the 10s timeout ("database is locked").
+        # journal_mode is persistent in the DB file; re-issuing is a no-op.
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA synchronous=NORMAL")
         try:
             yield conn
             conn.commit()
