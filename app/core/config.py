@@ -63,7 +63,11 @@ class Settings(BaseSettings):
     # constrained labeling task that Haiku handles well, and Haiku uses a
     # separate capacity pool so classification stays up when Sonnet 529s.
     llm_classify_model: str = "claude-haiku-4-5-20251001"
-    llm_max_tokens: int = 8192
+    # Response budget. Thinking-enabled models (Sonnet 5+) spend reasoning
+    # tokens from this same budget, so it needs headroom beyond the largest
+    # expected JSON output — 8192 caused mid-JSON truncation on asset-heavy
+    # cases. Cost is per generated token, not per the cap itself.
+    llm_max_tokens: int = 16384
     llm_temperature: float = 0.0
 
     # Pipeline context (optional overrides)

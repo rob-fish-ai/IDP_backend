@@ -55,6 +55,13 @@ def _get_client(settings: Settings) -> anthropic.Anthropic:
 def _response_text(message) -> str:
     # Models with thinking enabled (Sonnet 5+) open content with thinking
     # blocks — join the text blocks instead of assuming content[0] is text.
+    if message.stop_reason == "max_tokens":
+        # Surface truncation at the source — downstream it shows up only as
+        # a confusing JSON parse error on the amputated output.
+        logger.warning(
+            "Response truncated at max_tokens (model=%s) — output is incomplete",
+            message.model,
+        )
     return "".join(b.text for b in message.content if b.type == "text")
 
 
