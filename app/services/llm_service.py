@@ -52,6 +52,12 @@ def _get_client(settings: Settings) -> anthropic.Anthropic:
     return anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=_HTTP_TIMEOUT)
 
 
+def _response_text(message) -> str:
+    # Models with thinking enabled (Sonnet 5+) open content with thinking
+    # blocks — join the text blocks instead of assuming content[0] is text.
+    return "".join(b.text for b in message.content if b.type == "text")
+
+
 def call_llm(
     system_prompt: str,
     user_prompt: str,
@@ -79,7 +85,7 @@ def call_llm(
                 system=system_prompt,
                 messages=[{"role": "user", "content": user_prompt}],
             )
-            return message.content[0].text
+            return _response_text(message)
 
         except (anthropic.RateLimitError, anthropic.APIStatusError) as exc:
             # OverloadedError (529) is an APIStatusError subclass.
@@ -174,7 +180,7 @@ def call_llm_vision(
                 system=system_prompt,
                 messages=[{"role": "user", "content": content}],
             )
-            return message.content[0].text
+            return _response_text(message)
 
         except (anthropic.RateLimitError, anthropic.APIStatusError) as exc:
             if isinstance(exc, anthropic.RateLimitError):
