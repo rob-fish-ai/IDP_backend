@@ -313,6 +313,42 @@ class PreviousCertification(BaseModel):
         return v
 
 
+class Finding(BaseModel):
+    """One audit finding, carrying the context needed to place it downstream.
+
+    Findings were plain strings until the Cartograph integration, which needs
+    them attached to a subject (a member, an income record, an asset) with a
+    stable identity so a re-audit updates a finding instead of duplicating it
+    and so reviewer resolutions survive.
+
+    `text` is the full human-readable string and remains the canonical wording
+    — the string list on ExtractionResult is rendered from it, so existing
+    consumers see exactly what they saw before.
+    """
+    code: str                                   # stable type, e.g. "SSA_AS_PAYSTUB_AND_VOI"
+    text: str                                   # full finding wording (backward-compatible)
+    category: str = "file_review"               # unit_rent | household_member | income |
+                                                # asset | expense | file_review
+    label: Optional[str] = None                 # short title, when one is worth separating
+    subject_type: Optional[str] = None          # household_member | income_record |
+                                                # asset_record | expense_record | None = case
+    subject_ref: dict = Field(default_factory=dict)   # {member_name, source_name, ...}
+    result: str = "non_compliant"               # compliant | non_compliant | na
+    assignment: Optional[str] = None            # internal | client | procedural_issue
+    correction_required: Optional[str] = None
+    resolution_type: Optional[str] = None       # presence_only | recalculation
+    confidence: Optional[float] = None
+    pages: list[int] = []
+    finding_key: Optional[str] = None           # derived; see build_finding_key
+
+    @field_validator("pages", mode="before")
+    @classmethod
+    def coerce_pages(cls, v):
+        if v is None:
+            return []
+        return [int(p) for p in v if str(p).isdigit() or isinstance(p, int)]
+
+
 class PageOcrRecord(BaseModel):
     """Per-page OCR provenance persisted for post-hoc diagnosis.
 
@@ -344,6 +380,10 @@ class ExtractionResult(BaseModel):
     income_calculations: list[IncomeCalculationResult] = []
     questionnaire_disclosures: Optional[QuestionnaireDisclosures] = None
     findings: list[str] = []
+    # Structured form of `findings`. Populated for emitters that have been
+    # migrated; `findings` stays the rendered string list for every consumer
+    # that predates the Cartograph integration.
+    finding_records: list[Finding] = []
     field_scores: Optional["ExtractionScoreSummary"] = None
     page_ocr: list[PageOcrRecord] = []
 

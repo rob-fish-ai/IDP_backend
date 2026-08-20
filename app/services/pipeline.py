@@ -17,6 +17,10 @@ from app.schemas.extraction import (
     VerificationIncomeEntry,
 )
 from app.services.bug_detector import detect_known_bugs
+from app.services.findings import dedupe as dedupe_findings
+from app.services.findings import records as finding_records
+from app.services.findings import text_of
+from app.services.findings import render as render_findings
 from app.services.cert_type_rules import validate_cert_type_requirements
 from app.services.cross_doc_validator import (
     validate_asset_consistency,
@@ -467,8 +471,8 @@ def run_extraction_pipeline(
         # headline into a field the findings text never renders — the one
         # finding that explains every derivative RED on a no-cert packet.
         missing_forms = [
-            f for f in findings
-            if f.startswith("Missing required compliance document")
+            text_of(f) for f in findings
+            if text_of(f).startswith("Missing required compliance document")
         ]
         certification_info.formsPresent = sorted(forms_present)
         certification_info.missingForms = missing_forms
@@ -477,7 +481,9 @@ def run_extraction_pipeline(
         has_issues = (
             bool(missing_forms)
             or any(
-                "missing" in f.lower() or "not signed" in f.lower() or "resubmission" in f.lower()
+                "missing" in text_of(f).lower()
+                or "not signed" in text_of(f).lower()
+                or "resubmission" in text_of(f).lower()
                 for f in findings
             )
         )
@@ -486,7 +492,7 @@ def run_extraction_pipeline(
         # Remove the findings that were moved into missingForms — each fact
         # should appear exactly once in the output.
         missing_set = set(missing_forms)
-        findings[:] = [f for f in findings if f not in missing_set]
+        findings[:] = [f for f in findings if text_of(f) not in missing_set]
 
     # Step 5c: Resolve duplicate self-declarations (most recent wins)
     if income:
@@ -577,6 +583,10 @@ def run_extraction_pipeline(
             text=text or None,
         ))
 
+    # Collapse exact repeats before emitting: several detectors iterate per
+    # source document rather than per record.
+    deduped_findings = dedupe_findings(findings)
+
     return ExtractionResult(
         classification=classification,
         document_groups=document_groups,
@@ -589,7 +599,8 @@ def run_extraction_pipeline(
         document_inventory_hud=inventory_hud,
         income_calculations=income_calculations,
         questionnaire_disclosures=questionnaire_disclosures,
-        findings=findings,
+        findings=render_findings(deduped_findings),
+        finding_records=finding_records(deduped_findings),
         field_scores=score_summary,
         page_ocr=page_ocr,
     )
