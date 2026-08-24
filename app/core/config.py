@@ -165,3 +165,16 @@ class Settings(BaseSettings):
     # Independent of audit_mode — runs even in pure webhook deployments
     # where the poller itself is idle.
     audit_maintenance_interval_seconds: int = 3600   # 1 hour
+
+    # --- Cartograph integration -------------------------------------------
+    # Outbound: where extraction results are POSTed, and the secret used to
+    # sign them. Cartograph verifies with the same scheme it uses inbound.
+    cartograph_ingest_url: str = ""
+    cartograph_ingest_secret: str = ""
+    # Inbound: the secret Cartograph signs its result callback with. Distinct
+    # from the outbound secret so a compromise in one direction does not
+    # expose the other.
+    cartograph_callback_secret: str = ""
+    # Bound the outbound POST so a stalled connection cannot wedge a worker.
+    cartograph_timeout_seconds: float = 30.0
+

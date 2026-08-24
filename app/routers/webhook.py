@@ -20,9 +20,12 @@ de-duplicated via JobStore state.
 """
 from __future__ import annotations
 
+import json
 import logging
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException
+from fastapi import (
+    APIRouter, BackgroundTasks, Depends, Header, HTTPException, Request,
+)
 from pydantic import BaseModel, Field, field_validator
 
 from app.core.config import Settings
@@ -30,6 +33,11 @@ from app.core.dependencies import get_settings
 from app.services.audit.job_store import get_job_store
 from app.services.audit.jobs import run_audit, run_comparison, run_extraction
 from app.services.audit.poller import SUPPORTED_CERT_TYPES
+from app.services.cartograph.signing import (
+    SIGNATURE_HEADER,
+    TIMESTAMP_HEADER,
+    verify,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -535,3 +543,62 @@ def reset_audit_jobs(
     deleted = store.delete_all()
     logger.warning("Admin reset: WIPED %d jobs (mode=all)", deleted)
     return {"deleted": deleted, "mode": "all"}
+
+
+# ---------------------------------------------------------------------------
+# Cartograph integration — result callback
+# ---------------------------------------------------------------------------
+
+@router.post("/integration/import_result", status_code=200)
+async def cartograph_import_result(
+    request: Request,
+    settings: Settings = Depends(get_settings),
+) -> dict:
+    """Receive the outcome of a Cartograph import.
+
+    Cartograph's ingest endpoint returns 202 before its background job runs
+    the inserts, so the HTTP response to our POST cannot say what happened.
+    Without this callback an import that fails validation on their side
+    fails silently on ours.
+
+    Authenticated with the same HMAC scheme we use outbound, keyed on a
+    separate inbound secret. Fails closed: an unset secret is rejected
+    rather than accepted.
+    """
+    body = await request.body()
+    ok, reason = verify(
+        body,
+        settings.cartograph_callback_secret,
+        request.headers.get(TIMESTAMP_HEADER),
+        request.headers.get(SIGNATURE_HEADER),
+    )
+    if not ok:
+        logger.warning("Cartograph callback rejected: %s", reason)
+        raise HTTPException(status_code=401, detail=reason)
+
+    try:
+        payload = json.loads(body)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="invalid JSON body")
+
+    case_ref = payload.get("case_ref") or payload.get("job_id")
+    status = payload.get("status")
+    warnings = payload.get("warnings") or []
+    counts = payload.get("counts_created") or payload.get("created") or {}
+
+    # Log at a level that matches the outcome: a failed import or a payload
+    # that produced warnings is something to act on, not background noise.
+    if status == "ok" and not warnings:
+        logger.info(
+            "Cartograph import ok case_ref=%s scan_id=%s created=%s",
+            case_ref, payload.get("scan_id"), counts,
+        )
+    else:
+        logger.warning(
+            "Cartograph import status=%s case_ref=%s scan_id=%s created=%s "
+            "warnings=%s error=%s",
+            status, case_ref, payload.get("scan_id"), counts,
+            warnings, payload.get("error_message"),
+        )
+
+    return {"ok": True, "received": case_ref}
