@@ -351,7 +351,10 @@ def mulesoft_done(
 # Read endpoints: list jobs / inspect one case
 # ---------------------------------------------------------------------------
 
-@router.get("/audit/cases")
+@router.get(
+    "/audit/cases",
+    dependencies=[Depends(_verify_webhook_token)],
+)
 def list_cases(
     state: str | None = None,
     limit: int = 100,
@@ -386,7 +389,10 @@ def list_cases(
     }
 
 
-@router.get("/audit/cases/{case_id}")
+@router.get(
+    "/audit/cases/{case_id}",
+    dependencies=[Depends(_verify_webhook_token)],
+)
 def get_case_audit(
     case_id: str,
     settings: Settings = Depends(get_settings),
