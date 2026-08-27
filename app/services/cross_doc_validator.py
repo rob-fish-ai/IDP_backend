@@ -6,9 +6,21 @@ from app.schemas.extraction import (
     AssetExtraction,
     CertificationInfo,
     DocumentGroup,
+    Finding,
     HouseholdDemographics,
     IncomeCalculationResult,
     IncomeExtraction,
+)
+from app.services.findings import (
+    ASSIGN_CLIENT,
+    ASSIGN_INTERNAL,
+    CATEGORY_ASSET,
+    CATEGORY_INCOME,
+    CATEGORY_MEMBER,
+    CATEGORY_UNIT_RENT,
+    RESOLVE_PRESENCE,
+    RESOLVE_RECALC,
+    make_finding,
 )
 
 logger = logging.getLogger(__name__)
@@ -20,12 +32,12 @@ _DISCREPANCY_THRESHOLD = 0.10  # 10%
 def validate_income_consistency(
     income: IncomeExtraction | None,
     income_calculations: list[IncomeCalculationResult],
-) -> list[str]:
+) -> list[Finding]:
     """Compare income calculation methods for significant discrepancies.
 
     Flags when self-declared vs VOI vs YTD vs paystub annual amounts differ > 10%.
     """
-    findings: list[str] = []
+    findings: list[Finding] = []
     if not income_calculations:
         return findings
 
@@ -72,18 +84,36 @@ def validate_income_consistency(
         # If every method is an "outlier", there's no consensus to deviate
         # from — emit the single summary finding instead of one per method.
         if outliers and len(outliers) < len(methods):
-            # Emit one finding per outlier, listing all the others it disagrees with.
+            # One finding per source, not per outlier. Two outlier methods on
+            # the same source describe a single disagreement that one
+            # recalculation resolves, and separate findings would collide on
+            # identity anyway — a finding is keyed by the record it concerns.
+            # With a single outlier the wording is unchanged.
+            clauses: list[str] = []
+            worst_pct = 0.0
             for method, val, others in outliers:
                 others_str = ", ".join(f"{m} = ${v:,.2f}" for m, v in others)
-                max_pct = max(
+                worst_pct = max(worst_pct, max(
                     abs(val - v) / max(val, v) if max(val, v) > 0 else 0
                     for _, v in others
-                )
-                findings.append(
-                    f"Income discrepancy for '{source}': {method} = ${val:,.2f} "
-                    f"disagrees with {others_str} (up to {max_pct:.0%} difference) — "
-                    f"review income calculation methods (Section 9)"
-                )
+                ))
+                clauses.append(f"{method} = ${val:,.2f} disagrees with {others_str}")
+            findings.append(make_finding(
+                "INCOME_METHOD_OUTLIER",
+                f"Income discrepancy for '{source}': {'; '.join(clauses)} "
+                f"(up to {worst_pct:.0%} difference) — "
+                f"review income calculation methods (Section 9)",
+                label="An income calculation method disagrees with the others",
+                category=CATEGORY_INCOME,
+                subject_type="income_record",
+                subject_ref={"source_name": source},
+                assignment=ASSIGN_INTERNAL,
+                correction_required=(
+                    "Determine which calculation method is correct for this "
+                    "source and recompute the annual income"
+                ),
+                resolution_type=RESOLVE_RECALC,
+            ))
         else:
             # No single outlier — methods disagree among themselves.
             # Emit ONE summary finding instead of N² pairs.
@@ -93,10 +123,21 @@ def validate_income_consistency(
                 methods_str = ", ".join(
                     f"{m} = ${v:,.2f}" for m, v in sorted_items
                 )
-                findings.append(
+                findings.append(make_finding(
+                    "INCOME_METHODS_DISAGREE",
                     f"Income discrepancy for '{source}': methods disagree "
-                    f"({methods_str}) — review income calculation methods (Section 9)"
-                )
+                    f"({methods_str}) — review income calculation methods (Section 9)",
+                    label="No income calculation method agrees with any other",
+                    category=CATEGORY_INCOME,
+                    subject_type="income_record",
+                    subject_ref={"source_name": source},
+                    assignment=ASSIGN_INTERNAL,
+                    correction_required=(
+                        "Establish which verification is authoritative for this "
+                        "source and recompute the annual income"
+                    ),
+                    resolution_type=RESOLVE_RECALC,
+                ))
 
     return findings
 
@@ -104,14 +145,14 @@ def validate_income_consistency(
 def validate_duplicate_income(
     income: IncomeExtraction | None,
     certification_info: CertificationInfo | None = None,
-) -> list[str]:
+) -> list[Finding]:
     """Detect duplicate income records with identical key fields.
 
     Two records with same source, member, rate, and frequency are likely duplicates
     (e.g., same business income extracted twice). Cross-references TIC total to
     determine if the duplicate is expected (e.g., 2 × $1,734 = $3,468 in TIC column A).
     """
-    findings: list[str] = []
+    findings: list[Finding] = []
     if not income:
         return findings
 
@@ -146,11 +187,26 @@ def validate_duplicate_income(
         if certification_info and certification_info.householdIncome:
             note = " — cross-check against TIC total income to verify"
 
-        findings.append(
+        findings.append(make_finding(
+            "DUPLICATE_INCOME_RECORD",
             f"Potential duplicate income: {len(indices)} records for "
             f"'{member}' at '{source}' with rate {rate}/{vi.frequencyOfPay or '?'} "
-            f"({vi.incomeType or '?'}){note}"
-        )
+            f"({vi.incomeType or '?'}){note}",
+            label="Income source recorded more than once with identical fields",
+            category=CATEGORY_INCOME,
+            subject_type="income_record",
+            subject_ref={
+                "member_name": vi.memberName,
+                "source_name": vi.sourceName,
+                "income_type": vi.incomeType,
+            },
+            assignment=ASSIGN_INTERNAL,
+            correction_required=(
+                "Confirm whether the household genuinely holds more than one "
+                "record for this source; delete the duplicate and recompute"
+            ),
+            resolution_type=RESOLVE_RECALC,
+        ))
 
     # Also detect near-duplicates: same incomeType + same member + similar amount
     # (catches parser + LLM extracting the same source with slightly different field values)
@@ -187,6 +243,11 @@ def validate_duplicate_income(
                 amounts.append((i, amt))
 
         if len(amounts) >= 2:
+            # Collect every qualifying pair, then emit once for the group. Three
+            # near-duplicate records produce three pairs but describe a single
+            # problem with a single subject, so one finding carries them all.
+            pairs: list[tuple[float, float]] = []
+            subject_vi = None
             for a_idx in range(len(amounts)):
                 for b_idx in range(a_idx + 1, len(amounts)):
                     i_a, amt_a = amounts[a_idx]
@@ -210,21 +271,44 @@ def validate_duplicate_income(
                     src_b = (vi_b.sourceName or "").lower().strip()
                     if src_a and src_b and src_a != src_b:
                         continue
-                    findings.append(
-                        f"Near-duplicate income: '{vi_a.memberName}' has two "
-                        f"'{vi_a.incomeType}' records — "
-                        f"${amt_a:,.2f} vs ${amt_b:,.2f} — "
-                        f"possibly extracted from both TIC and verification document"
-                    )
+                    subject_vi = subject_vi or vi_a
+                    pairs.append((amt_a, amt_b))
+
+            if pairs and subject_vi is not None:
+                pairs_str = "; ".join(
+                    f"${a:,.2f} vs ${b:,.2f}" for a, b in pairs
+                )
+                count = "two" if len(pairs) == 1 else "several"
+                findings.append(make_finding(
+                    "NEAR_DUPLICATE_INCOME",
+                    f"Near-duplicate income: '{subject_vi.memberName}' has {count} "
+                    f"'{subject_vi.incomeType}' records — "
+                    f"{pairs_str} — "
+                    f"possibly extracted from both TIC and verification document",
+                    label="Similar income records of the same type for one member",
+                    category=CATEGORY_INCOME,
+                    subject_type="income_record",
+                    subject_ref={
+                        "member_name": subject_vi.memberName,
+                        "income_type": subject_vi.incomeType,
+                    },
+                    assignment=ASSIGN_INTERNAL,
+                    correction_required=(
+                        "Determine whether these are one source extracted twice "
+                        "or genuinely separate income; remove any duplicate and "
+                        "recompute"
+                    ),
+                    resolution_type=RESOLVE_RECALC,
+                ))
 
     return findings
 
 
 def validate_asset_consistency(
     assets: AssetExtraction | None,
-) -> list[str]:
+) -> list[Finding]:
     """Compare self-declared asset balances against verified amounts."""
-    findings: list[str] = []
+    findings: list[Finding] = []
     if not assets:
         return findings
 
@@ -239,12 +323,27 @@ def validate_asset_consistency(
             if max_val > 0:
                 diff_pct = abs(self_declared - verified) / max_val
                 if diff_pct > _DISCREPANCY_THRESHOLD:
-                    findings.append(
+                    findings.append(make_finding(
+                        "ASSET_SELF_DECLARED_VS_VERIFIED",
                         f"Asset discrepancy for '{asset.sourceName or 'Unknown'}' "
                         f"({asset.accountType or 'Unknown'}): self-declared = ${self_declared:,.2f} vs "
                         f"verified = ${verified:,.2f} ({diff_pct:.0%} difference) — "
-                        f"review asset worksheet (Section 7)"
-                    )
+                        f"review asset worksheet (Section 7)",
+                        label="Self-declared asset balance differs from the verified balance",
+                        category=CATEGORY_ASSET,
+                        subject_type="asset_record",
+                        subject_ref={
+                            "member_name": asset.assetOwner,
+                            "source_name": asset.sourceName,
+                            "account_type": asset.accountType,
+                        },
+                        assignment=ASSIGN_INTERNAL,
+                        correction_required=(
+                            "Use the verified balance on the asset worksheet and "
+                            "recompute income from assets"
+                        ),
+                        resolution_type=RESOLVE_RECALC,
+                    ))
 
     return findings
 
@@ -253,9 +352,9 @@ def validate_household_consistency(
     household: HouseholdDemographics | None,
     income: IncomeExtraction | None,
     assets: AssetExtraction | None,
-) -> list[str]:
+) -> list[Finding]:
     """Check that names on income/asset docs match the household roster."""
-    findings: list[str] = []
+    findings: list[Finding] = []
     if not household or not household.houseHold:
         return findings
 
@@ -274,28 +373,70 @@ def validate_household_consistency(
         for vi in income.sourceIncome.verificationIncome:
             name = (vi.memberName or "").lower().strip()
             if name and not _name_in_household(name, hh_names):
-                findings.append(
+                findings.append(make_finding(
+                    "INCOME_MEMBER_NOT_IN_ROSTER",
                     f"Income record for '{vi.memberName}' at '{vi.sourceName}' — "
-                    f"person not found in household roster. Verify household composition (Section 8)"
-                )
+                    f"person not found in household roster. Verify household composition (Section 8)",
+                    label="Income earner is not on the household roster",
+                    category=CATEGORY_MEMBER,
+                    subject_type="income_record",
+                    subject_ref={
+                        "member_name": vi.memberName,
+                        "source_name": vi.sourceName,
+                    },
+                    assignment=ASSIGN_INTERNAL,
+                    correction_required=(
+                        "Add the person to the household roster, or reassign the "
+                        "income record to the member it belongs to"
+                    ),
+                    resolution_type=RESOLVE_RECALC,
+                ))
 
         for ps in income.sourceIncome.payStub:
             name = (ps.memberName or "").lower().strip()
             if name and not _name_in_household(name, hh_names):
-                findings.append(
+                findings.append(make_finding(
+                    "PAYSTUB_MEMBER_NOT_IN_ROSTER",
                     f"Pay stub for '{ps.memberName}' from '{ps.sourceName}' — "
-                    f"person not found in household roster. Verify household composition (Section 8)"
-                )
+                    f"person not found in household roster. Verify household composition (Section 8)",
+                    label="Paystub earner is not on the household roster",
+                    category=CATEGORY_MEMBER,
+                    subject_type="income_record",
+                    subject_ref={
+                        "member_name": ps.memberName,
+                        "source_name": ps.sourceName,
+                    },
+                    assignment=ASSIGN_INTERNAL,
+                    correction_required=(
+                        "Add the person to the household roster, or reassign the "
+                        "paystub to the member it belongs to"
+                    ),
+                    resolution_type=RESOLVE_RECALC,
+                ))
 
     # Check asset records
     if assets:
         for asset in assets.assetInformation:
             name = (asset.assetOwner or "").lower().strip()
             if name and not _name_in_household(name, hh_names):
-                findings.append(
+                findings.append(make_finding(
+                    "ASSET_OWNER_NOT_IN_ROSTER",
                     f"Asset record for '{asset.assetOwner}' at '{asset.sourceName}' — "
-                    f"person not found in household roster. Verify household composition (Section 8)"
-                )
+                    f"person not found in household roster. Verify household composition (Section 8)",
+                    label="Asset owner is not on the household roster",
+                    category=CATEGORY_MEMBER,
+                    subject_type="asset_record",
+                    subject_ref={
+                        "member_name": asset.assetOwner,
+                        "source_name": asset.sourceName,
+                    },
+                    assignment=ASSIGN_INTERNAL,
+                    correction_required=(
+                        "Add the person to the household roster, or reassign the "
+                        "asset to the member it belongs to"
+                    ),
+                    resolution_type=RESOLVE_RECALC,
+                ))
 
     return findings
 
@@ -303,9 +444,9 @@ def validate_household_consistency(
 def validate_asset_worksheet_rules(
     assets: AssetExtraction | None,
     document_groups: list[DocumentGroup],
-) -> list[str]:
+) -> list[Finding]:
     """Section 7 asset worksheet checks."""
-    findings: list[str] = []
+    findings: list[Finding] = []
     if not assets:
         return findings
 
@@ -319,10 +460,19 @@ def validate_asset_worksheet_rules(
             if any(kw in dt.lower() for kw in ("bank statement", "voa", "verification of asset"))
         )
         if not has_no_asset_cert and not has_asset_doc:
-            findings.append(
+            findings.append(make_finding(
+                "NO_ASSET_CERT_MISSING",
                 "No assets extracted and no 'No Asset Certification' found — "
-                "zero-asset certification record required if household has no assets (Section 7)"
-            )
+                "zero-asset certification record required if household has no assets (Section 7)",
+                label="Zero-asset household with no asset certification on file",
+                category=CATEGORY_ASSET,
+                assignment=ASSIGN_CLIENT,
+                correction_required=(
+                    "Obtain a signed No Asset Certification, or supply the asset "
+                    "documentation that is missing from the packet"
+                ),
+                resolution_type=RESOLVE_PRESENCE,
+            ))
 
     # Check for joint/shared accounts without percentage of ownership
     for asset in assets.assetInformation:
@@ -330,11 +480,26 @@ def validate_asset_worksheet_rules(
             try:
                 pct = float(asset.percentageOfOwnership)
                 if 0 < pct < 100:
-                    findings.append(
+                    findings.append(make_finding(
+                        "JOINT_ACCOUNT_OWNERSHIP_PCT",
                         f"Joint account at '{asset.sourceName or 'Unknown'}' with "
                         f"{pct}% ownership — verify asset values are adjusted by "
-                        f"ownership percentage (Section 7)"
-                    )
+                        f"ownership percentage (Section 7)",
+                        label="Jointly owned asset may not be prorated to the household share",
+                        category=CATEGORY_ASSET,
+                        subject_type="asset_record",
+                        subject_ref={
+                            "member_name": asset.assetOwner,
+                            "source_name": asset.sourceName,
+                            "account_type": asset.accountType,
+                        },
+                        assignment=ASSIGN_INTERNAL,
+                        correction_required=(
+                            "Apply the ownership percentage to the asset value and "
+                            "recompute income from assets"
+                        ),
+                        resolution_type=RESOLVE_RECALC,
+                    ))
             except ValueError:
                 pass
 
@@ -344,13 +509,13 @@ def validate_asset_worksheet_rules(
 def validate_rent_assistance(
     certification_info: CertificationInfo | None,
     document_groups: list[DocumentGroup],
-) -> list[str]:
+) -> list[Finding]:
     """Check rent assistance documents against TIC fields.
 
     If a HomeBASE, Section 8, or other assistance document is present,
     the TIC should show a non-zero assistance amount.
     """
-    findings: list[str] = []
+    findings: list[Finding] = []
     if not certification_info:
         return findings
 
@@ -378,11 +543,20 @@ def validate_rent_assistance(
     fed_val = float(fed) if fed and fed != "0" else 0
 
     if non_fed_val == 0 and fed_val == 0:
-        findings.append(
+        findings.append(make_finding(
+            "RENT_ASSISTANCE_NOT_ON_TIC",
             f"Rent assistance document(s) present ({', '.join(assistance_docs)}) "
             f"but TIC shows $0 for both federal and non-federal rent assistance — "
-            f"verify if assistance amount should be recorded on TIC Part VI"
-        )
+            f"verify if assistance amount should be recorded on TIC Part VI",
+            label="Rent assistance documented but not recorded on the certification",
+            category=CATEGORY_UNIT_RENT,
+            assignment=ASSIGN_INTERNAL,
+            correction_required=(
+                "Record the assistance amount on the certification, or confirm "
+                "the assistance did not apply for this period"
+            ),
+            resolution_type=RESOLVE_RECALC,
+        ))
 
     return findings
 
@@ -413,21 +587,33 @@ def validate_tic_totals(
     certification_info: CertificationInfo | None,
     income: IncomeExtraction | None,
     income_calculations: list[IncomeCalculationResult],
-) -> list[str]:
+) -> list[Finding]:
     """Cross-reference TIC/HUD 50059 total income against sum of individual sources.
 
     The certification form declares a household income total. The sum of all
     extracted individual income sources should approximately match. Discrepancies
     indicate missing sources, duplicate extraction, or type misidentification.
     """
-    findings: list[str] = []
+    findings: list[Finding] = []
     if not certification_info or not certification_info.householdIncome:
         # No total to compare against
         if income and income.sourceIncome.verificationIncome:
-            findings.append(
+            findings.append(make_finding(
+                "TIC_TOTAL_NOT_EXTRACTED",
                 "Household income total not extracted from certification form — "
-                "cannot cross-validate individual income sources against declared total"
-            )
+                "cannot cross-validate individual income sources against declared total",
+                label="Certification income total unavailable for cross-validation",
+                category=CATEGORY_INCOME,
+                # An extraction gap on our side, not a compliance failure by the
+                # file. It suppresses a check rather than failing one.
+                result="na",
+                assignment=ASSIGN_INTERNAL,
+                correction_required=(
+                    "Confirm the certification total by hand; the comparison "
+                    "against individual sources did not run"
+                ),
+                resolution_type=RESOLVE_PRESENCE,
+            ))
         return findings
 
     tic_total = _parse_money(certification_info.householdIncome)
@@ -493,10 +679,22 @@ def validate_tic_totals(
     calc_total = sum(best_by_source.values())
 
     if calc_total == 0:
-        findings.append(
+        findings.append(make_finding(
+            "TIC_TOTAL_NO_CALCULATIONS",
             f"TIC declares household income ${tic_total:,.2f} but no individual income "
-            f"calculations produced results — verify all income sources extracted"
-        )
+            f"calculations produced results — verify all income sources extracted",
+            label="Certification declares income but no source calculation succeeded",
+            category=CATEGORY_INCOME,
+            # Again an extraction gap: the declared total is present, our side
+            # produced nothing to hold against it.
+            result="na",
+            assignment=ASSIGN_INTERNAL,
+            correction_required=(
+                "Verify the income sources by hand; none were calculable from "
+                "the packet"
+            ),
+            resolution_type=RESOLVE_PRESENCE,
+        ))
         return findings
 
     diff = abs(tic_total - calc_total)
@@ -505,17 +703,34 @@ def validate_tic_totals(
     if diff_pct > 0.15:
         direction = "higher" if calc_total > tic_total else "lower"
         source_detail = ", ".join(f"{k}: ${v:,.0f}" for k, v in best_by_source.items())
-        findings.append(
+        findings.append(make_finding(
+            "TIC_TOTAL_MISMATCH",
             f"Income total mismatch: TIC declares ${tic_total:,.2f} but extracted sources "
             f"sum to ${calc_total:,.2f} ({diff_pct:.0%} {direction}). "
             f"Sources: [{source_detail}]. "
-            f"Possible missing/duplicate income source — review Section 9"
-        )
+            f"Possible missing/duplicate income source — review Section 9",
+            label="Household income total disagrees with the sum of its sources",
+            category=CATEGORY_INCOME,
+            assignment=ASSIGN_INTERNAL,
+            correction_required=(
+                "Locate the missing or duplicated income source and recompute "
+                "the household total"
+            ),
+            resolution_type=RESOLVE_RECALC,
+        ))
     elif diff_pct > 0.05:
-        findings.append(
+        findings.append(make_finding(
+            "TIC_TOTAL_MINOR_DIFF",
             f"Minor income discrepancy: TIC ${tic_total:,.2f} vs calculated ${calc_total:,.2f} "
-            f"({diff_pct:.0%} difference) — may be rounding"
-        )
+            f"({diff_pct:.0%} difference) — may be rounding",
+            label="Small difference between declared and calculated household income",
+            category=CATEGORY_INCOME,
+            # Below the threshold that indicates a real defect; carried as a
+            # note so a reviewer can confirm it is rounding.
+            result="na",
+            assignment=ASSIGN_INTERNAL,
+            resolution_type=RESOLVE_PRESENCE,
+        ))
 
     return findings
 
@@ -543,7 +758,7 @@ def validate_cert_summary_vs_income(
     income: IncomeExtraction | None,
     income_calculations: list[IncomeCalculationResult],
     document_groups: list[DocumentGroup],
-) -> list[str]:
+) -> list[Finding]:
     """Cross-validate individual income records against cert summary tables.
 
     Certification forms (USDA RD 3560-8, LIHTC TIC page 3, HUD 50059 Section D)
@@ -555,7 +770,7 @@ def validate_cert_summary_vs_income(
     """
     import re
 
-    findings: list[str] = []
+    findings: list[Finding] = []
     if not income:
         return findings
 
@@ -654,12 +869,26 @@ def validate_cert_summary_vs_income(
 
         if diff_pct > 0.10:
             direction = "higher" if best_calc_annual > summary_annual else "lower"
-            findings.append(
+            findings.append(make_finding(
+                "CERT_SUMMARY_INCOME_MISMATCH",
                 f"Income mismatch for {se['raw_name']} at {se['raw_employer']}: "
                 f"cert summary shows ${summary_annual:,.2f}/year but VOI-based calculation "
                 f"is ${best_calc_annual:,.2f} ({diff_pct:.0%} {direction}). "
-                f"Cert summary is typically more reliable — verify VOI rate/hours."
-            )
+                f"Cert summary is typically more reliable — verify VOI rate/hours.",
+                label="Calculated income disagrees with the certification summary table",
+                category=CATEGORY_INCOME,
+                subject_type="income_record",
+                subject_ref={
+                    "member_name": best_vi.memberName,
+                    "source_name": best_vi.sourceName,
+                },
+                assignment=ASSIGN_INTERNAL,
+                correction_required=(
+                    "Re-verify the rate and hours on the verification of income "
+                    "against the certification summary, then recompute"
+                ),
+                resolution_type=RESOLVE_RECALC,
+            ))
 
     return findings
 
