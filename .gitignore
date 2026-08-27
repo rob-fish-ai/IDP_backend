@@ -1,2 +1,8 @@
 __pycache__/
 *.pyc
+
+# Secrets and local state — never commit
+.env
+.env.*
+.venv/
+uvicorn.log
