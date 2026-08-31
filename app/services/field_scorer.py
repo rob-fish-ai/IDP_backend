@@ -171,7 +171,17 @@ def score_pydantic_records(
                 f"{a.assetOwner or ''} — {a.accountType or ''}{acct_tail}"
             ).strip(" —")
             scorer = RecordScorer("asset", label or "Unknown")
-            for field in ("accountType", "currentBalance", "incomeAmount", "assetOwner"):
+            # selfDeclaredAmount belongs here even though it is not always
+            # populated: an asset carries its value in currentBalance when
+            # third-party verified and in selfDeclaredAmount when
+            # self-certified. Scoring only one of them made the business
+            # rule below — which excuses the empty sibling — unable to see
+            # the field it keys on, so every self-certified asset scored a
+            # false RED for a balance it was never going to have.
+            for field in (
+                "accountType", "currentBalance", "selfDeclaredAmount",
+                "incomeAmount", "assetOwner",
+            ):
                 val = getattr(a, field, None)
                 scorer.score_field(field, str(val) if val else None)
             cards.append(scorer.build())
@@ -696,6 +706,14 @@ def _score_asset_rules(card: RecordScoreCard) -> None:
                 fs.mark_na("Balance captured in selfDeclaredAmount")
             if fs.field_name == "incomeAmount" and fs.value is None:
                 fs.mark_na("Self-declared asset — per-asset income not itemized")
+
+    # The mirror case: a third-party verified asset carries its value in
+    # currentBalance and has no self-declaration to record. Scoring the
+    # empty sibling would just move the false RED to the other field.
+    elif vals.get("currentBalance") and not vals.get("selfDeclaredAmount"):
+        for fs in card.fields:
+            if fs.field_name == "selfDeclaredAmount" and fs.value is None:
+                fs.mark_na("Balance captured in currentBalance")
 
     # currentBalance: numeric >= 0
     balance = vals.get("currentBalance")

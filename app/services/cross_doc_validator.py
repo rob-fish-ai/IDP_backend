@@ -28,6 +28,16 @@ logger = logging.getLogger(__name__)
 # Threshold for flagging income discrepancies
 _DISCREPANCY_THRESHOLD = 0.10  # 10%
 
+# Above what absolute difference a small percentage gap stops being
+# explicable as rounding. Rounding artifacts are bounded in dollars, not in
+# percent: cents lost per source, a figure entered to the nearest dollar. A
+# percentage band alone scales with household income, so on a $50,000
+# certification it lets a $5,000 methodology difference — which month of a
+# benefit was annualized, a source counted once or twice — be described as
+# rounding and skimmed past. The percentage decides whether to look; this
+# decides what to call what is found.
+_ROUNDING_TOLERANCE = 100.0
+
 
 def validate_income_consistency(
     income: IncomeExtraction | None,
@@ -719,18 +729,33 @@ def validate_tic_totals(
             resolution_type=RESOLVE_RECALC,
         ))
     elif diff_pct > 0.05:
-        findings.append(make_finding(
-            "TIC_TOTAL_MINOR_DIFF",
-            f"Minor income discrepancy: TIC ${tic_total:,.2f} vs calculated ${calc_total:,.2f} "
-            f"({diff_pct:.0%} difference) — may be rounding",
-            label="Small difference between declared and calculated household income",
-            category=CATEGORY_INCOME,
-            # Below the threshold that indicates a real defect; carried as a
-            # note so a reviewer can confirm it is rounding.
-            result="na",
-            assignment=ASSIGN_INTERNAL,
-            resolution_type=RESOLVE_PRESENCE,
-        ))
+        if diff <= _ROUNDING_TOLERANCE:
+            findings.append(make_finding(
+                "TIC_TOTAL_MINOR_DIFF",
+                f"Minor income discrepancy: TIC ${tic_total:,.2f} vs calculated "
+                f"${calc_total:,.2f} (${diff:,.2f}, {diff_pct:.0%}) — "
+                f"consistent with rounding",
+                label="Declared and calculated household income differ by a rounding amount",
+                category=CATEGORY_INCOME,
+                result="na",
+                assignment=ASSIGN_INTERNAL,
+                resolution_type=RESOLVE_PRESENCE,
+            ))
+        else:
+            findings.append(make_finding(
+                "TIC_TOTAL_MINOR_DIFF",
+                f"Income discrepancy: TIC ${tic_total:,.2f} vs calculated "
+                f"${calc_total:,.2f} — a difference of ${diff:,.2f} ({diff_pct:.0%}). "
+                f"Too large to be rounding; identify which source accounts for it",
+                label="Declared and calculated household income disagree",
+                category=CATEGORY_INCOME,
+                assignment=ASSIGN_INTERNAL,
+                correction_required=(
+                    "Identify the source responsible for the difference and "
+                    "confirm which figure is correct"
+                ),
+                resolution_type=RESOLVE_RECALC,
+            ))
 
     return findings
 
