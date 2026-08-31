@@ -196,9 +196,21 @@ def revisit_failed_cases(settings: Settings) -> int:
     audit_retention_days, which bounds how long any case is revisited.
     """
     store = get_job_store(settings.audit_job_db)
+
+    def _from_salesforce(row: dict) -> bool:
+        """Only Salesforce-sourced rows can be checked against Salesforce.
+
+        Cartograph cases live in the same store keyed by their own ref, which
+        Salesforce has never seen. Querying for one returns a 500 ("invalid
+        parameter value") — harmless but it burns an API call per failed case
+        per sweep and buries real Salesforce errors under a traceback.
+        """
+        return (row.get("source") or "salesforce") == "salesforce"
+
     candidates = [
         row for row in store.list_by_state(EXTRACTION_FAILED)
-        if any(m in (row.get("error") or "") for m in _NO_SOURCE_PDF_MARKERS)
+        if _from_salesforce(row)
+        and any(m in (row.get("error") or "") for m in _NO_SOURCE_PDF_MARKERS)
     ]
     # Done-but-unauditable: the audit "completed" but the packet had no
     # certification form (correction rounds attach the reviewer's report
@@ -208,7 +220,8 @@ def revisit_failed_cases(settings: Settings) -> int:
     # it stays frozen at a garbage-input verdict.
     candidates += [
         row for row in store.list_by_state(DONE)
-        if "Missing required certification form" in (row.get("findings_text") or "")
+        if _from_salesforce(row)
+        and "Missing required certification form" in (row.get("findings_text") or "")
     ]
     if not candidates:
         return 0

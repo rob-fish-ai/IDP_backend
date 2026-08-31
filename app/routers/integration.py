@@ -93,6 +93,9 @@ async def receive_case(
         cert_type=payload.cert_type,
         funding_program=payload.program,
         content_document_id=None,
+        # Marks the row so Salesforce-only maintenance skips it. A
+        # Cartograph case_ref is not a Salesforce Case Id.
+        source="cartograph",
     )
     if upsert.get("deduplicated"):
         logger.info(

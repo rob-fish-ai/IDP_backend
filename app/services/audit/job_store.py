@@ -53,7 +53,11 @@ CREATE TABLE IF NOT EXISTS audit_jobs (
     extracted_at REAL,
     mulesoft_done_at REAL,
     completed_at REAL,
-    retry_count INTEGER NOT NULL DEFAULT 0
+    retry_count INTEGER NOT NULL DEFAULT 0,
+    -- Which integration put this row here. Salesforce-only maintenance
+    -- (the revisit sweep asks Salesforce whether a newer PDF was attached)
+    -- must not run against a case_id Salesforce has never heard of.
+    source TEXT NOT NULL DEFAULT 'salesforce'
 );
 
 CREATE INDEX IF NOT EXISTS idx_state ON audit_jobs(state);
@@ -86,6 +90,15 @@ class JobStore:
                     "ALTER TABLE audit_jobs ADD COLUMN mulesoft_snapshot TEXT"
                 )
                 logger.info("Added mulesoft_snapshot column to existing audit_jobs table")
+            if "source" not in existing_cols:
+                # Every pre-existing row came from Salesforce, so the
+                # default is correct for the backfill as well as for new
+                # rows written by the Salesforce path.
+                conn.execute(
+                    "ALTER TABLE audit_jobs "
+                    "ADD COLUMN source TEXT NOT NULL DEFAULT 'salesforce'"
+                )
+                logger.info("Added source column to existing audit_jobs table")
         logger.info("Audit job store ready at %s", db_path)
 
     @contextmanager
@@ -115,6 +128,7 @@ class JobStore:
         cert_type: str | None,
         funding_program: str | None,
         content_document_id: str | None,
+        source: str = "salesforce",
     ) -> dict[str, Any]:
         """Create or refresh a pending job. Idempotent.
 
@@ -136,14 +150,15 @@ class JobStore:
             conn.execute("""
                 INSERT INTO audit_jobs (
                     case_id, case_number, state, cert_type, funding_program,
-                    content_document_id, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    content_document_id, source, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(case_id) DO UPDATE SET
                     case_number = excluded.case_number,
                     state = excluded.state,
                     cert_type = excluded.cert_type,
                     funding_program = excluded.funding_program,
                     content_document_id = excluded.content_document_id,
+                    source = excluded.source,
                     extraction_result = NULL,
                     findings_text = NULL,
                     error = NULL,
@@ -154,7 +169,7 @@ class JobStore:
                     completed_at = NULL
             """, (
                 case_id, case_number, PENDING, cert_type, funding_program,
-                content_document_id, now, now,
+                content_document_id, source, now, now,
             ))
             return {"state": PENDING, "deduplicated": False}
 
