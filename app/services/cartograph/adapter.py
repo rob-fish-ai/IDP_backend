@@ -449,13 +449,61 @@ def build_income_records(
             "zero_income": None,
         })
 
-    attached = sum(len(r["paystubs"]) for r in records)
-    if attached < len(source_income.payStub):
-        warnings.append(
-            f"{len(source_income.payStub) - attached} of "
-            f"{len(source_income.payStub)} paystub(s) matched no income "
-            f"source and were not sent"
-        )
+    # Paystubs left over after matching describe an employer the extractor
+    # never raised a verification entry for. That happens: on this packet the
+    # employer verification came back blank and the manager substituted
+    # paystubs, so the source exists only as a stack of stubs.
+    #
+    # Building records solely from verificationIncome would drop the largest
+    # income in the household while sending the small self-declared ones,
+    # and Cartograph recomputes the total from what it receives. A source the
+    # engine demonstrably knows about must not vanish because it is recorded
+    # in one of the three income structures rather than another.
+    matched = {id(stub) for group in grouped.values() for stub in group}
+    orphans = [s for s in source_income.payStub if id(s) not in matched]
+    if orphans:
+        by_source: dict[tuple, list] = {}
+        for stub in orphans:
+            key = ((stub.memberName or "").strip(), (stub.sourceName or "").strip())
+            by_source.setdefault(key, []).append(stub)
+
+        for (member_name, source_name), stubs in by_source.items():
+            context = f"income_records[{len(records)}]"
+            warnings.append(
+                f"{context}: '{source_name or 'unnamed employer'}' has "
+                f"{len(stubs)} paystub(s) but no verification entry; record "
+                f"reconstructed from the paystubs and typed as wages"
+            )
+            records.append({
+                "member_ref": _resolve_member_ref(
+                    member_name, members, warnings, context,
+                ),
+                # A paystub is employment income by definition, so this is
+                # the one inference the mapping makes rather than collapsing
+                # to 'other'. The warning above records that it was inferred.
+                "income_type": "non_federal_wages",
+                "source_name": source_name or None,
+                "frequency_of_pay": next(
+                    (s.payInterval for s in stubs if s.payInterval), None,
+                ),
+                "date_received": None,
+                "employment_start_date": None,
+                "employment_status": None,
+                "termination_date": None,
+                "self_declared_amount": None,
+                "source_of_declaration": None,
+                "paystubs": [
+                    {
+                        "pay_date": _iso_date(s.payDate),
+                        "gross_pay": _money(s.grossPay),
+                        "ytd_amount": _money(s.ytdGross),
+                        "pay_frequency": s.payInterval,
+                    }
+                    for s in stubs
+                ],
+                "vois": [],
+                "zero_income": None,
+            })
 
     return records
 
@@ -491,18 +539,38 @@ def build_asset_records(
                 "source": asset.sourceName,
             }
 
-        # A self-certified asset carries its value in selfDeclaredAmount and
-        # a verified one in currentBalance. Both are sent under the field
-        # that describes what they are, so the importer can tell a verified
-        # balance from a resident's own figure.
+        # current_value asserts a third-party verified balance; manual_balance
+        # asserts the resident's own figure. The extractor sometimes copies a
+        # self-certified amount into currentBalance as well, which would send
+        # a resident's declaration to Cartograph dressed as verification and
+        # let it satisfy a checklist item that requires third-party proof.
+        #
+        # A balance counts as verified only with evidence behind it: a bank
+        # statement, a verification of assets, or a source document that is
+        # not the resident's own certification.
+        verified = bool(
+            asset.bankStatment
+            or asset.verificationOfAsset
+            or "self-cert" not in (asset.documentType or "").lower()
+        )
+        current_value = _money(asset.currentBalance) if verified else None
+        if asset.currentBalance and not verified:
+            warnings.append(
+                f"{context}: balance came from a self-certification with no "
+                f"statement or verification of assets; sent as "
+                f"manual_balance only"
+            )
+
         records.append({
             "member_ref": member_ref,
             "asset_type": _map_vocabulary(
                 asset.accountType, _ASSET_TYPES, warnings, context,
             ),
             "institution_name": asset.sourceName,
-            "current_value": _money(asset.currentBalance),
-            "manual_balance": _money(asset.selfDeclaredAmount),
+            "current_value": current_value,
+            "manual_balance": _money(
+                asset.selfDeclaredAmount or asset.currentBalance
+            ),
             "source_of_declaration": asset.selfDeclaredSource,
             "bank_stmt_avg_balance": _money(asset.averageSixMonthBalance),
             "annual_income_from_assets": _money(asset.incomeAmount),
