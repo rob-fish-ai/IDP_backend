@@ -17,6 +17,7 @@ from app.schemas.extraction import (
     VerificationIncomeEntry,
 )
 from app.services.bug_detector import detect_known_bugs
+from app.services.completeness import check_completeness
 from app.services.findings import dedupe as dedupe_findings
 from app.services.findings import records as finding_records
 from app.services.findings import text_of
@@ -1581,7 +1582,23 @@ def _generate_findings(
         household=household, certification_info=certification_info,
     ))
 
-    # --- 20. Special scenarios (Section 19) ---
+    # --- 20. Completeness against the certification's own account ---
+    # Runs last: it compares the finished extraction against what the
+    # certification says should be in it, which is the check that replaces
+    # the MuleSoft reconciliation when Salesforce retires.
+    findings.extend(check_completeness(ExtractionResult(
+        classification=classification,
+        document_groups=document_groups,
+        household_demographics=household or HouseholdDemographics(),
+        certification_info=certification_info,
+        income=income or IncomeExtraction(),
+        assets=assets or AssetExtraction(),
+        document_inventory_financial=inventory_financial,
+        document_inventory_hud=inventory_hud,
+        income_calculations=income_calculations or [],
+    )))
+
+    # --- 21. Special scenarios (Section 19) ---
     findings.extend(check_special_scenarios(
         household, income, certification_info,
         document_groups, inventory_hud, ctx,
