@@ -1152,26 +1152,56 @@ def _retry_missed_asset_groups(
     """Identify asset groups whose pages aren't represented in extracted
     records, then send a targeted retry for just those groups.
 
-    Matching uses sourceName + accountNumber only (not assetOwner — owner
-    name appears on every page in single-person households and would mark
-    all groups as covered).
+    A group counts as covered only when a value that *distinguishes* one
+    extracted record from the others appears in it.
+
+    Matching on any signature is not enough. Institution names are the
+    obvious signature and the least distinguishing one: two household
+    members holding accounts at the same bank is ordinary, so a record
+    extracted from one member's certification marks the other member's
+    pages as covered and their asset is never recovered. Owner names fail
+    the same way in the other direction, which is why they were excluded —
+    in a single-person household the owner appears on every page.
+
+    So the rule is not which field to trust, but which *values* can tell
+    records apart: a value shared by two extracted records carries no
+    discriminating power and is discarded, whichever field it came from.
+    Amounts are included because they are naturally distinguishing.
+
+    When nothing distinguishing survives, every group is treated as missed
+    and re-asked. That is the safe direction — the retry is a single bounded
+    pass, and extracting an asset twice is caught by deduplication while
+    missing one is money that silently vanishes.
     """
-    extracted_signatures: set[str] = set()
-    for rec in extracted:
-        # sourceName: institution-specific, good signal
-        src = rec.get("sourceName")
-        if src and len(str(src).strip()) >= 4:
-            extracted_signatures.add(str(src).lower().strip())
-        # accountNumber: very specific
-        acct = rec.get("accountNumber")
-        if acct and len(str(acct).strip()) >= 4:
-            extracted_signatures.add(str(acct).lower().strip())
+    def _signatures(rec: dict) -> set[str]:
+        out: set[str] = set()
+        for key in ("sourceName", "accountNumber", "assetOwner",
+                    "currentBalance", "selfDeclaredAmount"):
+            value = rec.get(key)
+            if value and len(str(value).strip()) >= 4:
+                out.add(str(value).lower().strip())
+        return out
+
+    per_record = [_signatures(rec) for rec in extracted]
+
+    # A value occurring in more than one record cannot distinguish between
+    # them, so it cannot be evidence that any particular group was read.
+    seen_count: dict[str, int] = {}
+    for sigs in per_record:
+        for sig in sigs:
+            seen_count[sig] = seen_count.get(sig, 0) + 1
+    distinguishing = [
+        {sig for sig in sigs if seen_count[sig] == 1} for sigs in per_record
+    ]
 
     missed_groups: list[DocumentGroup] = []
     for g in expected_groups:
         text_lower = (g.combined_text or "").lower()
-        # Skip if any extracted record's signature appears in this group text
-        if any(sig in text_lower for sig in extracted_signatures):
+        # Covered when some single record is identifiable within this group.
+        if any(
+            sigs and any(sig in text_lower for sig in sigs)
+            for sigs in distinguishing
+        ):
             continue
         missed_groups.append(g)
 
