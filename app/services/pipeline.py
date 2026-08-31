@@ -208,20 +208,36 @@ def run_extraction_pipeline(
     if certification_info:
         _supplement_cert_info_from_rent_change(certification_info, document_groups)
 
-    # Vision-verify "not signed": handwriting never survives OCR, so a
-    # text-level isSigned=No is unreliable (wet-signed and blank forms
-    # look identical in text). One targeted vision call settles it and
-    # also detects draft watermarks ("not a final document").
+    # Vision-verify the signature verdict in BOTH directions. Handwriting
+    # does not survive OCR, so a wet-signed form and a blank one produce the
+    # same text — which makes the text-level verdict unreliable whichever way
+    # it lands, not only when it says "No".
+    #
+    # Guarding one direction guarded the harmless one. A false "No" raises a
+    # finding a reviewer dismisses in seconds. A false "Yes" silently removes
+    # a finding nobody knows was needed, and reports an unsigned
+    # certification as compliant — which is the failure that survives to an
+    # external audit.
+    #
+    # The direction is also the one most easily produced by accident: a
+    # signature date read off an adjacent document filed under the same
+    # classification is enough, and the certification form travels with
+    # several signed companions.
+    #
+    # Cost is one vision call per case, where it was previously one on the
+    # 82% of cases whose text said "No".
     draft_watermark = False
-    if certification_info and certification_info.isSigned == "No":
+    if certification_info:
         verdict = _verify_cert_signature_vision(cert_groups, page_texts, settings)
         if verdict:
-            if verdict["signed"]:
+            text_verdict = certification_info.isSigned
+            vision_verdict = "Yes" if verdict["signed"] else "No"
+            if text_verdict != vision_verdict:
                 logger.info(
-                    "Vision found signatures on cert page %s — overriding "
-                    "text-level isSigned=No", verdict["page"],
+                    "Vision overrides text-level isSigned=%s with %s on cert "
+                    "page %s", text_verdict, vision_verdict, verdict["page"],
                 )
-                certification_info.isSigned = "Yes"
+            certification_info.isSigned = vision_verdict
             draft_watermark = verdict["draft_watermark"]
             if draft_watermark:
                 logger.info(
@@ -729,18 +745,20 @@ Return STRICT JSON only:
 
 
 def _verify_cert_signature_vision(cert_groups, page_texts, settings) -> dict | None:
-    """Vision-verify a text-level isSigned=No on the cert form.
+    """Decide from the page image whether the cert form carries signatures.
 
-    OCR cannot see handwriting: a wet-signed TIC and a blank one both OCR
-    to empty signature cells, so text-based isSigned=No is a coin flip
-    (measured: fires on 82% of cases with zero correlation to human
-    reviewer rejections). Only the page image can tell. Checks the cert
-    group's signature pages (pages whose text mentions 'signature',
-    falling back to the group's last page).
+    OCR cannot see handwriting: a wet-signed form and a blank one OCR to the
+    same empty signature cells, so the text-level verdict is a coin flip in
+    either direction (measured: text-level "No" fires on 82% of cases with
+    zero correlation to human reviewer rejections). Only the image can tell,
+    so this is authoritative when it can reach a page.
 
-    Returns {"signed": bool, "draft_watermark": bool, "page": int} or
-    None when no page could be checked (missing images, vision failure)
-    — callers keep the text-based verdict in that case.
+    Checks the cert group's signature pages — those whose text mentions
+    'signature' — falling back to the group's last page.
+
+    Returns {"signed": bool, "draft_watermark": bool, "page": int} or None
+    when no page could be checked (missing images, vision failure); callers
+    keep the text-based verdict in that case.
     """
     from app.services.llm_service import call_llm_vision_json
 
