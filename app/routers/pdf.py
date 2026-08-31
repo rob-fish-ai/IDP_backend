@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile
 from fastapi.responses import FileResponse
 from starlette.concurrency import run_in_threadpool
 
+from app.core.auth import verify_bearer_token
 from app.core.config import Settings
 from app.core.dependencies import get_settings
 from app.core.exceptions import InvalidFileError, JobNotFoundError
@@ -13,7 +14,15 @@ from app.services import pdf_service
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/pdf", tags=["PDF"])
+# Every route here is authenticated. These endpoints spend money — each
+# extraction runs OCR and several Claude calls — and they accept and return
+# resident data. They were open while the engine was internal-only; it is
+# now reachable over the RunPod proxy.
+router = APIRouter(
+    prefix="/pdf",
+    tags=["PDF"],
+    dependencies=[Depends(verify_bearer_token)],
+)
 
 
 async def _validate_upload(file: UploadFile, settings: Settings) -> bytes:

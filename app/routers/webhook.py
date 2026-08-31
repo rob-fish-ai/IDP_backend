@@ -28,6 +28,7 @@ from fastapi import (
 )
 from pydantic import BaseModel, Field, field_validator
 
+from app.core.auth import verify_bearer_token
 from app.core.config import Settings
 from app.core.dependencies import get_settings
 from app.services.audit.job_store import get_job_store
@@ -60,37 +61,8 @@ def _verify_webhook_mode(settings: Settings = Depends(get_settings)) -> None:
         )
 
 
-def _verify_webhook_token(
-    settings: Settings = Depends(get_settings),
-    authorization: str | None = Header(default=None),
-) -> None:
-    """Reject webhooks lacking a matching bearer token.
-
-    Auth is REQUIRED unless IDP_DEV_MODE=true is explicitly set. Missing
-    token in production fails closed (returns 503) — never accept
-    unauthenticated webhooks silently.
-    """
-    expected = settings.webhook_auth_token
-    if not expected:
-        if settings.dev_mode:
-            logger.warning(
-                "Webhook auth bypassed (IDP_DEV_MODE=true) — DEV ONLY",
-            )
-            return
-        # Fail closed: configuration error, not a request error
-        logger.error(
-            "IDP_WEBHOOK_AUTH_TOKEN is not set in production. "
-            "Refusing webhook to prevent unauthenticated access."
-        )
-        raise HTTPException(
-            status_code=503,
-            detail="Webhook auth not configured",
-        )
-
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing bearer token")
-    if authorization.split(" ", 1)[1] != expected:
-        raise HTTPException(status_code=401, detail="Invalid bearer token")
+# Bearer auth now lives in app.core.auth so the PDF routes can share it.
+_verify_webhook_token = verify_bearer_token
 
 
 # ---------------------------------------------------------------------------
