@@ -8,8 +8,10 @@ deletion.
 
 Two endpoints, one per direction:
 
-  POST /integration/case           Cartograph uploads a packet to audit.
-                                   Bearer auth, multipart, 202 immediately.
+  POST /integration/case           Cartograph signals a case is ready.
+                                   HMAC auth, JSON with document URLs, 202
+                                   immediately. The engine fetches the files
+                                   itself.
   POST /integration/import_result  Cartograph reports how the import went.
                                    HMAC auth, JSON.
 
@@ -21,22 +23,14 @@ from __future__ import annotations
 import json
 import logging
 
-from fastapi import (
-    APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Request,
-    UploadFile,
-)
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from pydantic import BaseModel, Field
 
-from app.core.auth import verify_cartograph_upload_token
+from app.core.auth import verify_cartograph_signature
 from app.core.config import Settings
 from app.core.dependencies import get_settings
-from app.core.exceptions import InvalidFileError
 from app.services.audit.job_store import get_job_store
-from app.services.cartograph.signing import (
-    SIGNATURE_HEADER,
-    TIMESTAMP_HEADER,
-    verify,
-)
-from app.services.cartograph.tasks import audit_uploaded_case
+from app.services.cartograph.tasks import audit_case
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/integration", tags=["Cartograph"])
@@ -46,97 +40,102 @@ router = APIRouter(prefix="/integration", tags=["Cartograph"])
 # Cartograph -> Engine: a case is ready to audit
 # ---------------------------------------------------------------------------
 
+class CaseDocument(BaseModel):
+    """One file belonging to a case."""
+    url: str = Field(..., description="Presigned URL, fetched on receipt")
+    filename: str | None = None
+    job_document_id: int | None = None
+    document_class: str | None = None
+
+
+class AuditRequest(BaseModel):
+    """What Cartograph sends when a case is ready to audit."""
+    case_ref: str = Field(..., description="Cartograph Job#ref_number")
+    documents: list[CaseDocument] = Field(..., min_length=1)
+    event_type: str = "audit_request"
+    schema_version: str = "1.0"
+    cert_type: str | None = Field(None, description="MI, AR, AR-SC or IR")
+    program: str | None = Field(None, description="Funding program")
+    job_id: int | None = None
+    community_id: int | None = None
+    unit_number: str | None = None
+    effective_date: str | None = None
+
+
 @router.post(
     "/case",
     status_code=202,
-    dependencies=[Depends(verify_cartograph_upload_token)],
+    dependencies=[Depends(verify_cartograph_signature)],
 )
 async def receive_case(
+    payload: AuditRequest,
     background_tasks: BackgroundTasks,
-    file: UploadFile = File(..., description="The certification packet"),
-    case_ref: str = Form(..., description="Cartograph Job#ref_number"),
-    cert_type: str | None = Form(None, description="MI, AR, AR-SC or IR"),
-    program: str | None = Form(None, description="Funding program"),
-    job_id: int | None = Form(None),
-    community_id: int | None = Form(None),
-    unit_number: str | None = Form(None),
-    effective_date: str | None = Form(None),
     settings: Settings = Depends(get_settings),
 ) -> dict:
-    """Accept a packet, acknowledge, and audit it in the background.
+    """Accept an audit notification, acknowledge, and work in the background.
 
-    Returns 202 without doing the work. An extraction takes minutes — OCR on
-    every page plus several model calls — and Cartograph must not hold a
-    connection open for that. The result arrives later as a signed POST to
-    their ingest endpoint, not in the response to this call.
+    Returns 202 without doing anything expensive. An extraction takes
+    minutes — OCR on every page plus several model calls — and Cartograph
+    holds no connection open for it. The result arrives later as a signed
+    POST to their ingest endpoint, not in the response to this call.
 
-    Cartograph should send this from a background job rather than a
-    controller action: Heroku's router terminates an inbound request at 30
-    seconds, so a web request that uploads a large packet dies regardless of
-    how quickly this responds.
+    The engine fetches the documents itself as the first act of the
+    background task, so the presigned URLs only need to outlive the queue
+    rather than the whole audit.
     """
-    if file.content_type not in settings.allowed_content_types:
-        raise InvalidFileError(
-            f"Unsupported content type '{file.content_type}'. "
-            "Only PDF files are accepted."
-        )
-
-    pdf_bytes = await file.read()
-    if not pdf_bytes:
-        raise InvalidFileError("Uploaded file is empty.")
-
-    # Idempotency lives in the job store rather than in a timestamp window.
-    # A bearer token has no replay protection, and a retry from Cartograph is
-    # indistinguishable from a replay — both should cost one audit, not two.
+    # Idempotency lives in the job store rather than in the signature window.
+    # Cartograph is expected to retry, and a retry is indistinguishable from
+    # a replay — both should cost one audit, not two.
     store = get_job_store(settings.audit_job_db)
     upsert = store.upsert_pending(
-        case_id=case_ref,
-        case_number=case_ref,
-        cert_type=cert_type,
-        funding_program=program,
+        case_id=payload.case_ref,
+        case_number=payload.case_ref,
+        cert_type=payload.cert_type,
+        funding_program=payload.program,
         content_document_id=None,
     )
     if upsert.get("deduplicated"):
         logger.info(
-            "Case %s already in state %s — ignoring duplicate upload",
-            case_ref, upsert.get("state"),
+            "Case %s already in state %s — ignoring duplicate notification",
+            payload.case_ref, upsert.get("state"),
         )
         return {
             "status": "already_in_progress",
-            "case_ref": case_ref,
+            "case_ref": payload.case_ref,
             "state": upsert.get("state"),
         }
 
     logger.info(
-        "Cartograph upload accepted case_ref=%s cert=%s program=%s bytes=%d "
-        "filename=%s",
-        case_ref, cert_type, program, len(pdf_bytes), file.filename,
+        "Cartograph audit request case_ref=%s cert=%s program=%s documents=%d",
+        payload.case_ref, payload.cert_type, payload.program,
+        len(payload.documents),
     )
 
     background_tasks.add_task(
-        audit_uploaded_case,
-        pdf_bytes=pdf_bytes,
-        case_ref=case_ref,
-        cert_type=cert_type,
-        program=program,
-        job_id=job_id,
-        community_id=community_id,
-        unit_number=unit_number,
-        effective_date=effective_date,
+        audit_case,
+        case_ref=payload.case_ref,
+        documents=[d.model_dump() for d in payload.documents],
+        cert_type=payload.cert_type,
+        program=payload.program,
+        job_id=payload.job_id,
+        community_id=payload.community_id,
+        unit_number=payload.unit_number,
+        effective_date=payload.effective_date,
     )
 
-    return {"status": "accepted", "case_ref": case_ref}
+    return {"status": "accepted", "case_ref": payload.case_ref}
 
 
 # ---------------------------------------------------------------------------
 # Cartograph -> Engine: how the import went
 # ---------------------------------------------------------------------------
 
-@router.post("/import_result", status_code=200)
-async def cartograph_import_result(
-    request: Request,
-    settings: Settings = Depends(get_settings),
-) -> dict:
+@router.post(
+    "/import_result",
+    status_code=200,
+    dependencies=[Depends(verify_cartograph_signature)],
+)
+async def cartograph_import_result(request: Request) -> dict:
     """Receive the outcome of a Cartograph import.
 
     Cartograph's ingest endpoint returns 202 before its background job runs
@@ -144,23 +143,13 @@ async def cartograph_import_result(
     Without this callback an import that fails validation on their side
     fails silently on ours.
 
-    Authenticated with the same HMAC scheme we use outbound, keyed on a
-    separate inbound secret. Fails closed: an unset secret is rejected
-    rather than accepted.
+    The body is read rather than declared as a model: the signature covers
+    the exact bytes, and the shape is Cartograph's to change. Fields are
+    pulled out defensively so an added key never turns into a 422 they
+    cannot see.
     """
-    body = await request.body()
-    ok, reason = verify(
-        body,
-        settings.cartograph_callback_secret,
-        request.headers.get(TIMESTAMP_HEADER),
-        request.headers.get(SIGNATURE_HEADER),
-    )
-    if not ok:
-        logger.warning("Cartograph callback rejected: %s", reason)
-        raise HTTPException(status_code=401, detail=reason)
-
     try:
-        payload = json.loads(body)
+        payload = json.loads(await request.body())
     except ValueError:
         raise HTTPException(status_code=400, detail="invalid JSON body")
 

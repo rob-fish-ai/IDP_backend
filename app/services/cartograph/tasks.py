@@ -1,13 +1,17 @@
-"""The background chain for a case uploaded by Cartograph.
+"""The background chain for a case Cartograph has flagged as audit-ready.
 
-Extract, build the payload, deliver it. This is the piece that joins the
-three parts that already existed separately — the extraction pipeline, the
+Fetch, extract, adapt, deliver. This joins the four parts that already
+existed separately — the document fetcher, the extraction pipeline, the
 payload adapter, and the signed outbound client.
+
+The notification that starts this returned 202 long before any of it runs.
+Cartograph holds no connection open; the result reaches it later as a signed
+POST to its ingest endpoint.
 
 Deliberately no Salesforce anywhere in this path. The equivalent chain in
 `audit/jobs.py` downloads from Salesforce, compares against MuleSoft, and
-carries a decade of Salesforce-shaped assumptions. This one starts from bytes
-in hand and ends at an HTTP POST, and it is what survives the migration.
+carries a decade of Salesforce-shaped assumptions. This one starts from a
+URL and ends at an HTTP POST, and it is what survives the migration.
 """
 
 import logging
@@ -20,16 +24,18 @@ from app.services.cartograph.client import (
     CartographNotConfigured,
     is_configured,
     post_extraction,
+    post_failure,
 )
+from app.services.cartograph.documents import DocumentUnavailable, fetch_packet
 from app.services.pdf_service import process_pdf_full
 
 logger = logging.getLogger(__name__)
 
 
-def audit_uploaded_case(
+def audit_case(
     *,
-    pdf_bytes: bytes,
     case_ref: str,
+    documents: list[dict],
     cert_type: str | None = None,
     program: str | None = None,
     job_id: int | None = None,
@@ -37,16 +43,30 @@ def audit_uploaded_case(
     unit_number: str | None = None,
     effective_date: str | None = None,
 ) -> None:
-    """Run one uploaded packet end to end.
+    """Run one notified case end to end.
 
-    Every failure is recorded on the job row rather than only logged. A case
-    that fails silently here is a case Cartograph is still waiting on, and
-    nobody discovers it until a reviewer opens a blank checklist.
+    Every failure is recorded on the job row and reported to Cartograph
+    rather than only logged. A case that fails silently here is a case
+    Cartograph is still waiting on, and nobody discovers it until a reviewer
+    opens a blank checklist.
     """
     settings = get_settings()
     store = get_job_store(settings.audit_job_db)
 
     store.mark_extracting(case_ref)
+
+    # Fetch first, before anything expensive. Presigned URLs expire, so the
+    # window between the notification and the download is kept as small as
+    # the queue allows.
+    try:
+        pdf_bytes = fetch_packet(documents)
+    except DocumentUnavailable as exc:
+        logger.error("case_ref=%s document unavailable: %s", case_ref, exc)
+        store.mark_extraction_failed(case_ref, f"document unavailable: {exc}")
+        # Recoverable on their side: reissue the link and notify again.
+        post_failure(case_ref, str(exc), settings,
+                     error_code="document_unavailable")
+        return
 
     # Per-job work dir: page images and texts are named by page number only,
     # so concurrent extractions must not share one.
@@ -62,6 +82,7 @@ def audit_uploaded_case(
     except Exception as exc:
         logger.exception("Extraction failed for case_ref=%s", case_ref)
         store.mark_extraction_failed(case_ref, str(exc))
+        post_failure(case_ref, str(exc), settings, error_code="extraction_failed")
         return
     finally:
         shutil.rmtree(work_dir, ignore_errors=True)
@@ -115,8 +136,8 @@ def audit_uploaded_case(
         return
 
     if not response["ok"]:
-        # Their ingest rejected it. The payload is the evidence, so record
-        # enough to reproduce without re-running the extraction.
+        # Their ingest rejected it. Record enough to reproduce without
+        # re-running the extraction.
         store.mark_comparison_failed(
             case_ref,
             f"ingest rejected: HTTP {response['status_code']} "

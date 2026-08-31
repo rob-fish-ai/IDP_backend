@@ -175,12 +175,6 @@ class Settings(BaseSettings):
     # from the outbound secret so a compromise in one direction does not
     # expose the other.
     cartograph_callback_secret: str = ""
-    # Inbound: the bearer token Cartograph sends when uploading a case packet.
-    # A bearer rather than HMAC because the body is multipart — signing it
-    # would force the whole upload into memory before parsing. Its own value
-    # rather than the shared webhook token so Cartograph can be revoked
-    # independently.
-    cartograph_upload_token: str = ""
     # Bound the outbound POST so a stalled connection cannot wedge a worker.
     cartograph_timeout_seconds: float = 30.0
 

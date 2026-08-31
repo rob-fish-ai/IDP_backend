@@ -23,6 +23,10 @@ from app.services.cartograph.signing import (
     sign,
 )
 
+# Kept in step with adapter.SCHEMA_VERSION; imported lazily below to avoid a
+# cycle, since the adapter has no reason to know about the client.
+SCHEMA_VERSION = "1.2"
+
 logger = logging.getLogger(__name__)
 
 
@@ -45,6 +49,47 @@ def is_configured(settings: Settings) -> bool:
     if "<" in url or ">" in url:
         return False
     return True
+
+
+def post_failure(
+    case_ref: str,
+    reason: str,
+    settings: Settings,
+    *,
+    error_code: str = "extraction_failed",
+) -> dict | None:
+    """Tell Cartograph a case could not be audited.
+
+    Without this, a case whose document could not be fetched simply stops.
+    Cartograph goes on waiting and nobody discovers it until a reviewer opens
+    an empty checklist. The most common cause — an expired presigned URL — is
+    also the most recoverable: Cartograph reissues the link and notifies
+    again.
+
+    Best-effort by design. It is called from failure paths, so it must not
+    raise and mask the error it is reporting.
+    """
+    if not is_configured(settings):
+        logger.error(
+            "case_ref=%s failed (%s) and Cartograph is not configured, so the "
+            "failure could not be reported: %s", case_ref, error_code, reason,
+        )
+        return None
+
+    payload = {
+        "schema_version": SCHEMA_VERSION,
+        "case_ref": case_ref,
+        "status": "failed",
+        "error_code": error_code,
+        "error_message": reason,
+    }
+    try:
+        return post_extraction(payload, settings)
+    except Exception:
+        logger.exception(
+            "case_ref=%s could not report failure to Cartograph", case_ref,
+        )
+        return None
 
 
 def post_extraction(payload: dict, settings: Settings) -> dict:

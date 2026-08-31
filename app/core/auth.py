@@ -8,10 +8,15 @@ router to get at it would be the wrong shape, so it sits here instead.
 import hmac
 import logging
 
-from fastapi import Depends, Header, HTTPException
+from fastapi import Depends, Header, HTTPException, Request
 
 from app.core.config import Settings
 from app.core.dependencies import get_settings
+from app.services.cartograph.signing import (
+    SIGNATURE_HEADER,
+    TIMESTAMP_HEADER,
+    verify,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -60,29 +65,29 @@ def verify_bearer_token(
     _check(authorization, expected)
 
 
-def verify_cartograph_upload_token(
+async def verify_cartograph_signature(
+    request: Request,
     settings: Settings = Depends(get_settings),
-    authorization: str | None = Header(default=None),
 ) -> None:
-    """Authenticate a case upload from Cartograph.
+    """Verify an HMAC-signed request from Cartograph.
 
-    A credential of its own rather than the shared webhook token, so
-    Cartograph's access can be revoked or rotated without breaking the
-    monitoring frontend or the Salesforce webhooks. Same reasoning as the two
-    separate HMAC secrets.
+    Both inbound Cartograph endpoints use this — the audit notification and
+    the import-result callback. The secret is per *direction*, not per
+    endpoint: everything Cartograph sends us is signed with the same inbound
+    secret, and everything we send them uses the outbound one. Two secrets
+    total, however many endpoints each direction grows.
 
-    No dev-mode bypass: this endpoint spends money on every call and accepts
-    resident documents, so an unset token is a 503 in every environment.
+    Reading the body here is free for the handler: Starlette caches it, so a
+    later `await request.body()` returns the same bytes rather than a second
+    read of the stream.
     """
-    expected = settings.cartograph_upload_token
-    if not expected:
-        logger.error(
-            "IDP_CARTOGRAPH_UPLOAD_TOKEN is not set. Refusing the upload "
-            "rather than accepting an unauthenticated document."
-        )
-        raise HTTPException(
-            status_code=503,
-            detail="Upload auth not configured",
-        )
-
-    _check(authorization, expected)
+    body = await request.body()
+    ok, reason = verify(
+        body,
+        settings.cartograph_callback_secret,
+        request.headers.get(TIMESTAMP_HEADER),
+        request.headers.get(SIGNATURE_HEADER),
+    )
+    if not ok:
+        logger.warning("Cartograph request rejected: %s", reason)
+        raise HTTPException(status_code=401, detail=reason)
