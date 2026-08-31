@@ -18,6 +18,7 @@ from app.schemas.extraction import (
 )
 from app.services.bug_detector import detect_known_bugs
 from app.services.completeness import check_completeness
+from app.services.doc_taxonomy import is_current_certification_form
 from app.services.findings import dedupe as dedupe_findings
 from app.services.findings import records as finding_records
 from app.services.findings import text_of
@@ -765,9 +766,7 @@ def _verify_cert_signature_vision(cert_groups, page_texts, settings) -> dict | N
 
     group = next(
         (g for g in cert_groups
-         if "(previous)" not in g.document_type.lower()
-         and any(m in g.document_type.lower()
-                 for m in ("50059", "tenant income certification", "(tic)", "3560"))),
+         if is_current_certification_form(g.document_type)),
         None,
     )
     if not group:
@@ -1411,11 +1410,10 @@ def _generate_findings(
     # important thing to tell the analyst — every downstream field
     # finding (rent not extracted, date mismatches vs MuleSoft, unsigned
     # cert) is derivative noise without this context.
-    cert_markers = ("50059", "tenant income certification", "(tic)", "3560")
     cert_form_present = any(
-        any(m in g.document_type.lower() for m in cert_markers)
+        is_current_certification_form(g.document_type)
         for g in document_groups
-        if g.category != "ignore" and "(Previous)" not in g.document_type
+        if g.category != "ignore"
     )
     ocr_failed_pages = sorted(
         p for g in document_groups if g.document_type == "OCR Failed"

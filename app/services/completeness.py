@@ -28,6 +28,7 @@ import logging
 import re
 
 from app.schemas.extraction import ExtractionResult
+from app.services.doc_taxonomy import is_current_certification_form
 from app.services.findings import (
     ASSIGN_INTERNAL,
     CATEGORY_ASSET,
@@ -125,16 +126,12 @@ def _certification_text(extraction: ExtractionResult) -> str:
     should appear in this year's records. Including it would make every
     packet carrying one look full of unexplained amounts.
     """
-    parts = []
-    for group in extraction.document_groups:
-        label = (group.document_type or "").lower()
-        if group.category == "ignore" or "(previous)" in label:
-            continue
-        if any(
-            marker in label
-            for marker in ("tenant income certification", "(tic)", "50059", "3560")
-        ):
-            parts.append(group.combined_text or "")
+    parts = [
+        group.combined_text or ""
+        for group in extraction.document_groups
+        if group.category != "ignore"
+        and is_current_certification_form(group.document_type)
+    ]
     return "\n".join(parts)
 
 
