@@ -58,22 +58,20 @@ SCHEMA_VERSION = "1.2"
 # reported as a warning while a misattached one looks correct.
 _NAME_MATCH_THRESHOLD = 0.72
 
-# Cartograph validates these against its own picklists and creates asset
-# records with create!, so an unrecognized value raises RecordInvalid rather
-# than being stored. Only values confirmed against their schema are mapped;
-# everything else collapses to "other" and is reported, which turns a 500
-# on their side into a line in the warnings list on ours.
-_INCOME_TYPES = {
-    "non-federal wage": "non_federal_wages",
-    "non federal wage": "non_federal_wages",
-    "non-federal wages": "non_federal_wages",
-}
-_ASSET_TYPES = {
-    "checking": "checking",
-    "checking account": "checking",
-    "savings": "savings",
-    "savings account": "savings",
-}
+_SLUG_RE = re.compile(r"[^a-z0-9]+")
+
+
+def _normalize_term(value: str) -> str:
+    """Reduce a vocabulary term to a comparable form.
+
+    'Non-Federal Wage', 'non federal wages' and 'NON_FEDERAL_WAGE' are the
+    same term written three ways. Matching on the normalized form means the
+    engine does not need a lookup entry per spelling, which is what makes the
+    mapping survive documents it has not seen.
+    """
+    slug = _SLUG_RE.sub("_", str(value).strip().lower()).strip("_")
+    # Trailing plural: 'wages' and 'wage' are one term.
+    return slug[:-1] if slug.endswith("s") and not slug.endswith("ss") else slug
 
 # CertReview::CERT_TYPES allows initial, annual and interim. The engine
 # audits four types; AR-SC has no target, which is an open item on the
@@ -296,24 +294,46 @@ def _resolve_member_ref(
 
 def _map_vocabulary(
     value: str | None,
-    table: dict[str, str],
+    allowed: list[str],
     warnings: list[str],
     context: str,
 ) -> str:
-    """Map an extracted type onto Cartograph's picklist, or to 'other'.
+    """Map an extracted type onto the consumer's picklist, or to 'other'.
 
-    Collapsing is reported every time. These warnings are the only record of
-    where the engine's vocabulary is lossy, and the alternative — guessing at
-    a value their validator rejects — surfaces as a 500 with no explanation.
+    `allowed` is the consumer's own list of valid values, supplied as
+    configuration rather than compiled in. The engine does not decide what
+    Cartograph accepts, and a table of terms observed in whatever documents
+    happened to be tested is a table that silently stops working on the next
+    property, the next state, the next funding program.
+
+    Matching is on the normalized form, so a term the consumer spells
+    'non_federal_wages' matches an extraction reading 'Non-Federal Wage'
+    without an entry per spelling.
+
+    Anything unmatched collapses to 'other' and is reported. Reporting is the
+    point: their validators reject unknown values, and assets are created
+    with create!, so a guess surfaces as a 500 with nothing to debug. A
+    warning naming the original converts their exception into our diagnostic,
+    and the accumulated warnings are the list of terms to agree with them.
     """
     if not value:
         warnings.append(f"{context}: no type extracted; sent as 'other'")
         return "other"
-    mapped = table.get(str(value).strip().lower())
-    if mapped:
-        return mapped
+
+    if not allowed:
+        warnings.append(
+            f"{context}: type '{value}' sent as 'other' — no picklist is "
+            f"configured, so no value can be confirmed valid"
+        )
+        return "other"
+
+    target = _normalize_term(value)
+    for candidate in allowed:
+        if _normalize_term(candidate) == target:
+            return candidate
+
     warnings.append(
-        f"{context}: type '{value}' has no Cartograph equivalent; "
+        f"{context}: type '{value}' is not in the configured picklist; "
         f"collapsed to 'other'"
     )
     return "other"
@@ -381,6 +401,7 @@ def build_cert_review(
 def build_income_records(
     extraction: ExtractionResult,
     members: list[dict],
+    settings: Settings,
     warnings: list[str],
 ) -> list[dict]:
     """Map income sources, with their paystubs nested underneath.
@@ -434,7 +455,7 @@ def build_income_records(
         records.append({
             "member_ref": member_ref,
             "income_type": _map_vocabulary(
-                entry.incomeType, _INCOME_TYPES, warnings, context,
+                entry.incomeType, settings.cartograph_income_types, warnings, context,
             ),
             "source_name": entry.sourceName,
             "frequency_of_pay": entry.frequencyOfPay,
@@ -472,16 +493,21 @@ def build_income_records(
             warnings.append(
                 f"{context}: '{source_name or 'unnamed employer'}' has "
                 f"{len(stubs)} paystub(s) but no verification entry; record "
-                f"reconstructed from the paystubs and typed as wages"
+                f"reconstructed from the paystubs"
             )
             records.append({
                 "member_ref": _resolve_member_ref(
                     member_name, members, warnings, context,
                 ),
-                # A paystub is employment income by definition, so this is
-                # the one inference the mapping makes rather than collapsing
-                # to 'other'. The warning above records that it was inferred.
-                "income_type": "non_federal_wages",
+                # No type is inferred from the fact that stubs exist. Which
+                # kind of employment income this is depends on the employer
+                # and the program, and a stub says neither — so it goes
+                # through the same mapping as anything else and collapses to
+                # 'other' with a warning, rather than arriving as a
+                # determination nobody made.
+                "income_type": _map_vocabulary(
+                    None, settings.cartograph_income_types, warnings, context,
+                ),
                 "source_name": source_name or None,
                 "frequency_of_pay": next(
                     (s.payInterval for s in stubs if s.payInterval), None,
@@ -511,6 +537,7 @@ def build_income_records(
 def build_asset_records(
     extraction: ExtractionResult,
     members: list[dict],
+    settings: Settings,
     warnings: list[str],
 ) -> list[dict]:
     """Map assets, with statements and the verification of assets nested."""
@@ -545,26 +572,25 @@ def build_asset_records(
         # a resident's declaration to Cartograph dressed as verification and
         # let it satisfy a checklist item that requires third-party proof.
         #
-        # A balance counts as verified only with evidence behind it: a bank
-        # statement, a verification of assets, or a source document that is
-        # not the resident's own certification.
-        verified = bool(
-            asset.bankStatment
-            or asset.verificationOfAsset
-            or "self-cert" not in (asset.documentType or "").lower()
-        )
+        # A balance counts as verified only when verification evidence came
+        # with it: a bank statement or a verification of assets. Tested on the
+        # presence of the evidence rather than on the name of the document
+        # that carried it — document titles vary by state, by management
+        # company and by form revision, so a title test passes or fails on
+        # spelling rather than on whether anyone actually verified anything.
+        verified = bool(asset.bankStatment or asset.verificationOfAsset)
         current_value = _money(asset.currentBalance) if verified else None
         if asset.currentBalance and not verified:
             warnings.append(
-                f"{context}: balance came from a self-certification with no "
-                f"statement or verification of assets; sent as "
-                f"manual_balance only"
+                f"{context}: balance arrived with no statement or "
+                f"verification of assets behind it; sent as manual_balance "
+                f"rather than as a verified value"
             )
 
         records.append({
             "member_ref": member_ref,
             "asset_type": _map_vocabulary(
-                asset.accountType, _ASSET_TYPES, warnings, context,
+                asset.accountType, settings.cartograph_asset_types, warnings, context,
             ),
             "institution_name": asset.sourceName,
             "current_value": current_value,
@@ -607,8 +633,8 @@ def build_payload(
     # it. Assets before cert_review for the same reason — the asset total is
     # summed from the records actually sent.
     members = build_household_members(extraction, warnings)
-    assets = build_asset_records(extraction, members, warnings)
-    income = build_income_records(extraction, members, warnings)
+    assets = build_asset_records(extraction, members, settings, warnings)
+    income = build_income_records(extraction, members, settings, warnings)
 
     payload = {
         "schema_version": SCHEMA_VERSION,

@@ -175,6 +175,16 @@ class Settings(BaseSettings):
     # from the outbound secret so a compromise in one direction does not
     # expose the other.
     cartograph_callback_secret: str = ""
+    # Cartograph's own picklists for income and asset type. Supplied as
+    # configuration because they belong to the consumer, not to the engine:
+    # they are editable on their side, they differ by funding program, and a
+    # list compiled from whatever documents happened to be tested stops
+    # working on the next property. Empty means nothing can be confirmed
+    # valid, so every value collapses to "other" and is reported — which is
+    # the correct behaviour when the picklist is unknown, and produces the
+    # list of terms to agree with them.
+    cartograph_income_types: list[str] = []
+    cartograph_asset_types: list[str] = []
     # Bound the outbound POST so a stalled connection cannot wedge a worker.
     cartograph_timeout_seconds: float = 30.0
 

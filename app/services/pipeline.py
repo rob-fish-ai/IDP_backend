@@ -407,12 +407,18 @@ def run_extraction_pipeline(
                     memberName=first.memberName,
                     socialSecurityNumber=first.socialSecurityNumber,
                     frequencyOfPay=first.payInterval,
-                    # Left unset deliberately: this is reconstructed from
-                    # stubs, so there is no verification document behind it
-                    # and no self-declared figure to record. Downstream
-                    # checks that look for third-party evidence should find
-                    # none, because there is none.
-                    incomeType="Non-Federal Wage",
+                    # incomeType is left unset rather than assumed. A paystub
+                    # is employment income, but which kind — federal wages,
+                    # non-federal wages, a training stipend — depends on the
+                    # employer and the program, and neither is knowable from
+                    # the stub alone. An unset field is read downstream as
+                    # "not determined", which is true; a guessed one is read
+                    # as a determination, which would be false.
+                    #
+                    # The same applies to selfDeclaredAmount and every
+                    # verification field: this source was reconstructed from
+                    # stubs, so there is no third-party document behind it
+                    # and checks looking for one should find nothing.
                 ))
                 logger.info(
                     "Reconstructed income source '%s' for '%s' from %d "
