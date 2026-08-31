@@ -385,6 +385,42 @@ def run_extraction_pipeline(
                 )
                 income_calculations.extend(results)
 
+                # Give the source a verification entry as well, not just a
+                # calculation. Forty-three places across eight modules
+                # iterate verificationIncome — the consistency checks, the
+                # duplicate detector, the roster match, field scoring, the
+                # MuleSoft comparison, the Cartograph payload. A source that
+                # exists only as a stack of stubs is invisible to every one
+                # of them, so the household's largest income can be audited
+                # by nothing and reported to no one while the calculation
+                # quietly knows about it.
+                #
+                # This is not rare. A blank employer verification with
+                # paystubs substituted is a documented path — the packet
+                # that exposed it carries an "Unable to Obtain Third Party
+                # Verification" form saying exactly that. It also surfaces
+                # whenever extraction drops the entry, which sampling makes
+                # possible on any run.
+                first = source_ps[0]
+                vi_entries.append(VerificationIncomeEntry(
+                    sourceName=first.sourceName,
+                    memberName=first.memberName,
+                    socialSecurityNumber=first.socialSecurityNumber,
+                    frequencyOfPay=first.payInterval,
+                    # Left unset deliberately: this is reconstructed from
+                    # stubs, so there is no verification document behind it
+                    # and no self-declared figure to record. Downstream
+                    # checks that look for third-party evidence should find
+                    # none, because there is none.
+                    incomeType="Non-Federal Wage",
+                ))
+                logger.info(
+                    "Reconstructed income source '%s' for '%s' from %d "
+                    "unmatched paystub(s) — no verification entry was "
+                    "extracted for it",
+                    first.sourceName, first.memberName, len(source_ps),
+                )
+
     # Step 4: Build document inventories (deterministic — no LLM)
     logger.info("Step 4/6: Building document inventories (no LLM)")
     inventory_financial = build_financial_inventory(document_groups)
