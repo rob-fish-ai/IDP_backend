@@ -55,6 +55,74 @@ _MATERIALITY = 500.0
 _MAX_LISTED = 8
 
 
+def _as_float(value) -> float | None:
+    if value is None:
+        return None
+    try:
+        return round(float(str(value).replace("$", "").replace(",", "").strip()), 2)
+    except ValueError:
+        return None
+
+
+def _digits(value: float) -> str:
+    return str(value).replace(".", "").replace("-", "").lstrip("0") or "0"
+
+
+def _one_edit_apart(a: str, b: str) -> bool:
+    """Whether two digit strings differ by a single insertion or substitution.
+
+    A figure read twice from a scan differs by a digit, not by a plausible
+    amount: 62,926.52 and 662,926.52 are the same number with one character
+    duplicated. Treating that as a missing record would send a reviewer
+    looking for an income source that does not exist.
+    """
+    if abs(len(a) - len(b)) > 1:
+        return False
+    if len(a) == len(b):
+        return sum(x != y for x, y in zip(a, b)) == 1
+    shorter, longer = (a, b) if len(a) < len(b) else (b, a)
+    for i in range(len(longer)):
+        if longer[:i] + longer[i + 1:] == shorter:
+            return True
+    return False
+
+
+def _is_near(amount: float, seen: set[float]) -> bool:
+    """Whether an amount is the same figure as something extracted.
+
+    Two ways the same number arrives differently: a small numeric drift from
+    a misread cent or a rounding difference, and a digit-level scan error
+    that changes the magnitude entirely. Both mean the engine saw the figure;
+    neither means a record is missing.
+    """
+    digits = _digits(amount)
+    for other in seen:
+        if other and abs(amount - other) <= max(0.02, abs(other) * 0.001):
+            return True
+        if _one_edit_apart(digits, _digits(other)):
+            return True
+    return False
+
+
+def _reachable_sums(components: list[float], cap: int = 20000) -> set[float]:
+    """Totals obtainable by adding up some combination of extracted values.
+
+    A certification states subtotals — income per member, a household total,
+    a total for assets — and those are the figures a reader most expects to
+    see. None of them appears as a single extracted value, so without this
+    every packet would report its own arithmetic as unexplained.
+    """
+    sums: set[float] = {0.0}
+    for value in components:
+        if not value:
+            continue
+        sums |= {round(existing + value, 2) for existing in sums}
+        if len(sums) > cap:
+            break
+    sums.discard(0.0)
+    return sums
+
+
 def _amounts_in(text: str) -> set[float]:
     out: set[float] = set()
     for match in _AMOUNT_RE.finditer(text or ""):
@@ -186,9 +254,25 @@ def check_unaccounted_amounts(extraction: ExtractionResult) -> list:
         return []
 
     seen = _extracted_amounts(extraction)
+
+    # The figures a certification most prominently states are its own
+    # subtotals, which never appear as a single extracted value.
+    components = [
+        value for value in (
+            [_as_float(c.annualIncome) for c in extraction.income_calculations]
+            + [
+                _as_float(a.currentBalance) or _as_float(a.selfDeclaredAmount)
+                for a in extraction.assets.assetInformation
+            ]
+        ) if value
+    ]
+    seen |= _reachable_sums(components)
+
     unaccounted = sorted(
         amount for amount in _amounts_in(text)
-        if amount >= _MATERIALITY and amount not in seen
+        if amount >= _MATERIALITY
+        and amount not in seen
+        and not _is_near(amount, seen)
     )
     if not unaccounted:
         return []
