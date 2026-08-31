@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.dependencies import get_settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import setup_logging
-from app.routers import health, pdf, webhook
+from app.routers import health, integration, pdf, webhook
 
 
 @asynccontextmanager
@@ -73,6 +73,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(pdf.router)
     app.include_router(webhook.router)
+    app.include_router(integration.router)
 
     return app
 

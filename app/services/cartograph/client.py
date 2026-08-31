@@ -31,7 +31,20 @@ class CartographNotConfigured(RuntimeError):
 
 
 def is_configured(settings: Settings) -> bool:
-    return bool(settings.cartograph_ingest_url and settings.cartograph_ingest_secret)
+    """Whether delivery can be attempted at all.
+
+    The placeholder check is not pedantry. The shipped default is
+    'https://<cartograph-host>/webhooks/runpod_ocr_results', which is a
+    non-empty string, so a bare truthiness test calls it configured and the
+    failure surfaces minutes later as a DNS error inside a background task
+    rather than as the configuration problem it is.
+    """
+    url = settings.cartograph_ingest_url
+    if not url or not settings.cartograph_ingest_secret:
+        return False
+    if "<" in url or ">" in url:
+        return False
+    return True
 
 
 def post_extraction(payload: dict, settings: Settings) -> dict:
