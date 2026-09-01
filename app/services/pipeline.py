@@ -425,18 +425,19 @@ def run_extraction_pipeline(
                     memberName=first.memberName,
                     socialSecurityNumber=first.socialSecurityNumber,
                     frequencyOfPay=first.payInterval,
-                    # incomeType is left unset rather than assumed. A paystub
-                    # is employment income, but which kind — federal wages,
-                    # non-federal wages, a training stipend — depends on the
-                    # employer and the program, and neither is knowable from
-                    # the stub alone. An unset field is read downstream as
-                    # "not determined", which is true; a guessed one is read
-                    # as a determination, which would be false.
-                    #
-                    # The same applies to selfDeclaredAmount and every
-                    # verification field: this source was reconstructed from
-                    # stubs, so there is no third-party document behind it
-                    # and checks looking for one should find nothing.
+                    # A paystub is employment income by definition, so this
+                    # records what the evidence establishes and nothing more.
+                    # It deliberately does not narrow to federal or
+                    # non-federal wages: that depends on the employer and the
+                    # program, neither knowable from a stub. Consumers that
+                    # need a narrower value map this through their own
+                    # vocabulary; consumers that have collapsed the
+                    # distinction take it as-is.
+                    incomeType="Employment",
+                    # selfDeclaredAmount and every verification field stay
+                    # unset: this source was reconstructed from stubs, so
+                    # there is no third-party document behind it and checks
+                    # looking for one should find nothing.
                 ))
                 logger.info(
                     "Reconstructed income source '%s' for '%s' from %d "

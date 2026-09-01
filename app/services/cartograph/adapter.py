@@ -297,6 +297,7 @@ def _map_vocabulary(
     allowed: list[str],
     warnings: list[str],
     context: str,
+    aliases: dict[str, str] | None = None,
 ) -> str:
     """Map an extracted type onto the consumer's picklist, or to 'other'.
 
@@ -328,6 +329,14 @@ def _map_vocabulary(
         return "other"
 
     target = _normalize_term(value)
+
+    # An alias wins over a spelling match. A term can normalize onto a value
+    # the consumer still accepts but has moved away from, and matching on
+    # spelling would keep sending the one they are retiring.
+    aliased = (aliases or {}).get(target)
+    if aliased:
+        return aliased
+
     for candidate in allowed:
         if _normalize_term(candidate) == target:
             return candidate
@@ -456,6 +465,7 @@ def build_income_records(
             "member_ref": member_ref,
             "income_type": _map_vocabulary(
                 entry.incomeType, settings.cartograph_income_types, warnings, context,
+                aliases=settings.cartograph_type_aliases,
             ),
             "source_name": entry.sourceName,
             "frequency_of_pay": entry.frequencyOfPay,
@@ -507,6 +517,7 @@ def build_income_records(
                 # determination nobody made.
                 "income_type": _map_vocabulary(
                     None, settings.cartograph_income_types, warnings, context,
+                    aliases=settings.cartograph_type_aliases,
                 ),
                 "source_name": source_name or None,
                 "frequency_of_pay": next(
@@ -591,6 +602,7 @@ def build_asset_records(
             "member_ref": member_ref,
             "asset_type": _map_vocabulary(
                 asset.accountType, settings.cartograph_asset_types, warnings, context,
+                aliases=settings.cartograph_type_aliases,
             ),
             "institution_name": asset.sourceName,
             "current_value": current_value,

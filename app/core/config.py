@@ -185,6 +185,14 @@ class Settings(BaseSettings):
     # list of terms to agree with them.
     cartograph_income_types: list[str] = []
     cartograph_asset_types: list[str] = []
+    # Overrides for terms whose normalized spelling matches a value the
+    # consumer no longer wants used. Keyed on the normalized extracted term.
+    # Cartograph keeps `non_federal_wages` in its picklist but has moved
+    # employment income to `wages_and_salaries`, carrying the distinction in
+    # a separate employment_type field — so matching on spelling alone would
+    # pick the value they are moving away from. Configuration rather than
+    # code because it records their decision, not ours.
+    cartograph_type_aliases: dict[str, str] = {}
     # Bound the outbound POST so a stalled connection cannot wedge a worker.
     cartograph_timeout_seconds: float = 30.0
 
