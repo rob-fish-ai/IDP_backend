@@ -268,10 +268,12 @@ def process_pdf(
     # Phase B: OCR in parallel. The OCR service handles ocr_concurrency
     # requests concurrently; ThreadPoolExecutor is safe here because
     # ocr_single_image only does I/O (HTTP POST).
-    def _ocr_one(item: tuple[int, Path]) -> tuple[int, dict]:
+    def _ocr_one(
+        item: tuple[int, Path], *, allow_fallback: bool = True,
+    ) -> tuple[int, dict]:
         page_num, path = item
         try:
-            result = ocr_single_image(path, settings)
+            result = ocr_single_image(path, settings, allow_fallback=allow_fallback)
         except ProcessingError:
             logger.warning(
                 "OCR failed page=%d — will attempt vision fallback", page_num,
@@ -296,9 +298,21 @@ def process_pdf(
         )
         return page_num, result
 
+    # The first pass uses the primary tier only. A page scanned sideways
+    # fails DeepSeek, falls through to the GLM tier over the network, reads
+    # badly there too because it is still sideways, and only then reaches
+    # the rotation probe that would have fixed it. Rotation is decided
+    # first, so the expensive tier is spent only on pages whose problem
+    # survives being turned the right way up.
+    #
+    # Measured on a 119-page packet where 75% of pages were scanned
+    # sideways: 21 minutes for the first pass with the fallback enabled,
+    # against 3 minutes for 202 probe reads without it.
     ocr_results: dict[int, dict] = {}
     with ThreadPoolExecutor(max_workers=settings.ocr_concurrency) as pool:
-        for page_num, result in pool.map(_ocr_one, processed_paths):
+        for page_num, result in pool.map(
+            lambda item: _ocr_one(item, allow_fallback=False), processed_paths,
+        ):
             ocr_results[page_num] = result
 
     # Phase B1.5: rotation probe for sideways scans.
@@ -317,6 +331,33 @@ def process_pdf(
     _rotation_probe(
         pdf_bytes, settings, processed_dir, processed_map, ocr_results,
     )
+
+    # Phase B1.6: the secondary OCR tier, now that orientation is settled.
+    # Only pages the primary tier could not read upright reach it, which on
+    # a sideways-scanned packet is a small fraction of what would otherwise
+    # have gone through. Pages the probe corrected are re-read here from the
+    # replaced image if they are still unreliable.
+    if settings.ocr_fallback_url:
+        from app.services.ocr_service import composite_of
+
+        needs_second_tier = [
+            (page_num, processed_map[page_num])
+            for page_num, result in ocr_results.items()
+            if result.get("needs_external_ocr")
+        ]
+        if needs_second_tier:
+            logger.info(
+                "Phase B1.6: secondary OCR tier for %d page(s) still "
+                "unreadable after rotation: %s",
+                len(needs_second_tier), [p for p, _ in needs_second_tier],
+            )
+            with ThreadPoolExecutor(max_workers=settings.ocr_concurrency) as pool:
+                for page_num, result in pool.map(_ocr_one, needs_second_tier):
+                    # Keep the better read rather than assuming the second
+                    # tier improves on the first — it is a different engine,
+                    # not a strictly better one.
+                    if composite_of(result) >= composite_of(ocr_results[page_num]):
+                        ocr_results[page_num] = result
 
     # Phase B2: Vision fallback for low-quality OCR pages.
     # Pages whose OCR composite score falls below the threshold get their
