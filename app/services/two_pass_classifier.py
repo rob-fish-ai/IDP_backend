@@ -167,7 +167,9 @@ CANONICAL DOCUMENT TYPES (use these exact names):
     - Verification of Disability Benefits    (private LTD/STD insurer benefit letters)
     - Pension Statement
     - TANF Verification
-    - TANF / Public Assistance Verification  (county benefit printouts: CalWORKs, GA/GR, cash aid)
+    - TANF / Public Assistance Verification  (county benefit printouts: CalWORKs, GA/GR, cash aid.
+                                              Includes forms headed "Verification of Benefits" —
+                                              use THIS name, not the form's own heading)
     - Child Support Statement
     - Child Support / Alimony Affidavit      (resident affidavit, not a payer statement)
     - Gift Income Verification               (third party attesting to ongoing cash contributions)
@@ -357,6 +359,66 @@ Return JSON in exactly this shape:
 Return ONLY valid JSON."""
 
 
+def _known_document_types() -> frozenset[str]:
+    """The canonical type list, read from the prompt that defines it.
+
+    Parsed rather than restated so the two cannot drift. A second copy in
+    Python would be authoritative for validation while the prompt stayed
+    authoritative for the model, and the first divergence would make every
+    document of the new type look like a classifier error.
+
+    Returns an empty set if the prompt's shape ever changes enough to defeat
+    the parse, which disables validation rather than rejecting everything.
+    """
+    # A label may legitimately contain parentheses — "Tenant Income
+    # Certification (TIC)", "Verification of Income (VOI)". The explanatory
+    # comment beside it is set off by a run of spaces, so the column gap is
+    # what separates name from note, not the bracket.
+    types = set(
+        re.findall(r"^ {4}- (.+?)(?:\s{2,}\(|\s*$)", GROUP_PROMPT, re.M)
+    )
+    # Emitted by the pipeline itself, not chosen by the model.
+    types |= {"Unknown", "Blank Page", "OCR Failed"}
+    return frozenset(t.strip() for t in types if t.strip())
+
+
+_reported_unknown_types: set[str] = set()
+
+
+def _validated_type(document_type: str) -> str:
+    """Return the label, reporting it if it is not one the prompt defines.
+
+    The label is kept rather than corrected. Every consumer routes on it, so
+    an unknown type means the document reaches no extractor and contributes
+    nothing — but guessing at a replacement would put a document through the
+    wrong extractor, which is worse than putting it through none. The warning
+    is the fix; the label is evidence.
+
+    This is not hypothetical: the model returned "Tenant Income Certification
+    Questionnaire", a label no routing set contains, having been asked to
+    distinguish a questionnaire from the certification it is named after.
+    """
+    known = _known_document_types()
+    if not known:
+        return document_type
+
+    base = document_type.replace(" (Previous)", "").strip()
+    if base in known:
+        return document_type
+
+    if document_type not in _reported_unknown_types:
+        _reported_unknown_types.add(document_type)
+        logger.warning(
+            "Classifier returned %r, which is not in the canonical type list. "
+            "No extractor routes on it, so these pages contribute nothing. "
+            "Either the prompt needs the type added or it needs to stop "
+            "inventing one.",
+            document_type,
+        )
+    return document_type
+
+
+
 def _llm_classify_and_group(
     page_results: list[dict],
     settings: Settings,
@@ -480,7 +542,7 @@ def _build_from_llm_groups(
 
     for g in llm_groups:
         page_nums = g.get("pages", [])
-        doc_type = g.get("document_type", "Unknown")
+        doc_type = _validated_type(g.get("document_type", "Unknown"))
         category = g.get("category", "ignore")
         person_name = g.get("person_name")
         notes = g.get("notes")
