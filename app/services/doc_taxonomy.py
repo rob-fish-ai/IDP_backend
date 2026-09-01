@@ -24,6 +24,23 @@ _CERTIFICATION_MARKERS = (
     "3560",
 )
 
+# Words that name a different kind of document even when a certification
+# marker is also present. A questionnaire titled "Tenant Income
+# Certification Questionnaire" contains the certification's whole name and
+# is not the certification — it is the resident's declaration that feeds
+# one. Marker matching alone would treat it as the form it is named after,
+# which is how a questionnaire's signature comes to stand for a
+# certification's.
+#
+# The qualifier wins because it is the more specific claim: "certification"
+# describes the subject, "questionnaire" describes the document.
+_NOT_CERTIFICATION_MARKERS = (
+    "questionnaire",
+    "worksheet",
+    "checklist",
+    "instructions",
+)
+
 
 def is_certification_form(document_type: str | None) -> bool:
     """Whether a classified document type is a certification form.
@@ -36,6 +53,8 @@ def is_certification_form(document_type: str | None) -> bool:
     if not document_type:
         return False
     label = document_type.lower()
+    if any(marker in label for marker in _NOT_CERTIFICATION_MARKERS):
+        return False
     return any(marker in label for marker in _CERTIFICATION_MARKERS)
 
 

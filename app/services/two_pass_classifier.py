@@ -286,13 +286,18 @@ CRITICAL CLASSIFICATION RULES:
   page). On AR-SC files this form IS the certification and the source of
   truth — which is exactly why (b) is the test.
 
-  A form with (a) but NOT (b) is the resident's own declaration and is
-  "Application / Housing Questionnaire", however formally it is sworn.
-  "Tenant Income Certification Questionnaire" (CA TCAC) is this: the
-  resident answers income and asset questions across several pages and
-  signs, but nobody determines eligibility on it — it feeds a separate
-  certification. Its name resembling the TIC's is not evidence; the absence
-  of an owner determination section is.
+  A form with (a) but NOT (b) is the resident's own declaration. Return it
+  with document_type EXACTLY "Application / Housing Questionnaire" — not the
+  form's printed title. A form headed "Tenant Income Certification
+  Questionnaire" (CA TCAC) is this case: the resident answers income and
+  asset questions across several pages and signs, but nobody determines
+  eligibility on it, and it feeds a separate certification. Its title
+  containing the certification's name is not evidence; the absence of an
+  owner determination section is.
+
+  Use only document_type values from the list above, exactly as written.
+  A label copied from a form's letterhead matches nothing downstream, so
+  the document is read by no extractor and silently contributes nothing.
 
   Getting this wrong is costly in one direction specifically: a
   questionnaire filed as a certification puts the resident's signature and
