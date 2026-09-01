@@ -167,10 +167,18 @@ CANONICAL DOCUMENT TYPES (use these exact names):
     - Verification of Disability Benefits    (private LTD/STD insurer benefit letters)
     - Pension Statement
     - TANF Verification
+    - TANF / Public Assistance Verification  (county benefit printouts: CalWORKs, GA/GR, cash aid)
     - Child Support Statement
+    - Child Support / Alimony Affidavit      (resident affidavit, not a payer statement)
+    - Gift Income Verification               (third party attesting to ongoing cash contributions)
     - Bank Statement
+    - Investment Account Statement           (brokerage, mutual fund, retirement account)
     - Life Insurance Policy
     - Asset Self-Certification
+    - No Asset Certification                 (household attests it holds NO assets — distinct
+                                              from an asset self-certification, which lists some)
+    - Disposal of Assets Certification       (assets given away below fair market value)
+    - Direct Express Card Verification
     - Student Status Certification
     - Zero Income Certification
     - Self-Employment Affidavit
@@ -178,6 +186,8 @@ CANONICAL DOCUMENT TYPES (use these exact names):
     - HomeBASE Verification
     - Unemployment Affidavit
     - Notice of Rent Change
+    - Owner Summary Sheet                    (management's roster/summary for the unit)
+    - Family Summary Sheet
     - Identity Document                      (driver license / state ID / SSN card pages)
 
   COMPLIANCE — required forms, not data-extracted:
@@ -260,15 +270,34 @@ CRITICAL CLASSIFICATION RULES:
 
 - "Alternate Certification" / "AR-SC" forms = "Tenant Income Certification (TIC)".
 
-- SELF-CERTIFICATION INCOME FORMS ARE CERTIFICATION FORMS, not
-  questionnaires. "Self-Certification of Household Annual Income" (OHCS),
-  "NY AR Self Certification Form", "Owner's Eligibility Determination",
-  "Annual Self Certification" (and its checklist cover page), and any form
-  where the RESIDENT certifies household members + gross annual income and
-  the OWNER/management determines eligibility (income limit, rent, effective
-  date, signatures) = "Tenant Income Certification (TIC)", INCLUDE. Never
-  classify these as "Application / Housing Questionnaire" — on AR-SC files
-  this form IS the certification and the source of truth.
+- SELF-CERTIFICATION vs QUESTIONNAIRE — decide on structure, not on title.
+  Both have a resident declaring income and signing under penalty of
+  perjury, so the declaration alone does not tell them apart. What does is
+  whether the OWNER also determines eligibility ON THE SAME FORM.
+
+  A form is "Tenant Income Certification (TIC)" only when it carries BOTH:
+    (a) the resident certifying household members and gross annual income, AND
+    (b) an owner/management determination — income limit, maximum rent,
+        effective date, owner or agent signature line.
+
+  Examples with both: "Self-Certification of Household Annual Income"
+  (OHCS), "NY AR Self Certification Form", "Owner's Eligibility
+  Determination", "Annual Self Certification" (and its checklist cover
+  page). On AR-SC files this form IS the certification and the source of
+  truth — which is exactly why (b) is the test.
+
+  A form with (a) but NOT (b) is the resident's own declaration and is
+  "Application / Housing Questionnaire", however formally it is sworn.
+  "Tenant Income Certification Questionnaire" (CA TCAC) is this: the
+  resident answers income and asset questions across several pages and
+  signs, but nobody determines eligibility on it — it feeds a separate
+  certification. Its name resembling the TIC's is not evidence; the absence
+  of an owner determination section is.
+
+  Getting this wrong is costly in one direction specifically: a
+  questionnaire filed as a certification puts the resident's signature and
+  date where the certification's belong, and an unsigned certification then
+  reads as signed.
 
 - PHOTO IDs AND SOCIAL SECURITY CARDS: pages showing driver licenses,
   state IDs, passports, or Social Security cards = "Identity Document",
@@ -297,6 +326,15 @@ CRITICAL CLASSIFICATION RULES:
   as its own single-page group; never merge it with surrounding groups.
 
 - Multi-page forms: GROUP ALL pages of the same form into ONE group.
+
+- One group is ONE form. Documents that sit next to each other in the file
+  are not the same document, even when they share a type and a person. A
+  submission cover sheet, the certification it introduces, and a
+  questionnaire filed behind it are three forms and three groups. Each form
+  has its own beginning — a title block, a form number, a "Page 1 of N" —
+  and a new one starts a new group even when the previous form's type would
+  also fit. Merging them makes one form's signatures and dates appear to
+  belong to another.
 
 PREVIOUS CERTIFICATION DETECTION:
   Files often contain BOTH the current cert AND a previous one for comparison.
