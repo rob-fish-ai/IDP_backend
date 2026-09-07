@@ -135,6 +135,10 @@ def audit_case(
         store.mark_comparison_failed(case_ref, f"delivery failed: {exc}")
         return
 
+    # Recorded before the outcome is judged, so a rejection keeps the reason
+    # their endpoint gave rather than only the status code.
+    store.record_delivery(case_ref, response)
+
     if not response["ok"]:
         # Their ingest rejected it. Record enough to reproduce without
         # re-running the extraction.

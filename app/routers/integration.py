@@ -158,6 +158,22 @@ async def cartograph_import_result(request: Request) -> dict:
 
     case_ref = payload.get("case_ref") or payload.get("job_id")
     status = payload.get("status")
+
+    # Store it against the job before logging. A case that was delivered and
+    # then rejected during their import is otherwise indistinguishable here
+    # from one that imported cleanly — both leave the job row saying "done".
+    if case_ref:
+        try:
+            get_job_store(get_settings().audit_job_db).record_import_result(
+                str(case_ref), payload,
+            )
+        except Exception:
+            # Never let bookkeeping turn a report we asked for into an error
+            # they have to retry.
+            logger.exception(
+                "Could not store import result for case_ref=%s", case_ref,
+            )
+
     warnings = payload.get("warnings") or []
     counts = payload.get("counts_created") or payload.get("created") or {}
 

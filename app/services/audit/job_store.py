@@ -57,7 +57,16 @@ CREATE TABLE IF NOT EXISTS audit_jobs (
     -- Which integration put this row here. Salesforce-only maintenance
     -- (the revisit sweep asks Salesforce whether a newer PDF was attached)
     -- must not run against a case_id Salesforce has never heard of.
-    source TEXT NOT NULL DEFAULT 'salesforce'
+    source TEXT NOT NULL DEFAULT 'salesforce',
+    -- What the consumer said when we handed the extraction over, and what it
+    -- said later about storing it. Their ingest answers 202 before the
+    -- inserts run, so the response to the delivery cannot report the
+    -- outcome — that arrives separately on the result callback. Keeping only
+    -- log lines meant a case could be delivered, silently rejected during
+    -- import, and look complete here forever.
+    cartograph_delivery TEXT,        -- JSON: status, scan_id, bytes sent
+    cartograph_import_result TEXT,   -- JSON: their import outcome + warnings
+    cartograph_import_at REAL
 );
 
 CREATE INDEX IF NOT EXISTS idx_state ON audit_jobs(state);
@@ -99,6 +108,18 @@ class JobStore:
                     "ADD COLUMN source TEXT NOT NULL DEFAULT 'salesforce'"
                 )
                 logger.info("Added source column to existing audit_jobs table")
+            for column, ddl in (
+                ("cartograph_delivery", "TEXT"),
+                ("cartograph_import_result", "TEXT"),
+                ("cartograph_import_at", "REAL"),
+            ):
+                if column not in existing_cols:
+                    conn.execute(
+                        f"ALTER TABLE audit_jobs ADD COLUMN {column} {ddl}"
+                    )
+                    logger.info(
+                        "Added %s column to existing audit_jobs table", column,
+                    )
         logger.info("Audit job store ready at %s", db_path)
 
     @contextmanager
@@ -260,6 +281,37 @@ class JobStore:
                     completed_at = ?, updated_at = ?
                 WHERE case_id = ?
             """, (DONE, findings_text, confidence, snapshot_json, now, now, case_id))
+
+    def record_delivery(self, case_id: str, response: dict[str, Any]) -> None:
+        """Store what the consumer returned when the extraction was handed over.
+
+        The scan id in that response is the only handle for finding the case
+        on their side. Logging it and discarding it meant that whenever the
+        question came up — where did this end up — the answer had already
+        scrolled past.
+        """
+        with self._lock, self._connect() as conn:
+            conn.execute(
+                "UPDATE audit_jobs SET cartograph_delivery = ?, updated_at = ? "
+                "WHERE case_id = ?",
+                (json.dumps(response, default=str), time.time(), case_id),
+            )
+
+    def record_import_result(self, case_id: str, payload: dict[str, Any]) -> None:
+        """Store the consumer's report of how storing the extraction went.
+
+        Separate from the delivery because it arrives separately: their
+        ingest returns before its background job runs the inserts. A case
+        with a delivery and no import result is one they accepted and never
+        confirmed — which is exactly the silence this endpoint exists to
+        break.
+        """
+        with self._lock, self._connect() as conn:
+            conn.execute(
+                "UPDATE audit_jobs SET cartograph_import_result = ?, "
+                "cartograph_import_at = ?, updated_at = ? WHERE case_id = ?",
+                (json.dumps(payload, default=str), time.time(), time.time(), case_id),
+            )
 
     def mark_comparison_failed(self, case_id: str, error: str) -> None:
         self._set_state(case_id, COMPARISON_FAILED, error=error)
