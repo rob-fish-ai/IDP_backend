@@ -292,6 +292,39 @@ def _resolve_member_ref(
     return best_ref
 
 
+# The only values this field is defined to hold. Anything else is prose that
+# reached a status column.
+_EMPLOYMENT_STATUSES = ("active", "terminated", "on leave")
+
+
+def _employment_status(
+    value: str | None,
+    warnings: list[str],
+    context: str,
+) -> str | None:
+    """Pass through a real employment status; drop anything else.
+
+    The extractor occasionally writes an explanation into this field rather
+    than a status — "Flagged — disclosed on questionnaire but no VOI/paystub
+    found" appeared on a real case. Forwarded, that prose lands in a status
+    column and every later reader treats it as a value, including the checks
+    that ask whether employment was terminated.
+
+    The note is real information, but it belongs in a finding, not in a field
+    whose vocabulary is three words. Dropping it with a warning keeps the
+    column meaningful and keeps the observation visible.
+    """
+    if not value:
+        return None
+    if any(status in value.strip().lower() for status in _EMPLOYMENT_STATUSES):
+        return value
+    warnings.append(
+        f"{context}: employment_status held prose rather than a status "
+        f"({value[:60]!r}); omitted"
+    )
+    return None
+
+
 def _map_vocabulary(
     value: str | None,
     allowed: list[str],
@@ -471,7 +504,9 @@ def build_income_records(
             "frequency_of_pay": entry.frequencyOfPay,
             "date_received": _iso_date(entry.dateReceived),
             "employment_start_date": _iso_date(entry.hireDate),
-            "employment_status": entry.employmentStatus,
+            "employment_status": _employment_status(
+                entry.employmentStatus, warnings, context,
+            ),
             "termination_date": _iso_date(entry.terminationDate),
             "self_declared_amount": _money(entry.selfDeclaredAmount),
             "source_of_declaration": entry.selfDeclaredSource,
@@ -560,12 +595,19 @@ def build_asset_records(
             asset.assetOwner, members, warnings, context,
         )
 
+        # A statement with neither a date nor a balance carries nothing and
+        # would arrive as an empty row asserting that a statement exists.
+        # That is worse than sending none: the checklist item asking whether
+        # a statement was obtained would read as satisfied.
         statements = [
-            {
-                "statement_date": _iso_date(s.statementDate),
-                "balance": _money(s.balance),
-            }
-            for s in asset.bankStatment
+            entry for entry in (
+                {
+                    "statement_date": _iso_date(s.statementDate),
+                    "balance": _money(s.balance),
+                }
+                for s in asset.bankStatment
+            )
+            if any(entry.values())
         ]
 
         voa = None
