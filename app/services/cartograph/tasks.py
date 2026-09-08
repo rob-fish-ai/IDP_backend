@@ -19,7 +19,7 @@ import shutil
 
 from app.core.dependencies import get_settings
 from app.services.audit.job_store import get_job_store
-from app.services.cartograph.adapter import build_payload
+from app.services.cartograph.adapter import build_payload, cert_type_from_cartograph
 from app.services.cartograph.client import (
     CartographNotConfigured,
     is_configured,
@@ -53,6 +53,19 @@ def audit_case(
     settings = get_settings()
     store = get_job_store(settings.audit_job_db)
 
+    # Their vocabulary, translated before it reaches anything that keys on
+    # ours. An untranslated "annual" disables every cert-type rule, and
+    # AR-SC is the type where that costs most: its whole rule set exists
+    # because the certification form is the source of truth and no
+    # third-party wage verification is expected.
+    engine_cert_type = cert_type_from_cartograph(cert_type)
+    if cert_type and engine_cert_type is None:
+        logger.warning(
+            "case_ref=%s arrived with cert_type=%r, which is not a type the "
+            "engine recognizes; determining it from the documents instead",
+            case_ref, cert_type,
+        )
+
     store.mark_extracting(case_ref)
 
     # Fetch first, before anything expensive. Presigned URLs expire, so the
@@ -76,7 +89,7 @@ def audit_case(
             pdf_bytes,
             settings,
             funding_program=program,
-            certification_type=cert_type,
+            certification_type=engine_cert_type,
             work_dir=work_dir,
         )
     except Exception as exc:

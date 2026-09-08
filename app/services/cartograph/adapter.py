@@ -73,16 +73,22 @@ def _normalize_term(value: str) -> str:
     # Trailing plural: 'wages' and 'wage' are one term.
     return slug[:-1] if slug.endswith("s") and not slug.endswith("ss") else slug
 
-# CertReview::CERT_TYPES allows initial, annual and interim. The engine
-# audits four types; AR-SC has no target, which is an open item on the
-# schema change request. Until it is resolved AR-SC maps to annual and says
-# so, rather than being silently indistinguishable from a plain AR.
-_CERT_TYPES = {
+# The engine's four certification types and Cartograph's names for them.
+# AR-SC is a distinct value on both sides: it applies its own rule set here
+# (the certification form is the source of truth, so no third-party wage
+# verification is expected) and Cartograph carries ar_self_cert to match.
+_CERT_TYPE_OUT = {
     "MI": "initial",
     "AR": "annual",
-    "AR-SC": "annual",
+    "AR-SC": "ar_self_cert",
     "IR": "interim",
 }
+
+# The same mapping read backwards, for the cert type arriving on a
+# notification. Without it the consumer's vocabulary reaches the extraction
+# pipeline unchanged, where "annual" matches none of the engine's types and
+# every cert-type rule silently stops applying.
+_CERT_TYPE_IN = {value: key for key, value in _CERT_TYPE_OUT.items()}
 
 # Values the extractor uses for these fields. "H" marks head of household;
 # disabled and student are Y/N. See field_scorer's business rules.
@@ -240,6 +246,26 @@ def build_household_members(
     return members
 
 
+def cert_type_from_cartograph(value: str | None) -> str | None:
+    """Translate an arriving certification type into the engine's vocabulary.
+
+    Cartograph names these initial, annual, interim and ar_self_cert; the
+    engine calls them MI, AR, AR-SC and IR, and every cert-type rule keys on
+    its own names. Passing the consumer's value straight through means those
+    rules stop applying — an AR-SC packet labelled "annual" is audited as an
+    ordinary recertification, so the exemptions that expect no third-party
+    wage verification never fire and the file collects false findings about
+    documents it is not supposed to have.
+
+    An unrecognized value returns None rather than a guess. None lets the
+    engine determine the type from the documents; a wrong override silently
+    replaces what the forms say.
+    """
+    if not value:
+        return None
+    return _CERT_TYPE_IN.get(str(value).strip().lower())
+
+
 def _money(value: str | None) -> str | None:
     """Normalize a money string to plain digits, or None if unparseable.
 
@@ -394,18 +420,13 @@ def build_cert_review(
         return {}
 
     raw_type = (info.certificationType or "").strip().upper()
-    cert_type = _CERT_TYPES.get(raw_type)
+    cert_type = _CERT_TYPE_OUT.get(raw_type)
     if cert_type is None:
         warnings.append(
             f"cert_review.cert_type '{info.certificationType}' is not one of "
             f"MI, AR, AR-SC or IR; sent as 'annual'"
         )
         cert_type = "annual"
-    elif raw_type == "AR-SC":
-        warnings.append(
-            "cert_review.cert_type AR-SC sent as 'annual' — CERT_TYPES has no "
-            "AR-SC value, so the self-certification distinction is lost"
-        )
 
     hoh = next(
         (m for m in members if m.get("is_hoh")),
