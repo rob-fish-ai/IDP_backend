@@ -20,6 +20,9 @@ from app.schemas.scoring import (
     RecordScoreCard,
     StageScore,
 )
+# The scorer's bounds and the annualizer's arithmetic have to agree about
+# how long a pay period is, so both read the same multiplier table.
+from app.services.income_calculator import get_frequency_multiplier
 
 logger = logging.getLogger(__name__)
 
@@ -633,17 +636,38 @@ def _score_income_rules(card: RecordScoreCard, cert_type: str | None) -> None:
             update_field_score(card, "rateOfPay", stage="business_rule",
                                score=0.30, reason="Not a valid number")
 
-    # hoursPerPayPeriod: 1-168
+    # hoursPerPayPeriod is hours in ONE pay period, so its plausible range
+    # scales with how long that period is. Bounding it at 1-168 assumed a
+    # week, which scored every correct non-weekly value as suspect: a
+    # bi-weekly 80 was "hrs/week seems high" at 0.70 and a monthly 173.33
+    # was out of range at 0.30. That pushed the extractor toward reporting
+    # hours per week, which the annualizer then multiplies by the number of
+    # pay periods — the reading that halves a bi-weekly wage.
+    #
+    # Bounds are derived from the frequency's own multiplier rather than
+    # listed per frequency, so a frequency added to FREQUENCY_MULTIPLIERS is
+    # bounded correctly without touching this rule.
     hours = vals.get("hoursPerPayPeriod")
     if hours:
         try:
             h = float(hours)
-            if h < 1 or h > 168:
+            multiplier = get_frequency_multiplier(vals.get("frequencyOfPay"))
+            # Unknown frequency gets the loosest period rather than the
+            # tightest: penalising a value we cannot bound is the mistake
+            # this rule just made.
+            weeks = 52 / multiplier if multiplier else 52 / 12
+            hard_cap = 168 * weeks          # every hour of every day
+            plausible = 60 * weeks          # sustained full-time plus overtime
+            if h < 1 or h > hard_cap:
                 update_field_score(card, "hoursPerPayPeriod", stage="business_rule",
-                                   score=0.30, reason=f"Hours {h} outside 1-168 range")
-            elif h > 60:
+                                   score=0.30,
+                                   reason=f"Hours {h} outside 1-{hard_cap:.0f} "
+                                          f"range for a {weeks:.2f}-week pay period")
+            elif h > plausible:
                 update_field_score(card, "hoursPerPayPeriod", stage="business_rule",
-                                   score=0.70, reason=f"{h} hrs/week seems high")
+                                   score=0.70,
+                                   reason=f"{h} hrs in a {weeks:.2f}-week pay "
+                                          f"period seems high")
             else:
                 update_field_score(card, "hoursPerPayPeriod", stage="business_rule",
                                    score=1.0, reason="Valid range")

@@ -56,23 +56,55 @@ def normalize_ssn(value: str | None) -> str | None:
 
 
 # Keys that hold SSN values across extraction results and MuleSoft
-# snapshots. mask_ssns_deep matches on exact key name.
+# snapshots. Matched by exact key name; see _SSN_IN_TEXT_PATTERN for the
+# second ground, which catches SSNs that no key name marks.
 _SSN_KEYS = frozenset({"socialSecurityNumber", "SSN__c"})
+
+# An SSN written the way a document prints it. Used to mask SSNs that appear
+# in free text rather than in a field named for them — the raw OCR of a
+# certification form carries them in prose ("TENANT: ... SSN: 441-60-8888"),
+# where no key name marks them.
+#
+# Deliberately only the dashed nine-digit form. A bare run of nine digits is
+# just as likely to be an account or case number, and rewriting those would
+# corrupt the very evidence a reviewer is reading.
+_SSN_IN_TEXT_PATTERN = re.compile(r"\b\d{3}-\d{2}-(\d{4})\b")
 
 
 def mask_ssns_deep(obj):
-    """Deep-copy a JSON-ish structure with every SSN field masked to last-4.
+    """Deep-copy a JSON-ish structure with every SSN masked to last-4.
 
     Applied at audit-result egress (API responses, anything user-facing).
     The stored extraction keeps SSNs as captured; nothing that leaves the
-    service does."""
+    service does.
+
+    Masks on two independent grounds, because either alone leaks:
+
+      - the key names an SSN field, which covers structured extraction; and
+      - the value looks like an SSN, which covers everything else. Raw OCR
+        page text is the case that matters — it reproduces the certification
+        verbatim, SSNs included, under a key called "text".
+
+    Pydantic models are dumped rather than returned untouched. A model is
+    neither a dict nor a list, so a recursive walk that only knows those two
+    hands the whole object back unmasked; `process_pdf_full` returns its
+    extraction as a model, so the entire structured result — every member
+    and every asset — passed through this function unchanged. The response
+    body is the same JSON either way, since the model is serialized on the
+    way out regardless.
+    """
+    if hasattr(obj, "model_dump"):
+        return mask_ssns_deep(obj.model_dump())
     if isinstance(obj, dict):
         return {
-            k: (mask_ssn(v) if k in _SSN_KEYS and isinstance(v, str) else mask_ssns_deep(v))
+            k: (mask_ssn(v) if k in _SSN_KEYS and isinstance(v, str)
+                else mask_ssns_deep(v))
             for k, v in obj.items()
         }
     if isinstance(obj, list):
         return [mask_ssns_deep(v) for v in obj]
+    if isinstance(obj, str):
+        return _SSN_IN_TEXT_PATTERN.sub(r"***-**-\1", obj)
     return obj
 
 

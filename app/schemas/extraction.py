@@ -75,6 +75,13 @@ class CertificationInfo(BaseModel):
     tenantRent: Optional[str] = None
     utilityAllowance: Optional[str] = None
     rentLimit: Optional[str] = None
+    # Rent assistance as the certification records it. These existed only as
+    # underscore-prefixed names read off __dict__ that nothing ever wrote, so
+    # the check comparing them against assistance documents asserted "$0 on
+    # the certification" without having read anything. None means the field
+    # was not found, which is different from a recorded zero.
+    federalRentAssistance: Optional[str] = None
+    nonFederalRentAssistance: Optional[str] = None
     householdIncome: Optional[str] = None
     householdSize: Optional[str] = None
     unitNumber: Optional[str] = None

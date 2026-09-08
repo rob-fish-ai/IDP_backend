@@ -44,9 +44,18 @@ def normalize_source_name(name: str | None) -> str | None:
     if key_no_space in _SOURCE_NAME_MAP:
         return _SOURCE_NAME_MAP[key_no_space]
 
-    # Check if any map key is contained in the input
-    for map_key, proper_name in _SOURCE_NAME_MAP.items():
-        if map_key in key or map_key in key_no_space:
-            return proper_name
-
+    # Deliberately no substring fallback. Canonicalising the spelling of a
+    # name is not the same as guessing which entity it is, and matching a
+    # map key anywhere inside the input did the second: any employer whose
+    # name happens to contain "ssa" became the Social Security
+    # Administration — Massachusetts General Hospital, Nassau County Health,
+    # Vassar Brothers Medical — and "Amazonia Foods" became Amazon.
+    #
+    # The renamed source then satisfied the 'ssa' tests in bug_detector and
+    # the income routing, so a wage earner's paystubs were audited as
+    # benefit income and the reviewer was told to delete them. Word
+    # boundaries would fix the accidents but not the principle: a fragment
+    # of a name is not evidence of the entity.
+    #
+    # A genuine spelling variant belongs in the map as its own key.
     return to_title_case(stripped)

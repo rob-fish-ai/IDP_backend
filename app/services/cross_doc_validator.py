@@ -546,11 +546,29 @@ def validate_rent_assistance(
     if not assistance_docs:
         return findings
 
-    # Check TIC rent assistance fields
-    non_fed = certification_info.__dict__.get("_nonFederalAssistance")
-    fed = certification_info.__dict__.get("_federalAssistance")
-    non_fed_val = float(non_fed) if non_fed and non_fed != "0" else 0
-    fed_val = float(fed) if fed and fed != "0" else 0
+    # Both fields were read off __dict__ under underscore-prefixed names that
+    # nothing in the codebase ever wrote, so they were always None and the
+    # finding below fired on every packet carrying an assistance document —
+    # telling a reviewer the certification shows $0 without having read the
+    # certification at all.
+    non_fed = certification_info.nonFederalRentAssistance
+    fed = certification_info.federalRentAssistance
+
+    if non_fed is None and fed is None:
+        # Not extracted rather than recorded as zero. The check cannot run,
+        # and saying nothing is right: an assertion about a value nobody read
+        # is worse than a gap, because it looks like evidence.
+        logger.info(
+            "Rent assistance documents present (%s) but the certification "
+            "carries no assistance figure — nothing to compare against",
+            ", ".join(assistance_docs),
+        )
+        return findings
+
+    # Reuse the module's own parser rather than float() on a raw string:
+    # "1,250.00" and "$0.00" are both shapes a certification prints.
+    non_fed_val = _parse_money(non_fed) or 0.0
+    fed_val = _parse_money(fed) or 0.0
 
     if non_fed_val == 0 and fed_val == 0:
         findings.append(make_finding(

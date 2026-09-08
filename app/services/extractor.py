@@ -178,6 +178,12 @@ FIELDS TO EXTRACT:
 - utilityAllowance: Utility allowance amount. Numeric string with 2 decimals.
 - rentLimit: Rent limit for the unit (incl. "Current rent limit for this
   unit" / "Maximum Gross Rent Limit" lines). Numeric string with 2 decimals.
+- federalRentAssistance / nonFederalRentAssistance: rent assistance the form records
+  (TIC Part VI "Federal rent assistance" / "Non-federal rent assistance", HUD 50059
+  assistance payment lines, Section 8 / voucher / HomeBASE subsidy amounts). Numeric
+  string with 2 decimals. Record "0.00" only when the form shows a zero; use null when
+  the form has no such line — a zero that was printed and a field that is absent mean
+  different things to the audit.
 - householdIncome: Total annual household income. Numeric string with 2 decimals.
 - householdSize: Number of household members. Integer as string.
 - unitNumber: Unit number or apartment number.
@@ -272,7 +278,11 @@ VERIFICATION INCOME FIELDS:
 - dateReceived: date the VOI form was received or date signed by employer. YYYY-MM-DD. null if not shown.
 - rateOfPay: numeric string (hourly or periodic rate)
 - frequencyOfPay: lowercase. This is how often the person is PAID (weekly / bi-weekly / semi-monthly / monthly), NOT the rate unit. If rate is "hourly" but pay dates are 14 days apart, frequencyOfPay is "bi-weekly". Determine from pay period structure, not from rate label.
-- hoursPerPayPeriod: hours per week
+- hoursPerPayPeriod: hours worked in ONE pay period — the same period frequencyOfPay names,
+  NOT hours per week. If the document states a weekly figure, convert it: 40 hrs/week paid
+  bi-weekly is 80; paid semi-monthly is 86.67; paid monthly is 173.33; paid weekly is 40.
+  The annual calculation is rateOfPay x hoursPerPayPeriod x (pay periods per year), so a
+  weekly figure reported here halves or quarters the person's income.
 - overtimeRate: only if person actually receives overtime
 - overtimeFrequency: same frequency as regular pay
 - ytdAmount: only if document explicitly states "year to date". MUST BE null for SSA/fixed income.
