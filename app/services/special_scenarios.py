@@ -9,8 +9,20 @@ from app.schemas.extraction import (
     CertificationInfo,
     DocumentGroup,
     DocumentInventory,
+    Finding,
     HouseholdDemographics,
     IncomeExtraction,
+)
+from app.services.findings import (
+    ASSIGN_CLIENT,
+    ASSIGN_INTERNAL,
+    CATEGORY_ASSET,
+    CATEGORY_FILE_REVIEW,
+    CATEGORY_INCOME,
+    CATEGORY_MEMBER,
+    RESOLVE_PRESENCE,
+    RESOLVE_RECALC,
+    make_finding,
 )
 
 logger = logging.getLogger(__name__)
@@ -24,12 +36,9 @@ def check_special_scenarios(
     inventory_hud: DocumentInventory | None,
     ctx: PipelineContext | None,
     assets: AssetExtraction | None = None,
-) -> list[str]:
-    """Check for special scenarios per Section 19.
-
-    Returns list of compliance finding strings.
-    """
-    findings: list[str] = []
+) -> list[Finding]:
+    """Check for special scenarios per Section 19."""
+    findings: list[Finding] = []
 
     findings.extend(_check_members_without_ssn(household, certification_info))
     findings.extend(_check_student_contradictions(household, document_groups))
@@ -44,9 +53,9 @@ def check_special_scenarios(
 def _check_members_without_ssn(
     household: HouseholdDemographics | None,
     certification_info: CertificationInfo | None,
-) -> list[str]:
+) -> list[Finding]:
     """Members over age 6 must have SSN. Zeros = finding."""
-    findings: list[str] = []
+    findings: list[Finding] = []
     if not household or not household.houseHold:
         return findings
 
@@ -69,18 +78,40 @@ def _check_members_without_ssn(
         name = f"{member.FirstName or ''} {member.LastName or ''}".strip()
 
         if not ssn:
-            findings.append(
+            findings.append(make_finding(
+                "MEMBER_SSN_MISSING",
                 f"Household member '{name}' (age {int(age)}) has no SSN on file — "
-                f"all members over age 6 must have a Social Security number (Section 19)"
-            )
+                f"all members over age 6 must have a Social Security number (Section 19)",
+                label="Household member over 6 with no SSN",
+                category=CATEGORY_MEMBER,
+                subject_type="household_member",
+                subject_ref={"member_name": name},
+                assignment=ASSIGN_CLIENT,
+                correction_required=(
+                    "Obtain the member's Social Security number, or the "
+                    "documentation supporting an exemption"
+                ),
+                resolution_type=RESOLVE_PRESENCE,
+            ))
         elif ssn in (
             "***-**-0000", "***-**-9999", "000-00-0000", "999-99-9999",
         ):
             from app.services.validation import mask_ssn
-            findings.append(
+            findings.append(make_finding(
+                "MEMBER_SSN_PLACEHOLDER",
                 f"Household member '{name}' has placeholder SSN ({mask_ssn(ssn)}) — "
-                f"zeros entered instead of actual SSN = finding (Section 19)"
-            )
+                f"zeros entered instead of actual SSN = finding (Section 19)",
+                label="Household member has a placeholder SSN",
+                category=CATEGORY_MEMBER,
+                subject_type="household_member",
+                subject_ref={"member_name": name},
+                assignment=ASSIGN_CLIENT,
+                correction_required=(
+                    "Replace the placeholder with the member's actual Social "
+                    "Security number"
+                ),
+                resolution_type=RESOLVE_PRESENCE,
+            ))
 
     return findings
 
@@ -88,9 +119,9 @@ def _check_members_without_ssn(
 def _check_student_contradictions(
     household: HouseholdDemographics | None,
     document_groups: list[DocumentGroup],
-) -> list[str]:
+) -> list[Finding]:
     """Student status contradictions and missing verification."""
-    findings: list[str] = []
+    findings: list[Finding] = []
     if not household or not household.houseHold:
         return findings
 
@@ -100,24 +131,39 @@ def _check_student_contradictions(
     )
 
     students = [m for m in household.houseHold if m.student == "Y"]
+    if not students or has_student_cert:
+        return findings
 
-    if students and not has_student_cert:
-        names = ", ".join(
-            f"{m.FirstName or ''} {m.LastName or ''}".strip() for m in students
-        )
-        findings.append(
-            f"Student status 'Y' for {names} but no Student Status Certification "
-            f"found — verification required (Section 19)"
-        )
+    # One finding per student rather than one naming them all. The old
+    # wording joined every name into a single string, which has no subject
+    # to key on: the identity would change whenever the roster did, so a
+    # reviewer's resolution would not survive a member being added, and
+    # nothing could attach the finding to the member it concerns.
+    for member in students:
+        name = f"{member.FirstName or ''} {member.LastName or ''}".strip()
+        findings.append(make_finding(
+            "STUDENT_STATUS_UNVERIFIED",
+            f"Student status 'Y' for {name} but no Student Status Certification "
+            f"found — verification required (Section 19)",
+            label="Student status declared with no certification on file",
+            category=CATEGORY_MEMBER,
+            subject_type="household_member",
+            subject_ref={"member_name": name},
+            assignment=ASSIGN_CLIENT,
+            correction_required=(
+                "Obtain a Student Status Certification for this member"
+            ),
+            resolution_type=RESOLVE_PRESENCE,
+        ))
 
     return findings
 
 
 def _check_ssa_overpayment(
     document_groups: list[DocumentGroup],
-) -> list[str]:
+) -> list[Finding]:
     """Check SSA benefit letter text for overpayment indicators."""
-    findings: list[str] = []
+    findings: list[Finding] = []
     overpayment_keywords = ("overpayment", "adjusted amount", "withholding", "offset")
 
     for g in document_groups:
@@ -125,10 +171,31 @@ def _check_ssa_overpayment(
         if "ssa" in dt or "ssi" in dt or "ssdi" in dt or "social security" in dt:
             text_lower = g.combined_text.lower()
             if any(kw in text_lower for kw in overpayment_keywords):
-                findings.append(
+                findings.append(make_finding(
+                    "SSA_POSSIBLE_OVERPAYMENT",
                     f"Pages {g.page_range}: SSA benefit letter indicates possible overpayment "
-                    f"or adjustment — obtain verification of overpayment balance (Section 19)"
-                )
+                    f"or adjustment — obtain verification of overpayment balance (Section 19)",
+                    label="Benefit letter suggests an overpayment or adjustment",
+                    category=CATEGORY_INCOME,
+                    subject_type="income_record",
+                    # Keyed on the document, which is all this check knows —
+                    # it reads the letter's text, not the income record it
+                    # belongs to. Page range distinguishes two letters in one
+                    # packet without inventing a source name.
+                    subject_ref={
+                        "document_type": g.document_type,
+                        "page_range": g.page_range,
+                    },
+                    assignment=ASSIGN_INTERNAL,
+                    correction_required=(
+                        "Obtain verification of the overpayment balance and "
+                        "recompute the benefit income if it is being withheld"
+                    ),
+                    # The gross benefit is not the amount received while an
+                    # overpayment is recovered, so the figure changes.
+                    resolution_type=RESOLVE_RECALC,
+                    pages=g.pages,
+                ))
 
     return findings
 
@@ -137,9 +204,15 @@ def _check_hud_9887_pages(
     inventory_hud: DocumentInventory | None,
     household: HouseholdDemographics | None,
     certification_info: CertificationInfo | None,
-) -> list[str]:
-    """HUD 9887 must have 4 pages. 9887-A must have 2 pages per adult."""
-    findings: list[str] = []
+) -> list[Finding]:
+    """9887-A must be 2 pages each.
+
+    The 9887's own 4-page requirement is named in the section but has never
+    been implemented here — `adult_count` is computed for a per-adult check
+    that does not exist. Left as it was rather than invented during a
+    migration whose point is that wording and behaviour do not change.
+    """
+    findings: list[Finding] = []
     if not inventory_hud:
         return findings
 
@@ -152,17 +225,27 @@ def _check_hud_9887_pages(
         if "9887-A" in dt or "9887A" in dt:
             # Each 9887-A should be 2 pages
             if doc.pageCount > 0 and doc.pageCount < 2:
-                findings.append(
+                findings.append(make_finding(
+                    "HUD_9887A_INCOMPLETE",
                     f"HUD 9887-A for '{doc.personName or 'Unknown'}' has {doc.pageCount} page(s) — "
-                    f"should be 2 pages. Missing pages = finding (Section 19)"
-                )
+                    f"should be 2 pages. Missing pages = finding (Section 19)",
+                    label="HUD 9887-A is missing pages",
+                    category=CATEGORY_FILE_REVIEW,
+                    subject_type="household_member",
+                    subject_ref={"member_name": doc.personName},
+                    assignment=ASSIGN_CLIENT,
+                    correction_required=(
+                        "Obtain the complete two-page HUD 9887-A for this member"
+                    ),
+                    resolution_type=RESOLVE_PRESENCE,
+                ))
 
     return findings
 
 
-def _check_cryptocurrency(assets: AssetExtraction | None) -> list[str]:
+def _check_cryptocurrency(assets: AssetExtraction | None) -> list[Finding]:
     """Section 7: Cryptocurrency has no standardized verification — auto-flag."""
-    findings: list[str] = []
+    findings: list[Finding] = []
     if not assets:
         return findings
 
@@ -170,20 +253,35 @@ def _check_cryptocurrency(assets: AssetExtraction | None) -> list[str]:
         acct_type = (asset.accountType or "").lower()
         doc_type = (asset.documentType or "").lower()
         if "crypto" in acct_type or "crypto" in doc_type:
-            findings.append(
+            findings.append(make_finding(
+                "CRYPTO_ASSET_UNVERIFIABLE",
                 f"Cryptocurrency asset for '{asset.assetOwner or 'Unknown'}' — "
                 f"self-declared only, no standardized verification procedure. "
-                f"Manual review required (Section 7)"
-            )
+                f"Manual review required (Section 7)",
+                label="Cryptocurrency asset has no standard verification",
+                category=CATEGORY_ASSET,
+                subject_type="asset_record",
+                subject_ref={
+                    "member_name": asset.assetOwner,
+                    "source_name": asset.sourceName,
+                    "account_type": asset.accountType,
+                },
+                assignment=ASSIGN_INTERNAL,
+                correction_required=(
+                    "Review the declared holding and decide what evidence the "
+                    "program will accept for it"
+                ),
+                resolution_type=RESOLVE_RECALC,
+            ))
 
     return findings
 
 
 def _check_homeless_applicant(
     document_groups: list[DocumentGroup],
-) -> list[str]:
+) -> list[Finding]:
     """Detect possible homeless applicant — blank rent/own fields."""
-    findings: list[str] = []
+    findings: list[Finding] = []
     homeless_indicators = ("homeless", "no fixed address", "shelter", "unhoused")
 
     for g in document_groups:
@@ -191,34 +289,24 @@ def _check_homeless_applicant(
         if "application" in dt or "questionnaire" in dt:
             text_lower = g.combined_text.lower()
             if any(kw in text_lower for kw in homeless_indicators):
-                findings.append(
+                findings.append(make_finding(
+                    "HOMELESS_APPLICANT_INDICATED",
                     f"Pages {g.page_range}: Application indicates possible homeless applicant — "
-                    f"additional verification required for housing status (Section 19)"
-                )
-
-    return findings
-
-
-def _check_blank_application_fields(
-    document_groups: list[DocumentGroup],
-) -> list[str]:
-    """Application field completeness — all fields must have affirmative or negative response."""
-    findings: list[str] = []
-    # This is a general check — look for patterns indicating blank required fields
-    blank_indicators = (
-        "total gross income" + " " * 5,  # blank income field
-        "gross income: $" + " " * 3,
-    )
-
-    for g in document_groups:
-        dt = g.document_type.lower()
-        if "application" in dt or "questionnaire" in dt:
-            text_lower = g.combined_text.lower()
-            # Check for blank/missing total gross income
-            if "total gross income" in text_lower or "total annual income" in text_lower:
-                # If we find the label but no number nearby, flag it
-                # This is a heuristic — LLM extraction is more reliable
-                pass  # Handled by extraction layer
+                    f"additional verification required for housing status (Section 19)",
+                    label="Application suggests the applicant was homeless",
+                    category=CATEGORY_FILE_REVIEW,
+                    subject_ref={
+                        "document_type": g.document_type,
+                        "page_range": g.page_range,
+                    },
+                    assignment=ASSIGN_INTERNAL,
+                    correction_required=(
+                        "Verify the housing status at application and attach "
+                        "the supporting documentation the program requires"
+                    ),
+                    resolution_type=RESOLVE_PRESENCE,
+                    pages=g.pages,
+                ))
 
     return findings
 
