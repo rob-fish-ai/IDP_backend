@@ -337,4 +337,3 @@ def stop_maintenance_thread(timeout: float = 5.0) -> None:
     _MAINT_STOP.set()
     _MAINT_THREAD.join(timeout=timeout)
     _MAINT_THREAD = None
-    _STOP_EVENT = None

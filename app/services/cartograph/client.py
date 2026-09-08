@@ -23,9 +23,11 @@ from app.services.cartograph.signing import (
     sign,
 )
 
-# Kept in step with adapter.SCHEMA_VERSION; imported lazily below to avoid a
-# cycle, since the adapter has no reason to know about the client.
-SCHEMA_VERSION = "1.2"
+# One definition, in the module that builds the payload the version
+# describes. The second copy here was kept "in step" by hand under a comment
+# describing a lazy import that was never written, so the two could disagree
+# and the failure would be a consumer told the wrong schema version.
+from app.services.cartograph.adapter import SCHEMA_VERSION
 
 logger = logging.getLogger(__name__)
 

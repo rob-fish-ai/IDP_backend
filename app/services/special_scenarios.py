@@ -207,16 +207,15 @@ def _check_hud_9887_pages(
 ) -> list[Finding]:
     """9887-A must be 2 pages each.
 
-    The 9887's own 4-page requirement is named in the section but has never
-    been implemented here — `adult_count` is computed for a per-adult check
-    that does not exist. Left as it was rather than invented during a
-    migration whose point is that wording and behaviour do not change.
+    Per document, which is the half of the rule this module can check from
+    the inventory alone. signature_validator holds the other half — total
+    pages against two per adult — and that is why `adult_count` used to be
+    computed here and thrown away. See the duplicate-finding note: one
+    incomplete 9887-A is currently reported by both modules.
     """
     findings: list[Finding] = []
     if not inventory_hud:
         return findings
-
-    adult_count = _count_adults(household, certification_info)
 
     for doc in inventory_hud.documents:
         dt = (doc.documentType or "").strip()
@@ -314,32 +313,6 @@ def _check_homeless_applicant(
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-def _count_adults(
-    household: HouseholdDemographics | None,
-    certification_info: CertificationInfo | None,
-) -> int:
-    """Count household members age >= 18."""
-    if not household or not household.houseHold:
-        return 0
-
-    effective = _parse_date(
-        certification_info.effectiveDate if certification_info else None
-    )
-    if not effective:
-        effective = date.today()
-
-    count = 0
-    for member in household.houseHold:
-        dob = _parse_date(member.DOB)
-        if dob:
-            age = (effective - dob).days / 365.25
-            if age >= 18:
-                count += 1
-        else:
-            count += 1  # Assume adult if DOB unknown
-    return count
-
 
 def _parse_date(value: str | None) -> date | None:
     """Parse YYYY-MM-DD."""

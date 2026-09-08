@@ -847,8 +847,6 @@ def _supplement_cert_info_from_rent_change(
             ("tenantRent", r"Tenant (?:Paid )?Rent\s*\(?\$?\s*([\d,]+\.?\d*)"),
             ("utilityAllowance", r"Utility Allowance\s*\(?\$?\s*([\d,]+\.?\d*)"),
             ("grossRent", r"Gross Rent\s*\(?\$?\s*([\d,]+\.?\d*)"),
-            ("_totalTenantPayment", r"Total Tenant Payment\s*\(?\$?\s*([\d,]+\.?\d*)"),
-            ("_assistancePayment", r"Assistance Payment\s*\(?\$?\s*([\d,]+\.?\d*)"),
         ]
         for field_name, pattern in rent_patterns:
             m = re.search(pattern, clean, re.IGNORECASE)
@@ -879,13 +877,6 @@ def _supplement_cert_info_from_rent_change(
                 field_name, current, value, best_date,
             )
             setattr(ci, field_name, value)
-
-    # Fill householdIncome only if null
-    if not ci.householdIncome:
-        for _, fields in rent_sources:
-            if "householdIncome" in fields:
-                ci.householdIncome = fields["householdIncome"]
-                break
 
 
 def _fuzzy_employer_match(a: str, b: str) -> bool:

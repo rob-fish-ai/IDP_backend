@@ -292,9 +292,6 @@ class JobStore:
             """, (COMPARING, now, case_id, EXTRACTED))
             return cur.rowcount > 0
 
-    def mark_comparing(self, case_id: str) -> None:
-        self._set_state(case_id, COMPARING)
-
     def mark_done(
         self,
         case_id: str,
@@ -435,27 +432,6 @@ class JobStore:
                     "SELECT COUNT(*) AS n FROM audit_jobs",
                 ).fetchone()
             return row["n"]
-
-    def list_known_case_ids(self) -> set[str]:
-        """Return all case IDs IDP has touched (in any state).
-
-        Used by the poller to exclude already-known cases from the
-        Salesforce SOQL query so the same case isn't fetched repeatedly.
-        """
-        with self._connect() as conn:
-            rows = conn.execute(
-                "SELECT case_id FROM audit_jobs"
-            ).fetchall()
-            return {r["case_id"] for r in rows}
-
-    def list_failed_case_ids(self) -> set[str]:
-        """Case IDs in failed states — eligible for retry on next poll."""
-        with self._connect() as conn:
-            rows = conn.execute("""
-                SELECT case_id FROM audit_jobs
-                WHERE state IN (?, ?, ?)
-            """, (EXTRACTION_FAILED, COMPARISON_FAILED, MULESOFT_TIMEOUT)).fetchall()
-            return {r["case_id"] for r in rows}
 
     # ------------------------------------------------------------------
     # Admin / maintenance

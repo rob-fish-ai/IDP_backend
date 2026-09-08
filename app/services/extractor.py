@@ -1015,10 +1015,8 @@ _ASSET_DOC_TYPES_PER_RECORD = {
     # of these doc types in the input, retry with the missed groups.
     "Bank Statement",
     "Verification of Assets (VOA)",
-    "Verification of Deposit (VOD)",
     "Life Insurance Policy",
     "Asset Self-Certification",
-    "Real Estate",
     "Investment Account Statement",
     "Direct Express Card Verification",
     "Debit Card Asset Self-Certification",

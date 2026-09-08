@@ -80,9 +80,6 @@ def mask_ssns_deep(obj):
 # Title Case
 # ---------------------------------------------------------------------------
 
-_LOWERCASE_WORDS = {"of", "the", "and", "in", "for", "to", "a", "an"}
-
-
 def to_title_case(name: str | None) -> str | None:
     """Convert a name string to Title Case, preserving suffixes and hyphens."""
     if not name:
@@ -237,8 +234,6 @@ def validate_household(data: dict) -> dict:
             })
         elif dob:
             dob_by_name[name_key] = dob
-
-    data["_dob_discrepancies"] = discrepancies
 
     return data
 
@@ -399,14 +394,4 @@ def validate_assets(data: dict) -> dict:
             voa["incomeAmount"] = normalize_money(voa.get("incomeAmount"))
             voa["dateReceived"] = normalize_date(voa.get("dateReceived"))
 
-    return data
-
-
-def validate_document_inventory(data: dict) -> dict:
-    """Apply validation rules to document inventory output."""
-    for doc in data.get("documents", []):
-        doc["personName"] = to_title_case(doc.get("personName"))
-        doc["signedBy"] = to_title_case(doc.get("signedBy"))
-        doc["signatureDate"] = normalize_date(doc.get("signatureDate"))
-        doc["documentDate"] = normalize_date(doc.get("documentDate"))
     return data
