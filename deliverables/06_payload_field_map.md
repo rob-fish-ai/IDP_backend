@@ -58,7 +58,7 @@ One per case.
 
 | Field | Example | Meaning |
 |---|---|---|
-| `cert_type` | `annual` | One of `initial`, `annual`, `interim`. See the AR-SC note in section 7 |
+| `cert_type` | `annual` | One of `initial`, `annual`, `ar_self_cert`, `interim`. Omitted entirely if the type cannot be determined — see the AR-SC note in section 7 |
 | `effective_date` | `2026-10-01` | ISO. Certification effective date |
 | `unit_number` | `3-207` | As printed on the certification, which may differ from the unit record |
 | `hh_size` | `1` | Count of members sent, not a figure read off the form |
@@ -149,7 +149,9 @@ Three columns are being sent right now with nowhere to land:
 
 Two decisions, neither blocking:
 
-**AR-SC.** `CertReview::CERT_TYPES` allows `initial`, `annual`, `interim`. The engine audits four types and AR-SC has no target, so it currently arrives as `annual` with a warning attached. AR-SC applies a different rule set, so collapsing it loses a real distinction. Either add a fourth value or agree where the distinction should live.
+**AR-SC — this one does block.** `CertReview::CERT_TYPES` allows `initial`, `annual`, `interim`. The engine audits four types, and AR-SC now arrives as **`ar_self_cert`**, a fourth value. It is not collapsed onto `annual`: AR-SC applies a different rule set — the certification form is the source of truth and no third-party wage verification is expected — and sending it as an ordinary annual produces false findings about documents the file is not supposed to have. `CERT_TYPES` needs the fourth value before an AR-SC case can import.
+
+An unmappable or missing type is now **omitted** rather than defaulted. `cert_type` selects the checklist template through `cert_type_scope`, so a guessed value produces a clean-looking audit against the wrong rule set. A missing one is visible; a plausible wrong one is not.
 
 **`source` on the cert child tables.** Re-import clears extraction-owned records and rewrites them. Without a marker separating what the importer created from what an analyst typed, the delete removes both. This only matters on the second import of a case, by which point reviewer work is in place. Until it exists, treat a cert review that already has records as a conflict rather than proceeding.
 

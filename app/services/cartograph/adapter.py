@@ -266,6 +266,48 @@ def cert_type_from_cartograph(value: str | None) -> str | None:
     return _CERT_TYPE_IN.get(str(value).strip().lower())
 
 
+def _cert_type_out(value: str | None, warnings: list[str]) -> str | None:
+    """Translate the certification type for delivery, or omit it.
+
+    Recognized in either vocabulary: the engine's own names, and Cartograph's
+    if a value reaches here already translated. Recognizing the consumer's
+    term is not a guess — it is the same table read the other way — and it
+    keeps a correct value correct instead of reporting it as unknown.
+
+    Anything else is omitted rather than defaulted. This field used to fall
+    back to 'annual', which is the most common type and therefore the most
+    convincing wrong answer: cert_type selects the checklist template through
+    `cert_type_scope`, so a move-in delivered as an annual is audited against
+    the wrong rule set and reads as a clean result. A missing value is
+    visible and recoverable; a plausible one is neither.
+
+    The same reasoning as the classifier's unknown labels and the employment
+    status that held prose — report, never invent.
+    """
+    raw = (value or "").strip()
+    if not raw:
+        warnings.append(
+            "cert_review.cert_type omitted: no certification type was "
+            "extracted, so the checklist template cannot be selected"
+        )
+        return None
+
+    mapped = _CERT_TYPE_OUT.get(raw.upper())
+    if mapped:
+        return mapped
+
+    if raw.lower() in _CERT_TYPE_IN:
+        # Already in Cartograph's vocabulary — recognized, not guessed.
+        return raw.lower()
+
+    warnings.append(
+        f"cert_review.cert_type omitted: '{value}' is not one of "
+        f"MI, AR, AR-SC or IR, and the wrong type selects the wrong "
+        f"checklist template"
+    )
+    return None
+
+
 def _money(value: str | None) -> str | None:
     """Normalize a money string to plain digits, or None if unparseable.
 
@@ -419,14 +461,7 @@ def build_cert_review(
         warnings.append("no certification form extracted; cert_review omitted")
         return {}
 
-    raw_type = (info.certificationType or "").strip().upper()
-    cert_type = _CERT_TYPE_OUT.get(raw_type)
-    if cert_type is None:
-        warnings.append(
-            f"cert_review.cert_type '{info.certificationType}' is not one of "
-            f"MI, AR, AR-SC or IR; sent as 'annual'"
-        )
-        cert_type = "annual"
+    cert_type = _cert_type_out(info.certificationType, warnings)
 
     hoh = next(
         (m for m in members if m.get("is_hoh")),
