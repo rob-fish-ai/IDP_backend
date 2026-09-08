@@ -96,6 +96,15 @@ async def receive_case(
         # Marks the row so Salesforce-only maintenance skips it. A
         # Cartograph case_ref is not a Salesforce Case Id.
         source="cartograph",
+        # The work is queued below rather than left for a poller, so the row
+        # is created already owned. Without this the row sits in `pending`
+        # until a thread picks the task up — and a Cartograph retry inside
+        # that window is not recognized as a duplicate, so the case is
+        # fetched, extracted and delivered twice. The window is milliseconds
+        # when the engine is idle and as long as another case's extraction
+        # when every worker thread is busy, which is exactly when a retry is
+        # most likely.
+        claimed=True,
     )
     if upsert.get("deduplicated"):
         logger.info(

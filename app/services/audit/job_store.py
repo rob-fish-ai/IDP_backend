@@ -26,6 +26,12 @@ logger = logging.getLogger(__name__)
 
 # State constants
 PENDING = "pending"
+# Accepted and handed to a worker that has not started yet. Distinct from
+# PENDING because the two answer the dedupe question differently: a PENDING
+# row is waiting for a poller to claim it and must stay claimable, while a
+# QUEUED row already has a worker committed to it and a second notification
+# would run the same case twice.
+QUEUED = "queued"
 EXTRACTING = "extracting"
 EXTRACTED = "extracted"
 COMPARING = "comparing"
@@ -33,6 +39,12 @@ DONE = "done"
 EXTRACTION_FAILED = "extraction_failed"
 COMPARISON_FAILED = "comparison_failed"
 MULESOFT_TIMEOUT = "mulesoft_timeout"
+
+# States in which some worker already owns the case, so a second arrival for
+# the same case_id is a duplicate rather than a new request. PENDING is
+# deliberately absent: it means "nobody has claimed this yet", which is what
+# the watchdog resets a wedged Salesforce row to so the next poll re-runs it.
+_OWNED_STATES = (QUEUED, EXTRACTING, EXTRACTED, COMPARING)
 
 
 _SCHEMA = """
@@ -150,18 +162,25 @@ class JobStore:
         funding_program: str | None,
         content_document_id: str | None,
         source: str = "salesforce",
+        claimed: bool = False,
     ) -> dict[str, Any]:
         """Create or refresh a pending job. Idempotent.
 
-        If a job already exists in a non-terminal state, return as-is.
-        If it's terminal (done/failed), recreate as pending.
+        If a job already exists in a state some worker owns, return as-is.
+        If it's terminal (done/failed) or unclaimed, recreate.
+
+        `claimed` is for callers that queue the work themselves rather than
+        leaving the row for a poller to pick up — the row is created already
+        owned, so a duplicate notification arriving before the worker starts
+        is recognized as a duplicate instead of queuing the case twice.
         """
+        initial_state = QUEUED if claimed else PENDING
         with self._lock, self._connect() as conn:
             now = time.time()
             row = conn.execute(
                 "SELECT state FROM audit_jobs WHERE case_id = ?", (case_id,)
             ).fetchone()
-            if row and row["state"] in (EXTRACTING, EXTRACTED, COMPARING):
+            if row and row["state"] in _OWNED_STATES:
                 logger.info(
                     "Job for %s already in state %s — skipping upsert",
                     case_id, row["state"],
@@ -189,13 +208,34 @@ class JobStore:
                     mulesoft_done_at = NULL,
                     completed_at = NULL
             """, (
-                case_id, case_number, PENDING, cert_type, funding_program,
+                case_id, case_number, initial_state, cert_type, funding_program,
                 content_document_id, source, now, now,
             ))
-            return {"state": PENDING, "deduplicated": False}
+            return {"state": initial_state, "deduplicated": False}
 
     def mark_extracting(self, case_id: str) -> None:
         self._set_state(case_id, EXTRACTING)
+
+    def touch(self, case_id: str) -> None:
+        """Record that a job is still making progress, without changing state.
+
+        The watchdog treats a row as wedged when `updated_at` has not moved
+        for `audit_watchdog_seconds`. Without a heartbeat that timestamp is
+        stamped once when extraction starts, so the measure reads "how long
+        has this been running" rather than "how long since anything
+        happened" — and a genuinely slow packet (119 pages, most of them
+        scanned sideways, 42 minutes) is indistinguishable from a worker
+        that died in the first second.
+
+        Being wrong in that direction is expensive: the sweep re-queues or
+        fails a case that is still running, which releases the dedupe and
+        lets a re-notification start the same audit a second time.
+        """
+        with self._lock, self._connect() as conn:
+            conn.execute(
+                "UPDATE audit_jobs SET updated_at = ? WHERE case_id = ?",
+                (time.time(), case_id),
+            )
 
     def mark_extracted(self, case_id: str, extraction_result: dict[str, Any]) -> None:
         with self._lock, self._connect() as conn:
@@ -500,7 +540,8 @@ class JobStore:
         placeholders = ",".join("?" * len(states))
         with self._connect() as conn:
             rows = conn.execute(
-                f"SELECT case_id, case_number, state, retry_count, updated_at "
+                f"SELECT case_id, case_number, state, retry_count, updated_at, "
+                f"source "
                 f"FROM audit_jobs "
                 f"WHERE state IN ({placeholders}) AND updated_at < ?",
                 (*states, cutoff),

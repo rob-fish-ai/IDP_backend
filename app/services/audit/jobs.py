@@ -25,6 +25,7 @@ from app.services.audit.job_store import (
     EXTRACTED,
     EXTRACTING,
     EXTRACTION_FAILED,
+    QUEUED,
     JobStore,
     get_job_store,
 )
@@ -166,11 +167,33 @@ def _finalize_case(
 # Watchdog — recover cases wedged in transient states
 # ---------------------------------------------------------------------------
 
-# States that should be transient. If a row sits in any of these past
-# the watchdog threshold, the worker that started it almost certainly
-# died (deploy mid-extraction, OOM, etc.) — we need to either retry it
-# or surface it as failed.
-_WEDGE_PRONE_STATES: tuple[str, ...] = (EXTRACTING, EXTRACTED, COMPARING)
+# States that should be transient. If a row sits in any of these past the
+# watchdog threshold *without its heartbeat moving*, the worker that started
+# it almost certainly died (deploy mid-extraction, OOM, etc.) — we need to
+# either retry it or surface it as failed.
+#
+# The heartbeat is what makes that inference sound: the extraction touches
+# `updated_at` as it works, so the threshold measures time since the last
+# sign of life rather than time since the case started. Without it a packet
+# that legitimately takes 42 minutes looks exactly like a worker that died
+# in the first second.
+_WEDGE_PRONE_STATES: tuple[str, ...] = (QUEUED, EXTRACTING, EXTRACTED, COMPARING)
+
+
+def _from_salesforce(row: dict) -> bool:
+    """Only Salesforce-sourced rows can be acted on through Salesforce.
+
+    Cartograph cases live in the same store keyed by their own ref, which
+    Salesforce has never seen. Querying or updating one returns a 500
+    ("invalid parameter value") — harmless but it burns an API call per row
+    per sweep and buries real Salesforce errors under a traceback.
+
+    One definition rather than one per sweep: every maintenance job that
+    reaches for Salesforce needs this test, and a sweep that forgets it does
+    not fail loudly — it writes to a Case Id that does not exist and logs the
+    rejection as if it were a Salesforce outage.
+    """
+    return (row.get("source") or "salesforce") == "salesforce"
 
 
 # Error fingerprints of "the case had no processable packet" failures —
@@ -196,16 +219,6 @@ def revisit_failed_cases(settings: Settings) -> int:
     audit_retention_days, which bounds how long any case is revisited.
     """
     store = get_job_store(settings.audit_job_db)
-
-    def _from_salesforce(row: dict) -> bool:
-        """Only Salesforce-sourced rows can be checked against Salesforce.
-
-        Cartograph cases live in the same store keyed by their own ref, which
-        Salesforce has never seen. Querying for one returns a 500 ("invalid
-        parameter value") — harmless but it burns an API call per failed case
-        per sweep and buries real Salesforce errors under a traceback.
-        """
-        return (row.get("source") or "salesforce") == "salesforce"
 
     candidates = [
         row for row in store.list_by_state(EXTRACTION_FAILED)
@@ -312,6 +325,31 @@ def watchdog_sweep(settings: Settings) -> int:
         state = job["state"]
         age_seconds = int(time.time() - (job.get("updated_at") or 0))
 
+        if not _from_salesforce(job):
+            # Nothing re-runs a Cartograph row. Resetting it to `pending`
+            # would leave it waiting for a poller that only reads Salesforce,
+            # and the retry cap would eventually write a failure marker to a
+            # Case Id Salesforce has never seen. The only recovery is a fresh
+            # notification — its presigned URLs have expired by now anyway —
+            # so terminalize it, which is also what lets the notification
+            # through: a failed row is no longer owned.
+            err = (
+                f"Wedged in '{state}' state for {age_seconds // 60}m. The "
+                f"worker died mid-flight — re-notify the case to audit it "
+                f"again."
+            )
+            logger.error(
+                "Watchdog: case_ref=%s wedged in %s for %ds — marking failed "
+                "(re-notification required; no poller re-runs Cartograph "
+                "cases)",
+                case_number, state, age_seconds,
+            )
+            if state in (QUEUED, EXTRACTING):
+                store.mark_extraction_failed(case_id, err)
+            else:
+                store.mark_comparison_failed(case_id, err)
+            continue
+
         if retries < cap:
             # Re-queue. retry_count auto-increments inside reset_to_pending.
             store.reset_to_pending(case_id)
@@ -343,7 +381,7 @@ def watchdog_sweep(settings: Settings) -> int:
             # wedge-prone state, gets re-listed by every sweep (re-writing
             # the SF marker each time), and the retention sweep — which
             # only deletes terminal states — can never remove it.
-            if state == EXTRACTING:
+            if state in (QUEUED, EXTRACTING):
                 store.mark_extraction_failed(case_id, err)
             else:
                 store.mark_comparison_failed(case_id, err)
@@ -416,6 +454,10 @@ def run_extraction(case_id: str) -> None:
                 funding_program=funding,
                 certification_type=cert_type,
                 source_files=source_files,
+                # See JobStore.touch: without a heartbeat the watchdog reads
+                # "still running after 30 minutes" as "wedged", and re-queues
+                # a slow case that is doing exactly what it should.
+                heartbeat=lambda: store.touch(case_id),
                 work_dir=work_dir,
             )
         finally:

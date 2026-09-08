@@ -91,6 +91,12 @@ def audit_case(
             funding_program=program,
             certification_type=engine_cert_type,
             work_dir=work_dir,
+            # Proves the case is alive while it runs. A packet scanned
+            # sideways takes tens of minutes legitimately, and without this
+            # the watchdog cannot tell that from a dead worker — it would
+            # fail a running case, which releases the dedupe and lets a
+            # re-notification audit the same case twice.
+            heartbeat=lambda: store.touch(case_ref),
         )
     except Exception as exc:
         logger.exception("Extraction failed for case_ref=%s", case_ref)

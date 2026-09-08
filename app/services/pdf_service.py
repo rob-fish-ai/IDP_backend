@@ -72,6 +72,7 @@ def _rotation_probe(
     processed_dir,
     processed_map: dict,
     ocr_results: dict[int, dict],
+    beat=lambda: None,
 ) -> None:
     """Re-OCR suspect landscape pages at 90°/270°; keep decisive winners.
 
@@ -137,6 +138,7 @@ def _rotation_probe(
     best: dict[int, tuple[int, dict, float]] = {}  # page -> (angle, result, composite)
     with ThreadPoolExecutor(max_workers=settings.ocr_concurrency) as pool:
         for page_num, angle, result in pool.map(_probe_one, candidates):
+            beat()
             if result is None:
                 continue
             composite = composite_of(result)
@@ -184,8 +186,40 @@ def _rotation_probe(
         )
 
 
+_HEARTBEAT_MIN_INTERVAL = 30.0
+
+
+def _throttled(heartbeat):
+    """Wrap a progress callback so it fires at most twice a minute.
+
+    Called once per page across four OCR phases, which on a large packet is
+    several hundred calls. The consumer is a row update whose only purpose
+    is to prove liveness, and nothing downstream reads it more finely than
+    the watchdog's half-hour window.
+
+    Failures are swallowed. A heartbeat exists to report that work is
+    happening; letting it abort the work it reports on would invert that.
+    """
+    if heartbeat is None:
+        return lambda: None
+
+    state = {"last": 0.0}
+
+    def beat() -> None:
+        now = time.perf_counter()
+        if now - state["last"] < _HEARTBEAT_MIN_INTERVAL:
+            return
+        state["last"] = now
+        try:
+            heartbeat()
+        except Exception:
+            logger.warning("Progress heartbeat failed", exc_info=True)
+
+    return beat
+
+
 def process_pdf(
-    pdf_bytes: bytes, settings: Settings, work_dir=None,
+    pdf_bytes: bytes, settings: Settings, work_dir=None, heartbeat=None,
 ) -> dict:
     """Split PDF into pages, pre-process images, run OCR, and save text per page.
 
@@ -196,6 +230,7 @@ def process_pdf(
     Concurrent jobs MUST pass distinct work_dirs — page files are named
     by page number only and would collide in a shared directory.
     """
+    beat = _throttled(heartbeat)
     work_dir = work_dir or settings.output_dir
     processed_dir = work_dir / "processed"
     texts_dir = work_dir / "texts"
@@ -314,6 +349,7 @@ def process_pdf(
             lambda item: _ocr_one(item, allow_fallback=False), processed_paths,
         ):
             ocr_results[page_num] = result
+            beat()
 
     # Phase B1.5: rotation probe for sideways scans.
     # Portrait forms scanned into landscape pages (rotation flag 0) reach
@@ -329,7 +365,7 @@ def process_pdf(
     # see the upright page. (180° upside-down scans are out of scope: their
     # content stays portrait, and DeepSeek copes with them far better.)
     _rotation_probe(
-        pdf_bytes, settings, processed_dir, processed_map, ocr_results,
+        pdf_bytes, settings, processed_dir, processed_map, ocr_results, beat,
     )
 
     # Phase B1.6: the secondary OCR tier, now that orientation is settled.
@@ -353,6 +389,7 @@ def process_pdf(
             )
             with ThreadPoolExecutor(max_workers=settings.ocr_concurrency) as pool:
                 for page_num, result in pool.map(_ocr_one, needs_second_tier):
+                    beat()
                     # Keep the better read rather than assuming the second
                     # tier improves on the first — it is a different engine,
                     # not a strictly better one.
@@ -475,6 +512,7 @@ def process_pdf(
 
         with ThreadPoolExecutor(max_workers=settings.ocr_concurrency) as pool:
             for page_num, vision_text in pool.map(_vision_one, low_quality_pages):
+                beat()
                 ocr_text_len = len(ocr_results[page_num].get("text", "").strip())
                 page_flags = flag_codes(ocr_results[page_num].get("flag_details"))
                 ocr_unreliable = bool(_UNRELIABLE_OCR_FLAGS & page_flags)
@@ -556,13 +594,16 @@ def process_pdf_full(
     certification_type: str | None = None,
     source_files: list[dict] | None = None,
     work_dir=None,
+    heartbeat=None,
 ) -> dict:
     """Full pipeline: OCR all pages, then classify, extract, and validate.
 
     Returns both the OCR results and the structured MuleSoft extraction.
     """
     # Stage 1: OCR
-    ocr_result = process_pdf(pdf_bytes, settings, work_dir=work_dir)
+    ocr_result = process_pdf(
+        pdf_bytes, settings, work_dir=work_dir, heartbeat=heartbeat,
+    )
 
     # Stage 2: Extraction pipeline — include OCR quality scores + image paths
     page_texts = []
