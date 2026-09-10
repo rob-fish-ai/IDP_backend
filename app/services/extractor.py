@@ -10,6 +10,7 @@ from app.schemas.extraction import (
     HouseholdDemographics,
     IncomeExtraction,
 )
+from app.services.doc_taxonomy import is_current_certification_form
 from app.services.llm_service import call_llm_json
 from app.services import validation
 from app.services.text_sanitizer import (
@@ -431,6 +432,9 @@ def _build_texts(groups: list[DocumentGroup]) -> list[str]:
     return texts
 
 
+build_group_texts = _build_texts
+
+
 def _retry_if_incomplete(label: str, *, gate, fill) -> None:
     """Run one self-healing retry pass on a just-extracted result.
 
@@ -501,6 +505,30 @@ def extract_demographics(
         result["houseHold"] = kept
 
     members = result.get("houseHold", [])
+
+    # --- Self-healing retry: cells every certification form carries ---
+    # A member row on a TIC / HUD 50059 / RD 3560 always has a DOB, an SSN
+    # slot (full or masked) and a relationship. A null there after the first
+    # pass is far more often the model skipping a cell than the form lacking
+    # it, so re-ask for exactly those cells from the certification form's
+    # text. Records that may legitimately be absent (income, assets) are
+    # never retried this way — absence there is the audit fact.
+    cert_texts = _build_texts(
+        [g for g in groups if is_current_certification_form(g.document_type)]
+    ) or relevant_texts
+
+    def _gate():
+        return required_member_gaps(members)
+
+    def _fill(gaps: list[dict]) -> None:
+        retry = retry_member_fields(cert_texts, gaps, 0, certification_type, settings)
+        recovered = merge_member_fields(members, retry, allow_new=0)
+        if recovered:
+            logger.info("Demographics retry recovered %d member field(s): %s",
+                        len(recovered), recovered)
+
+    _retry_if_incomplete("Demographics", gate=_gate, fill=_fill)
+
     logger.info("Extracted %d household members", len(members))
     return HouseholdDemographics.model_validate(result)
 
@@ -543,7 +571,7 @@ def extract_certification_info(
 
     # --- Self-healing retry: recover critical fields that came back null ---
     def _gate():
-        return [f for f in _CRITICAL_CERT_FIELDS if not cert_info_dict.get(f)]
+        return [f for f in CRITICAL_CERT_FIELDS if not cert_info_dict.get(f)]
 
     def _fill(missing: list[str]) -> None:
         retry_dict = _retry_cert_info_fields(
@@ -580,7 +608,7 @@ def extract_certification_info(
 # from the first extraction, a targeted retry runs to try to recover them.
 # These are the fields that downstream scoring, compliance checks, and the
 # frontend display all depend on.
-_CRITICAL_CERT_FIELDS = [
+CRITICAL_CERT_FIELDS = [
     "effectiveDate",
     "grossRent",
     "tenantRent",
@@ -684,6 +712,170 @@ def _retry_cert_info_fields(
     if isinstance(result, dict) and "certificationInfo" in result:
         result = result.get("certificationInfo") or {}
     return result if isinstance(result, dict) else {}
+
+def retry_cert_info_fields(
+    relevant_texts: list[str],
+    missing_fields: list[str],
+    already_extracted: dict,
+    certification_type: str | None,
+    settings: Settings,
+) -> dict:
+    """Public entry to the targeted cert-field retry, for the pipeline's
+    second-stage recovery from page images (see pipeline
+    `_recover_required_fields_from_images`)."""
+    return _retry_cert_info_fields(
+        relevant_texts, missing_fields, already_extracted, certification_type, settings,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Household member required-field retry
+# ---------------------------------------------------------------------------
+
+# Cells every certification form prints for every member row. Null here is an
+# extraction gap to retry, not a fact about the household. (An SSN slot can
+# legitimately be blank for some minors and exempt statuses — that is a
+# finding downstream; the retry only asks the form once more.)
+REQUIRED_MEMBER_FIELDS = ("DOB", "socialSecurityNumber", "relationship")
+
+
+def _member_name_key(m: dict) -> str:
+    first = (m.get("FirstName") or "").strip().lower()
+    last = (m.get("LastName") or "").strip().lower()
+    return f"{first} {last}".strip()
+
+
+def _loose_name_key(m: dict) -> str:
+    """First token of the first name + last name — tolerates a retry row
+    that folded a middle name into FirstName ("Arnold Ray")."""
+    first = ((m.get("FirstName") or "").strip().lower().split(" ") or [""])[0]
+    last = (m.get("LastName") or "").strip().lower()
+    return f"{first} {last}".strip()
+
+
+def required_member_gaps(members: list[dict]) -> list[dict]:
+    """[{name, missing: [field, ...]}] for members with a null required cell."""
+    gaps = []
+    for m in members:
+        missing = [f for f in REQUIRED_MEMBER_FIELDS if not m.get(f)]
+        name = _member_name_key(m)
+        if missing and name:
+            gaps.append({"name": name, "missing": missing})
+    return gaps
+
+
+_MEMBER_RETRY_PROMPT = """\
+You are re-examining the HOUSEHOLD COMPOSITION section of a HUD/Affordable
+Housing certification form (TIC, HUD 50059, RD 3560) to fill member fields
+that were missed on the first pass.
+
+For each listed member, find their row on the form (match by name; ignore
+middle names and suffixes) and return ONLY the fields listed as missing. If
+the request says the form states more members than were extracted, return
+every member row on the form so the missing ones can be added.
+
+Field rules:
+- DOB: YYYY-MM-DD. "01/15/1990" -> "1990-01-15". If only month and year, day = 01.
+- socialSecurityNumber: exactly as printed — full NNN-NN-NNNN, or the masked
+  form ***-**-XXXX when the form prints the last four only. NEVER invent digits.
+- relationship: exactly as the form states it, Title Case ("Head", "Spouse",
+  "Co-Head", "Daughter", "Son", "Granddaughter", "Foster Child", "Other Adult").
+  HUD 50059 field 36 codes: H=Head, S=Spouse, K=Co-Head, D=Dependent, F=Foster,
+  L=Live-in Aide, O=Other Adult — expand the code.
+- A cell that is blank on the form is null. Do not guess, and do not copy
+  another member's value.
+
+Return ONLY valid JSON:
+{"houseHold": [{"FirstName": "...", "LastName": "...", "DOB": ..., "socialSecurityNumber": ..., "relationship": ...}]}"""
+
+
+def retry_member_fields(
+    relevant_texts: list[str],
+    gaps: list[dict],
+    shortfall: int,
+    certification_type: str | None,
+    settings: Settings,
+) -> list[dict]:
+    """Re-ask the certification form for members' missing required cells.
+
+    `gaps` is the output of required_member_gaps; `shortfall` is how many
+    more members the form's own household size states than were extracted
+    (0 when unknown or none). Returns normalised member dicts — the caller
+    merges them with merge_member_fields. A failed call returns [] so the
+    first-pass result is never lost.
+    """
+    lines = [f"- {g['name'].title()}: missing {', '.join(g['missing'])}" for g in gaps]
+    ask = (
+        "Members and the fields still missing:\n" + "\n".join(lines)
+        if lines else "No known member needs fields filled."
+    )
+    if shortfall:
+        ask += (
+            f"\n\nThe form states {shortfall} more household member(s) than were "
+            "extracted. Return every member row on the form so the missing "
+            "one(s) can be added."
+        )
+    user_prompt = f"{ask}\n\nDOCUMENT TEXT:\n\n" + "\n\n---\n\n".join(relevant_texts)
+    user_prompt += _get_cert_context(certification_type)
+
+    try:
+        result = call_llm_json(_MEMBER_RETRY_PROMPT, user_prompt, settings)
+    except Exception:
+        logger.exception("Member field retry call failed — keeping original values")
+        return []
+
+    rows = result.get("houseHold") if isinstance(result, dict) else None
+    if not isinstance(rows, list):
+        return []
+    cleaned = validation.validate_household(
+        {"houseHold": [r for r in rows if isinstance(r, dict)]}
+    )
+    cleaned = scrub_extracted_dict(cleaned) or {}
+    return [r for r in cleaned.get("houseHold", []) if isinstance(r, dict)]
+
+
+def merge_member_fields(
+    members: list[dict],
+    retry_members: list[dict],
+    *,
+    allow_new: int = 0,
+) -> list[str]:
+    """Fill null required cells from retry rows, matched by first + last name.
+
+    Populated cells are never overwritten. An unmatched retry row becomes a
+    new member only while `allow_new` > 0 and the row carries a DOB or SSN —
+    the form's own household size bounds additions, not the model. Returns
+    "Name.field" labels of what was filled or "Name (added)".
+    """
+    recovered: list[str] = []
+    exact = {_member_name_key(m): m for m in members}
+    loose = {_loose_name_key(m): m for m in members}
+    has_head = any(m.get("head") == "H" for m in members)
+    for r in retry_members:
+        key = _member_name_key(r)
+        if not key:
+            continue
+        target = exact.get(key) or loose.get(_loose_name_key(r))
+        if target is not None:
+            for f in REQUIRED_MEMBER_FIELDS:
+                if not target.get(f) and r.get(f):
+                    target[f] = r[f]
+                    recovered.append(f"{key.title()}.{f}")
+        elif allow_new > 0 and (r.get("DOB") or r.get("socialSecurityNumber")):
+            new = {
+                k: r.get(k) for k in (
+                    "householdMemberNumber", "FirstName", "MiddleName", "LastName",
+                    "socialSecurityNumber", "DOB", "relationship", "head",
+                )
+            }
+            if has_head:
+                new["head"] = None
+            members.append(new)
+            exact[key] = new
+            loose[_loose_name_key(new)] = new
+            allow_new -= 1
+            recovered.append(f"{key.title()} (added)")
+    return recovered
 
 
 def extract_income(

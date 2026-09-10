@@ -11,6 +11,7 @@ from app.schemas.extraction import (
     CertificationInfo,
     ExtractionResult,
     HouseholdDemographics,
+    HouseholdMember,
     IncomeExtraction,
     PageOcrRecord,
     PreviousCertification,
@@ -20,7 +21,10 @@ from app.schemas.extraction import (
 from app.services.bug_detector import detect_known_bugs
 from app.services.completeness import check_completeness
 from app.services.doc_taxonomy import is_current_certification_form
-from app.services.findings import ASSIGN_INTERNAL, CATEGORY_INCOME, RESOLVE_PRESENCE, make_finding, slug
+from app.services.findings import (
+    ASSIGN_CLIENT, ASSIGN_INTERNAL, CATEGORY_FILE_REVIEW, CATEGORY_INCOME,
+    CATEGORY_MEMBER, CATEGORY_UNIT_RENT, RESOLVE_PRESENCE, make_finding, slug,
+)
 from app.services.findings import dedupe as dedupe_findings
 from app.services.findings import records as finding_records
 from app.services.findings import text_of
@@ -37,10 +41,16 @@ from app.services.cross_doc_validator import (
     validate_tic_totals,
 )
 from app.services.extractor import (
+    CRITICAL_CERT_FIELDS,
+    build_group_texts,
     extract_assets,
     extract_certification_info,
     extract_demographics,
     extract_income,
+    merge_member_fields,
+    required_member_gaps,
+    retry_cert_info_fields,
+    retry_member_fields,
 )
 from app.services.income_calculator import calculate_all_methods, match_paystubs_to_sources
 from app.services.inventory_builder import build_financial_inventory, build_hud_inventory
@@ -213,6 +223,18 @@ def run_extraction_pipeline(
     # Supplement cert info from Notice of Rent Change if fields are missing
     if certification_info:
         _supplement_cert_info_from_rent_change(certification_info, document_groups)
+
+    # Second-stage retry, from the page image, for the cells a certification
+    # form must carry. Runs after the rent-change supplement so it fires only
+    # on gaps nothing text-based could fill. Failure keeps first-pass values.
+    required_field_findings: list = []
+    try:
+        required_field_findings = _recover_required_fields_from_images(
+            household, certification_info, cert_groups, page_texts, ocr_quality,
+            settings, ctx.certification_type,
+        )
+    except Exception:
+        logger.exception("Required-field recovery failed — keeping first-pass values")
 
     # Vision-verify the signature verdict in BOTH directions. Handwriting
     # does not survive OCR, so a wet-signed form and a blank one produce the
@@ -506,6 +528,7 @@ def run_extraction_pipeline(
         previous_certification=previous_certification,
     )
     findings.extend(name_findings)
+    findings.extend(required_field_findings)
     if draft_watermark:
         findings.append(
             "Certification form is a watermarked DRAFT ('not a final "
@@ -906,6 +929,322 @@ def _verify_cert_signature_vision(cert_groups, page_texts, settings) -> dict | N
         return None
     return {"signed": signed, "draft_watermark": watermark,
             "page": best_page or sig_pages[0]}
+
+# ---------------------------------------------------------------------------
+# Required-field recovery from the page image
+# ---------------------------------------------------------------------------
+
+# The labels a certification form prints beside each must-exist cell. Used
+# only after the page image has been transcribed, to tell "the cell is blank
+# on the form" from "the engine could not read the cell".
+_CERT_FIELD_LABELS = {
+    "effectiveDate": ("effective date",),
+    "tenantRent": ("tenant rent", "total tenant payment", "tenant payment"),
+    "utilityAllowance": ("utility allowance",),
+    "grossRent": ("gross rent",),
+    "householdIncome": (
+        "total annual household income", "total household income",
+        "total annual income", "total income", "household income",
+    ),
+    "unitNumber": ("unit number", "unit no", "unit #", "apt", "unit"),
+    "householdSize": (
+        "household size", "number of household members", "no. of members",
+        "family size", "number in household",
+    ),
+    "numberOfBedrooms": ("bedroom", "# br", "br size", "unit size"),
+}
+_CERT_FIELD_TITLES = {
+    "effectiveDate": "Effective Date",
+    "tenantRent": "Tenant Rent",
+    "utilityAllowance": "Utility Allowance",
+    "grossRent": "Gross Rent",
+    "householdIncome": "Total Annual Household Income",
+    "unitNumber": "Unit Number",
+    "householdSize": "Household Size",
+    "numberOfBedrooms": "Number of Bedrooms",
+}
+_CERT_FIELD_CATEGORY = {
+    "tenantRent": CATEGORY_UNIT_RENT,
+    "utilityAllowance": CATEGORY_UNIT_RENT,
+    "grossRent": CATEGORY_UNIT_RENT,
+    "householdIncome": CATEGORY_INCOME,
+}
+_MONEY_CERT_FIELDS = frozenset({"tenantRent", "utilityAllowance", "grossRent", "householdIncome"})
+# Member cells the recovery reports on when still missing. The SSN slot is
+# left out: a blank one is already a document-side finding
+# (MEMBER_SSN_MISSING), and it is the one required cell that can be
+# legitimately empty.
+_REPORTED_MEMBER_FIELDS = ("DOB", "relationship")
+_MEMBER_FIELD_TITLES = {"DOB": "Date of Birth", "relationship": "Relationship"}
+_MAX_RECOVERY_PAGES = 3
+_MIN_TRANSCRIPT_CHARS = 200
+_BLANK_MARK = "[blank]"
+_BLANK_WINDOW = 40
+
+_FORM_TRANSCRIPTION_PROMPT = """\
+You are transcribing ONE page of an affordable-housing certification form
+(LIHTC Tenant Income Certification, HUD 50059, RD 3560-8, or similar) from
+its image, so that a text-only reader can recover every field on it.
+
+RULES:
+- Write every field label together with the value in its cell, one field per
+  line, in reading order: "Tenant Rent: $953.00".
+- When a value cell is EMPTY, write the label followed by [blank]:
+  "Rental Assistance: [blank]". Never leave a label without a value or [blank].
+- Transcribe printed and handwritten values exactly as written. Never derive
+  a value from another field or by arithmetic.
+- Reproduce tables (household composition, income, assets, rent) as HTML
+  <table> rows, one member or source per row, keeping every column and its
+  header; empty cells are [blank].
+- Checkboxes: "[X] Label" or "[ ] Label".
+- Keep part/section headings (e.g. "PART VII. RENT") and form field numbers
+  (e.g. "86. Total Annual Income").
+Return ONLY the transcription, no commentary."""
+
+
+def _required_field_gaps(household, certification_info) -> dict:
+    """What the certification form must carry but the extraction lacks."""
+    cert_missing = (
+        [f for f in CRITICAL_CERT_FIELDS if not getattr(certification_info, f, None)]
+        if certification_info else []
+    )
+    members = [m.model_dump() for m in household.houseHold] if household else []
+    shortfall = 0
+    size_raw = certification_info.householdSize if certification_info else None
+    try:
+        size = int(float(size_raw)) if size_raw else 0
+    except (TypeError, ValueError):
+        size = 0
+    if size > len(members):
+        shortfall = size - len(members)
+    return {
+        "cert": cert_missing,
+        "members": required_member_gaps(members),
+        "shortfall": shortfall,
+    }
+
+
+def _label_blank_in(transcript: str, label: str) -> bool:
+    """True when the transcript shows `label` followed by the blank marker."""
+    start = 0
+    while True:
+        idx = transcript.find(label, start)
+        if idx < 0:
+            return False
+        window = transcript[idx + len(label): idx + len(label) + _BLANK_WINDOW]
+        if _BLANK_MARK in window:
+            return True
+        start = idx + len(label)
+
+
+def _required_cert_field_finding(field: str, transcript: str, pages: list[int]):
+    title = _CERT_FIELD_TITLES.get(field, field)
+    category = _CERT_FIELD_CATEGORY.get(field, CATEGORY_FILE_REVIEW)
+    blank = any(_label_blank_in(transcript, lab) for lab in _CERT_FIELD_LABELS.get(field, ()))
+    if blank:
+        return make_finding(
+            "REQUIRED_FIELD_BLANK_ON_FORM",
+            f"Certification form leaves '{title}' blank — the field is on the form "
+            f"but no value was entered; the certification is incomplete without it",
+            label=f"{title} left blank on the certification",
+            category=category,
+            subject_ref={"field": field},
+            result="non_compliant",
+            assignment=ASSIGN_CLIENT,
+            correction_required=f"Complete '{title}' on the certification form",
+            resolution_type=RESOLVE_PRESENCE,
+            pages=pages,
+        )
+    page_txt = ", ".join(str(p) for p in pages)
+    return make_finding(
+        "REQUIRED_FIELD_UNREADABLE",
+        f"'{title}' could not be read from the certification form, even after "
+        f"re-reading the page image — read it by hand from page(s) {page_txt}",
+        label=f"{title} unreadable on the certification",
+        category=category,
+        subject_ref={"field": field},
+        result="na",
+        assignment=ASSIGN_INTERNAL,
+        correction_required=f"Read '{title}' from the form and enter it by hand",
+        resolution_type=RESOLVE_PRESENCE,
+        pages=pages,
+    )
+
+
+def _required_member_field_finding(name: str, fields: list[str], pages: list[int]):
+    page_txt = ", ".join(str(p) for p in pages)
+    what = " and ".join(_MEMBER_FIELD_TITLES.get(f, f) for f in fields)
+    return make_finding(
+        "REQUIRED_FIELD_UNREADABLE",
+        f"{name}: {what} blank or unreadable on the certification form's "
+        f"household composition, even after re-reading the page image — "
+        f"confirm from page(s) {page_txt}",
+        label=f"{what} missing for {name}",
+        category=CATEGORY_MEMBER,
+        subject_type="household_member",
+        subject_ref={"member_name": name, "field": ",".join(fields)},
+        result="na",
+        assignment=ASSIGN_INTERNAL,
+        correction_required=f"Read {what} for {name} from the form and enter it by hand",
+        resolution_type=RESOLVE_PRESENCE,
+        pages=pages,
+    )
+
+
+def _recover_required_fields_from_images(
+    household,
+    certification_info,
+    cert_groups,
+    page_texts: list[dict],
+    ocr_quality: dict[int, dict],
+    settings: Settings,
+    certification_type: str | None,
+) -> list:
+    """Second-stage retry for the cells a certification form must carry.
+
+    The text retry re-reads the same OCR text, so when OCR dropped the value
+    cells it cannot succeed (observed: a TIC whose Part VII labels survived
+    and every amount beside them vanished, on a page scored green). This
+    stage transcribes the certification form's pages from their images, swaps
+    that text in wherever page text is read downstream — the extractor's
+    group text, source verification, completeness, and the stored page
+    record — and runs the targeted text retries once more over it.
+
+    Bounded: fires only when a must-exist cell is still null, reads at most
+    _MAX_RECOVERY_PAGES pages, once per case. Scoped to the certification
+    form on purpose: income and asset records may legitimately be absent,
+    and hunting for them in images is how derived figures get in.
+
+    Returns findings for what is still missing afterwards. A cell the
+    transcript shows blank is the form's omission (client); a cell it shows
+    filled that the retry still cannot read is the engine's (internal, "na").
+    """
+    gaps = _required_field_gaps(household, certification_info)
+    if not (gaps["cert"] or gaps["members"] or gaps["shortfall"]):
+        return []
+    group = next(
+        (g for g in cert_groups if is_current_certification_form(g.document_type)),
+        None,
+    )
+    if not group:
+        return []
+    paths = {pt["page"]: pt.get("image_path") for pt in page_texts}
+    pages = [p for p in group.pages if paths.get(p)][:_MAX_RECOVERY_PAGES]
+    if not pages:
+        logger.info("Required-field recovery: no page images for cert pages %s", group.pages)
+        return []
+    logger.info(
+        "Required-field recovery: cert fields %s, member gaps %s, member shortfall %d "
+        "— transcribing cert page(s) %s",
+        gaps["cert"],
+        [f"{g['name']}:{'/'.join(g['missing'])}" for g in gaps["members"]],
+        gaps["shortfall"], pages,
+    )
+
+    from concurrent.futures import ThreadPoolExecutor
+    from app.services.llm_service import call_llm_vision
+    from app.services.validation import normalize_date, normalize_money
+
+    def _transcribe(pn: int) -> tuple[int, str | None]:
+        try:
+            return pn, call_llm_vision(
+                _FORM_TRANSCRIPTION_PROMPT,
+                f"Transcribe packet page {pn} of this certification form.",
+                [str(paths[pn])], settings,
+            )
+        except Exception:
+            logger.exception("Required-field recovery: transcription failed for page %d", pn)
+            return pn, None
+
+    transcripts: dict[int, str] = {}
+    with ThreadPoolExecutor(max_workers=len(pages)) as pool:
+        for pn, text in pool.map(_transcribe, pages):
+            if text and len(text.strip()) >= _MIN_TRANSCRIPT_CHARS:
+                transcripts[pn] = text
+            elif text is not None:
+                logger.info("Required-field recovery: page %d transcript too short, keeping OCR text", pn)
+    if not transcripts:
+        return []
+
+    # Swap the transcripts in everywhere downstream reads page text.
+    by_page = {pt["page"]: pt for pt in page_texts}
+    for pn, text in transcripts.items():
+        pt = by_page[pn]
+        logger.info(
+            "Required-field recovery: page %d text replaced (%d -> %d chars)",
+            pn, len(pt.get("text") or ""), len(text),
+        )
+        pt["text"] = text
+        pt["ocr_flag"] = "yellow"
+        flags = pt.get("ocr_flag_details")
+        if not isinstance(flags, list):
+            flags = pt["ocr_flag_details"] = []
+        for f in ("vision_fallback", "required_field_recovery"):
+            if f not in flags:
+                flags.append(f)
+        q = ocr_quality.setdefault(pn, {})
+        q["text"] = text
+        q["flag"] = "yellow"
+    group.combined_text = "\n\n".join(
+        f"--- Page {p} ---\n{(by_page.get(p) or {}).get('text', '')}" for p in group.pages
+    )
+    texts = build_group_texts([group])
+    transcript_all = "\n".join(transcripts.values()).lower()
+
+    findings: list = []
+
+    # Certification cells
+    if gaps["cert"] and certification_info:
+        known = {
+            k: v for k, v in certification_info.model_dump().items()
+            if v not in (None, "", [], "null")
+        }
+        retry = retry_cert_info_fields(texts, gaps["cert"], known, certification_type, settings)
+        recovered: list[str] = []
+        for f in gaps["cert"]:
+            raw = retry.get(f)
+            if raw in (None, "", "null"):
+                continue
+            if f in _MONEY_CERT_FIELDS:
+                val = normalize_money(str(raw))
+            elif f == "effectiveDate":
+                val = normalize_date(str(raw))
+            else:
+                val = str(raw).strip() or None
+            if val:
+                setattr(certification_info, f, val)
+                recovered.append(f)
+        still = [f for f in gaps["cert"] if f not in recovered]
+        logger.info(
+            "Required-field recovery: cert fields recovered %s, still missing %s",
+            recovered, still,
+        )
+        for f in still:
+            findings.append(_required_cert_field_finding(f, transcript_all, group.pages))
+
+    # Member cells
+    if gaps["members"] or gaps["shortfall"]:
+        member_dicts = [m.model_dump() for m in household.houseHold]
+        retry = retry_member_fields(
+            texts, gaps["members"], gaps["shortfall"], certification_type, settings,
+        )
+        recovered = merge_member_fields(member_dicts, retry, allow_new=gaps["shortfall"])
+        household.houseHold = [HouseholdMember.model_validate(d) for d in member_dicts]
+        still = [
+            {"name": g["name"], "missing": [f for f in g["missing"] if f in _REPORTED_MEMBER_FIELDS]}
+            for g in required_member_gaps(member_dicts)
+        ]
+        still = [g for g in still if g["missing"]]
+        logger.info(
+            "Required-field recovery: member cells recovered %s, still missing %s",
+            recovered, [f"{g['name']}:{'/'.join(g['missing'])}" for g in still],
+        )
+        for g in still:
+            findings.append(
+                _required_member_field_finding(g["name"].title(), g["missing"], group.pages)
+            )
+
+    return findings
 
 
 def _supplement_cert_info_from_rent_change(
