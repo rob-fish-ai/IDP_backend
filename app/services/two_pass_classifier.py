@@ -460,13 +460,15 @@ def _llm_classify_and_group(
         + "\n".join(lines)
     )
 
-    # Output budget: classification output is actually small — each group
-    # is ~50-80 tokens of JSON, and even a 100-page file with 20 groups
-    # produces only ~1500 output tokens. Cap at 8000 to stay under the
-    # Anthropic SDK's non-streaming timeout guardrail (which fires around
+    # Output budget: classification output is small — each group is ~50-80
+    # tokens of JSON, and even a 100-page file with 20 groups produces only
+    # ~1500 output tokens. The per-page factor carries headroom for Sonnet
+    # 5's tokenizer, which produces roughly 30% more tokens for the same
+    # text than earlier families. Cap at 8000 to stay under the Anthropic
+    # SDK's non-streaming timeout guardrail (which fires around
     # max_tokens > 8192 because it assumes 100 tok/s worst-case and refuses
     # requests estimated to take longer than 10 minutes).
-    out_budget = max(4096, min(8000, 150 * len(lines)))
+    out_budget = max(6000, min(8000, 200 * len(lines)))
 
     logger.info(
         "LLM classify+group: sending %d page snippets (model=%s, max_tokens=%d)",
@@ -478,6 +480,19 @@ def _llm_classify_and_group(
             GROUP_PROMPT, user_prompt, settings,
             max_tokens=out_budget,
             model=settings.llm_classify_model,
+            # max_tokens covers thinking AND output. On a model that thinks
+            # by default this budget is a JSON allowance, not a reasoning
+            # one: moving classification to Sonnet 5 — where omitting the
+            # parameter runs adaptive thinking, unlike the 4.6 family —
+            # produced a response that spent all 4800 tokens thinking and
+            # emitted no text block, failing every case with an
+            # "Expecting value: line 1 column 1" from an empty string.
+            #
+            # Page labelling is the task type Anthropic's own migration
+            # guidance puts in the thinking-disabled column, and the reason
+            # for moving off Haiku was the model's judgement on ambiguous
+            # pages rather than its capacity to deliberate about them.
+            thinking={"type": "disabled"},
         )
         return result.get("groups", [])
     except Exception as exc:

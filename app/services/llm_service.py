@@ -38,13 +38,25 @@ _NO_TEMPERATURE_PREFIXES = (
 )
 
 
-def _request_kwargs(model: str, settings: Settings, max_tokens: int | None) -> dict:
+# Fable-family models think unconditionally and reject an explicit
+# thinking configuration with a 400, so the parameter is never sent to them.
+_THINKING_ALWAYS_ON_PREFIXES = ("claude-fable",)
+
+
+def _request_kwargs(
+    model: str,
+    settings: Settings,
+    max_tokens: int | None,
+    thinking: dict | None = None,
+) -> dict:
     kwargs: dict = {
         "model": model,
         "max_tokens": max_tokens or settings.llm_max_tokens,
     }
     if not model.startswith(_NO_TEMPERATURE_PREFIXES):
         kwargs["temperature"] = settings.llm_temperature
+    if thinking and not model.startswith(_THINKING_ALWAYS_ON_PREFIXES):
+        kwargs["thinking"] = thinking
     return kwargs
 
 
@@ -72,6 +84,7 @@ def call_llm(
     *,
     max_tokens: int | None = None,
     model: str | None = None,
+    thinking: dict | None = None,
 ) -> str:
     """Send a prompt to Claude and return the raw text response.
 
@@ -88,7 +101,7 @@ def call_llm(
     for attempt in range(1, _MAX_RETRIES + 1):
         try:
             message = client.messages.create(
-                **_request_kwargs(chosen_model, settings, max_tokens),
+                **_request_kwargs(chosen_model, settings, max_tokens, thinking),
                 system=system_prompt,
                 messages=[{"role": "user", "content": user_prompt}],
             )
@@ -238,6 +251,16 @@ def call_llm_vision_json(
         max_tokens=max_tokens,
     )
 
+    # Same guard as call_llm_json: an empty body means the model emitted no
+    # text block, which on a thinking-enabled model means the budget went to
+    # thinking. Reporting that as malformed JSON hides the cause.
+    if not raw.strip():
+        raise ValueError(
+            "Vision model returned no text content. If the model has extended "
+            "thinking enabled, max_tokens covers thinking AND output — "
+            "raise the budget or pass thinking={'type': 'disabled'}."
+        )
+
     text = raw.strip()
 
     fence_match = re.search(r"```(?:json)?\s*\n(.*?)```", text, re.DOTALL)
@@ -269,6 +292,7 @@ def call_llm_json(
     *,
     max_tokens: int | None = None,
     model: str | None = None,
+    thinking: dict | None = None,
 ) -> dict:
     """Send a prompt to Claude and parse the response as JSON.
 
@@ -276,8 +300,20 @@ def call_llm_json(
     """
     raw = call_llm(
         system_prompt, user_prompt, settings,
-        max_tokens=max_tokens, model=model,
+        max_tokens=max_tokens, model=model, thinking=thinking,
     )
+
+    # An empty body is not malformed JSON, and reporting it as
+    # "Expecting value: line 1 column 1" hides what actually happened. The
+    # cause seen in production: a thinking-enabled model spent the whole
+    # max_tokens budget on thinking blocks and emitted no text block at all,
+    # which _response_text correctly returns as "".
+    if not raw.strip():
+        raise ValueError(
+            "Model returned no text content. If the model has extended "
+            "thinking enabled, max_tokens covers thinking AND output — "
+            "raise the budget or pass thinking={'type': 'disabled'}."
+        )
 
     # Extract JSON from response — handle preamble text and markdown fences
     text = raw.strip()
