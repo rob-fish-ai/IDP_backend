@@ -62,7 +62,12 @@ class Settings(BaseSettings):
     # Classification runs on Haiku by default — classification is a
     # constrained labeling task that Haiku handles well, and Haiku uses a
     # separate capacity pool so classification stays up when Sonnet 529s.
-    llm_classify_model: str = "claude-haiku-4-5-20251001"
+    # Classification decides which extractor ever sees a page, so a wrong
+    # call loses the content entirely rather than producing a wrong value.
+    # Moved off Haiku 2026-09-10 after the same packet classified its two
+    # income-verification pages as "Verification of Income (VOI)" on one run
+    # and "Unknown" on the next, 90 minutes apart, on identical bytes.
+    llm_classify_model: str = "claude-sonnet-5"
     # Response budget. Thinking-enabled models (Sonnet 5+) spend reasoning
     # tokens from this same budget, so it needs headroom beyond the largest
     # expected JSON output — 8192 caused mid-JSON truncation on asset-heavy

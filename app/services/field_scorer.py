@@ -618,6 +618,19 @@ def score_findings(cards: list[RecordScoreCard], findings: list) -> None:
             slug(v) for v in (finding.subject_ref or {}).values() if v
         }
         targets = _CATEGORY_RECORD_TYPES.get(finding.category, ())
+        # A dispute about records that do not exist has nowhere to land, and
+        # that is the case where it matters most: when extraction produced
+        # nothing there is no card to mark down, so the flat mean over the
+        # remaining records rises. Observed live — a run that classified the
+        # income pages as Unknown found no income at all and scored 0.907
+        # green, higher than the run that found the household's $21,720.
+        #
+        # The certification card carries the declared totals the missing
+        # records were supposed to account for, so it is where a
+        # contradiction about absent records belongs.
+        absent = bool(targets) and not any(c.record_type in targets for c in cards)
+        if absent:
+            targets = ("certification",)
         for card in cards:
             if card.record_type not in targets:
                 continue
@@ -628,7 +641,17 @@ def score_findings(cards: list[RecordScoreCard], findings: list) -> None:
             named = bool(subject and (subject & label_parts))
             if subject and not named:
                 continue
-            score = _DISPUTED_SCORE if named else _DISPUTED_CASE_SCORE
+            # A dispute whose records exist is shared among them: the
+            # contradiction is real but which record carries the error is
+            # unknown, so the penalty is moderate. A dispute whose records do
+            # not exist at all admits no such ambiguity — the certification
+            # declares a figure and the extraction produced nothing to set
+            # against it. That is the strongest evidence of extraction failure
+            # the engine can have, and it is scored as such.
+            if named or absent:
+                score = _DISPUTED_SCORE
+            else:
+                score = _DISPUTED_CASE_SCORE
             reason = f"Disputed by {finding.code}"
             for field in card.fields:
                 if field.flag == ScoreFlag.NA:

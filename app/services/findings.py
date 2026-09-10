@@ -86,6 +86,13 @@ _DISPUTES_EXTRACTION = frozenset({
     "SSA_AS_PAYSTUB_AND_VOI",
     # An amount the packet does not contain anywhere the audit may read
     "INCOME_AMOUNT_NOT_IN_SOURCE",
+    # The certification declares income the extraction produced nothing for.
+    # This is the strongest dispute of all and was missing: it fires exactly
+    # when extraction found NOTHING, which is when the score most needs to
+    # fall and — because a record that does not exist cannot be marked down —
+    # is precisely when it used to rise.
+    "TIC_TOTAL_NO_CALCULATIONS",
+    "TIC_TOTAL_NOT_EXTRACTED",
 })
 
 

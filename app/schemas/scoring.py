@@ -51,6 +51,14 @@ WEIGHT_FINDING = 0.40
 UNVERIFIED_CEILING = 0.79
 
 
+# Ordering used to take the worse of two flags. NA is not a severity — it
+# means the field does not apply — so it sits with GREEN.
+_FLAG_SEVERITY = {
+    ScoreFlag.NA: 0, ScoreFlag.GREEN: 0, ScoreFlag.YELLOW: 1, ScoreFlag.RED: 2,
+}
+_SEVERITY_FLAG = {0: ScoreFlag.GREEN, 1: ScoreFlag.YELLOW, 2: ScoreFlag.RED}
+
+
 def compute_flag(composite: float) -> ScoreFlag:
     if composite >= GREEN_THRESHOLD:
         return ScoreFlag.GREEN
@@ -201,3 +209,23 @@ class ExtractionScoreSummary(BaseModel):
         else:
             self.overall_composite = 1.0 if all_fields else 0.0
         self.overall_flag = compute_flag(self.overall_composite)
+
+        # The composite is an honest mean and stays one. The flag is not a
+        # mean — it is what a reviewer triages on, and averaging a disputed
+        # record away behind a dozen untouched ones hides exactly the thing
+        # they need to see.
+        #
+        # A dispute says the values it names cannot all be right. So the
+        # summary cannot be greener than the worst record carrying one, no
+        # matter how many clean records sit beside it. Without this rule a run
+        # that found no income at all on a household certifying $21,723 still
+        # flagged green, because the two asset records and the member record
+        # were fine and there was no income record left to be wrong.
+        disputed = [
+            r for r in self.records
+            if any(s.stage == "finding" for f in r.fields for s in f.stages)
+        ]
+        if disputed:
+            worst = max(_FLAG_SEVERITY[r.flag] for r in disputed)
+            if worst > _FLAG_SEVERITY[self.overall_flag]:
+                self.overall_flag = _SEVERITY_FLAG[worst]

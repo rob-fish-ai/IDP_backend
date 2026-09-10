@@ -343,6 +343,22 @@ CRITICAL CLASSIFICATION RULES:
   also fit. Merging them makes one form's signatures and dates appear to
   belong to another.
 
+- CONTINUATION PAGES: a page carrying only a header, a footer, a timestamp,
+  a confidentiality notice or a page number — with no title block, no form
+  number and no content of its own — is the continuation of the document
+  that precedes it. Put it in that group. Do NOT classify it independently:
+  judged alone it looks like nothing, so it becomes "Unknown", the group
+  lands in "ignore", and the pages of a real document are dropped from
+  extraction on the strength of a page that was never meant to stand alone.
+
+- "Unknown" is a last resort, not a tie-break. Use it only when a page has
+  content that identifies no type at all. If a page carries identifying
+  markers — an agency or employer name, a form number, benefit or wage
+  amounts, a signature block — choose the closest matching type and say what
+  made it uncertain in `notes`. A wrong-but-specific label routes the page to
+  an extractor and can be corrected downstream; "Unknown" routes it nowhere
+  and the content is lost silently.
+
 PREVIOUS CERTIFICATION DETECTION:
   Files often contain BOTH the current cert AND a previous one for comparison.
   Split them into separate groups:
