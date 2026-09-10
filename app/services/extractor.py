@@ -90,6 +90,11 @@ EXTRACTION RULES:
   over any handwritten application/questionnaire entry (handwriting is
   routinely misread). Same priority for name spellings.
 - head: "H" for head of household/primary applicant. null for all others. Maximum ONE "H".
+- relationship: relationship to the head of household exactly as the form states it, Title Case
+  ("Head", "Spouse", "Co-Head", "Daughter", "Son", "Granddaughter", "Foster Child", "Other Adult").
+  TIC → "Relationship to Head of Household" column; HUD 50059 → field 36 "Relat" (codes: H=Head,
+  S=Spouse, K=Co-Head, D=Dependent, F=Foster, L=Live-in Aide, O=Other Adult — expand the code);
+  RD 3560 → relationship column. null only when no form states it.
 - disabled: "Y" if member is disabled, "N" if not disabled, null if unknown/not documented.
   HUD 50059 has MULTIPLE disability indicators:
   (a) Per-member: Section C column "Special Status" or "Disab" or "H/C" — check marks, "Y", "1", "X" = "Y"; blank = "N"
@@ -1028,6 +1033,7 @@ _ASSET_DOC_TYPES_PER_RECORD = {
     "Life Insurance Policy",
     "Asset Self-Certification",
     "Investment Account Statement",
+    "Real Estate Verification",
     "Direct Express Card Verification",
     "Debit Card Asset Self-Certification",
 }

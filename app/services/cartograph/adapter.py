@@ -227,12 +227,15 @@ def build_household_members(
             "sort_order": index + 1,
         }
 
-        # The engine does not extract a relationship other than head of
-        # household — the roster gives a position, not a relation. Sending
-        # the one value we do know beats sending nothing; the rest stays
-        # absent rather than guessed.
+        # The certification states each member's relationship to the head
+        # and the extractor now reads it. Head of household is still asserted
+        # from the roster position, which is authoritative for that one
+        # value; everyone else carries what the form says, and the warning
+        # is reserved for a member the form genuinely left blank.
         if is_hoh:
             record["relationship"] = "Head of Household"
+        elif member.relationship:
+            record["relationship"] = member.relationship
         else:
             warnings.append(
                 f"household_members[{index}].relationship not extracted; left unset"

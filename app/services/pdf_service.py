@@ -1,4 +1,5 @@
 import logging
+import re
 import time
 from concurrent.futures import ThreadPoolExecutor
 
@@ -34,6 +35,34 @@ def _skipped_region_fraction(ocr_text: str) -> float:
         x1, y1, x2, y2 = (int(g) for g in m.groups())
         area += max(0, x2 - x1) * max(0, y2 - y1)
     return min(1.0, area / 1_000_000)
+
+
+# A 1-3 character unit repeated four or more times, where the unit carries
+# at least one letter or digit. Dotted leaders and rules ("........",
+# "------") are excluded on purpose: they are formatting, and a form page
+# legitimately has many of them.
+_REPEAT_RUN_RE = re.compile(r"((?=[^\s]*\w)[^\s]{1,3})\1{3,}")
+# Above this fraction of a page's text, the OCR has transcribed a barcode,
+# a security strip or a scanner artefact as characters. The score does not
+# notice — the run is "confident" output — and the flags the OCR service
+# raises for hallucination do not fire on it either.
+_REPETITIVE_FRACTION = 0.20
+
+
+def _repetitive_fraction(text: str) -> float:
+    """Fraction of a page's characters inside repeated short-unit runs.
+
+    Observed: a Social Security benefit letter came back as 7,995 characters
+    of which 343 runs of "I1I1I1I1..." were garbage — over a third of the
+    page — with the composite at 0.81 and no quality flag. The benefit
+    amount did not survive. The extractor then read that page and reported
+    the head of household's income as $0.00, which the audit delivered.
+    """
+    total = len(text or "")
+    if not total:
+        return 0.0
+    run_chars = sum(len(m.group(0)) for m in _REPEAT_RUN_RE.finditer(text))
+    return run_chars / total
 
 
 _ROTATION_PROBE_FLAGS = frozenset({
@@ -431,6 +460,18 @@ def process_pdf(
             )
             low_quality_pages.append(page_num)
             continue
+        repetitive = _repetitive_fraction(ocr_result.get("text") or "")
+        if repetitive >= _REPETITIVE_FRACTION:
+            logger.warning(
+                "Page %d: ~%.0f%% of OCR text is a repeated short pattern — "
+                "barcode or scan artefact read as characters; queueing "
+                "vision fallback", page_num, repetitive * 100,
+            )
+            flags = ocr_result.setdefault("flag_details", [])
+            if isinstance(flags, list) and "repetitive_content" not in flags:
+                flags.append("repetitive_content")
+            low_quality_pages.append(page_num)
+            continue
         text_len = len((ocr_result.get("text") or "").strip())
         img_path = path_by_page.get(page_num)
         if img_path and suspected_content_loss(img_path, text_len):
@@ -506,7 +547,7 @@ def process_pdf(
         # real ~4KB of vision-read content).
         _UNRELIABLE_OCR_FLAGS = {
             "possible_hallucination", "no_content", "ocr_failed",
-            "low_quality_scan", "max_tokens_hit",
+            "low_quality_scan", "max_tokens_hit", "repetitive_content",
         }
         _MIN_VISION_CHARS = 200
 

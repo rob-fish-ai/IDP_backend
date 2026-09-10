@@ -141,7 +141,8 @@ def score_pydantic_records(
         for m in household.houseHold:
             name = f"{m.FirstName or ''} {m.LastName or ''}".strip()
             scorer = RecordScorer("household_member", name or "Unknown")
-            for field in ("FirstName", "LastName", "DOB", "socialSecurityNumber", "disabled", "student"):
+            for field in ("FirstName", "LastName", "DOB", "socialSecurityNumber",
+                           "relationship", "disabled", "student"):
                 val = getattr(m, field, None)
                 scorer.score_field(field, str(val) if val else None)
             cards.append(scorer.build())
@@ -240,7 +241,8 @@ def score_source_verification(
                     "Work Number / Equifax Report", "Tenant Income Certification (TIC)",
                     "HUD 50059", "Application / Housing Questionnaire"},
         "asset": {"Verification of Assets (VOA)", "Bank Statement", "Life Insurance Policy",
-                   "Asset Self-Certification", "Tenant Income Certification (TIC)", "HUD 50059",
+                   "Asset Self-Certification", "Real Estate Verification",
+                   "Tenant Income Certification (TIC)", "HUD 50059",
                    "Application / Housing Questionnaire"},
     }
 

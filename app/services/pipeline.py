@@ -20,7 +20,7 @@ from app.schemas.extraction import (
 from app.services.bug_detector import detect_known_bugs
 from app.services.completeness import check_completeness
 from app.services.doc_taxonomy import is_current_certification_form
-from app.services.findings import ASSIGN_INTERNAL, CATEGORY_INCOME, RESOLVE_PRESENCE, make_finding
+from app.services.findings import ASSIGN_INTERNAL, CATEGORY_INCOME, RESOLVE_PRESENCE, make_finding, slug
 from app.services.findings import dedupe as dedupe_findings
 from app.services.findings import records as finding_records
 from app.services.findings import text_of
@@ -165,6 +165,7 @@ def run_extraction_pipeline(
         "Verification of Assets (VOA)", "Bank Statement",
         "Life Insurance Policy", "Asset Self-Certification",
         "Investment Account Statement", "Direct Express Card Verification",
+        "Real Estate Verification",
         "No Asset Certification", "Disposal of Assets Certification",
         "Debit Card Asset Self-Certification",
         "Application / Housing Questionnaire",
@@ -1048,12 +1049,27 @@ def _deduplicate_assets(asset_records: list) -> list:
 
     # Pass 2: group by accountNumber (primary key); fall back to
     # (sourceName|accountType) only when accountNumber is missing.
+    def _money_key(value) -> str:
+        try:
+            return f"{float(str(value).replace('$', '').replace(',', '')):.2f}"
+        except (TypeError, ValueError):
+            return (str(value) if value else "").strip().lower()
+
     def _key(rec) -> str:
         if rec.accountNumber:
             return f"acct:{rec.accountNumber.strip()}"
+        # No account number: the asset's identity is who owns it, what kind
+        # it is, and what it is worth. Keying on the source name instead let
+        # one property become two records — the extractor captured the
+        # address on one mention and left it blank on the other, and both
+        # $6,294.74 real-estate records were summed and delivered as
+        # $12,589.48 of assets, on two consecutive runs. Same owner, same
+        # type, same value, neither carrying an account number: one asset.
+        value = rec.currentBalance or rec.selfDeclaredAmount or rec.averageSixMonthBalance
         return (
-            f"sa:{(rec.sourceName or '').lower().strip()}|"
-            f"{(rec.accountType or '').lower().strip()}"
+            f"otv:{slug(rec.assetOwner)}|"
+            f"{(rec.accountType or '').lower().strip()}|"
+            f"{_money_key(value)}"
         )
 
     groups: dict[str, list] = {}

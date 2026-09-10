@@ -175,6 +175,9 @@ CANONICAL DOCUMENT TYPES (use these exact names):
     - Gift Income Verification               (third party attesting to ongoing cash contributions)
     - Bank Statement
     - Investment Account Statement           (brokerage, mutual fund, retirement account)
+    - Real Estate Verification               (county tax roll or assessor inquiry, deed, appraisal,
+                                              mortgage statement — evidence of property the
+                                              household owns and what it is worth)
     - Life Insurance Policy
     - Asset Self-Certification
     - No Asset Certification                 (household attests it holds NO assets — distinct

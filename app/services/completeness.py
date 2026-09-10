@@ -26,6 +26,7 @@ findings for review rather than corrections.
 
 import logging
 import re
+from collections import Counter
 
 from app.schemas.extraction import ExtractionResult
 from app.services.doc_taxonomy import is_current_certification_form
@@ -39,10 +40,28 @@ from app.services.findings import (
 
 logger = logging.getLogger(__name__)
 
-# Currency written on a form: $1,234.56, 1234.56, 1,234.00. Cents are
-# required — bare integers on a certification are far more often a count, a
-# year, a unit number or a percentage than an amount.
-_AMOUNT_RE = re.compile(r"\$?\s*(\d{1,3}(?:,\d{3})+\.\d{2}|\d+\.\d{2})")
+# Currency written on a form: $1,234.56, 1234.56, 1,234.00 — and 17,874.
+# A bare integer without cents is not matched: on a certification it is far
+# more often a count, a year, a unit number or a percentage than an amount.
+# A comma-grouped integer is matched: nothing else on a form is written
+# that way, and the head of household's whole income sat on a TIC as
+# "17,874" — the largest figure on the page, and the one line the scanner
+# could not see while it flagged the $3,359.56 beside it.
+_AMOUNT_RE = re.compile(
+    r"\$?\s*(\d{1,3}(?:,\d{3})+(?:\.\d{2})?|\d+\.\d{2})"
+)
+
+# Words a certification uses to label a figure that is not the household's:
+# the program's income limits, and the statutory fines quoted in the perjury
+# certification. Whole words, so "fine" does not fire inside "defined".
+_NOT_HOUSEHOLD_RE = re.compile(
+    r"\b(limits?|penalt(?:y|ies)|fined?|fines)\b|\bnot (?:less|more) than\b",
+    re.IGNORECASE,
+)
+# How far back to look for that label. Far enough for "Designated Income
+# Limit x 140% (170% for Deep Rent Skewing): 70,728"; bounded by the previous
+# amount regardless, so a long window cannot reach across a table cell.
+_LABEL_WINDOW = 70
 
 # Amounts below this are not worth a reviewer's attention even when
 # unexplained: fees, cents-level differences, incidental figures printed on
@@ -123,69 +142,121 @@ def _reachable_sums(components: list[float], cap: int = 20000) -> set[float]:
     return sums
 
 
-def _amounts_in(text: str) -> set[float]:
-    out: set[float] = set()
+def _amounts_in(text: str) -> Counter:
+    """Every amount printed on the certification, with how many times.
+
+    A Counter rather than a set because a figure printed twice is two
+    claims. Two grandchildren on one TIC each drew the same $9,292.80 survivor
+    benefit; the set saw one number, matched it against the one record that
+    was extracted, and reported the certification fully accounted for while
+    the second child's income was missing entirely.
+    """
+    out: Counter = Counter()
+    prev_end = 0
     for match in _AMOUNT_RE.finditer(text or ""):
+        # The form labels what a figure is, and the label sits between the
+        # previous number and this one. Read it: a certification prints
+        # income limits, and its perjury boilerplate quotes statutory fines,
+        # and neither is a household figure the extraction could have
+        # missed. The window stops at the previous amount so a label is
+        # only ever attributed to the figure it precedes.
+        label = text[max(prev_end, match.start() - _LABEL_WINDOW):match.start()]
+        prev_end = match.end()
+        if _NOT_HOUSEHOLD_RE.search(label):
+            continue
         try:
-            out.add(round(float(match.group(1).replace(",", "")), 2))
+            out[round(float(match.group(1).replace(",", "")), 2)] += 1
         except ValueError:
             continue
     return out
 
 
-def _extracted_amounts(extraction: ExtractionResult) -> set[float]:
-    """Every monetary value the extraction produced, from anywhere.
+def _consume(amount: float, pool: Counter) -> bool:
+    """Match an amount against the pool of extracted record values, using
+    one up. Exact first, then the same tolerances _is_near allows."""
+    if pool.get(amount, 0) > 0:
+        pool[amount] -= 1
+        return True
+    digits = _digits(amount)
+    for other, remaining in pool.items():
+        if remaining <= 0 or not other:
+            continue
+        if (abs(amount - other) <= max(0.02, abs(other) * 0.001)
+                or _one_edit_apart(digits, _digits(other))):
+            pool[other] -= 1
+            return True
+    return False
 
-    Deliberately indiscriminate. The question this answers is not "is this
+def _extracted_amounts(extraction: ExtractionResult) -> tuple[Counter, set[float]]:
+    """Every monetary value the extraction produced, split by what it is.
+
+    Deliberately indiscriminate about fields: the question is not "is this
     value in the right field" but "did the engine see this number at all",
     so a figure landing in an unexpected field still counts as seen.
-    """
-    found: set[float] = set()
 
-    def absorb(value) -> None:
+    Two pools, because two kinds of figure sit on a certification:
+
+      - Record values — an income source's amount, an asset's balance. Each
+        line on the form is one record, so each extracted record accounts
+        for one printed line. Returned as a Counter, one count per record
+        per distinct value, and consumed as lines are matched.
+      - The form's own scalars — total income, rents, the limit. A
+        certification restates these freely (a total appears in the income
+        table and again in the eligibility section), so they match without
+        limit.
+    """
+    pool: Counter = Counter()
+    unlimited: set[float] = set()
+
+    def as_float(value) -> float | None:
         if value is None:
-            return
+            return None
         text = str(value).replace("$", "").replace(",", "").strip()
         try:
-            found.add(round(float(text), 2))
+            return round(float(text), 2)
         except ValueError:
-            return
+            return None
+
+    def record(*values) -> None:
+        distinct = {f for f in (as_float(v) for v in values) if f is not None}
+        for f in distinct:
+            pool[f] += 1
 
     info = extraction.certification_info
     if info is not None:
-        for field in (
+        for value in (
             info.householdIncome, info.grossRent, info.tenantRent,
             info.utilityAllowance, info.rentLimit,
         ):
-            absorb(field)
+            f = as_float(value)
+            if f is not None:
+                unlimited.add(f)
 
     for entry in extraction.income.sourceIncome.verificationIncome:
-        for field in (
+        record(
             entry.selfDeclaredAmount, entry.rateOfPay, entry.ytdAmount,
             entry.overtimeRate, entry.hoursPerPayPeriod,
-        ):
-            absorb(field)
+        )
     for stub in extraction.income.sourceIncome.payStub:
-        absorb(stub.grossPay)
-        absorb(stub.ytdGross)
+        record(stub.grossPay, stub.ytdGross)
 
     for asset in extraction.assets.assetInformation:
-        for field in (
+        values = [
             asset.currentBalance, asset.selfDeclaredAmount,
             asset.averageSixMonthBalance, asset.incomeAmount,
-        ):
-            absorb(field)
-        for statement in asset.bankStatment:
-            absorb(statement.balance)
+        ]
+        values += [st.balance for st in asset.bankStatment]
         if asset.verificationOfAsset is not None:
-            absorb(asset.verificationOfAsset.currentBalance)
-            absorb(asset.verificationOfAsset.averageSixMonthBalance)
+            values += [
+                asset.verificationOfAsset.currentBalance,
+                asset.verificationOfAsset.averageSixMonthBalance,
+            ]
+        record(*values)
 
     for calc in extraction.income_calculations:
-        absorb(calc.annualIncome)
+        record(calc.annualIncome)
 
-    return found
-
+    return pool, unlimited
 
 def _certification_text(extraction: ExtractionResult) -> str:
     """Text of the certification form itself, excluding prior-year copies.
@@ -253,10 +324,12 @@ def check_unaccounted_amounts(extraction: ExtractionResult) -> list:
     if not text:
         return []
 
-    seen = _extracted_amounts(extraction)
+    pool, unlimited = _extracted_amounts(extraction)
 
     # The figures a certification most prominently states are its own
-    # subtotals, which never appear as a single extracted value.
+    # subtotals, which never appear as a single extracted value. Only sums
+    # of two or more components count here: a single component is a
+    # record's own value, which lives in the pool and is used once.
     components = [
         value for value in (
             [_as_float(c.annualIncome) for c in extraction.income_calculations]
@@ -266,14 +339,18 @@ def check_unaccounted_amounts(extraction: ExtractionResult) -> list:
             ]
         ) if value
     ]
-    seen |= _reachable_sums(components)
+    unlimited |= _reachable_sums(components) - {round(c, 2) for c in components}
 
-    unaccounted = sorted(
-        amount for amount in _amounts_in(text)
-        if amount >= _MATERIALITY
-        and amount not in seen
-        and not _is_near(amount, seen)
-    )
+    unaccounted: list[float] = []
+    for amount, printed in sorted(_amounts_in(text).items()):
+        if amount < _MATERIALITY:
+            continue
+        for _ in range(printed):
+            if _consume(amount, pool):
+                continue
+            if amount in unlimited or _is_near(amount, unlimited):
+                continue
+            unaccounted.append(amount)
     if not unaccounted:
         return []
 

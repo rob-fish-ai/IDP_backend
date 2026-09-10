@@ -53,6 +53,13 @@ class HouseholdMember(BaseModel):
     DOB: Optional[str] = None
     gender: Optional[str] = None
     head: Optional[str] = None
+    # As the certification states it: "Head", "Spouse", "Daughter",
+    # "Granddaughter". Every certification form has the column, and the
+    # consumer has a column for it, and until this field existed the value
+    # was read by nobody — the adapter warned "relationship not extracted"
+    # on every member of every case, for a field the extractor had no place
+    # to put.
+    relationship: Optional[str] = None
     disabled: Optional[str] = None
     student: Optional[str] = None
     email: Optional[str] = None
