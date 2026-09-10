@@ -195,6 +195,11 @@ CANONICAL DOCUMENT TYPES (use these exact names):
   COMPLIANCE — required forms, not data-extracted:
     - HUD 9887
     - HUD 9887-A
+    - HUD 9887 Consent Package Cover    (the "Document Package for Applicant's/Tenant's
+                                         Consent to the Release Of Information" sheet that
+                                         introduces the package — not a consent form itself)
+    - HUD 9887/A Fact Sheet             (explanatory "Fact Sheet" page filed with the
+                                         package — informational, never signed)
     - HUD 92006
     - HUD Race and Ethnic Data Form
     - Citizenship Declaration
@@ -238,6 +243,22 @@ CRITICAL CLASSIFICATION RULES:
 - "Income Calculation Worksheet" means a SEPARATE internal spreadsheet or
   calc tape used by property staff — NOT any cert form that contains an
   income calculation section.
+
+- THE 9887 CONSENT PACKAGE: the pages that introduce or explain the package
+  are not the forms. A cover sheet titled "Document Package for
+  Applicant's/Tenant's Consent to the Release Of Information" is
+  "HUD 9887 Consent Package Cover"; a page headed "HUD-9887/A Fact Sheet" is
+  "HUD 9887/A Fact Sheet". Only "Notice and Consent for the Release of
+  Information" and its continuation are HUD 9887, and only "Applicant's/
+  Tenant's Consent to the Release of Information" and its continuation are
+  HUD 9887-A. Labelling the cover or the fact sheet as a form makes the
+  package's page counts wrong in both directions, and the audit checks those
+  counts — a 9887 must be 4 pages and a 9887-A 2 pages per adult, so a
+  miscount reports missing pages on a package that is complete.
+
+- A "WAGE MATCH AGREEMENT" is its own form, not part of the 9887 family.
+  If no canonical type fits it, follow the last-resort rule below rather than
+  attaching it to a 9887.
 
 - HUD Model Lease (Section 8/202/236) is a LEGAL contract that contains the
   effective date, contract rent, utility allowance, tenant rent, and HAP

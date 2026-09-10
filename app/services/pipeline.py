@@ -5,6 +5,7 @@ import time
 
 from app.core.config import Settings
 from app.schemas.context import PipelineContext
+from app.schemas.scoring import GREEN_THRESHOLD
 from app.schemas.extraction import (
     AssetExtraction,
     CertificationInfo,
@@ -612,6 +613,14 @@ def run_extraction_pipeline(
         for fs in card.flagged_fields:
             if (card.record_type, fs.field_name) in _BUSINESS_RULE_COVERED:
                 continue
+            if _flagged_only_by_dispute(fs):
+                # The dispute that dragged this field down is already in the
+                # findings list, stated once and in plain language. Repeating
+                # it per field turns one finding into six identical lines —
+                # "Disputed by TIC_TOTAL_NO_CALCULATIONS" against every
+                # certification field — which is the per-field noise this
+                # suppression list exists to prevent.
+                continue
             findings.append(
                 f"[{fs.flag.value.upper()}] {card.record_label or card.record_type}"
                 f" → {fs.field_name}: {fs.flag_message}"
@@ -680,6 +689,23 @@ def run_extraction_pipeline(
 # The fields an income record can carry its amount in. One of them has to
 # hold a figure or the record says nothing about how much the household earns.
 _INCOME_AMOUNT_FIELDS = ("selfDeclaredAmount", "rateOfPay", "ytdAmount")
+
+
+def _flagged_only_by_dispute(field_score) -> bool:
+    """Whether a field is flagged solely because a finding disputed it.
+
+    A field can be both disputed and independently suspect — an unverified
+    value that a mismatch also implicates. Only the first case is redundant,
+    so this asks whether anything OTHER than the dispute pulled the field
+    below its threshold.
+    """
+    stages = getattr(field_score, "stages", None) or []
+    if not any(s.stage == "finding" for s in stages):
+        return False
+    return all(
+        s.stage == "finding" or s.score >= GREEN_THRESHOLD
+        for s in stages
+    )
 
 
 def _unverifiable_income_amounts(score_cards: list) -> list:
