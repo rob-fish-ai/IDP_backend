@@ -344,6 +344,15 @@ class Finding(BaseModel):
     assignment: Optional[str] = None            # internal | client | procedural_issue
     correction_required: Optional[str] = None
     resolution_type: Optional[str] = None       # presence_only | recalculation
+    # True when the finding reports the extraction contradicting the document's
+    # own account of itself — a declared total that the extracted sources do
+    # not sum to, a figure on the certification that matches no record, methods
+    # that disagree. Such a finding is evidence about the RELIABILITY of the
+    # values involved, not only about the household, so the scorer reads it.
+    #
+    # A missing-document finding is deliberately not one of these: the file is
+    # incomplete, but nothing says the extraction misread what is there.
+    disputes_extraction: bool = False
     confidence: Optional[float] = None
     pages: list[int] = []
     finding_key: Optional[str] = None           # derived; see build_finding_key

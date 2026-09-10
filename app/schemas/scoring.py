@@ -36,6 +36,19 @@ WEIGHT_EXTRACTION = 0.20        # is the field populated?
 WEIGHT_SOURCE_VERIFY = 0.30     # is the value found in source text + OCR quality?
 WEIGHT_CROSS_DOC = 0.15         # do multiple documents agree?
 WEIGHT_BUSINESS_RULE = 0.35     # does the value pass format/range/logic checks?
+# Does an audit finding contradict this value? Weighted highest because it is
+# the only stage that compares the extraction against the document's own
+# account of itself rather than against a format or a range. A declared total
+# the extracted sources do not sum to is the strongest evidence the engine
+# produces that it misread something, and until this stage existed the score
+# could not see it: an extraction whose income was 1,500x the certified total
+# scored 0.769 "yellow".
+WEIGHT_FINDING = 0.40
+
+# Ceiling for a field that no verification stage examined. Just under the
+# green threshold: unconfirmed is its own state, distinct from both
+# "confirmed good" and "found wrong".
+UNVERIFIED_CEILING = 0.79
 
 
 def compute_flag(composite: float) -> ScoreFlag:
@@ -88,6 +101,7 @@ class FieldScore(BaseModel):
             "source_verification": WEIGHT_SOURCE_VERIFY,
             "cross_doc": WEIGHT_CROSS_DOC,
             "business_rule": WEIGHT_BUSINESS_RULE,
+            "finding": WEIGHT_FINDING,
         }
         total_weight = 0.0
         weighted_sum = 0.0
@@ -96,6 +110,28 @@ class FieldScore(BaseModel):
             weighted_sum += s.score * w
             total_weight += w
         self.composite = weighted_sum / total_weight if total_weight > 0 else 0.0
+
+        # Dividing by the weight of the stages that RAN means a field nobody
+        # checked scores exactly what its extraction stage gave it — 0.85 for
+        # "the model returned something", which is above the green threshold.
+        # So "verified and correct" and "never verified" both came out green,
+        # and the flag a reviewer triages by could not tell them apart.
+        #
+        # A value no verification stage examined is not confirmed; it is
+        # unconfirmed. It is capped below green rather than pushed down to
+        # red, because nothing has been found wrong with it either.
+        # Specifically source verification, not any check at all. A business
+        # rule asks whether a value has a plausible shape — that a cert type
+        # is one of four codes, that a rate is under a bound. Only source
+        # verification asks whether the value is what the document says.
+        # Green should mean "found in the document", so a value never
+        # compared against it cannot earn one.
+        verified = any(
+            s.stage == "source_verification" for s in self.stages
+        )
+        if not verified:
+            self.composite = min(self.composite, UNVERIFIED_CEILING)
+
         self.flag = compute_flag(self.composite)
 
         # Auto-generate flag message from low-scoring stages

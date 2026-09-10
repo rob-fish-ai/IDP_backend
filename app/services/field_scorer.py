@@ -5,8 +5,13 @@ Extraction stage scores based on whether the LLM returned a value:
   - Populated but looks suspicious:      0.60 (medium — might be wrong)
   - Null / empty:                         0.00 (absent — needs manual entry)
 
-Business rules carry the most weight (45%) since they're the real validation.
-Cross-doc consistency (25%) boosts when multiple sources agree.
+Stage weights live in schemas/scoring.py. The findings stage carries the most
+weight because it is the only one that compares the extraction against the
+document's own account of itself rather than against a format or a range.
+
+Green means "found in the source document". A value no source verification
+examined is capped below green — unconfirmed is its own state, distinct from
+both confirmed-good and found-wrong.
 """
 
 from __future__ import annotations
@@ -14,12 +19,15 @@ from __future__ import annotations
 import logging
 import re
 
+from app.schemas.extraction import Finding
 from app.schemas.scoring import (
     ExtractionScoreSummary,
     FieldScore,
     RecordScoreCard,
+    ScoreFlag,
     StageScore,
 )
+from app.services.findings import slug
 # The scorer's bounds and the annualizer's arithmetic have to agree about
 # how long a pay period is, so both read the same multiplier table.
 from app.services.income_calculator import get_frequency_multiplier
@@ -277,13 +285,21 @@ def score_source_verification(
             if fs.value is None:
                 continue
 
-            # Skip source verification for user-provided fields
+            # Caller-provided fields are not compared against the OCR text:
+            # the caller states them (a frontend selector, or Cartograph's
+            # notification), and forms spell the value out in words the code
+            # does not contain — a TIC says "Move-in/Initial", not "MI" — so
+            # comparing would fail on almost every packet.
+            #
+            # But skipping the check is not the same as passing it. This used
+            # to append a 1.0 "source verification skipped", which asserted
+            # the strongest possible confidence in the one value nothing had
+            # examined. On a real packet Cartograph sent cert_type "annual"
+            # for a certification the document marks Move-in in three places;
+            # the engine adopted it, scored it green, and applied the wrong
+            # rule set. Appending nothing instead leaves the field
+            # unconfirmed, which is what it is.
             if (card.record_type, fs.field_name) in _SKIP_SOURCE_VERIFY:
-                fs.stages.append(StageScore(
-                    stage="source_verification", score=1.0,
-                    reason="User-provided — source verification skipped",
-                ))
-                fs.recompute()
                 continue
 
             # Check if value appears in source text
@@ -311,6 +327,19 @@ def score_source_verification(
         card.recompute()
 
 
+# At or below this many characters, a substring hit is not evidence: short
+# codes and abbreviations occur inside ordinary words. Chosen to cover the
+# two- and three-character values the schema actually carries — cert types
+# (MI, AR, IR), state codes, Y/N flags — without disturbing longer values,
+# where an accidental substring hit is vanishingly unlikely.
+_MIN_UNANCHORED_MATCH = 3
+
+
+def _whole_word_in(value: str, source_text: str) -> bool:
+    """Whether the value appears as its own token in the source text."""
+    return re.search(rf"(?<!\w){re.escape(value)}(?!\w)", source_text) is not None
+
+
 def _value_in_source(value: str, source_text: str) -> bool:
     """Check if an extracted value appears in the source OCR text.
 
@@ -324,6 +353,14 @@ def _value_in_source(value: str, source_text: str) -> bool:
     val = value.strip().lower()
     if not val:
         return False
+
+    # A short value proves nothing by appearing somewhere in a page of text.
+    # "AR" occurs inside YEAR, PART, CLARIFICATION and MARIJUANA, so a
+    # certification type of "AR" scored a perfect source_verification against
+    # a document that says Move-In. Below this length only a whole-word match
+    # counts as having found the value.
+    if len(val) <= _MIN_UNANCHORED_MATCH:
+        return _whole_word_in(val, source_text)
 
     # Direct match
     if val in source_text:
@@ -506,6 +543,84 @@ _TERMINATED_NA_FIELDS = {
     "ytdAmount", "ytdStartDate", "ytdEndDate",
     "hireDate",
 }
+
+
+# A finding that disputes the extraction is not a pass/fail on one field — it
+# says the values it names cannot all be right. The score it contributes is
+# low rather than zero: the finding proves a contradiction exists, not which
+# side of it is wrong.
+_DISPUTED_SCORE = 0.15
+# When a dispute names no subject, it concerns the case as a whole. Applied to
+# every record in the categories it touches, but more gently — a case-level
+# contradiction is weaker evidence against any one record than a finding that
+# names it.
+_DISPUTED_CASE_SCORE = 0.40
+
+# Which record types a finding category is about, so a case-level dispute
+# lands on the records that could have caused it rather than on all of them.
+_CATEGORY_RECORD_TYPES = {
+    "income": ("income",),
+    "asset": ("asset",),
+    "household_member": ("household_member",),
+    "unit_rent": ("certification",),
+    "expense": ("income", "asset"),
+    "file_review": (),          # about the file, not about any extracted record
+}
+
+
+def score_findings(cards: list[RecordScoreCard], findings: list) -> None:
+    """Let the audit's own findings lower the confidence of what they dispute.
+
+    Every other stage asks a question of a value in isolation: is it populated,
+    does it appear in the source text, does it satisfy a range. None of them
+    can see that the household's income sums to 1,500 times what the
+    certification declares, because that is a relationship between values
+    rather than a property of one.
+
+    So the strongest evidence the engine produces about its own reliability was
+    excluded from its confidence score. On a real packet that meant an
+    extraction reporting $48,360,000 of wages against a $31,470 certification
+    scored 0.769 and flagged "yellow", with the field that caused it — a
+    salary transcribed into a rate — scoring 0.96 green.
+
+    Only findings that dispute the extraction are read; see findings.py for
+    which those are and why a missing-document finding is not one of them.
+    """
+    disputing = [
+        f for f in findings
+        if isinstance(f, Finding) and f.disputes_extraction
+    ]
+    if not disputing:
+        return
+
+    for finding in disputing:
+        subject = {
+            slug(v) for v in (finding.subject_ref or {}).values() if v
+        }
+        targets = _CATEGORY_RECORD_TYPES.get(finding.category, ())
+        for card in cards:
+            if card.record_type not in targets:
+                continue
+            # A finding naming a subject applies to the record carrying that
+            # subject. Matching on the record's label rather than on a field
+            # keeps this working for every record type without a per-type map.
+            label_parts = {slug(p) for p in (card.record_label or "").split("—")}
+            named = bool(subject and (subject & label_parts))
+            if subject and not named:
+                continue
+            score = _DISPUTED_SCORE if named else _DISPUTED_CASE_SCORE
+            reason = f"Disputed by {finding.code}"
+            for field in card.fields:
+                if field.flag == ScoreFlag.NA:
+                    continue
+                update_field_score(
+                    card, field.field_name, stage="finding",
+                    score=score, reason=reason,
+                )
+        # Cards are recomputed once below rather than per finding.
+
+    for card in cards:
+        card.recompute()
 
 
 def score_business_rules(

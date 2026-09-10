@@ -51,6 +51,7 @@ from app.services.field_scorer import (
     build_score_summary,
     score_business_rules,
     score_cross_doc_consistency,
+    score_findings,
 )
 from app.services.signature_validator import validate_signatures
 from app.services.special_scenarios import check_special_scenarios
@@ -582,6 +583,13 @@ def run_extraction_pipeline(
 
     # Stage 3: Business rule validation (range, format, logic checks)
     score_business_rules(score_cards, certification_type=ctx.certification_type)
+
+    # Stage 4: the audit's own findings. Every stage above asks a question of
+    # one value in isolation, so none of them can see that the extracted
+    # sources sum to something the certification contradicts — that is a
+    # relationship between values, not a property of one. Runs last so a
+    # dispute has the final word over a field that passed its format check.
+    score_findings(score_cards, findings)
 
     # Build summary and surface red/yellow fields as findings.
     # Suppress field-level duplicates of facts the business rules already

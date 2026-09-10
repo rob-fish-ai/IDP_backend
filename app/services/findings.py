@@ -44,6 +44,53 @@ RESOLVE_RECALC = "recalculation"
 
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
 
+# Findings that report the extraction contradicting the document's own account
+# of itself: a declared total the extracted sources do not sum to, a figure
+# printed on the certification that matches no record, two calculation methods
+# that disagree, a source attributed to nobody on the roster, the same income
+# read twice.
+#
+# These are evidence about the RELIABILITY of the values involved, not only
+# about the household, which is why the scorer reads them. A missing-document
+# finding is deliberately absent: the file is incomplete, but nothing about it
+# says the engine misread what is there.
+#
+# Kept here, keyed by code, rather than passed at each of the seventeen
+# emission sites. A flag repeated per call site drifts — one emitter gets it,
+# the next one added does not, and the omission is silent because a finding
+# that fails to lower confidence looks exactly like a finding about a
+# household rather than about an extraction.
+_DISPUTES_EXTRACTION = frozenset({
+    # The certification's own totals versus what was extracted
+    "TIC_TOTAL_MISMATCH",
+    "TIC_TOTAL_MINOR_DIFF",
+    "CERT_SUMMARY_INCOME_MISMATCH",
+    "CERT_AMOUNT_UNACCOUNTED",
+    "HH_SIZE_MISMATCH",
+    # Calculations that disagree with each other
+    "INCOME_METHOD_OUTLIER",
+    "INCOME_METHODS_DISAGREE",
+    # A record attributed to someone the roster does not contain
+    "INCOME_MEMBER_NOT_IN_ROSTER",
+    "PAYSTUB_MEMBER_NOT_IN_ROSTER",
+    "ASSET_OWNER_NOT_IN_ROSTER",
+    # The same thing read more than once
+    "DUPLICATE_INCOME_RECORD",
+    "NEAR_DUPLICATE_INCOME",
+    "DUPLICATE_EMPLOYER",
+    "DUPLICATE_MEMBER",
+    "POSSIBLE_DUPLICATE_MEMBER_DOB",
+    "POSSIBLE_DUPLICATE_MEMBER_SSN",
+    # A value that cannot be what the record says it is
+    "PAYSTUB_AMOUNT_SUSPECT",
+    "SSA_AS_PAYSTUB_AND_VOI",
+})
+
+
+def disputes_extraction(code: str) -> bool:
+    """Whether a finding code reports the extraction contradicting the source."""
+    return code in _DISPUTES_EXTRACTION
+
 
 def slug(value: str | None) -> str:
     """Normalize a name into a stable key fragment.
@@ -106,6 +153,7 @@ def make_finding(
         resolution_type=resolution_type,
         confidence=confidence,
         pages=pages or [],
+        disputes_extraction=disputes_extraction(code),
         finding_key=build_finding_key(code, ref),
     )
 
