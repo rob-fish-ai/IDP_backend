@@ -84,6 +84,8 @@ _DISPUTES_EXTRACTION = frozenset({
     # A value that cannot be what the record says it is
     "PAYSTUB_AMOUNT_SUSPECT",
     "SSA_AS_PAYSTUB_AND_VOI",
+    # An amount the packet does not contain anywhere the audit may read
+    "INCOME_AMOUNT_NOT_IN_SOURCE",
 })
 
 

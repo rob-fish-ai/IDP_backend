@@ -19,6 +19,7 @@ from app.schemas.extraction import (
 from app.services.bug_detector import detect_known_bugs
 from app.services.completeness import check_completeness
 from app.services.doc_taxonomy import is_current_certification_form
+from app.services.findings import ASSIGN_INTERNAL, CATEGORY_INCOME, RESOLVE_PRESENCE, make_finding
 from app.services.findings import dedupe as dedupe_findings
 from app.services.findings import records as finding_records
 from app.services.findings import text_of
@@ -606,6 +607,7 @@ def run_extraction_pipeline(
         ("certification", "isSigned"),         # signature_validator
     }
     score_summary = build_score_summary(score_cards)
+    findings.extend(_unverifiable_income_amounts(score_cards))
     for card in score_cards:
         for fs in card.flagged_fields:
             if (card.record_type, fs.field_name) in _BUSINESS_RULE_COVERED:
@@ -673,6 +675,71 @@ def run_extraction_pipeline(
         field_scores=score_summary,
         page_ocr=page_ocr,
     )
+
+
+# The fields an income record can carry its amount in. One of them has to
+# hold a figure or the record says nothing about how much the household earns.
+_INCOME_AMOUNT_FIELDS = ("selfDeclaredAmount", "rateOfPay", "ytdAmount")
+
+
+def _unverifiable_income_amounts(score_cards: list) -> list:
+    """Report income amounts that appear nowhere the engine is allowed to read.
+
+    An income record whose amount cannot be found in any non-ignored document
+    is not a low-confidence field — it is a household income figure resting on
+    nothing in the file. That distinction is invisible in the per-field score
+    line, which reads like every other "verify manually" nag.
+
+    Seen on a real packet: a Social Security benefit of $1,810.00/month, the
+    household's only income, occurring exactly once in thirty-two pages — on
+    the Income Calculation Worksheet, which is excluded by design because it
+    is management's own arithmetic rather than evidence. Either the model
+    derived the figure from the annual total and presented it as extracted, or
+    it read a page it should not have. Both are worth a reviewer's attention
+    and neither is apparent from a yellow field.
+    """
+    out: list = []
+    for card in score_cards:
+        if card.record_type != "income":
+            continue
+        for fs in card.fields:
+            if fs.field_name not in _INCOME_AMOUNT_FIELDS or not fs.value:
+                continue
+            source = next(
+                (st for st in fs.stages if st.stage == "source_verification"),
+                None,
+            )
+            # Only a genuine miss counts. A value found elsewhere in the
+            # packet has been corroborated, just not by this record's own
+            # documents, and that is already reported as its own field score.
+            if source is None or source.score > 0.5:
+                continue
+            # The card's label is "member — source"; split it back into the
+            # parts the subject reference is keyed on. Passing the joined
+            # label as one subject produces a key that matches neither half,
+            # so the finding would never reach the record it concerns.
+            member, _, source = (card.record_label or "").partition("—")
+            out.append(make_finding(
+                "INCOME_AMOUNT_NOT_IN_SOURCE",
+                f"Income amount for '{card.record_label or 'Unknown'}' "
+                f"({fs.field_name} = {fs.value}) appears in no document the "
+                f"audit reads — it cannot be corroborated against the file "
+                f"(Section 9)",
+                label="Income amount has no corroboration in the packet",
+                category=CATEGORY_INCOME,
+                subject_type="income_record",
+                subject_ref={
+                    "member_name": member.strip(),
+                    "source_name": source.strip(),
+                },
+                assignment=ASSIGN_INTERNAL,
+                correction_required=(
+                    "Obtain third-party verification of this amount, or "
+                    "confirm which document in the file states it"
+                ),
+                resolution_type=RESOLVE_PRESENCE,
+            ))
+    return out
 
 
 def _link_questionnaire_to_income(

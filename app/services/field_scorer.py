@@ -265,6 +265,17 @@ def score_source_verification(
             "ocr_flag": worst_flag,
         }
 
+    # Everything the packet contains, regardless of which record type the
+    # document maps to. The map above has drifted from the classifier's
+    # taxonomy — most of its labels are absent from it — so a value can be
+    # printed plainly in the packet and still be unfindable to the record
+    # that needs it. A resident's date of birth sat on a Tenant Release and
+    # Consent Form, a label no record type claims, and was reported to the
+    # reviewer as "not found in source text" while being correct.
+    packet_text = " ".join(
+        g.combined_text for g in document_groups if g.category != "ignore"
+    ).lower()
+
     # Fields that are authoritatively provided by the user (via API param /
     # frontend selector), NOT extracted from OCR. Source-verifying them
     # against OCR text is meaningless and produces false YELLOWs.
@@ -311,6 +322,15 @@ def score_source_verification(
                 # the value was successfully extracted from that page.
                 score = 1.0
                 reason = "Verified in source"
+            elif _value_in_source(fs.value, packet_text):
+                # Present in the packet, but not in the documents this record
+                # was extracted from. That rules out the model having invented
+                # it, which is what this stage exists to detect, so it is not
+                # scored as a miss. It is still worth separating from a clean
+                # verification: a value corroborated only by an unrelated
+                # document may belong to a different record.
+                score = 0.85
+                reason = "Found elsewhere in the packet, not in this record's documents"
             elif ocr_good:
                 score = 0.50
                 reason = "Not found in source text — verify manually"

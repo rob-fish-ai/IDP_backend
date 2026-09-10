@@ -8,7 +8,14 @@ from app.schemas.extraction import (
     CertificationInfo,
     DocumentGroup,
     DocumentInventory,
+    Finding,
     HouseholdDemographics,
+)
+from app.services.findings import (
+    ASSIGN_INTERNAL,
+    CATEGORY_FILE_REVIEW,
+    RESOLVE_PRESENCE,
+    make_finding,
 )
 
 logger = logging.getLogger(__name__)
@@ -21,12 +28,15 @@ def validate_signatures(
     certification_info: CertificationInfo | None,
     document_groups: list[DocumentGroup],
     ctx: PipelineContext,
-) -> list[str]:
+) -> list:
     """Check signature requirements for all forms per Section 11.
 
-    Returns a list of compliance finding strings.
+    Returns a mixed list: the signature/date agreement check emits structured
+    Findings, the rest of this module still emits plain strings pending its
+    migration. Both forms are handled by findings.render / findings.records.
     """
-    findings: list[str] = []
+    findings: list = []
+    findings.extend(_check_signature_date_agreement(certification_info))
     adult_count = _count_adults(household, certification_info)
     member_count = len(household.houseHold) if household else 0
 
@@ -261,3 +271,67 @@ def _parse_date(value: str | None) -> date | None:
         return datetime.strptime(value.strip(), "%Y-%m-%d").date()
     except ValueError:
         return None
+
+
+def _check_signature_date_agreement(
+    certification_info: CertificationInfo | None,
+) -> list[Finding]:
+    """The signature verdict and its date have to describe the same document.
+
+    OCR cannot see handwriting, so the verdict comes from a vision check while
+    the date is read as text — two different reads that can disagree, and
+    nothing was comparing them.
+
+    Both directions have been seen on real packets. One certification came
+    back isSigned=No carrying signatureDate 2026-08-12, a date printed on the
+    applicant certification, the move-in application and the VAWA
+    acknowledgement filed beside it — a date lifted off a neighbouring
+    document and attached to a form whose signature block is blank. Another
+    came back isSigned=Yes with no date at all.
+
+    Neither is a statement about the household. Both say the engine's two
+    reads of the same signature block do not agree, and a reviewer deciding
+    whether to demand a resubmission needs to know that before acting on
+    either value.
+    """
+    if certification_info is None:
+        return []
+
+    signed = (certification_info.isSigned or "").strip().lower()
+    signed_date = (certification_info.signatureDate or "").strip()
+
+    if signed == "no" and signed_date:
+        return [make_finding(
+            "SIGNATURE_VERDICT_CONFLICTS_WITH_DATE",
+            f"Certification is recorded as NOT signed but carries a signature "
+            f"date of {signed_date} — the date may have been read from another "
+            f"document in the packet. Confirm against the certification's own "
+            f"signature block before requiring a resubmission (Section 11)",
+            label="Unsigned certification carries a signature date",
+            category=CATEGORY_FILE_REVIEW,
+            assignment=ASSIGN_INTERNAL,
+            correction_required=(
+                "Check the certification's signature block directly and correct "
+                "whichever of the two readings is wrong"
+            ),
+            resolution_type=RESOLVE_PRESENCE,
+        )]
+
+    if signed == "yes" and not signed_date:
+        return [make_finding(
+            "SIGNATURE_DATE_MISSING",
+            "Certification is recorded as signed but no signature date was "
+            "found — a certification must be both signed AND dated, and an "
+            "undated signature cannot be placed in the certification period "
+            "(Section 11)",
+            label="Signed certification with no date",
+            category=CATEGORY_FILE_REVIEW,
+            assignment=ASSIGN_INTERNAL,
+            correction_required=(
+                "Read the date beside the signature, or obtain a dated "
+                "certification if the signature is genuinely undated"
+            ),
+            resolution_type=RESOLVE_PRESENCE,
+        )]
+
+    return []
