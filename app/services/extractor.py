@@ -1648,7 +1648,10 @@ def _reconcile_income(vi_entries: list[dict], declared: list[dict], certificatio
             "type_of_VOI": "Self-Declaration",
             "sourcePages": [d["page"]] if d.get("page") else [],
             "evidence": {"selfDeclaredAmount": d["quote"]} if d.get("quote") else {},
-            "verificationStatus": "declared_only",
+            # On a self-certification the household's statement is the
+            # verification by design; elsewhere it is a declaration nobody
+            # has verified.
+            "verificationStatus": "self_certified" if certification_type == "AR-SC" else "declared_only",
             "declaredAnnualAmount": f"{annual_d:.2f}" if annual_d is not None else None,
             "declaredSource": d.get("documentType"),
         })

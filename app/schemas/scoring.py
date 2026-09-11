@@ -76,6 +76,10 @@ class StageScore(BaseModel):
     stage: str                          # "extraction", "cross_doc", "business_rule"
     score: float = Field(ge=0.0, le=1.0)
     reason: Optional[str] = None        # human-readable explanation
+    # A stage may cap the field's composite regardless of the other stages:
+    # a value found only on the certification form, or matched weakly, can
+    # score well on shape and still must not read as green.
+    ceiling: Optional[float] = None
 
 
 class FieldScore(BaseModel):
@@ -139,6 +143,9 @@ class FieldScore(BaseModel):
         )
         if not verified:
             self.composite = min(self.composite, UNVERIFIED_CEILING)
+        for s in self.stages:
+            if s.ceiling is not None:
+                self.composite = min(self.composite, s.ceiling)
 
         self.flag = compute_flag(self.composite)
 
@@ -162,6 +169,11 @@ class RecordScoreCard(BaseModel):
     record_type: str                    # "income", "asset", "household_member", "certification"
     record_label: Optional[str] = None
     fields: list[FieldScore] = []
+    # Provenance carried from the record: the packet pages it was read from
+    # and the reconciliation verdict (verified / declared_only / ...). Source
+    # verification checks a value against these pages first.
+    source_pages: list[int] = []
+    verification_status: Optional[str] = None
     composite: float = Field(default=0.0, ge=0.0, le=1.0)
     flag: ScoreFlag = ScoreFlag.RED
 
@@ -173,6 +185,12 @@ class RecordScoreCard(BaseModel):
             self.flag = ScoreFlag.GREEN if self.fields else ScoreFlag.RED
             return
         self.composite = sum(f.composite for f in scored) / len(scored)
+        # A record nothing third-party verifies — the household's own
+        # declaration kept because no source document carries it — cannot
+        # be green as a whole, however well its picklist fields verify
+        # against the form it was declared on.
+        if self.verification_status == "declared_only":
+            self.composite = min(self.composite, UNVERIFIED_CEILING)
         self.flag = compute_flag(self.composite)
 
     @property
@@ -229,3 +247,14 @@ class ExtractionScoreSummary(BaseModel):
             worst = max(_FLAG_SEVERITY[r.flag] for r in disputed)
             if worst > _FLAG_SEVERITY[self.overall_flag]:
                 self.overall_flag = _SEVERITY_FLAG[worst]
+
+        # Income that only the household declares is income nobody verified.
+        # A packet whose income records are all declared-only can average
+        # green on its identity and certification fields while the audit's
+        # central question — is the income what the file says — is open.
+        # (On a self-certification the same records carry status
+        # "self_certified" and do not bound the flag.)
+        if any(r.record_type == "income" and r.verification_status == "declared_only"
+               for r in self.records):
+            if _FLAG_SEVERITY[ScoreFlag.YELLOW] > _FLAG_SEVERITY[self.overall_flag]:
+                self.overall_flag = ScoreFlag.YELLOW

@@ -21,12 +21,14 @@ import re
 
 from app.schemas.extraction import Finding
 from app.schemas.scoring import (
+    UNVERIFIED_CEILING,
     ExtractionScoreSummary,
     FieldScore,
     RecordScoreCard,
     ScoreFlag,
     StageScore,
 )
+from app.services.doc_taxonomy import is_current_certification_form, is_previous_certification
 from app.services.findings import slug
 # The scorer's bounds and the annualizer's arithmetic have to agree about
 # how long a pay period is, so both read the same multiplier table.
@@ -168,7 +170,10 @@ def score_pydantic_records(
                            "ytdAmount", "hireDate"):
                 val = getattr(vi, field, None)
                 scorer.score_field(field, str(val) if val else None)
-            cards.append(scorer.build())
+            card = scorer.build()
+            card.source_pages = list(getattr(vi, "sourcePages", None) or [])
+            card.verification_status = getattr(vi, "verificationStatus", None)
+            cards.append(card)
 
     # Assets
     # Include the last 4 of the account number in the label so two distinct
@@ -196,7 +201,10 @@ def score_pydantic_records(
             ):
                 val = getattr(a, field, None)
                 scorer.score_field(field, str(val) if val else None)
-            cards.append(scorer.build())
+            card = scorer.build()
+            card.source_pages = list(getattr(a, "sourcePages", None) or [])
+            card.verification_status = getattr(a, "verificationStatus", None)
+            cards.append(card)
 
     return cards
 
@@ -210,143 +218,310 @@ def score_source_verification(
     document_groups: list,
     ocr_quality: dict[int, dict],
 ) -> None:
-    """Check if extracted values actually appear in the source OCR text.
+    """Check whether extracted values appear in the pages they were read from.
 
-    Combines two signals:
-    - Value-in-text: does the extracted value exist in the OCR text?
-    - OCR quality: only matters when the value is NOT found (to distinguish
-      "LLM hallucinated" from "OCR couldn't read that region").
+    Tiers, in order of what a hit means:
+      1.00  on the record's own pages — the value is what its document says
+      0.85  on those pages, but the record is the household's own declaration
+            (declared_only): nothing third-party carries it   [capped yellow]
+      0.85  short number found without its field label nearby  [capped yellow]
+      0.85  income/asset value found only on the certification form
+            — copied from what the household declared          [capped yellow]
+      0.70  found elsewhere in the packet's evidence documents [capped yellow]
+      0.50  not found; the record's pages read cleanly
+      0.30  not found; the record's pages read poorly
 
-    | Value Found | OCR Quality | Score | Reason                            |
-    |-------------|-------------|-------|-----------------------------------|
-    | yes         | any         | 1.00  | Verified in source                |
-    | no          | green       | 0.50  | Not found — possible LLM error    |
-    | no          | yellow/red  | 0.30  | Not found + poor OCR — unreliable |
-
-    A YELLOW OCR page flag doesn't downgrade a found-in-source value: if the
-    value was literally present in the text, the OCR was good enough for that
-    field. This avoids 7+ noise findings per file.
+    Before this, one text pool per record type was searched with a bare
+    substring: "953.00" verified against a BNC reference number, "82.05"
+    against "1,082.05", "58.00" against the income limit "58,200", and a
+    figure copied from the certification scored the same 1.0 as one read
+    from a benefit letter. The pools were literal label lists that had
+    drifted from the taxonomy, and the fallback pool was mostly compliance
+    paperwork.
     """
     if not document_groups:
         return
 
-    # Build combined source text per document group type
-    # Map record types to the doc types they were extracted from
-    _RECORD_DOC_MAP = {
-        "household_member": {"HUD 50059", "Tenant Income Certification (TIC)", "HUD 3560 Form",
-                             "HUD Model Lease", "Application / Housing Questionnaire"},
-        "certification": {"HUD 50059", "Tenant Income Certification (TIC)", "HUD 3560 Form",
-                          "HUD Model Lease"},
-        "income": {"Verification of Income (VOI)", "Paystub", "SSA Benefit Letter",
-                    "Work Number / Equifax Report", "Tenant Income Certification (TIC)",
-                    "HUD 50059", "Application / Housing Questionnaire"},
-        "asset": {"Verification of Assets (VOA)", "Bank Statement", "Life Insurance Policy",
-                   "Asset Self-Certification", "Real Estate Verification",
-                   "Tenant Income Certification (TIC)", "HUD 50059",
-                   "Application / Housing Questionnaire"},
-    }
+    # Per-page text, from the OCR quality map (which carries the text the
+    # extractor consumed) with the groups' page-marked text as fallback.
+    page_text: dict[int, str] = {}
+    for pn, q in ocr_quality.items():
+        t = q.get("text") if isinstance(q, dict) else None
+        if t:
+            page_text[pn] = t.lower()
+    for g in document_groups:
+        for pn, t in _split_group_pages(g).items():
+            page_text.setdefault(pn, t.lower())
+    page_flag = {pn: (q.get("flag") if isinstance(q, dict) else None) or "green" for pn, q in ocr_quality.items()}
 
-    # Build source text + worst OCR quality per record type
-    source_data: dict[str, dict] = {}  # record_type → {text, worst_flag}
-    for record_type, doc_types in _RECORD_DOC_MAP.items():
-        texts = []
-        worst_flag = "green"
-        for g in document_groups:
-            if g.category == "ignore":
-                continue
-            if g.document_type in doc_types:
-                texts.append(g.combined_text)
-                for pn in g.pages:
-                    pq = ocr_quality.get(pn, {})
-                    page_flag = pq.get("flag", "green")
-                    if page_flag == "red" or (page_flag == "yellow" and worst_flag == "green"):
-                        worst_flag = page_flag
-
-        source_data[record_type] = {
-            "text": " ".join(texts).lower(),
-            "ocr_flag": worst_flag,
-        }
-
-    # Everything the packet contains, regardless of which record type the
-    # document maps to. The map above has drifted from the classifier's
-    # taxonomy — most of its labels are absent from it — so a value can be
-    # printed plainly in the packet and still be unfindable to the record
-    # that needs it. A resident's date of birth sat on a Tenant Release and
-    # Consent Form, a label no record type claims, and was reported to the
-    # reviewer as "not found in source text" while being correct.
-    packet_text = " ".join(
-        g.combined_text for g in document_groups if g.category != "ignore"
-    ).lower()
-
-    # Fields that are authoritatively provided by the user (via API param /
-    # frontend selector), NOT extracted from OCR. Source-verifying them
-    # against OCR text is meaningless and produces false YELLOWs.
-    _SKIP_SOURCE_VERIFY = {
-        ("certification", "certificationType"),
-    }
-
-    # Score each field on each card
-    for card in cards:
-        sd = source_data.get(card.record_type)
-        if not sd or not sd["text"]:
+    classes: dict[int, str] = {}
+    for g in document_groups:
+        if g.category == "ignore":
             continue
+        cls = _evidence_class(g.document_type, g.category)
+        for pn in g.pages:
+            classes[pn] = cls
+    cert_pages = sorted(pn for pn, c in classes.items() if c == "cert")
+    household_pages = sorted(pn for pn, c in classes.items() if c in ("cert", "household"))
+    evidence_pages = sorted(pn for pn, c in classes.items() if c != "compliance")
+    class_pages = {
+        "certification": cert_pages,
+        "household_member": household_pages,
+        "income": sorted(pn for pn, c in classes.items() if c in ("income", "cert", "household")),
+        "asset": sorted(pn for pn, c in classes.items() if c in ("asset", "cert", "household")),
+    }
 
-        source_text = sd["text"]
-        ocr_good = sd["ocr_flag"] == "green"
+    _SKIP_SOURCE_VERIFY = {("certification", "certificationType")}
+
+    def _texts(pages: list[int]) -> list[str]:
+        return [page_text.get(pn, "") for pn in pages]
+
+    for card in cards:
+        own = [pn for pn in (card.source_pages or []) if pn in page_text] or class_pages.get(card.record_type, [])
+        if not own and not evidence_pages:
+            continue
+        own_flag = "green"
+        for pn in own:
+            f = page_flag.get(pn, "green")
+            if f == "red" or (f == "yellow" and own_flag == "green"):
+                own_flag = f
+        declared_only = card.verification_status == "declared_only"
+        own_texts = _texts(own)
 
         for fs in card.fields:
             if fs.value is None:
                 continue
-
-            # Caller-provided fields are not compared against the OCR text:
-            # the caller states them (a frontend selector, or Cartograph's
-            # notification), and forms spell the value out in words the code
-            # does not contain — a TIC says "Move-in/Initial", not "MI" — so
-            # comparing would fail on almost every packet.
-            #
-            # But skipping the check is not the same as passing it. This used
-            # to append a 1.0 "source verification skipped", which asserted
-            # the strongest possible confidence in the one value nothing had
-            # examined. On a real packet Cartograph sent cert_type "annual"
-            # for a certification the document marks Move-in in three places;
-            # the engine adopted it, scored it green, and applied the wrong
-            # rule set. Appending nothing instead leaves the field
-            # unconfirmed, which is what it is.
             if (card.record_type, fs.field_name) in _SKIP_SOURCE_VERIFY:
                 continue
+            if fs.field_name in _VOCAB_SYNONYMS:
+                # A picklist value is the engine's word for what the form
+                # says; it is verified through its synonyms and otherwise left
+                # unconfirmed rather than scored as an OCR failure.
+                if _vocab_in(fs.field_name, fs.value, own_texts):
+                    fs.stages.append(StageScore(stage="source_verification", score=1.0,
+                                                reason="Verified in source document"))
+                    fs.recompute()
+                continue
 
-            # Check if value appears in source text
-            found = _value_in_source(fs.value, source_text)
-
-            if found:
-                # Value literally present in the OCR text — trust it.
-                # Page-level OCR flags (watermark, yellow) don't matter if
-                # the value was successfully extracted from that page.
-                score = 1.0
-                reason = "Verified in source"
-            elif _value_in_source(fs.value, packet_text):
-                # Present in the packet, but not in the documents this record
-                # was extracted from. That rules out the model having invented
-                # it, which is what this stage exists to detect, so it is not
-                # scored as a miss. It is still worth separating from a clean
-                # verification: a value corroborated only by an unrelated
-                # document may belong to a different record.
-                score = 0.85
-                reason = "Found elsewhere in the packet, not in this record's documents"
-            elif ocr_good:
-                score = 0.50
-                reason = "Not found in source text — verify manually"
+            hit = _find_value(fs.value, fs.field_name, own_texts)
+            if hit == "strong" and declared_only and card.record_type in ("income", "asset"):
+                stage = StageScore(stage="source_verification", score=0.85, ceiling=UNVERIFIED_CEILING,
+                                   reason="Declared by the household; no verification document carries it")
+            elif hit == "strong":
+                stage = StageScore(stage="source_verification", score=1.0, reason="Verified in source document")
+            elif hit == "weak":
+                stage = StageScore(stage="source_verification", score=0.85, ceiling=UNVERIFIED_CEILING,
+                                   reason="Short value found without its field label nearby — weak match")
+            elif card.record_type in ("income", "asset") and _find_value(fs.value, fs.field_name, _texts(cert_pages)) == "strong":
+                stage = StageScore(stage="source_verification", score=0.85, ceiling=UNVERIFIED_CEILING,
+                                   reason="Found only on the certification form, not in this record's documents")
+            elif _find_value(fs.value, fs.field_name, _texts(evidence_pages)) is not None:
+                stage = StageScore(stage="source_verification", score=0.70, ceiling=UNVERIFIED_CEILING,
+                                   reason="Found elsewhere in the packet, not in this record's documents")
+            elif own_flag == "green":
+                stage = StageScore(stage="source_verification", score=0.50,
+                                   reason="Not found in source text — verify manually")
             else:
-                score = 0.30
-                reason = f"Not found + poor OCR ({sd['ocr_flag']}) — unreliable"
-
-            fs.stages.append(StageScore(
-                stage="source_verification", score=score, reason=reason,
-            ))
+                stage = StageScore(stage="source_verification", score=0.30,
+                                   reason=f"Not found + poor OCR ({own_flag}) — unreliable")
+            fs.stages.append(stage)
             fs.recompute()
 
     for card in cards:
         card.recompute()
+
+
+_PAGE_MARK_RE = re.compile(r"--- Page (\d+) ---\n?")
+
+
+def _split_group_pages(group) -> dict[int, str]:
+    parts = _PAGE_MARK_RE.split(group.combined_text or "")
+    out: dict[int, str] = {}
+    for i in range(1, len(parts) - 1, 2):
+        try:
+            out[int(parts[i])] = parts[i + 1]
+        except ValueError:
+            continue
+    if not out and group.pages:
+        out[group.pages[0]] = group.combined_text or ""
+    return out
+
+
+_INCOME_EVIDENCE_WORDS = ("income", "paystub", "pay stub", "benefit", "pension", "tanf",
+                          "child support", "work number", "equifax", "unemployment",
+                          "self-employment", "gift", "disability", "zero income")
+_ASSET_EVIDENCE_WORDS = ("asset", "bank", "investment", "real estate", "life insurance",
+                         "direct express", "debit card", "disposal", "verification of deposit")
+_HOUSEHOLD_EVIDENCE_WORDS = ("questionnaire", "application", "identity", "summary sheet",
+                             "student status")
+
+
+def _evidence_class(document_type: str | None, category: str | None) -> str:
+    """Which kind of evidence a document is, derived from its taxonomy label
+    rather than from a literal list that has to be kept in sync by hand."""
+    label = (document_type or "").lower()
+    if is_previous_certification(document_type):
+        return "other"
+    if is_current_certification_form(document_type):
+        return "cert"
+    if category == "compliance":
+        return "compliance"
+    if any(w in label for w in _HOUSEHOLD_EVIDENCE_WORDS):
+        return "household"
+    if any(w in label for w in _ASSET_EVIDENCE_WORDS):
+        return "asset"
+    if any(w in label for w in _INCOME_EVIDENCE_WORDS):
+        return "income"
+    return "other"
+
+
+# Words a field's label uses on the forms; a short number must sit within
+# _LABEL_REACH characters after one of them to count as a strong match.
+_FIELD_LABEL_WORDS = {
+    "tenantRent": ("tenant rent", "rent", "ttp", "tenant payment"),
+    "utilityAllowance": ("utility", "allowance"),
+    "grossRent": ("gross rent", "rent"),
+    "householdIncome": ("income",),
+    "householdSize": ("household", "members", "family", "size"),
+    "numberOfBedrooms": ("bedroom", "br", "size"),
+    "currentBalance": ("balance", "value", "amount", "equity"),
+    "averageSixMonthBalance": ("average", "balance"),
+    "selfDeclaredAmount": ("amount", "value", "balance", "income", "cash", "support", "benefit"),
+    "rateOfPay": ("rate", "pay", "benefit", "amount", "salary", "wage", "per", "$"),
+    "hoursPerPayPeriod": ("hours", "hrs"),
+    "incomeAmount": ("income", "interest", "dividend", "yield"),
+    "ytdAmount": ("ytd", "year to date", "year-to-date", "total"),
+}
+_DEFAULT_LABEL_WORDS = ("$", "amount", "total", "income", "rent", "balance", "value")
+_LABEL_REACH = 60
+
+
+def _numeric_forms(value: str) -> list[str]:
+    cleaned = value.replace("$", "").replace(",", "").strip()
+    forms = [cleaned]
+    try:
+        num = float(cleaned)
+    except ValueError:
+        return forms
+    if num == int(num):
+        forms += [str(int(num)), f"{int(num):,}", f"{int(num):,}.00", f"{int(num)}.00"]
+    forms += [f"{num:,.2f}", f"{num:.2f}"]
+    no_cents = re.sub(r"\.00$", "", cleaned)
+    if no_cents != cleaned:
+        forms.append(no_cents)
+    return list(dict.fromkeys(f for f in forms if f))
+
+
+def _find_number(value: str, text: str) -> int | None:
+    """Position of the value as a whole number token in text, else None.
+
+    Anchored on both sides: not preceded by a digit or a decimal point, and
+    not followed by more digits or by a separator that continues the number.
+    "953.00" no longer matches inside "26TC252G95301", "82.05" inside
+    "1,082.05", "58.00" inside "58,200", "116.00" inside "HUD-116".
+    """
+    for form in _numeric_forms(value):
+        m = re.search(r"(?<![\d.,])(?<![a-z0-9]-)" + re.escape(form) + r"(?![\d]|[.,]\d)", text)
+        if m:
+            return m.start()
+    return None
+
+
+def _is_numeric_value(value: str) -> bool:
+    return re.fullmatch(r"\$?\s*-?\d[\d,]*(?:\.\d+)?", value.strip()) is not None
+
+
+def _find_value(value: str, field_name: str, texts: list[str]) -> str | None:
+    """'strong', 'weak' or None: whether the value is on any of the texts.
+
+    Numbers are matched as whole tokens; a number with three or fewer
+    significant digits must additionally sit near its field's label, or
+    the hit is weak — a bare "58" is a form field number as often as a
+    utility allowance.
+    """
+    val = value.strip().lower()
+    if not val:
+        return None
+    if _is_numeric_value(val):
+        digits = re.sub(r"\D", "", re.sub(r"\.00$", "", val.replace(",", "")))
+        short = len(digits.lstrip("0")) <= 3
+        labels = _FIELD_LABEL_WORDS.get(field_name, _DEFAULT_LABEL_WORDS)
+        best = None
+        for text in texts:
+            pos = _find_number(val, text)
+            if pos is None:
+                continue
+            if not short:
+                return "strong"
+            window = text[max(0, pos - _LABEL_REACH):pos]
+            if any(w in window for w in labels):
+                return "strong"
+            best = "weak"
+        return best
+    for text in texts:
+        if _value_in_source(val, text):
+            return "strong"
+    return None
+
+
+# Picklist fields: the engine's word for what the form says. Verified by
+# synonym on the record's own pages; never scored as poor OCR when absent.
+_VOCAB_SYNONYMS: dict[str, dict[str, list[str]]] = {
+    "frequencyOfPay": {
+        "bi-weekly": [r"bi[\s-]?weekly", r"every (?:two|2) weeks", r"\bbiwkly\b"],
+        "weekly": [r"\bweekly\b", r"per week", r"/wk\b"],
+        "monthly": [r"\bmonthly\b", r"per month", r"/mo\b", r"each month"],
+        "semi-monthly": [r"semi[\s-]?monthly", r"twice a month", r"1st and 15th"],
+        "annually": [r"\bannual", r"\byearly\b", r"per year", r"/yr\b"],
+        "hourly": [r"\bhourly\b", r"per hour", r"/hr\b"],
+    },
+    "employmentStatus": {
+        "active": [r"presently employed[:\s]*(?:yes|x)", r"currently employed", r"\bactive\b", r"still employed", r"employed[:\s]*yes"],
+        "terminated": [r"terminat", r"no longer employed", r"separat", r"last day", r"end(?:ed)? date"],
+        "on leave": [r"\bleave\b"],
+    },
+    "incomeType": {
+        "social security": [r"social security", r"\bssa\b", r"retirement benefit", r"\bss\b", r"soc\.? sec"],
+        "supplemental security income": [r"supplemental security", r"\bssi\b"],
+        "social security disability": [r"disability", r"\bssdi\b"],
+        "child support": [r"child support"],
+        "pension": [r"pension", r"annuity", r"retirement"],
+        "non-federal wage": [r"\bwages?\b", r"salary", r"gross pay", r"rate of pay", r"employ", r"earnings"],
+        "federal wage": [r"federal", r"\bwages?\b"],
+        "temporary assistance": [r"\btanf\b", r"temporary assistance", r"cash aid", r"public assistance", r"calworks"],
+        "self-employment": [r"self[\s-]?employ", r"business", r"schedule c"],
+        "zero income": [r"no income", r"zero income", r"\$0"],
+        "other income": [r"\bincome\b"],
+        "employment": [r"employ", r"\bwages?\b", r"gross pay"],
+    },
+    "accountType": {
+        "checking": [r"checking", r"\bchk\b", r"\bdda\b"],
+        "savings": [r"savings?\b", r"\bsav\b"],
+        "cash": [r"\bcash\b"],
+        "real estate": [r"real estate", r"property", r"parcel", r"tax roll", r"\bdeed\b", r"apprais", r"equity"],
+        "cd": [r"certificate of deposit", r"\bcd\b"],
+        "investment": [r"invest", r"brokerage", r"mutual fund", r"401", r"\bira\b", r"stock"],
+        "retirement": [r"retirement", r"401", r"\bira\b", r"pension"],
+        "life insurance": [r"life insurance", r"surrender value", r"cash value"],
+        "prepaid card": [r"prepaid", r"direct express", r"\bcard\b"],
+        "direct express": [r"direct express"],
+        "other": [r"\bother\b"],
+    },
+}
+
+
+def _vocab_in(field_name: str, value: str, texts: list[str]) -> bool:
+    val = value.strip().lower()
+    patterns = _VOCAB_SYNONYMS.get(field_name, {}).get(val, [])
+    patterns = patterns + [re.escape(val).replace(r"\ ", r"[\s-]?").replace(r"\-", r"[\s-]?")]
+    for text in texts:
+        for pat in patterns:
+            try:
+                if re.search(pat, text):
+                    return True
+            except re.error:
+                continue
+    return False
 
 
 # At or below this many characters, a substring hit is not evidence: short
@@ -384,19 +559,17 @@ def _value_in_source(value: str, source_text: str) -> bool:
     if len(val) <= _MIN_UNANCHORED_MATCH:
         return _whole_word_in(val, source_text)
 
+    # Numbers match as whole tokens only (see _find_number): a bare
+    # substring test verified "953.00" against a reference number and
+    # "82.05" against "1,082.05".
+    if _is_numeric_value(val):
+        return _find_number(val, source_text) is not None
+
     # Direct match
     if val in source_text:
         return True
 
-    # Monetary: try multiple formats
-    # "2479.00" → search for "2479", "2,479", "$2,479", "2479.00", "$2,479.00"
     cleaned = val.replace("$", "").replace(",", "").strip()
-    if cleaned and cleaned in source_text:
-        return True
-    # Also try without trailing .00
-    no_cents = re.sub(r"\.00$", "", cleaned)
-    if no_cents and no_cents != cleaned and no_cents in source_text:
-        return True
     # Try with comma formatting: "2479" → "2,479" or "46584" → "46,584"
     try:
         num = float(cleaned)
