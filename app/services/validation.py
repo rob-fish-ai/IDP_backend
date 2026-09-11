@@ -249,24 +249,8 @@ def validate_household(data: dict) -> dict:
         for h in heads[1:]:
             h["head"] = None
 
-    # DOB discrepancy detection: flag members with conflicting DOBs across documents
-    members = data.get("houseHold", [])
-    dob_by_name: dict[str, str] = {}
-    discrepancies = []
-    for member in members:
-        name_key = f"{(member.get('FirstName') or '').lower()} {(member.get('LastName') or '').lower()}".strip()
-        if not name_key:
-            continue
-        dob = member.get("DOB")
-        if dob and name_key in dob_by_name and dob_by_name[name_key] != dob:
-            discrepancies.append({
-                "name": f"{member.get('FirstName', '')} {member.get('LastName', '')}".strip(),
-                "dob_1": dob_by_name[name_key],
-                "dob_2": dob,
-            })
-        elif dob:
-            dob_by_name[name_key] = dob
-
+    # Conflicting identity values across documents are resolved and
+    # reported by app.services.identity, which sees every page.
     return data
 
 

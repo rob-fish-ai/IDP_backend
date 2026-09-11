@@ -26,6 +26,7 @@ from app.services.findings import (
     ASSIGN_CLIENT, ASSIGN_INTERNAL, CATEGORY_FILE_REVIEW, CATEGORY_INCOME,
     CATEGORY_MEMBER, CATEGORY_UNIT_RENT, RESOLVE_PRESENCE, make_finding, slug,
 )
+from app.services.identity import resolve_identities
 from app.services.findings import dedupe as dedupe_findings
 from app.services.findings import records as finding_records
 from app.services.findings import text_of
@@ -463,6 +464,19 @@ def run_extraction_pipeline(
         income.sourceIncome.verificationIncome = _resolve_duplicate_self_declarations(
             income.sourceIncome.verificationIncome
         )
+    # Step 4g: identity fields by document authority. The extractor picked
+    # whichever SSN or date of birth it read first; the certification's
+    # printed value now wins over a questionnaire's handwriting, and every
+    # disagreement between documents is a finding.
+    identity_findings: list = []
+    if household and household.houseHold:
+        try:
+            identity_findings = resolve_identities(
+                household, document_groups,
+                {pn: (q.get("text") or "") for pn, q in ocr_quality.items()},
+            )
+        except Exception:
+            logger.exception("Identity resolution failed — keeping extracted values")
     logger.info("Step 4f/6: Computing income calculations from the final income list")
     income_calculations = _compute_income_calculations(income, certification_info, ctx) if income else []
 
@@ -485,6 +499,7 @@ def run_extraction_pipeline(
     findings.extend(name_findings)
     findings.extend(required_field_findings)
     findings.extend(_reconciliation_findings(income, ctx))
+    findings.extend(identity_findings)
     if draft_watermark:
         findings.append(
             "Certification form is a watermarked DRAFT ('not a final "
@@ -1759,6 +1774,26 @@ def _deduplicate_household_members(household) -> list[str]:
 
         for dup_idx in scored[1:]:
             dup = members[dup_idx]
+            # A conflicting identity value on the copy is evidence, not
+            # noise: report it rather than dropping it with the copy.
+            for field in ("DOB", "socialSecurityNumber"):
+                a_val, b_val = getattr(primary, field, None), getattr(dup, field, None)
+                if a_val and b_val and a_val != b_val and not (
+                    field == "socialSecurityNumber" and a_val[-4:] == b_val[-4:]
+                ):
+                    findings.append(make_finding(
+                        "MEMBER_IDENTITY_CONFLICT",
+                        f"{primary.FirstName or ''} {primary.LastName or ''}: two extracted "
+                        f"records for this member disagree on {field} ({a_val} vs {b_val}); "
+                        f"the more complete record's value is kept (Section 4)",
+                        label=f"{field} differs between extracted copies of a member",
+                        category=CATEGORY_MEMBER,
+                        subject_type="household_member",
+                        subject_ref={"member_name": f"{primary.FirstName or ''} {primary.LastName or ''}".strip(), "field": field},
+                        assignment=ASSIGN_INTERNAL,
+                        correction_required=f"Confirm the member's {field} against the certification form",
+                        resolution_type=RESOLVE_PRESENCE,
+                    ))
             # Fill gaps in primary from duplicate
             for field in _MERGE_FIELDS:
                 if getattr(primary, field, None) is None and getattr(dup, field, None) is not None:

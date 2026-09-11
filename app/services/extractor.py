@@ -1942,7 +1942,8 @@ def extract_income(
         before = len(vis)
         vis = [
             vi for vi in vis
-            if _vi_has_amount(vi) or (vi.get("incomeType") or "").strip().lower() not in _FIXED_INCOME_TYPES
+            if _vi_has_amount(vi)
+            or (vi.get("incomeType") or "").strip().lower() not in _FIXED_INCOME_TYPES + ("zero income",)
         ]
         if len(vis) < before:
             logger.info("Income: '%s' pages %s: dropped %d fixed-benefit record(s) with no amount",

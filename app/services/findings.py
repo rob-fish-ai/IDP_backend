@@ -99,6 +99,8 @@ _DISPUTES_EXTRACTION = frozenset({
     # A document read as something it is not
     "CALC_WORKSHEET_AS_VOI",
     "FIXED_INCOME_PAYSTUB",
+    # Two documents state different identity values for one member
+    "MEMBER_IDENTITY_CONFLICT",
 })
 
 
