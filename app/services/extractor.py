@@ -603,6 +603,27 @@ def extract_certification_info(
     if certification_type:
         cert_info_dict["certificationType"] = certification_type
 
+    # A signature date belongs to the certification form itself. The cert
+    # request carries neighbouring forms too (applicant certifications,
+    # policies) and each has its own signature line; a date read from one
+    # of those attached to an undated TIC on 05754. When the packet has a
+    # current certification form, the date must be printed on its pages.
+    form_groups = [
+        g for g in groups
+        if g.category != "ignore" and is_current_certification_form(g.document_type)
+    ]
+    if form_groups:
+        form_text = strip_html("\n".join(g.combined_text or "" for g in form_groups))
+        form_pages = sorted(p for g in form_groups for p in g.pages)
+        for field in _FORM_DATE_FIELDS:
+            value = cert_info_dict.get(field)
+            if value and not _date_on_text(str(value), form_text):
+                logger.warning(
+                    "Cert info: %s=%s is not printed on the certification form pages %s — dropped",
+                    field, value, form_pages,
+                )
+                cert_info_dict[field] = None
+
     # Strip HTML/markup leakage from field values before schema validation.
     cert_info_dict = scrub_extracted_dict(cert_info_dict) or {}
 
@@ -611,6 +632,38 @@ def extract_certification_info(
         cert_info_dict.get("certificationType"),
     )
     return CertificationInfo.model_validate(cert_info_dict)
+
+
+# Date fields that must be printed on the certification form's own pages.
+_FORM_DATE_FIELDS = ("signatureDate",)
+_MONTH_NAMES = ("january", "february", "march", "april", "may", "june", "july", "august",
+                "september", "october", "november", "december")
+
+
+def _date_on_text(iso: str, text: str) -> bool:
+    """Whether an ISO date is printed on the text in any of the ways a form
+    prints dates: 08/12/2026, 8/12/26, 08-12-2026, 2026-08-12, August 12,
+    2026, 12 Aug 2026 — with the spaces OCR drops around separators."""
+    m = re.fullmatch(r"(\d{4})-(\d{2})-(\d{2})", iso.strip())
+    if not m:
+        return False
+    y, mo, d = m.group(1), int(m.group(2)), int(m.group(3))
+    yy = y[2:]
+    name = _MONTH_NAMES[mo - 1]
+    month_rx = rf"(?:{name}|{name[:3]}\.?)"
+    sep = r"\s*[/.\-]\s*"
+    year_rx = rf"(?:{y}|{yy})"
+    patterns = (
+        rf"(?<!\d){mo:02d}{sep}{d:02d}{sep}{year_rx}(?!\d)",
+        rf"(?<!\d){mo}{sep}{d}{sep}{year_rx}(?!\d)",
+        rf"(?<!\d){mo:02d}{sep}{d}{sep}{year_rx}(?!\d)",
+        rf"(?<!\d){mo}{sep}{d:02d}{sep}{year_rx}(?!\d)",
+        rf"(?<!\d){y}\s*-\s*{mo:02d}\s*-\s*{d:02d}(?!\d)",
+        rf"{month_rx}\s+{d}(?:st|nd|rd|th)?\s*,?\s+{y}",
+        rf"(?<!\d){d}\s*{month_rx}\s*,?\s*{y}",
+    )
+    low = text.lower()
+    return any(re.search(rx, low) for rx in patterns)
 
 
 # Fields considered critical for cert_info. If any of these come back null
@@ -1343,21 +1396,36 @@ def _document_amounts(group: DocumentGroup) -> set[float]:
 
 
 def _run_per_group(groups: list[DocumentGroup], fn, settings: Settings, label: str) -> list:
-    """Run fn(group) for every group, a few at a time; a failed group is
-    logged and skipped so one bad document never empties the category."""
+    """Run fn(group) for every group, a few at a time.
+
+    A document whose read fails fails the category, and with it the case,
+    as ExtractionUnavailableError (retryable). This used to log and skip
+    the document, which delivered the audit without it: on 05318 a
+    bank-statement read that came back as invalid JSON dropped both
+    checking accounts and the declared lines became "Other" claims.
+    """
     if not groups:
         return []
     from concurrent.futures import ThreadPoolExecutor
+    from app.core.exceptions import ExtractionUnavailableError
     results: list = []
     workers = max(1, min(4, len(groups), getattr(settings, "ocr_concurrency", 4) or 4))
 
     def _safe(g):
         try:
             return fn(g)
-        except Exception:
-            logger.exception("%s: extraction failed for '%s' pages %s — skipped",
+        except ExtractionUnavailableError as exc:
+            logger.error("%s: extraction failed for '%s' pages %s — %s",
+                         label, g.document_type, g.pages, exc)
+            raise ExtractionUnavailableError(
+                f"{label}: '{g.document_type}' pages {g.pages} could not be read — {exc}"
+            ) from exc
+        except Exception as exc:
+            logger.exception("%s: extraction failed for '%s' pages %s",
                              label, g.document_type, g.pages)
-            return None
+            raise ExtractionUnavailableError(
+                f"{label}: '{g.document_type}' pages {g.pages} failed — {type(exc).__name__}: {exc}"
+            ) from exc
 
     with ThreadPoolExecutor(max_workers=workers) as pool:
         for out in pool.map(_safe, groups):
@@ -1609,6 +1677,59 @@ def _declaration_read_is_complete(declared: list[dict], declared_total) -> bool:
     return abs(sum(known) - total) <= max(50.0, total * 0.10)
 
 
+def _drop_total_rows(declared: list[dict], label: str) -> list[dict]:
+    """Remove declared lines that are the sum of other lines on the same page.
+
+    A certification's asset or income table ends in a total, and a
+    questionnaire restates one; the model sometimes returns that row as a
+    line. Reconciled as a line it becomes a second record carrying the
+    whole table again ("Other 6,376.79" beside the accounts that sum to
+    it). A line equal to the sum of two or more other lines of its page is
+    the table's total, not a claim.
+    """
+    def _amt(d):
+        try:
+            return round(float(str(d.get("amount")).replace(",", "")), 2)
+        except (TypeError, ValueError):
+            return None
+
+    kept: list[dict] = []
+    for d in declared:
+        value = _amt(d)
+        others = [_amt(o) for o in declared if o is not d and o.get("page") == d.get("page")]
+        others = [o for o in others if o]
+        is_total = False
+        if value and len(others) >= 2:
+            # Any subset of two or more other lines summing to this one.
+            from itertools import combinations
+            for k in range(2, min(len(others), 6) + 1):
+                for c in combinations(others, k):
+                    total = round(sum(c), 2)
+                    # to the cent, or one misread digit apart (6,376.19 read
+                    # where the page prints 6,376.79)
+                    if abs(total - value) <= 0.011 or _one_digit_apart(f"{total:.2f}", f"{value:.2f}"):
+                        is_total = True
+                        break
+                if is_total:
+                    break
+        if is_total:
+            logger.info("%s: declared line %s on page %s is the sum of other lines — a total row, not a claim",
+                        label, d.get("amount"), d.get("page"))
+            d["matched"] = True
+            continue
+        kept.append(d)
+    return kept
+
+
+# Income the household receives as a unit, which the certification lists
+# under whichever member the preparer chose (the custodial parent, the head)
+# while the verifying statement names the payee. A declared line of such a
+# type that matches no record by member still describes the household's
+# one verified record of that type.
+_HOUSEHOLD_LEVEL_INCOME_TYPES = ("child support", "alimony", "temporary assistance", "tanf",
+                                 "public assistance", "general assistance")
+
+
 def _reconcile_income(vi_entries: list[dict], declared: list[dict], certification_type: str | None,
                       ps_entries: list[dict] | None = None, declared_total=None) -> None:
     """Annotate verified records with what the household declared for them;
@@ -1628,7 +1749,7 @@ def _reconcile_income(vi_entries: list[dict], declared: list[dict], certificatio
 
     stub_sources = _paystub_sources(ps_entries or [])
 
-    for d in declared:
+    for d in _drop_total_rows(declared, "Declared income"):
         if d.get("incomeType") == "Zero Income" and (d.get("amount") in (None, "0.00")):
             d["matched"] = True   # informational; nothing to reconcile
             continue
@@ -1650,6 +1771,22 @@ def _reconcile_income(vi_entries: list[dict], declared: list[dict], certificatio
                 or _close(_record_annual(vi), annual_d)
             )
         ]
+        if not candidates and (d.get("incomeType") or "").lower() in _HOUSEHOLD_LEVEL_INCOME_TYPES:
+            same_type = [
+                vi for vi in vi_entries
+                if vi.get("verificationStatus") != "declared_only"
+                and _same_income_type(vi.get("incomeType"), d.get("incomeType"))
+            ]
+            declared_member_has_one = any(
+                _same_member(vi.get("memberName"), d.get("memberName")) for vi in same_type
+            )
+            if len(same_type) == 1 and not declared_member_has_one:
+                logger.info(
+                    "Declared income: %s listed under %s matches the household's one verified %s "
+                    "record, which names %s — treated as the same income",
+                    d.get("amount"), d.get("memberName"), d.get("incomeType"), same_type[0].get("memberName"),
+                )
+                candidates = same_type
         if candidates:
             # prefer the candidate whose annual figure agrees, then the first
             candidates.sort(key=lambda vi: 0 if _close(_record_annual(vi), annual_d) else 1)
@@ -1867,6 +2004,25 @@ def _amounts_close(a, b) -> bool:
     return _one_digit_apart(f"{fa:.2f}", f"{fb:.2f}")
 
 
+def _amounts_equal(a, b) -> bool:
+    try:
+        return abs(float(str(a).replace(",", "")) - float(str(b).replace(",", ""))) < 0.005
+    except (TypeError, ValueError):
+        return False
+
+
+def _distinctive_amount(value) -> bool:
+    """A figure unlikely to be equal by coincidence: non-zero, and either
+    carrying cents or not a round multiple of fifty."""
+    try:
+        v = float(str(value).replace(",", ""))
+    except (TypeError, ValueError):
+        return False
+    if v <= 0:
+        return False
+    return round(v % 1, 2) not in (0.0, 1.0) or v % 50 != 0
+
+
 def _reconcile_assets(records: list[dict], declared: list[dict]) -> None:
     """Merge each declared asset into the verified record it describes, or
     keep it as a claim when nothing backs it.
@@ -1883,7 +2039,7 @@ def _reconcile_assets(records: list[dict], declared: list[dict]) -> None:
         if rec.get("verificationStatus") is None:
             rec["verificationStatus"] = "verified"
 
-    for d in declared:
+    for d in _drop_total_rows(declared, "Declared assets"):
         if d.get("kind") in ("no_assets", "disposal"):
             d["matched"] = True
             continue
@@ -1915,6 +2071,28 @@ def _reconcile_assets(records: list[dict], declared: list[dict]) -> None:
             ):
                 best = rec
                 break
+        if best is None and d.get("amount") is not None and _distinctive_amount(d["amount"]):
+            # A questionnaire lists the household's assets under whichever
+            # member filled it in; the statement names the account holder.
+            # A balance that matches a verified record of the same family
+            # (or an untyped line) to the cent is that account, not a
+            # second one — "Child Support Fund 82.05" under the daughter is
+            # the head's checking account ending 2788 with $82.05 in it.
+            for rec in records:
+                if rec.get("verificationStatus") == "declared_only":
+                    continue
+                r_value = rec.get("currentBalance") or rec.get("averageSixMonthBalance")
+                if not r_value or _digits_last4(d.get("accountNumber")):
+                    continue
+                same_family = _asset_family(rec.get("accountType")) == fam
+                if (same_family or fam in ("other", "")) and _amounts_equal(d["amount"], r_value):
+                    logger.info(
+                        "Declared assets: %s listed under %s equals %s's verified %s balance to the cent "
+                        "— treated as the same account", d["amount"], d.get("assetOwner"),
+                        rec.get("assetOwner"), rec.get("accountType") or "asset",
+                    )
+                    best = rec
+                    break
         if best is not None:
             d["matched"] = True
             if not best.get("selfDeclaredAmount") and d.get("amount") is not None:

@@ -266,8 +266,23 @@ def _parse_json(raw: str, label: str) -> dict:
     try:
         return json.loads(text)
     except json.JSONDecodeError as exc:
+        # A backslash the model copied from the page ("\(18.00", "\$") is
+        # not a JSON escape. Doubling every backslash that does not start a
+        # valid escape recovers the document verbatim; anything else is a
+        # real failure.
+        repaired = _INVALID_ESCAPE_RE.sub(r"\\\\", text)
+        if repaired != text:
+            try:
+                parsed = json.loads(repaired)
+                logger.warning("%s: repaired invalid backslash escapes in the model's JSON", label)
+                return parsed
+            except json.JSONDecodeError:
+                pass
         logger.error("%s: model returned invalid JSON (%s): %s", label, exc, text[:500])
         raise ValueError(f"{label}: invalid JSON — {exc}") from exc
+
+
+_INVALID_ESCAPE_RE = re.compile(r'\\(?!["\\/bfnrtu])')
 
 
 def call_llm_json(
