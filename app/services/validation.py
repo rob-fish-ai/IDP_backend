@@ -2,6 +2,7 @@
 
 import re
 import logging
+from datetime import date
 
 logger = logging.getLogger(__name__)
 
@@ -12,9 +13,30 @@ logger = logging.getLogger(__name__)
 _SSN_FULL_PATTERN = re.compile(r"\b(\d{3})-?(\d{2})-?(\d{4})\b")
 _SSN_MASKED_PATTERN = re.compile(r"\*{3}-\*{2}-(\d{4})")
 
+# An SSN as a document prints it: three-two-four digits, delimited from any
+# other digits, with OCR's stray spaces around the dashes tolerated
+# ("441- 66- 8882"). A phone number (3-3-4) or a ten-digit run never fits.
+_SSN_SHAPED_RE = re.compile(r"(?<![\d*xX#])(\d{3})[\s-]*(\d{2})[\s-]*(\d{4})(?![\d-])")
+# The masked forms: ***-**-1234, XXX-XX-1234, #####1234, *****1234.
+_SSN_MASKED_SHAPED_RE = re.compile(
+    r"(?:[*xX#•]{3}[\s-]*[*xX#•]{2}[\s-]*|[*xX#•]{5,}[\s-]*)(\d{4})(?!\d)"
+)
+# Only the last four, alone or after a label ("last 4: 1234", "SSN 1234").
+_SSN_LAST4_RE = re.compile(
+    r"^(?:(?:last\s*(?:four|4)(?:\s*digits)?|ssn|ss\s*#|ss\s*no\.?|social)\s*[:#\-]?\s*)?(\d{4})$",
+    re.IGNORECASE,
+)
+_DATE_SHAPED_RE = re.compile(r"\d{1,2}[/.]\d{1,2}[/.]\d{2,4}|\d{4}-\d{2}-\d{2}")
+_NOT_A_VALUE = frozenset({"n/a", "na", "none", "null", "unknown", "not provided",
+                          "not applicable", "-", "--", "—", "not shown", "not listed"})
+
 
 def mask_ssn(value: str | None) -> str | None:
-    """Mask SSN to ***-**-XXXX format. Returns None if no valid SSN found."""
+    """Mask SSN to ***-**-XXXX format. Returns None if no valid SSN found.
+
+    Egress masking: this errs toward masking, so anything with four digits
+    in an SSN-named field leaves as last-four. The strict reading of what
+    is an SSN lives in normalize_ssn."""
     if not value:
         return None
 
@@ -37,22 +59,55 @@ def mask_ssn(value: str | None) -> str | None:
     return None
 
 
+def _ssn_parts_plausible(area: str, group: str, serial: str) -> bool:
+    """The Social Security Administration never issues these."""
+    if area in ("000", "666") or area.startswith("9"):
+        return False
+    if group == "00" or serial == "0000":
+        return False
+    return True
+
+
 def normalize_ssn(value: str | None) -> str | None:
     """Normalize an SSN as captured, PRESERVING full digits when present.
+
+    Accepts only SSN-shaped input: nine digits in three-two-four groups
+    (dashes, spaces or nothing between them), the masked forms, or the
+    last four alone. A date, a phone number, a case number or an account
+    number in this field is not an SSN and returns None — the old reading
+    turned "02/20/1959" into ***-**-1959.
 
     Extraction stores the SSN exactly as the document shows it — full nine
     digits formatted NNN-NN-NNNN when printed in full, the standard masked
     form otherwise. Full SSNs stay internal to the job store for compliance
     exports; every audit-facing surface (findings, Salesforce writeback,
     API responses) masks them at egress via mask_ssns_deep()."""
-    if not value:
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text or text.lower() in _NOT_A_VALUE:
+        return None
+    if _DATE_SHAPED_RE.search(text):
         return None
 
-    m = _SSN_FULL_PATTERN.search(value)
+    m = _SSN_SHAPED_RE.search(text)
     if m:
-        return f"{m.group(1)}-{m.group(2)}-{m.group(3)}"
+        area, group, serial = m.groups()
+        if _ssn_parts_plausible(area, group, serial):
+            return f"{area}-{group}-{serial}"
+        logger.warning("normalize_ssn: %r is not an issuable SSN — dropped", text)
+        return None
 
-    return mask_ssn(value)
+    m = _SSN_MASKED_SHAPED_RE.search(text)
+    if m:
+        return f"***-**-{m.group(1)}"
+
+    m = _SSN_LAST4_RE.match(text)
+    if m:
+        return f"***-**-{m.group(1)}"
+
+    logger.warning("normalize_ssn: %r is not SSN-shaped — dropped", text)
+    return None
 
 
 # Keys that hold SSN values across extraction results and MuleSoft
@@ -112,95 +167,262 @@ def mask_ssns_deep(obj):
 # Title Case
 # ---------------------------------------------------------------------------
 
+# Tokens that keep their letter case whatever the rest of the name does:
+# generational suffixes, entity types, credentials, and short codes that
+# read as words when capitalised ("Ok" for OK, "Tbk" for TBK).
+_CASED_TOKENS = {
+    "jr": "Jr.", "jr.": "Jr.", "sr": "Sr.", "sr.": "Sr.", "ii": "II", "iii": "III", "iv": "IV",
+    "llc": "LLC", "l.l.c.": "L.L.C.", "inc": "Inc.", "inc.": "Inc.", "llp": "LLP", "lp": "LP",
+    "pllc": "PLLC", "pc": "PC", "p.c.": "P.C.", "ltd": "Ltd.", "ltd.": "Ltd.", "co": "Co.", "co.": "Co.",
+    "corp": "Corp.", "corp.": "Corp.", "dba": "DBA", "d/b/a": "d/b/a", "usa": "USA", "us": "US",
+    "u.s.": "U.S.", "md": "MD", "dds": "DDS", "cpa": "CPA", "phd": "PhD", "rn": "RN", "ssa": "SSA",
+    "hud": "HUD", "dhs": "DHS", "va": "VA", "ymca": "YMCA", "ywca": "YWCA", "ups": "UPS",
+    "usps": "USPS", "atm": "ATM", "irs": "IRS", "ssi": "SSI", "ssdi": "SSDI", "eiv": "EIV",
+    "tanf": "TANF", "snap": "SNAP", "wic": "WIC", "lihtc": "LIHTC", "pha": "PHA", "dss": "DSS",
+    "dcf": "DCF", "dhhs": "DHHS", "ocse": "OCSE", "ira": "IRA", "ach": "ACH", "eft": "EFT",
+    "ibm": "IBM", "att": "ATT", "at&t": "AT&T", "ups": "UPS", "cvs": "CVS", "kfc": "KFC",
+    "and": "and", "of": "of", "the": "the", "de": "de",
+    "la": "la", "del": "del", "van": "van", "von": "von", "da": "da", "y": "y",
+}
+_ACRONYM_MAX = 4
+
+
+def _cap_token(token: str) -> str:
+    """Capitalise one token, keeping hyphen and apostrophe structure and the
+    Mc/Mac/O' name patterns: "O'BRIEN" → "O'Brien", "MCDONALD" → "McDonald",
+    "MARY-ANN" → "Mary-Ann"."""
+    def _cap(seg: str) -> str:
+        if not seg:
+            return seg
+        low = seg.lower()
+        if low.startswith("mc") and len(low) > 3:
+            return "Mc" + low[2:].capitalize()
+        return low.capitalize()
+
+    def _cap_apostrophes(seg: str) -> str:
+        # "O'BRIEN" → "O'Brien", "D'ANGELO" → "D'Angelo"; a possessive or
+        # contraction tail ("MCDONALD'S") stays lower.
+        pieces = seg.split("'")
+        return "'".join(
+            _cap(part) if i == 0 or len(part) > 1 else part.lower()
+            for i, part in enumerate(pieces)
+        )
+
+    return "-".join(_cap_apostrophes(seg) for seg in token.split("-"))
+
+
 def to_title_case(name: str | None) -> str | None:
-    """Convert a name string to Title Case, preserving suffixes and hyphens."""
-    if not name:
+    """Convert a name to Title Case without destroying what was deliberate.
+
+    A name printed entirely in capitals (the way forms print them) is
+    title-cased token by token. A name that already mixes case is left as
+    the writer had it except that all-lower tokens are capitalised, so
+    "McDonald's LLC" and "ABC Trucking" survive, and short all-caps tokens
+    (≤ 4 letters: LLC, TBK, OK) keep their case even inside an otherwise
+    capitalised name. Suffixes and entity types take their conventional
+    form; particles ("de", "la", "van") stay lower after the first word.
+    """
+    if name is None:
+        return None
+    text = str(name).strip()
+    if not text:
         return None
 
-    parts = name.strip().split()
-    result = []
+    parts = text.split()
+    alpha_parts = [p for p in parts if any(c.isalpha() for c in p)]
+    all_caps = bool(alpha_parts) and all(p == p.upper() for p in alpha_parts)
+    out: list[str] = []
     for i, part in enumerate(parts):
-        # Handle hyphenated names
-        if "-" in part:
-            part = "-".join(seg.capitalize() for seg in part.split("-"))
-            result.append(part)
-        elif part.upper() in ("JR.", "SR.", "II", "III", "IV"):
-            result.append(part.upper() if len(part) <= 3 else part.capitalize())
+        key = part.lower()
+        bare = key.strip(".,;:()")
+        if bare in _CASED_TOKENS or key in _CASED_TOKENS:
+            fixed = _CASED_TOKENS.get(key, _CASED_TOKENS.get(bare))
+            if i == 0 and fixed in ("and", "of", "the", "de", "la", "del", "van", "von", "da", "y"):
+                fixed = fixed.capitalize()
+            # keep any trailing punctuation the token had ("Inc.," → "Inc.,")
+            trail = part[len(part.rstrip(".,;:)")):]
+            if trail and not fixed.endswith(trail):
+                fixed = fixed + trail
+            out.append(fixed)
+            continue
+        letters = "".join(c for c in part if c.isalpha())
+        if not letters:
+            out.append(part)
+            continue
+        if part == part.upper():
+            # A short all-caps token is an acronym when the rest of the name
+            # is cased text ("ABC Trucking"), or when it has no vowel and so
+            # cannot be a word ("TBK BANK", "OKDHS CSS") — in an all-caps
+            # name a short token with a vowel is a word (ANNA, LEE, RAY).
+            if len(letters) <= _ACRONYM_MAX and (
+                not all_caps or not any(c in "AEIOUY" for c in letters)
+            ):
+                out.append(part)
+            else:
+                out.append(_cap_token(part))
+        elif part == part.lower():
+            out.append(_cap_token(part))
         else:
-            result.append(part.capitalize())
-    return " ".join(result)
+            out.append(part)   # already mixed case — the writer's choice
+    return " ".join(out)
 
 
 # ---------------------------------------------------------------------------
 # Date Formatting
 # ---------------------------------------------------------------------------
 
-_DATE_MDY_SLASH = re.compile(r"^(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})$")
-_DATE_YMD = re.compile(r"^(\d{4})[/\-](\d{1,2})[/\-](\d{1,2})$")
+_DATE_YMD = re.compile(r"^(\d{4})[/.\-](\d{1,3})[/.\-](\d{1,3})(?:[T ].*)?$")
+_DATE_MDY = re.compile(r"^(\d{1,3})[/.\-](\d{1,3})[/.\-](\d{2}|\d{4})$")
+_DATE_TEXT_MDY = re.compile(r"^([A-Za-z]{3,9})\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})$")
+_DATE_TEXT_DMY = re.compile(r"^(\d{1,2})(?:st|nd|rd|th)?[\s\-]+([A-Za-z]{3,9})\.?[\s\-,]+(\d{4})$")
+_MONTHS = {m: i for i, m in enumerate(
+    ("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"), 1)}
+_MONTHS.update({"sept": 9})
+_YEAR_MIN, _YEAR_MAX = 1900, 2100
 
 
-def normalize_date(value: str | None) -> str | None:
-    """Normalize date to YYYY-MM-DD format.
+def _pivot_year(yy: int) -> int:
+    """Two-digit year → four. Dates on these documents are birth dates and
+    signature dates: nothing later than next year, so "26" is 2026 and "49"
+    is 1949 (pivot at the current year + 1)."""
+    pivot = (date.today().year + 1) % 100
+    return 2000 + yy if yy <= pivot else 1900 + yy
 
-    Returns None for invalid dates (month > 12, day > 31, etc.)
-    to prevent garbled OCR dates from contaminating extraction.
-    """
-    if not value:
+
+def _part_candidates(part: str) -> list[int]:
+    """Readings of a day or month part, tolerating one OCR-inserted digit
+    ("071" for 07, "115" for 15): each way of dropping one digit, the
+    reading most of them agree on first."""
+    if len(part) <= 2:
+        return [int(part)]
+    if len(part) != 3:
+        return [int(part)]
+    readings = [int(part[:2]), int(part[1:]), int(part[0] + part[2:])]
+    ordered = sorted(set(readings), key=lambda r: (-readings.count(r), readings.index(r)))
+    return ordered
+
+
+def _calendar_date(year: int, month: int, day: int) -> str | None:
+    if not (_YEAR_MIN <= year <= _YEAR_MAX):
+        return None
+    try:
+        return date(year, month, day).isoformat()
+    except ValueError:
         return None
 
-    value = value.strip()
 
-    # Already YYYY-MM-DD format
-    m = _DATE_YMD.match(value)
+def _resolve_md(year: int, first: str, second: str, month_first: bool) -> str | None:
+    """Resolve two numeric parts as month/day (or day/month), trying the
+    stated order first and the swapped order only when the stated order
+    is impossible (a month over 12)."""
+    firsts, seconds = _part_candidates(first), _part_candidates(second)
+    orders = [(True, False)] if month_first else [(False, True)]
+    orders.append((not orders[0][0], not orders[0][1]))
+    for as_month_first, _ in orders:
+        for a in firsts:
+            for b in seconds:
+                month, day = (a, b) if as_month_first else (b, a)
+                iso = _calendar_date(year, month, day)
+                if iso:
+                    return iso
+    return None
+
+
+def normalize_date(value) -> str | None:
+    """Normalize a date to YYYY-MM-DD, or None when the text is not a date.
+
+    Accepts ISO (with or without a time), M/D/Y with a two- or four-digit
+    year, dotted and dashed variants, and written months ("July 15, 1949",
+    "15 Jul 1949"). Two-digit years pivot at next year; an OCR-doubled digit
+    in a part is tolerated ("071/15/1949"); a day that does not exist in its
+    month (2020-02-30) is rejected rather than accepted; month/day are
+    swapped only when the printed order is impossible.
+    """
+    if value is None:
+        return None
+    text = re.sub(r"\s+", " ", str(value).strip())
+    if not text or text.lower() in _NOT_A_VALUE:
+        return None
+
+    m = _DATE_YMD.match(text)
     if m:
-        year, month, day = int(m.group(1)), int(m.group(2)), int(m.group(3))
-        if _is_valid_date(year, month, day):
-            return f"{year}-{month:02d}-{day:02d}"
-        return None  # Invalid date like 2026-21-01
+        return _resolve_md(int(m.group(1)), m.group(2), m.group(3), month_first=True)
 
-    # MM/DD/YYYY or MM-DD-YYYY
-    m = _DATE_MDY_SLASH.match(value)
+    m = _DATE_MDY.match(text)
     if m:
-        month, day, year = int(m.group(1)), int(m.group(2)), int(m.group(3))
-        if _is_valid_date(year, month, day):
-            return f"{year}-{month:02d}-{day:02d}"
-        # Try swapping month/day (common OCR issue: DD/MM/YYYY vs MM/DD/YYYY)
-        if _is_valid_date(year, day, month):
-            return f"{year}-{day:02d}-{month:02d}"
-        return None  # Garbled date
+        year_text = m.group(3)
+        year = _pivot_year(int(year_text)) if len(year_text) == 2 else int(year_text)
+        return _resolve_md(year, m.group(1), m.group(2), month_first=True)
 
-    return None  # Unrecognized format — return None, not raw string
+    m = _DATE_TEXT_MDY.match(text)
+    if m:
+        month = _MONTHS.get(m.group(1).lower()[:4]) or _MONTHS.get(m.group(1).lower()[:3])
+        if month:
+            return _calendar_date(int(m.group(3)), month, int(m.group(2)))
+        return None
+
+    m = _DATE_TEXT_DMY.match(text)
+    if m:
+        month = _MONTHS.get(m.group(2).lower()[:4]) or _MONTHS.get(m.group(2).lower()[:3])
+        if month:
+            return _calendar_date(int(m.group(3)), month, int(m.group(1)))
+        return None
+
+    logger.debug("normalize_date: %r is not a date — dropped", text)
+    return None
 
 
 def _is_valid_date(year: int, month: int, day: int) -> bool:
-    """Check if a date has valid ranges."""
-    if year < 1900 or year > 2100:
-        return False
-    if month < 1 or month > 12:
-        return False
-    if day < 1 or day > 31:
-        return False
-    return True
+    """Whether the calendar has this date (kept for callers of the old name)."""
+    return _calendar_date(year, month, day) is not None
 
 
 # ---------------------------------------------------------------------------
 # Monetary Formatting
 # ---------------------------------------------------------------------------
 
-def normalize_money(value: str | None) -> str | None:
-    """Normalize monetary amount to string with 2 decimal places, no symbols."""
-    if not value:
+_MONEY_NUMBER_RE = re.compile(r"\d+(?:\.\d+)?")
+
+
+def normalize_money(value, field: str | None = None) -> str | None:
+    """Normalize a monetary amount to a string with two decimals, no symbols.
+
+    Returns None — never the input — when the text is not one amount:
+    "N/A", a date, a range ("1,200 - 1,500"), a percentage, or prose with
+    several numbers. Accepts what documents print: "$1,489.50", "1 489.50"
+    (OCR spaces), "(50.00)" and "-50" (negative), "1489.50/mo" (a unit
+    after the figure). The rejection is logged with the field name so the
+    gap is visible in the run log.
+    """
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return f"{float(value):.2f}"
+    text = str(value).strip()
+    if not text or text.lower() in _NOT_A_VALUE:
+        return None
+    if "%" in text or _DATE_SHAPED_RE.search(text):
+        logger.warning("normalize_money%s: %r is not an amount — dropped", f"[{field}]" if field else "", text)
         return None
 
-    cleaned = value.strip().replace("$", "").replace(",", "").strip()
-    if not cleaned:
+    negative = bool(re.match(r"^\(.*\)$", text)) or bool(re.match(r"^[-−]\s*\$?|^\$\s*[-−]", text))
+    # Remove currency marks, grouping commas and the spaces OCR drops into
+    # a figure ("1, 489.50"), then read the single number that is left.
+    cleaned = re.sub(r"[()$€£\s]|USD|usd", "", text).replace(",", "").lstrip("-−")
+    numbers = _MONEY_NUMBER_RE.findall(cleaned)
+    if len(numbers) != 1:
+        logger.warning("normalize_money%s: %r is not one amount — dropped", f"[{field}]" if field else "", text)
         return None
-
-    try:
-        amount = float(cleaned)
-        return f"{amount:.2f}"
-    except ValueError:
-        return value
+    remainder = cleaned.replace(numbers[0], "", 1)
+    if len(remainder) > 12 or re.search(r"\d", remainder):
+        logger.warning("normalize_money%s: %r is not an amount — dropped", f"[{field}]" if field else "", text)
+        return None
+    amount = float(numbers[0])
+    if negative:
+        amount = -amount
+    return f"{amount:.2f}"
 
 
 # ---------------------------------------------------------------------------
