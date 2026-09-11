@@ -1,0 +1,33 @@
+{
+  "case_id": "J-PORT-05754",
+  "packet": "Samantha Smith, Lumien Apartments unit 1-114, LIHTC TIC, 31 pages",
+  "verified_from": "the PDF, 2026-09-09",
+  "caller_cert_type": "AR",
+  "cert_type_note": "The packet is a Move-In (MI); Cartograph sent 'annual' and the caller value overrides, so certificationType is not scored.",
+  "certification": {
+    "certificationType": null,
+    "effectiveDate": null,
+    "isSigned": "No",
+    "signatureDate": null,
+    "householdSize": 1,
+    "householdIncome": 31470.00,
+    "tenantRent": 1059.00,
+    "utilityAllowance": 42.00,
+    "grossRent": 1101.00
+  },
+  "members": [
+    {"first": "Samantha", "last": "Smith", "dob": "1998-02-22", "ssn_last4": "2525", "relationship": "Head"}
+  ],
+  "income": [
+    {"member_last": "Smith", "member_first": "Samantha", "source_aliases": ["Durango Lodge", "Selwyn"], "annual": 31469.10,
+     "note": "One employer: DURANGO LODGE on the TIC = Selwyn Hospitality Durango, LLC on the paystubs, same address. Two records for it count as a duplicate."}
+  ],
+  "assets": [
+    {"type": "cash",                     "balance": 20.00,  "income": 0.00},
+    {"type": "checking", "last4": "4792", "balance": 50.00,  "income": 0.00},
+    {"type": "savings",  "last4": "6581", "balance": 600.00, "income": 0.90, "note": "the handwritten p11 was struck through; 40.55 is a misread"}
+  ],
+  "asset_total": 670.00,
+  "expect_findings": [],
+  "forbid_findings": []
+}

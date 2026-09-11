@@ -1,0 +1,40 @@
+{
+  "case_id": "J-PORT-05318",
+  "packet": "Arnold Lyons, Ada Heights / Emerald Pointe unit 7-102, LIHTC TIC, 37 pages",
+  "verified_from": "page OCR text (no PDF on disk), 2026-09-10",
+  "caller_cert_type": "AR",
+  "certification": {
+    "certificationType": "AR",
+    "effectiveDate": "2026-09-01",
+    "isSigned": "Yes",
+    "signatureDate": null,
+    "householdSize": 4,
+    "householdIncome": 39819.16,
+    "tenantRent": 953.00,
+    "utilityAllowance": 116.00,
+    "grossRent": 1069.00
+  },
+  "members": [
+    {"first": "Arnold",  "last": "Lyons",    "dob": "1959-02-20", "ssn_last4": "8882", "relationship": "Head"},
+    {"first": "Kyla",    "last": "Hamilton", "dob": "2009-01-05", "ssn_last4": "9331", "relationship": "Granddaughter"},
+    {"first": "Kameryn", "last": "Meely",    "dob": "2010-10-06", "ssn_last4": "1044", "relationship": "Granddaughter"},
+    {"first": "Traevon", "last": "Lyons",    "dob": "2010-06-05", "ssn_last4": "0368", "relationship": "Grandson"}
+  ],
+  "income": [
+    {"member_last": "Lyons",    "member_first": "Arnold",  "source_aliases": ["Social Security"], "annual": 17874.00,
+     "note": "SSA letter p18: $1,489.50/mo retirement; the same letter states SSI = $0.00"},
+    {"member_last": "Hamilton", "member_first": "Kyla",    "source_aliases": ["Social Security"], "annual": 9292.80},
+    {"member_last": "Meely",    "member_first": "Kameryn", "source_aliases": ["Social Security"], "annual": 9292.80},
+    {"member_last": "Hamilton", "member_first": "Kyla",    "source_aliases": ["Child Support"],   "annual": 3359.56,
+     "accept_member_last": ["Lyons"],
+     "note": "p24 is a 13-month payment history; TIC lists it under Kyla; the engine attributes it to Arnold, which is tolerated"}
+  ],
+  "assets": [
+    {"type": "checking",    "last4": "0446", "balance": 0.00,    "income": 0.00},
+    {"type": "checking",    "last4": "2788", "balance": 82.05,   "income": 0.00},
+    {"type": "real estate",                  "balance": 6294.74, "income": 0.00, "note": "304 W 16th St, Ada OK (Tax Roll Inquiry p16-17); 701 W Cottage is the apartment"}
+  ],
+  "asset_total": 6376.79,
+  "expect_findings": ["SIGNATURE_DATE_MISSING"],
+  "forbid_findings": ["TIC_TOTAL_MISMATCH"]
+}

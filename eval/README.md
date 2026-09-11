@@ -1,0 +1,25 @@
+# Extraction-quality harness
+
+Gold values for real packets live in `gold/<case>.json`; `run_eval.py` replays a packet
+through the pipeline and scores every run against them. Run outputs land in `runs/`
+(git-ignored) so a scoring-only change can be re-scored without new model calls.
+
+    .venv/bin/python eval/run_eval.py --all --stored            # score what is in the job store, no LLM calls
+    .venv/bin/python eval/run_eval.py --case J-PORT-05318 --runs 3   # replay stored OCR 3x, report spread
+    .venv/bin/python eval/run_eval.py --case J-PORT-05318 --json eval/runs/J-PORT-05318/*.json
+    .venv/bin/python eval/run_eval.py --case CAS570103 --pdf /root/testpackets/packet.pdf --runs 2
+
+Replaying stored OCR skips the vision-dependent steps (signature check, required-field
+image recovery) because the page images are gone; everything after OCR runs for real.
+Use `--pdf` for the full path.
+
+What is scored: certification scalars, each member's DOB / SSN last four / relationship,
+each income source's annual figure and record count, each asset's balance and income,
+the asset total over all records (double counting shows here), extra records, and the
+expected / forbidden finding codes. With more than one run the report lists which checks
+were unstable and which pages the classifier labelled differently.
+
+Gold conventions: `optional: true` on an income record means absence is not a miss but a
+different value is; `accept_member_last` tolerates a known attribution quirk;
+`certificationType: null` means the caller value overrides and the field is not scored.
+Add a case by dropping a gold file here; the case id must match the job-store `case_id`.

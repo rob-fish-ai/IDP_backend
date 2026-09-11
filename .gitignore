@@ -6,3 +6,6 @@ __pycache__/
 .env.*
 .venv/
 *.log
+
+# Evaluation harness output (large per-run JSON)
+eval/runs/
