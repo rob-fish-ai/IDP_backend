@@ -16,7 +16,7 @@ from datetime import date
 
 from app.core.config import Settings
 from app.core.dependencies import get_settings
-from app.core.exceptions import ClassificationUnavailableError
+from app.core.exceptions import ClassificationUnavailableError, ExtractionUnavailableError
 from app.services.audit.comparator import compare
 from app.services.audit.formatter import format_findings
 from app.services.audit.job_store import (
@@ -75,7 +75,7 @@ def _is_retryable_error(exc: BaseException) -> bool:
     # failed (transient far more often than not). Always retry under the
     # shared budget; a persistent failure caps out and finalizes with the
     # accurate error message.
-    if isinstance(exc, ClassificationUnavailableError):
+    if isinstance(exc, (ClassificationUnavailableError, ExtractionUnavailableError)):
         return True
 
     # Worker shutdown landed mid-run (reload or restart during a batch).

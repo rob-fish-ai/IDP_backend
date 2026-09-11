@@ -74,6 +74,13 @@ class Settings(BaseSettings):
     # cases. Cost is per generated token, not per the cap itself.
     llm_max_tokens: int = 16384
     llm_temperature: float = 0.0
+    # Extended thinking for extraction calls: "disabled" or "adaptive".
+    # Sent explicitly on every call, because an omitted parameter means
+    # adaptive on Sonnet 5 and off on the 4.6 family. Extraction is closer
+    # to transcription than reasoning; the harness decides (see
+    # eval/README.md), and classification and page transcription always
+    # run disabled regardless of this setting.
+    llm_thinking: str = "disabled"
 
     # Pipeline context (optional overrides)
     funding_program: str = ""  # LIHTC, HUD, USDA, RAD, Public Housing

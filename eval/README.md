@@ -23,3 +23,15 @@ Gold conventions: `optional: true` on an income record means absence is not a mi
 different value is; `accept_member_last` tolerates a known attribution quirk;
 `certificationType: null` means the caller value overrides and the field is not scored.
 Add a case by dropping a gold file here; the case id must match the job-store `case_id`.
+
+Thinking A/B: extraction calls send an explicit thinking configuration taken from
+`IDP_LLM_THINKING` (`disabled`, the default, or `adaptive`). To compare, replay the same
+cases under both and read the score and the wall time:
+
+    IDP_LLM_THINKING=disabled .venv/bin/python eval/run_eval.py --case J-PORT-05318 --runs 2
+    IDP_LLM_THINKING=adaptive .venv/bin/python eval/run_eval.py --case J-PORT-05318 --runs 2
+
+Measured 2026-09-11 on the three benchmark cases (one run each, same code): identical
+scores on 05754 and 05319; on 05318 the adaptive run read the declared tables more
+carefully (37/37 against 35/38) but took 3m48s against 55s. The declared-read guards
+added afterwards (total rows, household-level income) close that gap in code.

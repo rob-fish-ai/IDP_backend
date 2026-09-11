@@ -1722,17 +1722,28 @@ def _resolve_duplicate_self_declarations(vi_entries: list) -> list:
 
 
 def _llm_fallback(label, func, groups, settings, *, default=None, **kwargs):
-    """Call an LLM extraction function with graceful degradation on rate limit."""
-    import anthropic
-    logger.info("  %s: LLM fallback", label)
+    """Run one extraction stage; a stage that fails fails the case.
+
+    This used to swallow every error and return the empty default, which
+    delivered an audit with no income (or assets, or members) as a finished
+    result — a rate-limited call became a clean-looking packet with nothing
+    in it. An extraction failure is now ExtractionUnavailableError, which
+    the job layer classifies retryable, so the case is re-run whole on the
+    next cycle instead. `default` is kept for callers that pass it; it is
+    no longer returned.
+    """
+    from app.core.exceptions import ExtractionUnavailableError
+    logger.info("  %s: LLM extraction", label)
     try:
         return func(groups, settings, **kwargs)
-    except anthropic.RateLimitError:
-        logger.warning("  %s: LLM rate limited — returning empty result", label)
-        return default
-    except Exception:
-        logger.exception("  %s: LLM fallback failed", label)
-        return default
+    except ExtractionUnavailableError as exc:
+        logger.error("  %s: extraction unavailable — %s", label, exc)
+        raise ExtractionUnavailableError(f"{label} extraction failed: {exc}") from exc
+    except Exception as exc:
+        logger.exception("  %s: extraction failed", label)
+        raise ExtractionUnavailableError(
+            f"{label} extraction failed: {type(exc).__name__}: {exc}"
+        ) from exc
 
 
 def _deduplicate_household_members(household) -> list[str]:

@@ -34,6 +34,18 @@ class ClassificationUnavailableError(ProcessingError):
     """
 
 
+class ExtractionUnavailableError(ProcessingError):
+    """Raised when an extraction stage could not get a usable answer from
+    the model: the API stayed down past the retries, or the response was
+    truncated or not JSON twice in a row.
+
+    Classified retryable like ClassificationUnavailableError, for the same
+    reason: an extractor that fails must never become an empty income (or
+    asset, or household) section delivered as a finished audit. The case
+    waits for the next cycle and is re-run whole.
+    """
+
+
 # ---------- HTTP error mapping ----------
 
 _STATUS_MAP: dict[type[IDPBaseError], int] = {
