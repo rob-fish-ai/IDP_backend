@@ -257,12 +257,16 @@ a verificationIncome entry:
   - memberName: the custodial parent/head of household receiving support
   - incomeType: "Child Support"
   - type_of_VOI: "Child Support Order"
-  - selfDeclaredAmount: monthly or annual support amount as shown
-  - rateOfPay: support amount per payment period, if shown
-  - frequencyOfPay: payment frequency (weekly, bi-weekly, monthly), if shown
+  - rateOfPay + rateUnit + frequencyOfPay: ONLY a court-ordered or agency-stated
+    regular amount ("$162.70 per month ordered"), when the document states one
+  - paymentHistory: when the document is a payment record (one line per month, week
+    or payment), copy EVERY line as {"date": ..., "amount": ...} exactly as printed —
+    date as YYYY-MM-DD (a month-only label such as "08/26" becomes "2026-08-01"),
+    amount as a numeric string of what was actually paid that period (disbursements),
+    never an arrears balance. Do NOT add the lines up, do NOT pick one line as the
+    rate, and do NOT put a total in selfDeclaredAmount — the engine annualises the
+    history itself.
 Do NOT skip child support just because the form is brief or lacks typical wage fields.
-When the statement is a payment history (one line per month), report the most recent
-regular payment as rateOfPay with its frequency; do not add the lines up.
 
 PAYSTUB FIELDS:
 - sourceName: employer name, Title Case
@@ -277,7 +281,8 @@ PAYSTUB FIELDS:
 
 SPECIAL PAYSTUB RULES:
 - Work Number/Equifax: take the 6 most current entries only
-- Child Support: last 6 most recent payments
+- Child support and other benefit payments are NEVER pay stubs — they belong in the
+  verificationIncome entry's paymentHistory
 - Do NOT create pay stubs for SSA, pension, or TANF (these go to verificationIncome)
 
 VERIFICATION INCOME FIELDS:
@@ -285,10 +290,23 @@ VERIFICATION INCOME FIELDS:
 - programName: official program name for benefit income
 - selfDeclaredAmount: from self-cert forms, applications, or questionnaires, numeric string. Match to the corresponding employer/source by name when possible.
 - dateReceived: date the VOI form was received or date signed by employer. YYYY-MM-DD. null if not shown.
-- rateOfPay: numeric string (hourly or periodic rate)
+- rateOfPay: numeric string — the rate exactly as the document states it, in the unit
+  named by rateUnit
+- rateUnit: what rateOfPay is per, as the document labels it: "hourly", "daily", "weekly",
+  "bi-weekly", "semi-monthly", "monthly", "quarterly", "annually", or "per_period".
+  "$18.00/hr" → "hourly"; "Salary $48,360 per year" → rateOfPay "48360.00", rateUnit
+  "annually"; "$1,489.50 per month" → "monthly"; "$1,250 per pay period" → "per_period".
+  REQUIRED whenever rateOfPay is set; null only when the document does not say what
+  the number is per. Never write "hourly" into frequencyOfPay.
+- paymentHistory: list of {"date": "YYYY-MM-DD", "amount": "123.45"} — ONLY when this
+  document is a payment record listing individual payments over time (child support
+  ledger, agency payment history, benefit payment record). One row per printed line,
+  in the order printed, amounts as printed. Empty list otherwise. Never for pay stubs
+  or employer wage tables (those are payStub entries).
 - frequencyOfPay: lowercase. This is how often the person is PAID (weekly / bi-weekly / semi-monthly / monthly), NOT the rate unit. If rate is "hourly" but pay dates are 14 days apart, frequencyOfPay is "bi-weekly". Determine from pay period structure, not from rate label.
-- hoursPerPayPeriod: hours worked in ONE pay period — the same period frequencyOfPay names,
-  NOT hours per week. If the document states a weekly figure, convert it: 40 hrs/week paid
+- hoursPerPayPeriod: ONLY when rateUnit is "hourly" (or "daily": then days). null for a
+  salary or a periodic rate — hours never multiply those. When hourly: hours worked in
+  ONE pay period — the same period frequencyOfPay names, NOT hours per week. If the document states a weekly figure, convert it: 40 hrs/week paid
   bi-weekly is 80; paid semi-monthly is 86.67; paid monthly is 173.33; paid weekly is 40.
   The annual calculation is rateOfPay x hoursPerPayPeriod x (pay periods per year), so a
   weekly figure reported here halves or quarters the person's income.
@@ -889,7 +907,7 @@ def _is_zero_money(value) -> bool:
 
 def _vi_has_amount(vi: dict) -> bool:
     """True if a verificationIncome record carries any usable dollar amount."""
-    return any(vi.get(f) for f in _VI_AMOUNT_FIELDS)
+    return any(vi.get(f) for f in _VI_AMOUNT_FIELDS) or bool(vi.get("paymentHistory"))
 
 
 _INCOME_AMOUNT_RETRY_PROMPT = """\
@@ -1247,6 +1265,39 @@ def _enforce_provenance(records: list[dict], amount_fields: tuple[str, ...],
     return dropped
 
 
+def _prune_payment_history(records: list[dict], group: DocumentGroup, label: str) -> int:
+    """Drop payment-history rows whose amount the document does not print.
+
+    A ledger row is an amount like any other: one the pages do not carry
+    came from nowhere and must not be annualised. Returns rows dropped.
+    """
+    page_texts = _group_page_texts(group)
+    dropped = 0
+    for rec in records:
+        rows = rec.get("paymentHistory")
+        if not isinstance(rows, list) or not rows:
+            continue
+        kept = []
+        for row in rows:
+            amount = row.get("amount") if isinstance(row, dict) else None
+            if amount in (None, "", "null"):
+                continue
+            if _amount_on_pages(amount, page_texts, group.pages):
+                kept.append(row)
+            else:
+                dropped += 1
+        if dropped:
+            logger.warning(
+                "%s: %d payment-history row(s) not on pages %s of '%s' — dropped (no provenance)",
+                label, dropped, group.pages, group.document_type,
+            )
+            evidence = rec.get("evidence")
+            if isinstance(evidence, dict):
+                evidence["paymentHistory"] = f"{dropped} row(s) not on page"
+        rec["paymentHistory"] = kept
+    return dropped
+
+
 _PAGE_MARK_RE = re.compile(r"--- Page (\d+) ---\n?")
 
 
@@ -1489,7 +1540,11 @@ source_names_overlap = _source_overlap
 
 
 def _record_annual(vi: dict) -> float | None:
-    from app.services.income_calculator import get_frequency_multiplier
+    from app.services.income_calculator import annualize_history, get_frequency_multiplier
+    if vi.get("paymentHistory"):
+        annual = annualize_history(vi["paymentHistory"])
+        if annual is not None:
+            return round(annual, 2)
     for field in ("rateOfPay", "selfDeclaredAmount"):
         val = vi.get(field)
         if not val:
@@ -1916,6 +1971,7 @@ def extract_income(
         vis = [r for r in (si.get("verificationIncome") or []) if isinstance(r, dict)]
         pss = [r for r in (si.get("payStub") or []) if isinstance(r, dict)]
         _enforce_provenance(vis, _INCOME_AMOUNT_FIELDS, g, "Income")
+        _prune_payment_history(vis, g, "Income")
         _enforce_provenance(pss, _PAYSTUB_AMOUNT_FIELDS, g, "Income")
         # A program line reading $0.00 (the retirement letter that also says
         # the SSI payment is $0.00) is not income and never owes a record.

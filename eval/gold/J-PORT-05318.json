@@ -25,9 +25,9 @@
      "note": "SSA letter p18: $1,489.50/mo retirement; the same letter states SSI = $0.00"},
     {"member_last": "Hamilton", "member_first": "Kyla",    "source_aliases": ["Social Security"], "annual": 9292.80},
     {"member_last": "Meely",    "member_first": "Kameryn", "source_aliases": ["Social Security"], "annual": 9292.80},
-    {"member_last": "Hamilton", "member_first": "Kyla",    "source_aliases": ["Child Support"],   "annual": 3359.56,
+    {"member_last": "Hamilton", "member_first": "Kyla",    "source_aliases": ["Child Support"],   "annual": 4203.06,
      "accept_member_last": ["Lyons"],
-     "note": "p24 is a 13-month payment history; TIC lists it under Kyla; the engine attributes it to Arnold, which is tolerated"}
+     "note": "p24 is a 13-month payment ledger (08/25-08/26); the 12 most recent months sum to 4,203.06 (checked by hand from the OCR table). The TIC prints 3,359.56 (the 11 most recent months) and the questionnaire 2,867.30 — both are declarations the engine should dispute, not the answer. TIC lists it under Kyla; the engine attributes it to Arnold (the payee the statement names), which is tolerated"}
   ],
   "assets": [
     {"type": "checking",    "last4": "0446", "balance": 0.00,    "income": 0.00},

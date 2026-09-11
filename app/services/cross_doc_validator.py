@@ -682,7 +682,7 @@ def validate_tic_totals(
     best_by_source: dict[tuple[str, str, str], float] = {}
     best_method: dict[tuple[str, str, str], int] = {}
     key_labels: dict[tuple[str, str, str], str] = {}
-    _METHOD_PRIORITY = {"voi-based": 0, "self-declared": 1, "ytd-based": 2, "paystub-based": 3}
+    _METHOD_PRIORITY = {"voi-based": 0, "history-based": 0, "self-declared": 1, "ytd-based": 2, "paystub-based": 3}
     for calc in income_calculations:
         if not calc.annualIncome:
             continue
@@ -864,7 +864,7 @@ def validate_cert_summary_vs_income(
     if not income:
         return findings
     calc_by_key: dict[tuple[str, str, str], float] = {}
-    _METHOD_PRIORITY = {"voi-based": 0, "self-declared": 1, "ytd-based": 2, "paystub-based": 3}
+    _METHOD_PRIORITY = {"voi-based": 0, "history-based": 0, "self-declared": 1, "ytd-based": 2, "paystub-based": 3}
     best_method: dict[tuple[str, str, str], int] = {}
     for calc in income_calculations:
         if not calc.annualIncome or (calc.details or "").startswith(("[audit]", "[historical]")):

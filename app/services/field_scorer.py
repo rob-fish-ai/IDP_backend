@@ -1021,17 +1021,23 @@ def _score_income_rules(card: RecordScoreCard, cert_type: str | None) -> None:
                     fs.mark_na(f"Source is the program ({vals.get('incomeType', 'N/A')})")
         return
 
-    # rateOfPay: numeric, > 0, < 50k
+    # rateOfPay: numeric, > 0. An hourly figure (hours are stated) above
+    # $300 is not an hourly rate; a periodic or annual figure is bounded
+    # only by what one job can pay.
     rate = vals.get("rateOfPay")
     if rate:
         try:
             rate_num = float(rate.replace(",", ""))
+            hourly_looking = bool(vals.get("hoursPerPayPeriod"))
             if rate_num <= 0:
                 update_field_score(card, "rateOfPay", stage="business_rule",
                                    score=0.20, reason="Rate is zero or negative")
-            elif rate_num > 50000:
+            elif hourly_looking and rate_num > 300:
                 update_field_score(card, "rateOfPay", stage="business_rule",
-                                   score=0.50, reason="Unusually high — verify monthly vs hourly")
+                                   score=0.50, reason="Hours are stated but the rate is not an hourly figure — verify rate unit")
+            elif rate_num > 1_000_000:
+                update_field_score(card, "rateOfPay", stage="business_rule",
+                                   score=0.50, reason="Unusually high — verify rate unit")
             else:
                 update_field_score(card, "rateOfPay", stage="business_rule",
                                    score=1.0, reason="Valid range")

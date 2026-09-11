@@ -505,6 +505,13 @@ def run_extraction_pipeline(
                 f"from current-income comparison; verify employment "
                 f"status (Section 9)"
             )
+        elif details.startswith("[rejected]"):
+            note = details[len("[rejected] "):]
+            who = f" ({calc.memberName})" if calc.memberName else ""
+            findings.append(
+                f"Income source '{calc.sourceName}'{who}: {calc.method} calculation "
+                f"rejected — {note} (Section 9)"
+            )
     from app.services.income_calculator import ytd_divergence_findings
     findings.extend(ytd_divergence_findings(income_calculations))
 
@@ -1671,7 +1678,14 @@ def _resolve_duplicate_self_declarations(vi_entries: list) -> list:
                     return float(str(val).replace(",", ""))
                 except ValueError:
                     continue
-        return 0.0
+        rows = getattr(v, "paymentHistory", None) or []
+        total = 0.0
+        for row in rows:
+            try:
+                total += float(str(getattr(row, "amount", None) or 0).replace(",", ""))
+            except ValueError:
+                continue
+        return total
 
     groups: dict[tuple[str, str, str], list] = defaultdict(list)
     for vi in vi_entries:

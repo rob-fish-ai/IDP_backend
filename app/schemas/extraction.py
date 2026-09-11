@@ -140,6 +140,20 @@ class Address(BaseModel):
     zip: Optional[str] = None
 
 
+class PaymentHistoryRow(BaseModel):
+    """One line of a payment record: what was paid on a date. The engine
+    annualises the ledger; the model never sums or picks a row."""
+    date: Optional[str] = None      # YYYY-MM-DD; a month-only line is its first day
+    amount: Optional[str] = None    # numeric string, the amount actually paid
+
+    @field_validator("*", mode="before")
+    @classmethod
+    def coerce_to_str(cls, v):
+        if v is not None and not isinstance(v, str):
+            return str(v)
+        return v
+
+
 class VerificationIncomeEntry(BaseModel):
     sourceName: Optional[str] = None
     memberName: Optional[str] = None
@@ -148,6 +162,10 @@ class VerificationIncomeEntry(BaseModel):
     selfDeclaredAmount: Optional[str] = None
     selfDeclaredSource: Optional[str] = None  # Questionnaire, Application, Self-Certification TIC, Resident Affidavit/Certification, Asset Under 5,000 or 50,000 Form, Other
     rateOfPay: Optional[str] = None
+    # What rateOfPay is per: hourly | daily | weekly | bi-weekly | semi-monthly |
+    # monthly | quarterly | annually | per_period. Hours multiply only an
+    # hourly rate; a salary is already annual.
+    rateUnit: Optional[str] = None
     frequencyOfPay: Optional[str] = None
     hoursPerPayPeriod: Optional[str] = None
     overtimeRate: Optional[str] = None
@@ -155,6 +173,9 @@ class VerificationIncomeEntry(BaseModel):
     ytdAmount: Optional[str] = None
     ytdStartDate: Optional[str] = None
     ytdEndDate: Optional[str] = None
+    # A payment record's rows (child support ledger, agency payment history),
+    # annualised by the calculator from what was actually paid.
+    paymentHistory: list[PaymentHistoryRow] = []
     incomeType: Optional[str] = None
     type_of_VOI: Optional[str] = None
     address: Optional[Address] = None
@@ -336,9 +357,9 @@ class IncomeCalculationResult(BaseModel):
     memberName: Optional[str] = None
     sourceName: Optional[str] = None
     incomeType: Optional[str] = None  # benefit program / income category from the VI record
-    method: Optional[str] = None  # self-declared, voi-based, ytd-based, paystub-based
-    annualIncome: Optional[str] = None  # numeric string, 2 decimals
-    details: Optional[str] = None  # explanation of calculation
+    method: Optional[str] = None  # self-declared, voi-based, ytd-based, paystub-based, history-based
+    annualIncome: Optional[str] = None  # numeric string, 2 decimals; None on a "[rejected]" row
+    details: Optional[str] = None  # explanation; "[audit]" / "[historical]" / "[rejected]" prefixes
 
 
 # ---------------------------------------------------------------------------

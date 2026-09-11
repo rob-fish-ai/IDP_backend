@@ -282,6 +282,18 @@ def validate_certification_info(data: dict) -> dict:
     return data
 
 
+def _canonical_frequency(value) -> str | None:
+    """The canonical spelling of a pay frequency; unknown text is kept
+    lowercased so the scorer can still show what the document said."""
+    if not value:
+        return None
+    from app.services.income_calculator import FREQUENCY_MULTIPLIERS, normalize_frequency
+    canon = normalize_frequency(value)
+    if canon in FREQUENCY_MULTIPLIERS:
+        return canon
+    return str(value).strip().lower() or None
+
+
 def validate_income(data: dict) -> dict:
     """Apply validation rules to income extraction output."""
     si = data.get("sourceIncome", {})
@@ -292,8 +304,7 @@ def validate_income(data: dict) -> dict:
         stub["socialSecurityNumber"] = normalize_ssn(stub.get("socialSecurityNumber"))
         stub["grossPay"] = normalize_money(stub.get("grossPay"))
         stub["payDate"] = normalize_date(stub.get("payDate"))
-        if stub.get("payInterval"):
-            stub["payInterval"] = stub["payInterval"].lower()
+        stub["payInterval"] = _canonical_frequency(stub.get("payInterval"))
 
     for vi in si.get("verificationIncome", []):
         vi["memberName"] = to_title_case(vi.get("memberName"))
@@ -305,10 +316,32 @@ def validate_income(data: dict) -> dict:
         vi["ytdStartDate"] = normalize_date(vi.get("ytdStartDate"))
         vi["ytdEndDate"] = normalize_date(vi.get("ytdEndDate"))
         vi["overtimeRate"] = normalize_money(vi.get("overtimeRate"))
-        if vi.get("frequencyOfPay"):
-            vi["frequencyOfPay"] = vi["frequencyOfPay"].lower()
-        if vi.get("overtimeFrequency"):
-            vi["overtimeFrequency"] = vi["overtimeFrequency"].lower()
+        # Frequencies in one vocabulary. "Hourly" is a rate unit, not a pay
+        # frequency: when it arrives as the frequency it moves to rateUnit.
+        from app.services.income_calculator import normalize_frequency, normalize_rate_unit
+        for key in ("frequencyOfPay", "overtimeFrequency"):
+            canon = normalize_frequency(vi.get(key))
+            if canon in ("hourly", "daily"):
+                if not vi.get("rateUnit"):
+                    vi["rateUnit"] = canon
+                vi[key] = None
+            else:
+                vi[key] = _canonical_frequency(vi.get(key))
+        vi["rateUnit"] = normalize_rate_unit(vi.get("rateUnit"))
+        rows = vi.get("paymentHistory")
+        clean_rows = []
+        for row in rows if isinstance(rows, list) else []:
+            if not isinstance(row, dict):
+                continue
+            amount = normalize_money(row.get("amount"))
+            if amount is None:
+                continue
+            raw_date = row.get("date")
+            clean_rows.append({
+                "date": normalize_date(raw_date) or (str(raw_date).strip() if raw_date else None),
+                "amount": amount,
+            })
+        vi["paymentHistory"] = clean_rows
 
         # Normalize employment status
         status = (vi.get("employmentStatus") or "").strip().lower()
@@ -339,7 +372,7 @@ def validate_income(data: dict) -> dict:
     si["verificationIncome"] = [
         v for v in si.get("verificationIncome", [])
         if v.get("sourceName") or v.get("memberName") or v.get("rateOfPay")
-        or v.get("selfDeclaredAmount") or v.get("ytdAmount")
+        or v.get("selfDeclaredAmount") or v.get("ytdAmount") or v.get("paymentHistory")
     ]
 
     # Enforce Equifax/Work Number 6-paystub limit (Section 3)

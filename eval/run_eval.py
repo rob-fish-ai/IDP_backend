@@ -45,7 +45,7 @@ RUNS_DIR = ROOT / "eval" / "runs"
 DB_PATH = "/var/data/audit_jobs.db"
 
 # Calculation method preference, same order the TIC-total check uses.
-_METHOD_PRIORITY = {"voi-based": 0, "self-declared": 1, "ytd-based": 2, "paystub-based": 3}
+_METHOD_PRIORITY = {"voi-based": 0, "history-based": 0, "self-declared": 1, "ytd-based": 2, "paystub-based": 3}
 
 _CERT_MONEY = {"householdIncome", "tenantRent", "utilityAllowance", "grossRent", "federalRentAssistance"}
 
