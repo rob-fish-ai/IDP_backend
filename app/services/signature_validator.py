@@ -70,9 +70,6 @@ def validate_signatures(
     # --- 4. Student Status Certification: signed and dated ---
     _check_signed_dated(by_type, "Student Status Certification",
                         findings, "Student Status Certification must be signed and dated (Section 11)")
-    # Also check under alternate name
-    _check_signed_dated(by_type, "Student Status Certification",
-                        findings, "Student Status Certification must be signed and dated (Section 11)")
 
     # --- 5. Citizenship Declaration (Section 214): one per member, signed, dated ---
     # Only required for HUD/USDA properties
@@ -80,9 +77,6 @@ def validate_signatures(
     is_hud_or_usda = any(p in funding for p in ("hud", "section", "usda")) or _has_hud_50059(group_types)
     if is_hud_or_usda:
         cit_docs = by_type.get("Citizenship Declaration", [])
-        if not cit_docs:
-            # Also check alternate names
-            cit_docs = by_type.get("Citizenship Declaration", [])
         # Form absent entirely = hard compliance gap. Form present but
         # "unsigned" = unverifiable, not proven-missing: handwritten
         # signatures never survive OCR, so text-level signed-counts fired
@@ -103,8 +97,6 @@ def validate_signatures(
 
     # --- 6. Race and Ethnic Data Form: one per member, signed, dated ---
     race_docs = by_type.get("HUD Race and Ethnic Data Form", [])
-    if not race_docs:
-        race_docs = by_type.get("Race and Ethnic Data Form", [])
     if member_count > 0 and not race_docs:
         findings.append(
             "Missing required compliance document: Race and Ethnic Data "
@@ -120,19 +112,14 @@ def validate_signatures(
     # --- 7. HUD 92006: completed, signed, dated ---
     _check_signed_dated(by_type, "HUD 92006",
                         findings, "HUD 92006 (Emergency Contact) must be completed, signed, and dated (Section 11)")
-    _check_signed_dated(by_type, "HUD 92006",
-                        findings, "HUD 92006 (Emergency Contact) must be completed, signed, and dated (Section 11)")
 
-    # --- 8. HUD 9887: 4 pages, all adults sign, within 18 months ---
-    hud_9887_docs = by_type.get("HUD-9887", []) or by_type.get("HUD 9887", [])
+    # --- 8. HUD 9887: all adults sign, within 18 months ---
+    # Completeness of the form (its final section present) is asserted on
+    # the page text by special_scenarios; page counts said nothing once the
+    # classifier split the 9887 package into cover, fact sheet, 9887 and
+    # 9887-A groups.
+    hud_9887_docs = by_type.get("HUD 9887", [])
     if hud_9887_docs:
-        total_pages = sum(d.pageCount for d in hud_9887_docs)
-        if total_pages < 4:
-            findings.append(
-                f"HUD 9887 has {total_pages} page(s) — should be 4 pages. "
-                f"Missing pages = finding (Section 19)"
-            )
-
         # Check 18-month rule
         effective = _parse_date(
             certification_info.effectiveDate if certification_info else None
@@ -153,16 +140,9 @@ def validate_signatures(
                 "HUD 9887 must be signed by all adult household members (Section 11)"
             )
 
-    # --- 9. HUD 9887-A: 2 pages per adult, signed ---
-    hud_9887a_docs = by_type.get("HUD-9887-A", []) or by_type.get("HUD 9887-A", [])
+    # --- 9. HUD 9887-A: signed ---
+    hud_9887a_docs = by_type.get("HUD 9887-A", [])
     if hud_9887a_docs:
-        total_pages = sum(d.pageCount for d in hud_9887a_docs)
-        expected_pages = adult_count * 2
-        if expected_pages > 0 and total_pages < expected_pages:
-            findings.append(
-                f"HUD 9887-A has {total_pages} page(s) — expected {expected_pages} "
-                f"(2 pages per adult × {adult_count} adults). Missing pages = finding (Section 19)"
-            )
         unsigned = [d for d in hud_9887a_docs if d.isSigned == "No"]
         if unsigned:
             findings.append(

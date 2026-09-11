@@ -101,6 +101,8 @@ _DISPUTES_EXTRACTION = frozenset({
     "FIXED_INCOME_PAYSTUB",
     # Two documents state different identity values for one member
     "MEMBER_IDENTITY_CONFLICT",
+    # One person came out of extraction as two roster members
+    "MEMBER_MERGED",
 })
 
 

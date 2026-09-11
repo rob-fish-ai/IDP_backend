@@ -23,7 +23,8 @@ from app.services.bug_detector import detect_known_bugs
 from app.services.completeness import check_completeness
 from app.services.doc_taxonomy import (
     ROUTE_ASSET, ROUTE_CERT, ROUTE_DEMO, ROUTE_INCOME, assert_known,
-    is_current_certification_form, labels_for_route,
+    canonical_label, is_current_certification_form, is_previous_certification,
+    labels_for_route,
 )
 from app.services.findings import (
     ASSIGN_CLIENT, ASSIGN_INTERNAL, CATEGORY_FILE_REVIEW, CATEGORY_INCOME,
@@ -1818,10 +1819,19 @@ def _deduplicate_household_members(household) -> list[str]:
                     setattr(primary, field, getattr(dup, field))
             to_remove.add(dup_idx)
             dup_name = f"{dup.FirstName or ''} {dup.LastName or ''}".strip()
-            findings.append(
+            primary_name = f"{primary.FirstName or ''} {primary.LastName or ''}".strip()
+            findings.append(make_finding(
+                "MEMBER_MERGED",
                 f"Merged duplicate household member '{dup_name}' "
-                f"(member #{dup.householdMemberNumber or '?'} into #{primary.householdMemberNumber or '?'})"
-            )
+                f"(member #{dup.householdMemberNumber or '?'} into #{primary.householdMemberNumber or '?'})",
+                label="One member was extracted twice",
+                category=CATEGORY_MEMBER,
+                subject_type="household_member",
+                subject_ref={"member_name": primary_name},
+                assignment=ASSIGN_INTERNAL,
+                correction_required="Confirm the household roster against the certification form",
+                resolution_type=RESOLVE_PRESENCE,
+            ))
 
     if to_remove:
         household.houseHold = [m for i, m in enumerate(members) if i not in to_remove]
@@ -2099,8 +2109,9 @@ def _generate_findings(
     }
     assert_known(required_hud_forms, "pipeline.required_hud_forms")
     is_hud_property = any(
-        "HUD 50059" in g.document_type for g in document_groups
-        if "(Previous)" not in g.document_type
+        canonical_label(g.document_type)[0] == "HUD 50059"
+        and not is_previous_certification(g.document_type)
+        for g in document_groups
     )
     if is_hud_property:
         for form, description in required_hud_forms.items():
@@ -2230,10 +2241,37 @@ def _generate_findings(
                     for other in income_member_names
                 )
                 if not has_income:
-                    findings.append(
-                        f"Head of household '{member.FirstName} {member.LastName}' has no income records — "
-                        f"zero income worksheet required per Section 9"
-                    )
+                    # The wording follows what the certification says. A
+                    # zero-income worksheet is the remedy only when the
+                    # household declared zero; when the certification
+                    # declares income, the head's source is unread or sits
+                    # under another member, which is an extraction gap.
+                    declared_total = None
+                    try:
+                        if certification_info and certification_info.householdIncome:
+                            declared_total = float(str(certification_info.householdIncome).replace(",", ""))
+                    except ValueError:
+                        declared_total = None
+                    who = f"Head of household '{member.FirstName} {member.LastName}'"
+                    if declared_total is not None and declared_total <= 0:
+                        findings.append(
+                            f"{who} has no income records and the certification declares "
+                            f"zero household income — zero income worksheet / certification "
+                            f"required per Section 9"
+                        )
+                    elif declared_total:
+                        findings.append(
+                            f"{who} has no income records but the certification declares "
+                            f"${declared_total:,.2f} household income — the head's income "
+                            f"source was not read or is attributed to another member; "
+                            f"verify (Section 9)"
+                        )
+                    else:
+                        findings.append(
+                            f"{who} has no income records and the certification's income "
+                            f"total was not read — verify whether a zero income "
+                            f"certification is required (Section 9)"
+                        )
 
     # --- 13. Terminated employment without termination date ---
     if income:

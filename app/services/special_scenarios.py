@@ -43,7 +43,7 @@ def check_special_scenarios(
     findings.extend(_check_members_without_ssn(household, certification_info))
     findings.extend(_check_student_contradictions(household, document_groups))
     findings.extend(_check_ssa_overpayment(document_groups))
-    findings.extend(_check_hud_9887_pages(inventory_hud, household, certification_info))
+    findings.extend(_check_hud_9887_content(document_groups))
     findings.extend(_check_homeless_applicant(document_groups))
     findings.extend(_check_cryptocurrency(assets))
 
@@ -200,45 +200,72 @@ def _check_ssa_overpayment(
     return findings
 
 
-def _check_hud_9887_pages(
-    inventory_hud: DocumentInventory | None,
-    household: HouseholdDemographics | None,
-    certification_info: CertificationInfo | None,
-) -> list[Finding]:
-    """9887-A must be 2 pages each.
+# What a complete HUD 9887 / 9887-A carries in its text. The identity
+# marker says the group really is the form. Each required section is a
+# page's distinctive wording (the HUD form text is fixed), satisfied by any
+# of its patterns; a form missing a section is missing that page.
+_HUD_FORM_CONTENT: dict[str, tuple[tuple[str, ...], tuple[tuple[str, tuple[str, ...]], ...]]] = {
+    "HUD 9887": (
+        (r"notice\s+and\s+consent",),
+        (
+            ("signature page", (r"signatures?\s*:", r"form\s+hud-?\s*9887\b", r"other\s+family\s+members\s+18")),
+            ("agencies / expiry page", (r"expires\s+15\s+months", r"agencies\s+to\s+provide\s+information",
+                                        r"privacy\s+act\s+statement")),
+        ),
+    ),
+    "HUD 9887-A": (
+        (r"applicant'?s?\s*/?\s*tenant'?s?\s+consent", r"consent\s+to\s+the\s+release\s+of\s+information"),
+        (
+            ("instructions page", (r"instructions\s+to\s+the\s+owner", r"persons\s+who\s+apply\s+for",
+                                   r"applicant'?s?\s*/?\s*tenant'?s?\s+consent")),
+            ("conditions / failure-to-sign page", (r"failure\s+to\s+sign", r"unauthorized\s+disclosure",
+                                                   r"^\s*conditions\s*$")),
+        ),
+    ),
+}
 
-    Per document, which is the half of the rule this module can check from
-    the inventory alone. signature_validator holds the other half — total
-    pages against two per adult — and that is why `adult_count` used to be
-    computed here and thrown away. See the duplicate-finding note: one
-    incomplete 9887-A is currently reported by both modules.
-    """
+
+def _check_hud_9887_content(document_groups: list[DocumentGroup]) -> list[Finding]:
+    """A HUD 9887 or 9887-A is complete when its text carries every page's
+    distinctive section. This is the single owner of 9887 completeness: the
+    page counts the signature validator and this module used to compare
+    (four pages, two per adult) fired on every packet where the classifier
+    split the consent package into its cover, fact sheet, 9887 and 9887-A."""
+    import re as _re
+    from app.services.doc_taxonomy import canonical_label
+    from app.services.text_sanitizer import strip_html
+
     findings: list[Finding] = []
-    if not inventory_hud:
-        return findings
-
-    for doc in inventory_hud.documents:
-        dt = (doc.documentType or "").strip()
-
-        # HUD 9887-A page count check
-        if "9887-A" in dt or "9887A" in dt:
-            # Each 9887-A should be 2 pages
-            if doc.pageCount > 0 and doc.pageCount < 2:
-                findings.append(make_finding(
-                    "HUD_9887A_INCOMPLETE",
-                    f"HUD 9887-A for '{doc.personName or 'Unknown'}' has {doc.pageCount} page(s) — "
-                    f"should be 2 pages. Missing pages = finding (Section 19)",
-                    label="HUD 9887-A is missing pages",
-                    category=CATEGORY_FILE_REVIEW,
-                    subject_type="household_member",
-                    subject_ref={"member_name": doc.personName},
-                    assignment=ASSIGN_CLIENT,
-                    correction_required=(
-                        "Obtain the complete two-page HUD 9887-A for this member"
-                    ),
-                    resolution_type=RESOLVE_PRESENCE,
-                ))
-
+    for group in document_groups:
+        base = canonical_label(group.document_type)[0]
+        spec = _HUD_FORM_CONTENT.get(base)
+        if not spec:
+            continue
+        text = strip_html(group.combined_text or "").lower()
+        identity, sections = spec
+        if not any(_re.search(rx, text) for rx in identity):
+            continue  # not the form's own text; classification owns that
+        missing = [
+            name for name, patterns in sections
+            if not any(_re.search(rx, text, _re.MULTILINE) for rx in patterns)
+        ]
+        if not missing:
+            continue
+        pages = ", ".join(str(p) for p in group.pages)
+        code = "HUD_9887A_INCOMPLETE" if base == "HUD 9887-A" else "HUD_9887_INCOMPLETE"
+        findings.append(make_finding(
+            code,
+            f"{base} (page{'s' if len(group.pages) > 1 else ''} {pages}) is missing its "
+            f"{' and '.join(missing)} — the form is incomplete. Missing pages = finding (Section 19)",
+            label=f"{base} is missing pages",
+            category=CATEGORY_FILE_REVIEW,
+            subject_type="document",
+            subject_ref={"document_type": base, "pages": list(group.pages)},
+            assignment=ASSIGN_CLIENT,
+            correction_required=f"Obtain the complete {base}",
+            resolution_type=RESOLVE_PRESENCE,
+            pages=list(group.pages),
+        ))
     return findings
 
 

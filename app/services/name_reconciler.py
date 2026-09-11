@@ -14,6 +14,8 @@ Source trust hierarchy (highest first):
 
 import logging
 
+from app.services.findings import ASSIGN_INTERNAL, CATEGORY_MEMBER, RESOLVE_PRESENCE, make_finding
+
 logger = logging.getLogger(__name__)
 
 # Minimum similarity threshold for clustering (0-1)
@@ -68,10 +70,19 @@ def reconcile_names(
 
         variants = set(m["name"] for m in cluster if m["name"] != canonical)
         if variants:
-            findings.append(
+            findings.append(make_finding(
+                "NAME_VARIANT",
                 f"Name variants detected for '{canonical}': "
-                f"{', '.join(repr(v) for v in variants)} — using '{canonical}' from {cluster[0]['source']}"
-            )
+                f"{', '.join(repr(v) for v in variants)} — using '{canonical}' from {cluster[0]['source']}",
+                label="Name spelled differently across documents",
+                category=CATEGORY_MEMBER,
+                subject_type="household_member",
+                subject_ref={"member_name": canonical},
+                result="compliant",
+                assignment=ASSIGN_INTERNAL,
+                correction_required=None,
+                resolution_type=RESOLVE_PRESENCE,
+            ))
 
         for mention in cluster:
             canonical_map[mention["name"].lower()] = canonical
