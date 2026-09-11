@@ -1,6 +1,7 @@
 """Full IDP pipeline: OCR → Classify → Group → Extract → Validate → Output."""
 
 import logging
+import re
 import time
 
 from app.core.config import Settings
@@ -405,91 +406,13 @@ def run_extraction_pipeline(
                     tic_total,
                 )
 
-    # Step 3c: Compute income calculations (Section 9)
-    logger.info("Step 3c/6: Computing income calculations")
-    income_calculations = []
+    # Step 3c: sources that exist only as paystubs get a record now, so the
+    # steps that follow (questionnaire linking, name reconciliation, the
+    # duplicate resolver) see them. The calculations themselves are computed
+    # once, from the final list, just before the findings — see Step 4f.
     if income:
-        vi_entries = income.sourceIncome.verificationIncome
-        ps_entries = income.sourceIncome.payStub
-        ps_map = match_paystubs_to_sources(ps_entries, vi_entries)
-
-        # Effective date anchors the stale-wage guard: EIV / Work Number
-        # wage-history quarters years before the cert must not be
-        # annualized into current income.
-        from app.services.income_calculator import _parse_date as _parse_ic_date
-        reference_date = _parse_ic_date(
-            certification_info.effectiveDate if certification_info else None
-        )
-
-        for i, vi in enumerate(vi_entries):
-            results = calculate_all_methods(
-                vi, ps_map.get(i, []), ctx.funding_program,
-                reference_date=reference_date,
-            )
-            income_calculations.extend(results)
-
-        # Handle paystubs not matched to any VI entry
-        matched_ps = {id(ps) for psl in ps_map.values() for ps in psl}
-        unmatched_ps = [ps for ps in ps_entries if id(ps) not in matched_ps]
-        if unmatched_ps:
-            # Group by (source, member) — source alone would pool stubs from
-            # two household members who share an employer into one average.
-            by_source: dict[tuple[str, str], list] = {}
-            for ps in unmatched_ps:
-                key = (
-                    (ps.sourceName or "Unknown").lower(),
-                    (ps.memberName or "").lower(),
-                )
-                by_source.setdefault(key, []).append(ps)
-            for source_ps in by_source.values():
-                results = calculate_all_methods(
-                    None, source_ps, ctx.funding_program,
-                    reference_date=reference_date,
-                )
-                income_calculations.extend(results)
-
-                # Give the source a verification entry as well, not just a
-                # calculation. Forty-three places across eight modules
-                # iterate verificationIncome — the consistency checks, the
-                # duplicate detector, the roster match, field scoring, the
-                # MuleSoft comparison, the Cartograph payload. A source that
-                # exists only as a stack of stubs is invisible to every one
-                # of them, so the household's largest income can be audited
-                # by nothing and reported to no one while the calculation
-                # quietly knows about it.
-                #
-                # This is not rare. A blank employer verification with
-                # paystubs substituted is a documented path — the packet
-                # that exposed it carries an "Unable to Obtain Third Party
-                # Verification" form saying exactly that. It also surfaces
-                # whenever extraction drops the entry, which sampling makes
-                # possible on any run.
-                first = source_ps[0]
-                vi_entries.append(VerificationIncomeEntry(
-                    sourceName=first.sourceName,
-                    memberName=first.memberName,
-                    socialSecurityNumber=first.socialSecurityNumber,
-                    frequencyOfPay=first.payInterval,
-                    # A paystub is employment income by definition, so this
-                    # records what the evidence establishes and nothing more.
-                    # It deliberately does not narrow to federal or
-                    # non-federal wages: that depends on the employer and the
-                    # program, neither knowable from a stub. Consumers that
-                    # need a narrower value map this through their own
-                    # vocabulary; consumers that have collapsed the
-                    # distinction take it as-is.
-                    incomeType="Employment",
-                    # selfDeclaredAmount and every verification field stay
-                    # unset: this source was reconstructed from stubs, so
-                    # there is no third-party document behind it and checks
-                    # looking for one should find nothing.
-                ))
-                logger.info(
-                    "Reconstructed income source '%s' for '%s' from %d "
-                    "unmatched paystub(s) — no verification entry was "
-                    "extracted for it",
-                    first.sourceName, first.memberName, len(source_ps),
-                )
+        _reconstruct_orphan_paystub_sources(income)
+    income_calculations: list = []
 
     # Step 4: Build document inventories (deterministic — no LLM)
     logger.info("Step 4/6: Building document inventories (no LLM)")
@@ -529,6 +452,19 @@ def run_extraction_pipeline(
     if household and household.houseHold:
         dedup_findings = _deduplicate_household_members(household)
         name_findings.extend(dedup_findings)
+
+    # Step 4f: the income list is final here — questionnaire stubs added,
+    # names reconciled, members merged — so duplicates are resolved and the
+    # calculations computed now. Computing them at 3c produced rows for
+    # records later removed (a $0.00 SSI row with no record behind it) and
+    # under names later renamed, so nothing keyed on (member, source)
+    # could join the two.
+    if income:
+        income.sourceIncome.verificationIncome = _resolve_duplicate_self_declarations(
+            income.sourceIncome.verificationIncome
+        )
+    logger.info("Step 4f/6: Computing income calculations from the final income list")
+    income_calculations = _compute_income_calculations(income, certification_info, ctx) if income else []
 
     # Step 5: Compile findings
     logger.info("Step 5/6: Compiling findings")
@@ -601,12 +537,6 @@ def run_extraction_pipeline(
         # should appear exactly once in the output.
         missing_set = set(missing_forms)
         findings[:] = [f for f in findings if text_of(f) not in missing_set]
-
-    # Step 5c: Resolve duplicate self-declarations (most recent wins)
-    if income:
-        income.sourceIncome.verificationIncome = _resolve_duplicate_self_declarations(
-            income.sourceIncome.verificationIncome
-        )
 
     # Step 6: Multi-stage field-level scoring
     # Score from FINAL data objects after all merging/validation.
@@ -1566,40 +1496,207 @@ def _deduplicate_assets(asset_records: list) -> list:
             len(recs), key,
         )
 
-    return merged
+
+    # Tolerance pass: two records of one owner and one type family, neither
+    # carrying a different account number, whose values are within 1% or one
+    # digit apart are one asset read twice with a scan slip (6,294.34 beside
+    # 6,294.74). The richer record keeps its balance; the other's value is
+    # kept as the self-declared figure so a real disagreement still surfaces.
+    def _family(t: str | None) -> str:
+        t = (t or "").lower()
+        for fam, names in (("cash", ("checking", "savings", "cash", "prepaid", "direct express", "debit", "money market", "cd")),
+                           ("real estate", ("real estate", "property", "home")),
+                           ("investment", ("invest", "retirement", "annuity", "able", "crypto", "brokerage", "401", "ira")),
+                           ("life insurance", ("life insurance",))):
+            if any(n in t for n in names):
+                return fam
+        return t or "other"
+
+    def _value_of(rec) -> float | None:
+        for f in ("currentBalance", "selfDeclaredAmount", "averageSixMonthBalance"):
+            v = getattr(rec, f, None)
+            if v:
+                try:
+                    return float(str(v).replace(",", ""))
+                except ValueError:
+                    continue
+        return None
+
+    def _close(a: float, b: float) -> bool:
+        if abs(a - b) <= max(0.02, abs(b) * 0.01):
+            return True
+        sa, sb = f"{a:.2f}", f"{b:.2f}"
+        return len(sa) == len(sb) and sum(1 for x, y in zip(sa, sb) if x != y) == 1
+
+    def _last4(v) -> str:
+        return re.sub(r"\D", "", v or "")[-4:]
+
+    collapsed: list = []
+    for rec in sorted(merged, key=_populated_count, reverse=True):
+        twin = None
+        for kept in collapsed:
+            if slug(kept.assetOwner) != slug(rec.assetOwner) or _family(kept.accountType) != _family(rec.accountType):
+                continue
+            if kept.accountNumber and rec.accountNumber and _last4(kept.accountNumber) != _last4(rec.accountNumber):
+                continue
+            va, vb = _value_of(kept), _value_of(rec)
+            if va is not None and vb is not None and _close(va, vb):
+                twin = kept
+                break
+        if twin is None:
+            collapsed.append(rec)
+            continue
+        if not twin.selfDeclaredAmount and rec.selfDeclaredAmount:
+            twin.selfDeclaredAmount = rec.selfDeclaredAmount
+            twin.selfDeclaredSource = twin.selfDeclaredSource or rec.selfDeclaredSource
+        elif not twin.selfDeclaredAmount and rec.currentBalance and twin.currentBalance != rec.currentBalance:
+            twin.selfDeclaredAmount = rec.currentBalance
+        for f in ("accountNumber", "incomeAmount", "interestType", "percentageOfOwnership", "dateReceived", "sourceName"):
+            if not getattr(twin, f, None) and getattr(rec, f, None):
+                setattr(twin, f, getattr(rec, f))
+        logger.info(
+            "Asset dedup: merged a near-duplicate %s record for %s (%s vs %s)",
+            twin.accountType, twin.assetOwner, _value_of(twin), _value_of(rec),
+        )
+    return collapsed
+
+
+def _reconstruct_orphan_paystub_sources(income) -> None:
+    """Give a source that exists only as paystubs a verificationIncome record.
+
+    Forty-three places across eight modules iterate verificationIncome —
+    the consistency checks, the duplicate detector, the roster match, field
+    scoring, the Cartograph payload. A source that exists only as a stack
+    of stubs is invisible to every one of them, so the household's largest
+    income can be audited by nothing while the calculation quietly knows
+    about it. A blank employer verification with paystubs substituted is a
+    documented path, and it also surfaces whenever extraction drops the
+    entry.
+    """
+    vi_entries = income.sourceIncome.verificationIncome
+    ps_entries = income.sourceIncome.payStub
+    ps_map = match_paystubs_to_sources(ps_entries, vi_entries)
+    matched_ps = {id(ps) for psl in ps_map.values() for ps in psl}
+    unmatched_ps = [ps for ps in ps_entries if id(ps) not in matched_ps]
+    if not unmatched_ps:
+        return
+    # Group by (source, member) — source alone would pool stubs from two
+    # household members who share an employer into one record.
+    by_source: dict[tuple[str, str], list] = {}
+    for ps in unmatched_ps:
+        key = ((ps.sourceName or "Unknown").lower(), (ps.memberName or "").lower())
+        by_source.setdefault(key, []).append(ps)
+    for source_ps in by_source.values():
+        first = source_ps[0]
+        vi_entries.append(VerificationIncomeEntry(
+            sourceName=first.sourceName,
+            memberName=first.memberName,
+            frequencyOfPay=first.payInterval,
+            # A paystub is employment income by definition; which kind of
+            # wage depends on the employer and the program, neither knowable
+            # from a stub, so the broadest wage term the vocabulary carries.
+            incomeType="Non-Federal Wage",
+            type_of_VOI="Employer Verification",
+            sourcePages=sorted({p for ps in source_ps for p in (ps.sourcePages or [])}),
+            verificationStatus="verified",
+            # selfDeclaredAmount and every verification field stay unset:
+            # the stubs are the evidence, and the calculation reads them.
+        ))
+        logger.info(
+            "Reconstructed income source '%s' for '%s' from %d unmatched "
+            "paystub(s) — no verification entry was extracted for it",
+            first.sourceName, first.memberName, len(source_ps),
+        )
+
+
+def _compute_income_calculations(income, certification_info, ctx) -> list:
+    """Annual income per source, a pure function of the final income list."""
+    vi_entries = income.sourceIncome.verificationIncome
+    ps_entries = income.sourceIncome.payStub
+    ps_map = match_paystubs_to_sources(ps_entries, vi_entries)
+    # Effective date anchors the stale-wage guard: EIV / Work Number wage
+    # history quarters years before the cert must not be annualized into
+    # current income.
+    from app.services.income_calculator import _parse_date as _parse_ic_date
+    reference_date = _parse_ic_date(certification_info.effectiveDate if certification_info else None)
+    out: list = []
+    for i, vi in enumerate(vi_entries):
+        out.extend(calculate_all_methods(
+            vi, ps_map.get(i, []), ctx.funding_program, reference_date=reference_date,
+        ))
+    matched_ps = {id(ps) for psl in ps_map.values() for ps in psl}
+    unmatched_ps = [ps for ps in ps_entries if id(ps) not in matched_ps]
+    if unmatched_ps:
+        by_source: dict[tuple[str, str], list] = {}
+        for ps in unmatched_ps:
+            key = ((ps.sourceName or "Unknown").lower(), (ps.memberName or "").lower())
+            by_source.setdefault(key, []).append(ps)
+        for source_ps in by_source.values():
+            out.extend(calculate_all_methods(
+                None, source_ps, ctx.funding_program, reference_date=reference_date,
+            ))
+    return out
+
+
+_EVIDENCE_RANK = {"verified": 0, "verified_not_declared": 0, "self_certified": 1, "declared_only": 2}
 
 
 def _resolve_duplicate_self_declarations(vi_entries: list) -> list:
-    """If multiple sources declare the same income, keep the most recent.
+    """Collapse records that are the same income read twice.
 
-    Duplicates are keyed by (source, member): the same employer legitimately
-    appears once per household member who works there, and collapsing on
-    source alone silently deletes the second member's income record.
+    Identity is (member, source, program): the same employer legitimately
+    appears once per household member who works there, and one payer can
+    pay two programs (retirement and SSI) to one person. Within a group the
+    keeper is chosen by evidence — a third-party record over a declaration,
+    a record with an amount over one without, a non-zero amount over $0.00
+    — and only then by date. Keyed on (source, member) and tie-broken by
+    date, a later-dated $0.00 SSI row deleted the verified $1,489.50
+    retirement record beside it.
     """
     from collections import defaultdict
-    by_source: dict[tuple[str, str], list] = defaultdict(list)
-    non_dupes: list = []
 
+    def _amount(v) -> float:
+        for f in ("rateOfPay", "selfDeclaredAmount", "ytdAmount"):
+            val = getattr(v, f, None)
+            if val:
+                try:
+                    return float(str(val).replace(",", ""))
+                except ValueError:
+                    continue
+        return 0.0
+
+    groups: dict[tuple[str, str, str], list] = defaultdict(list)
     for vi in vi_entries:
-        source = (vi.sourceName or "").lower().strip()
-        member = (vi.memberName or "").lower().strip()
-        if source and vi.selfDeclaredAmount:
-            by_source[(source, member)].append(vi)
-        else:
-            non_dupes.append(vi)
-
-    for source, entries in by_source.items():
-        if len(entries) <= 1:
-            non_dupes.extend(entries)
-        else:
-            # Sort by dateReceived or hireDate descending, keep most recent
-            entries.sort(
-                key=lambda v: v.dateReceived or v.hireDate or "",
-                reverse=True,
-            )
-            non_dupes.append(entries[0])  # Keep most recent
-
-    return non_dupes
+        key = (
+            (vi.memberName or "").lower().strip(),
+            (vi.sourceName or "").lower().strip(),
+            (vi.incomeType or "").lower().strip(),
+        )
+        groups[key].append(vi)
+    out: list = []
+    for key, entries in groups.items():
+        if len(entries) == 1 or not key[1]:
+            out.extend(entries)
+            continue
+        entries.sort(key=lambda v: (
+            _EVIDENCE_RANK.get(v.verificationStatus or "verified", 1),
+            0 if _amount(v) > 0 else 1,
+            -(len([f for f in ("rateOfPay", "selfDeclaredAmount", "ytdAmount", "hoursPerPayPeriod", "frequencyOfPay") if getattr(v, f, None)])),
+            (v.dateReceived or v.hireDate or ""),
+        ))
+        keeper = entries[0]
+        # Fill the keeper's gaps from the copies it displaces.
+        for other in entries[1:]:
+            for f in ("selfDeclaredAmount", "selfDeclaredSource", "declaredAnnualAmount",
+                      "declaredSource", "dateReceived", "hireDate", "programName"):
+                if not getattr(keeper, f, None) and getattr(other, f, None):
+                    setattr(keeper, f, getattr(other, f))
+        logger.info(
+            "Income: collapsed %d records for %s / %s / %s into one (kept the %s record)",
+            len(entries), key[0] or "?", key[1], key[2] or "?", keeper.verificationStatus or "verified",
+        )
+        out.append(keeper)
+    return out
 
 
 def _llm_fallback(label, func, groups, settings, *, default=None, **kwargs):

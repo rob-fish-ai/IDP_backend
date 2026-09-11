@@ -779,6 +779,13 @@ def validate_tic_totals(
     residual = max(0.0, diff - explained)
     residual_pct = residual / tic_total if tic_total > 0 else 0
 
+    if explained and residual <= _ROUNDING_TOLERANCE:
+        logger.info(
+            "TIC total: the $%.2f gap is explained by per-record declared-vs-"
+            "calculated differences ($%.2f) — no case-level finding",
+            diff, explained,
+        )
+        return findings
     if diff_pct > 0.15 and residual_pct <= 0.15:
         logger.info(
             "TIC total: %.0f%% gap of $%.2f is explained by per-record declared-vs-"

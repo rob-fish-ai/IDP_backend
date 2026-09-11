@@ -828,11 +828,12 @@ def score_findings(cards: list[RecordScoreCard], findings: list) -> None:
         if named_field:
             if subject:
                 targets = [c for c in cards if c.record_type in fields_by_type
-                           and subject & {slug(p) for p in (c.record_label or "").split("—")}]
+                           and _names_record(subject, c)]
             else:
                 rt = _NAMED_FIELD_RECORD.get(named_field)
                 targets = [c for c in cards if c.record_type == rt] if rt else []
             for card in targets:
+                card.disputed = True
                 if any(f.field_name == named_field for f in card.fields):
                     _lower_fields(card, (named_field,), _DISPUTED_SCORE, reason)
                 else:
@@ -845,9 +846,9 @@ def score_findings(cards: list[RecordScoreCard], findings: list) -> None:
 
         candidates = [c for c in cards if c.record_type in fields_by_type]
         if subject:
-            targets = [c for c in candidates
-                       if subject & {slug(p) for p in (c.record_label or "").split("—")}]
+            targets = [c for c in candidates if _names_record(subject, c)]
             for card in targets:
+                card.disputed = True
                 _lower_fields(card, fields_by_type[card.record_type], _DISPUTED_SCORE, reason)
             continue
 
@@ -869,6 +870,14 @@ def score_findings(cards: list[RecordScoreCard], findings: list) -> None:
 
     for card in cards:
         card.recompute()
+
+
+def _names_record(subject: set, card: RecordScoreCard) -> bool:
+    """Whether every named part of a finding's subject is on the record's
+    label. Matching on any one part let a finding about a member's child
+    support land on the same member's Social Security record."""
+    label_parts = {slug(p) for p in (card.record_label or "").split("—")}
+    return bool(subject) and subject <= label_parts
 
 
 def _lower_fields(card: RecordScoreCard, field_names: tuple, score: float, reason: str) -> None:

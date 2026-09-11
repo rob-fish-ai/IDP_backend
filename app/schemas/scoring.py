@@ -174,6 +174,10 @@ class RecordScoreCard(BaseModel):
     # verification checks a value against these pages first.
     source_pages: list[int] = []
     verification_status: Optional[str] = None
+    # Set when a finding names this record: the contradiction is about this
+    # record specifically, so it cannot read as green however its other
+    # fields score.
+    disputed: bool = False
     composite: float = Field(default=0.0, ge=0.0, le=1.0)
     flag: ScoreFlag = ScoreFlag.RED
 
@@ -189,7 +193,7 @@ class RecordScoreCard(BaseModel):
         # declaration kept because no source document carries it — cannot
         # be green as a whole, however well its picklist fields verify
         # against the form it was declared on.
-        if self.verification_status == "declared_only":
+        if self.verification_status == "declared_only" or self.disputed:
             self.composite = min(self.composite, UNVERIFIED_CEILING)
         self.flag = compute_flag(self.composite)
 
