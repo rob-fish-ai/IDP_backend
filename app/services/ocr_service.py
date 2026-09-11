@@ -36,22 +36,45 @@ def _call_glm_ocr(buf: io.BytesIO, image_name: str, settings: Settings) -> dict:
         response = client.post(
             settings.ocr_fallback_url,
             files={"files": (image_name, buf, "image/png")},
+            # Greedy decoding: the fallback runs on pages the primary engine
+            # could not read, where sampling is what produces the loops.
+            data={"do_sample": "false"},
         )
         response.raise_for_status()
 
     result = response.json()
 
-    text = result.get("text", "")
+    # The service returns pages[] of PageResult with its own score, flag and
+    # flag_details. Those used to be discarded for a fabricated composite
+    # of 0.6 and no flags, which put every GLM read above the vision
+    # threshold and outside every flag-based gate.
+    page = None
+    if isinstance(result.get("pages"), list) and result["pages"]:
+        page = result["pages"][0] if isinstance(result["pages"][0], dict) else None
+
+    text = (page or {}).get("text") or result.get("text", "")
     if not text and isinstance(result.get("results"), list):
         text = "\n".join(r.get("text", "") for r in result["results"])
 
+    score = (page or {}).get("score")
+    composite = score.get("composite") if isinstance(score, dict) else score
+    try:
+        composite = float(composite) if composite is not None else None
+    except (TypeError, ValueError):
+        composite = None
+    flag = (page or {}).get("flag") or "yellow"
+    details = list((page or {}).get("flag_details") or [])
+    details.append("glm_ocr_fallback")
+
     return {
         "text": text,
-        "flag": "yellow",
-        "flag_message": "Extracted via GLM-OCR fallback",
-        "flag_details": ["glm_ocr_fallback"],
-        "score": {"composite": 0.6},
-        "needs_external_ocr": False,
+        "flag": flag,
+        "flag_message": (page or {}).get("flag_message") or "Extracted via GLM-OCR fallback",
+        "flag_details": details,
+        # No score from the service means "unknown", which the vision gate
+        # must treat as unreliable rather than as a pass.
+        "score": {"composite": composite if composite is not None else 0.0},
+        "needs_external_ocr": bool(composite is None),
     }
 
 

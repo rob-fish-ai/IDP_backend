@@ -1,6 +1,7 @@
 import logging
 import re
 import time
+import zlib
 from concurrent.futures import ThreadPoolExecutor
 
 import fitz  # PyMuPDF
@@ -9,7 +10,8 @@ from PIL import Image
 from app.core.config import Settings
 from app.core.exceptions import ProcessingError
 from app.services.image_processing import preprocess_for_ocr, suspected_content_loss
-from app.services.ocr_service import flag_codes, ocr_single_image
+from app.services.ocr_service import composite_of, flag_codes, ocr_single_image
+from app.services.text_sanitizer import strip_html
 from app.services.pipeline import run_extraction_pipeline
 
 logger = logging.getLogger(__name__)
@@ -65,6 +67,109 @@ def _repetitive_fraction(text: str) -> float:
     return run_chars / total
 
 
+# Quality flags the OCR service raises on its own output. They used to feed
+# only the rotation probe and the replacement rule; a page carrying one but
+# scoring above the vision threshold shipped as read. Observed: an EIV
+# income report whose five pages were "Mouth Line Thickness: 1/4" and
+# "Data of Birth:" repeated hundreds of times, flagged repetitive_content by
+# the service, scored 0.79-0.86, never re-read.
+_VISION_QUEUE_FLAGS = frozenset({
+    "possible_hallucination",
+    "repetitive_content",
+    "incomplete_extraction",
+})
+
+# Degenerate text: a decoder loop compresses to almost nothing, and one
+# token dominates. Calibrated on 147 stored pages: the five hallucinated
+# pages compress to 0.012-0.031 of their length and every clean page above
+# 300 characters to at least 0.30; the bank verification page whose account
+# cell became 2,896 nines compresses to 0.13 but is 82% one token, and no
+# clean page exceeds 0.19.
+_DEGENERATE_ZLIB_RATIO = 0.10
+_DOMINANT_TOKEN_FRACTION = 0.50
+_DEGENERATE_MIN_CHARS = 300
+
+
+def _plain_text(text: str) -> str:
+    """The text as the extractor will see it: no grounding tags, no HTML."""
+    return strip_html(text or "")
+
+
+def _degenerate_signals(text: str) -> tuple[float, float]:
+    """(compression ratio, dominant-token fraction) of the page's plain text.
+
+    Both are whitespace-tolerant, which the short-run regex is not: the
+    loops it missed were "I/we, I/we," (six characters with a space) and
+    "Data of birth:" (three words).
+    """
+    plain = _plain_text(text)
+    if len(plain) < _DEGENERATE_MIN_CHARS:
+        return 1.0, 0.0
+    ratio = len(zlib.compress(plain.encode("utf-8"))) / len(plain)
+    tokens = plain.split()
+    counts: dict[str, int] = {}
+    for tok in tokens:
+        counts[tok] = counts.get(tok, 0) + 1
+    dominant = max(counts.values()) / len(tokens) if tokens else 0.0
+    return ratio, dominant
+
+
+def _is_degenerate(text: str) -> tuple[bool, str]:
+    ratio, dominant = _degenerate_signals(text)
+    if ratio < _DEGENERATE_ZLIB_RATIO:
+        return True, f"compresses to {ratio:.3f} of its length"
+    if dominant >= _DOMINANT_TOKEN_FRACTION:
+        return True, f"one token is {dominant:.0%} of the page"
+    return False, ""
+
+
+_DET_BOX_RE = re.compile(r"<\|det\|>\[\[(\d+),\s*(\d+),\s*(\d+),\s*(\d+)\]\]<\|/det\|>")
+# A sideways scan on a portrait canvas puts every recognised line in a
+# narrow vertical band where the rotated header lands. On the stored
+# hallucinated pages the band is 4-21% of the page wide; the narrowest
+# clean page spans 66%.
+_VERTICAL_BAND_MAX_WIDTH = 0.30
+_VERTICAL_BAND_MIN_HEIGHT = 0.40
+
+
+def _boxes_in_vertical_band(text: str) -> bool:
+    """True when the OCR's own line boxes sit in a tall, narrow band."""
+    boxes = [tuple(int(g) for g in m.groups()) for m in _DET_BOX_RE.finditer(text or "")]
+    if not boxes:
+        return False
+    width = (max(b[2] for b in boxes) - min(b[0] for b in boxes)) / 1000
+    height = (max(b[3] for b in boxes) - min(b[1] for b in boxes)) / 1000
+    return width < _VERTICAL_BAND_MAX_WIDTH and height > _VERTICAL_BAND_MIN_HEIGHT
+
+
+_TEXT_LAYER_MIN_CHARS = 200
+_TEXT_LAYER_DIGIT_RECALL = 0.70
+
+
+def _digit_tokens(text: str) -> set[str]:
+    return set(re.findall(r"\d[\d,./-]*\d|\d", text or ""))
+
+
+def _text_layer_disagrees(layer: str, ocr_text: str) -> bool:
+    """True when the PDF's own text layer holds numbers the OCR lost.
+
+    A born-digital page carries its text exactly; OCR re-samples it and,
+    run to run, drops value cells while the labels survive. The layer is
+    the second read that detects it for free.
+    """
+    want = _digit_tokens(layer)
+    if len(want) < 5:
+        return False
+    have = _digit_tokens(_plain_text(ocr_text))
+    return len(want & have) / len(want) < _TEXT_LAYER_DIGIT_RECALL
+
+
+def _add_flag(result: dict, code: str) -> None:
+    flags = result.setdefault("flag_details", [])
+    if isinstance(flags, list) and code not in flag_codes(flags):
+        flags.append(code)
+
+
 _ROTATION_PROBE_FLAGS = frozenset({
     "possible_hallucination",
     "repetitive_content",
@@ -116,7 +221,15 @@ def _rotation_probe(
             or composite_of(result) < _ROTATION_PROBE_MAX_COMPOSITE
             or bool(_ROTATION_PROBE_FLAGS & flag_codes(result.get("flag_details")))
         )
-        if unreliable and _content_is_landscape(processed_map[page_num]):
+        if not unreliable:
+            continue
+        if _content_is_landscape(processed_map[page_num]):
+            suspects.append(page_num)
+        elif _boxes_in_vertical_band(result.get("text") or ""):
+            logger.info(
+                "Rotation probe: page %d has its OCR lines in a narrow vertical "
+                "band — treating as a sideways scan", page_num,
+            )
             suspects.append(page_num)
     if not suspects:
         return
@@ -298,6 +411,14 @@ def process_pdf(
         return page_num, path
 
     processed_map: dict[int, Path] = {}
+    # The colour render, kept for the vision reads: the OCR preprocessor's
+    # grayscale/CLAHE/sharpen canvas is tuned for the OCR engine and
+    # flattens handwriting, strike-throughs and ink colour that a
+    # transcription needs to see.
+    original_map: dict[int, Path] = {}
+    # The PDF's own text layer, when it has one. Born-digital pages carry
+    # their text exactly; it is the cheapest second read there is.
+    text_layer_map: dict[int, str] = {}
     with ThreadPoolExecutor(max_workers=settings.preprocess_concurrency) as pool:
         futures = []
         for page_num in range(1, total_pages + 1):
@@ -308,6 +429,20 @@ def process_pdf(
             pil_image = Image.frombytes(
                 "RGB", (pixmap.width, pixmap.height), pixmap.samples,
             )
+            try:
+                orig = pil_image.copy()
+                orig.thumbnail((settings.image_max_width, settings.image_max_height))
+                orig_path = processed_dir / f"page_{page_num}.orig.jpg"
+                orig.save(str(orig_path), "JPEG", quality=85)
+                original_map[page_num] = orig_path
+            except Exception:
+                logger.exception("Could not keep the colour render for page %d", page_num)
+            try:
+                layer = page.get_text("text") or ""
+                if len(layer.strip()) >= _TEXT_LAYER_MIN_CHARS:
+                    text_layer_map[page_num] = layer
+            except Exception:
+                logger.exception("Could not read the text layer of page %d", page_num)
             # Submit preprocessing to worker; main thread moves on to render
             # the next page while the worker does CLAHE/denoise/deskew.
             futures.append(pool.submit(_preprocess_and_save, page_num, pil_image))
@@ -324,9 +459,11 @@ def process_pdf(
     ]
     logger.info(
         "Rendered + preprocessed %d pages in %.2fs "
-        "(preprocess_concurrency=%d) — starting parallel OCR (concurrency=%d)",
+        "(preprocess_concurrency=%d, text layer on %d page(s)) — starting "
+        "parallel OCR (concurrency=%d)",
         total_pages, time.perf_counter() - start,
-        settings.preprocess_concurrency, settings.ocr_concurrency,
+        settings.preprocess_concurrency, len(text_layer_map),
+        settings.ocr_concurrency,
     )
 
     # Phase B: OCR in parallel. The OCR service handles ocr_concurrency
@@ -460,6 +597,25 @@ def process_pdf(
             )
             low_quality_pages.append(page_num)
             continue
+        service_flags = _VISION_QUEUE_FLAGS & flag_codes(ocr_result.get("flag_details"))
+        if service_flags:
+            logger.warning(
+                "Page %d: OCR service flagged its own output (%s) at composite "
+                "%s — queueing vision fallback",
+                page_num, ", ".join(sorted(service_flags)),
+                f"{composite:.2f}" if composite is not None else "?",
+            )
+            low_quality_pages.append(page_num)
+            continue
+        degenerate, why = _is_degenerate(ocr_result.get("text") or "")
+        if degenerate:
+            logger.warning(
+                "Page %d: OCR text is a decoder loop (%s) — queueing vision "
+                "fallback", page_num, why,
+            )
+            _add_flag(ocr_result, "degenerate_text")
+            low_quality_pages.append(page_num)
+            continue
         repetitive = _repetitive_fraction(ocr_result.get("text") or "")
         if repetitive >= _REPETITIVE_FRACTION:
             logger.warning(
@@ -467,12 +623,13 @@ def process_pdf(
                 "barcode or scan artefact read as characters; queueing "
                 "vision fallback", page_num, repetitive * 100,
             )
-            flags = ocr_result.setdefault("flag_details", [])
-            if isinstance(flags, list) and "repetitive_content" not in flags:
-                flags.append("repetitive_content")
+            _add_flag(ocr_result, "repetitive_content")
             low_quality_pages.append(page_num)
             continue
-        text_len = len((ocr_result.get("text") or "").strip())
+        # Ink density against the text the extractor will actually see, not
+        # the raw string: grounding markup is 13-66% of the raw length on
+        # sparse pages and hid real content loss behind it.
+        text_len = len(_plain_text(ocr_result.get("text") or ""))
         img_path = path_by_page.get(page_num)
         if img_path and suspected_content_loss(img_path, text_len):
             logger.warning(
@@ -480,9 +637,16 @@ def process_pdf(
                 "implies far more — suspected content loss, queueing vision "
                 "fallback", page_num, text_len,
             )
-            flags = ocr_result.setdefault("flag_details", [])
-            if isinstance(flags, list) and "suspected_content_loss" not in flags:
-                flags.append("suspected_content_loss")
+            _add_flag(ocr_result, "suspected_content_loss")
+            low_quality_pages.append(page_num)
+            continue
+        layer = text_layer_map.get(page_num)
+        if layer and _text_layer_disagrees(layer, ocr_result.get("text") or ""):
+            logger.warning(
+                "Page %d: the PDF text layer holds numbers the OCR read "
+                "lost — queueing a second read", page_num,
+            )
+            _add_flag(ocr_result, "text_layer_disagrees")
             low_quality_pages.append(page_num)
             continue
         # DeepSeek-OCR marks regions it could not read as
@@ -499,10 +663,27 @@ def process_pdf(
                 "image region(s) — queueing vision fallback",
                 page_num, skipped * 100,
             )
-            flags = ocr_result.setdefault("flag_details", [])
-            if isinstance(flags, list) and "unread_region" not in flags:
-                flags.append("unread_region")
+            _add_flag(ocr_result, "unread_region")
             low_quality_pages.append(page_num)
+
+    # Phase B1.9: pages queued for a second read that carry a PDF text
+    # layer take it verbatim — exact, deterministic, free — and leave the
+    # vision queue. Scanned packets have no layer and fall through.
+    if low_quality_pages:
+        layered = [pn for pn in low_quality_pages if pn in text_layer_map]
+        for page_num in layered:
+            layer = text_layer_map[page_num]
+            logger.info(
+                "Page %d: replaced %d chars of OCR text with the PDF text layer "
+                "(%d chars)", page_num, len(ocr_results[page_num].get("text") or ""),
+                len(layer),
+            )
+            ocr_results[page_num]["text"] = layer
+            ocr_results[page_num]["flag"] = "green"
+            ocr_results[page_num]["flag_message"] = "Text taken from the PDF text layer"
+            ocr_results[page_num]["needs_external_ocr"] = False
+            _add_flag(ocr_results[page_num], "text_layer")
+        low_quality_pages = [pn for pn in low_quality_pages if pn not in text_layer_map]
 
     if low_quality_pages:
         from app.services.llm_service import call_llm_vision
@@ -513,24 +694,35 @@ def process_pdf(
         )
 
         _VISION_PROMPT = (
-            "Extract ALL text from this document page. Preserve the structure:\n"
-            "- Reproduce tables using HTML <table> tags\n"
-            "- Keep field labels and their values together\n"
-            "- Include all dollar amounts, dates, names, and numbers exactly as shown\n"
-            "- Preserve form field numbers (e.g., '12. Effective Date', '86. Total Annual Income')\n"
-            "Return ONLY the extracted text, no commentary."
+            "Transcribe ALL text on this document page so that a text-only reader "
+            "can recover every field on it. Preserve the structure:\n"
+            "- Reproduce tables using HTML <table> tags, one row per row, keeping "
+            "every column and its header\n"
+            "- Keep each field label together with the value in its cell, on one "
+            "line: 'Tenant Rent: $953.00'\n"
+            "- When a value cell is EMPTY, write the label followed by [blank]\n"
+            "- Checkboxes: '[X] Label' or '[ ] Label'\n"
+            "- Transcribe handwriting exactly as written; wrap text that has been "
+            "struck through in ~~double tildes~~ and keep any initials beside it\n"
+            "- Include all dollar amounts, dates, names, account numbers and form "
+            "field numbers (e.g. '12. Effective Date', '86. Total Annual Income') "
+            "exactly as shown; never derive a value from another field\n"
+            "- Note a signature as [signature present] or [signature line blank]\n"
+            "Return ONLY the transcription, no commentary."
         )
 
         def _vision_one(page_num: int) -> tuple[int, str | None]:
-            img_path = path_by_page.get(page_num)
+            img_path = original_map.get(page_num) or path_by_page.get(page_num)
             if not img_path:
                 return page_num, None
             try:
                 return page_num, call_llm_vision(
                     _VISION_PROMPT,
-                    f"Extract all text from page {page_num} of this document.",
-                    [img_path],
+                    f"Transcribe page {page_num} of this document.",
+                    [str(img_path)],
                     settings,
+                    thinking={"type": "disabled"},
+                    reject_truncated=True,
                 )
             except Exception:
                 logger.exception(
@@ -548,31 +740,51 @@ def process_pdf(
         _UNRELIABLE_OCR_FLAGS = {
             "possible_hallucination", "no_content", "ocr_failed",
             "low_quality_scan", "max_tokens_hit", "repetitive_content",
+            "degenerate_text", "incomplete_extraction",
         }
+        # Queued because part of the page was unread, not because the read
+        # text is wrong: a shorter vision read is still worth keeping, as an
+        # addition rather than a replacement.
+        _PARTIAL_READ_FLAGS = {"unread_region", "suspected_content_loss", "text_layer_disagrees"}
         _MIN_VISION_CHARS = 200
 
         with ThreadPoolExecutor(max_workers=settings.ocr_concurrency) as pool:
             for page_num, vision_text in pool.map(_vision_one, low_quality_pages):
                 beat()
-                ocr_text_len = len(ocr_results[page_num].get("text", "").strip())
+                # Compare what the extractor will see: grounding markup is
+                # 13-66% of the raw OCR length on sparse pages, and a
+                # longer-raw-string rule kept the unread text every time.
+                ocr_plain_len = len(_plain_text(ocr_results[page_num].get("text", "")))
+                vision_plain_len = len(_plain_text(vision_text or ""))
                 page_flags = flag_codes(ocr_results[page_num].get("flag_details"))
                 ocr_unreliable = bool(_UNRELIABLE_OCR_FLAGS & page_flags)
                 if vision_text and (
-                    len(vision_text.strip()) > ocr_text_len
-                    or (ocr_unreliable and len(vision_text.strip()) >= _MIN_VISION_CHARS)
+                    vision_plain_len > ocr_plain_len
+                    or (ocr_unreliable and vision_plain_len >= _MIN_VISION_CHARS)
                 ):
                     logger.info(
                         "Vision fallback page=%d: replaced %d chars with %d chars",
-                        page_num,
-                        len(ocr_results[page_num].get("text", "")),
-                        len(vision_text),
+                        page_num, ocr_plain_len, vision_plain_len,
                     )
                     ocr_results[page_num]["text"] = vision_text
-                    ocr_results[page_num]["flag"] = "yellow"
+                    # Provenance, not a quality verdict: the text in use is
+                    # a transcription of the page. Scoring "not found" as
+                    # "poor OCR" on the best-read pages was backwards.
+                    ocr_results[page_num]["flag"] = "green"
                     ocr_results[page_num]["flag_message"] = "Text re-extracted via Vision fallback"
-                    flags = ocr_results[page_num].setdefault("flag_details", [])
-                    if isinstance(flags, list) and "vision_fallback" not in flags:
-                        flags.append("vision_fallback")
+                    ocr_results[page_num]["needs_external_ocr"] = False
+                    _add_flag(ocr_results[page_num], "vision_fallback")
+                elif vision_text and page_flags & _PARTIAL_READ_FLAGS and vision_plain_len >= 40:
+                    logger.info(
+                        "Vision fallback page=%d: appended a %d-char vision read to "
+                        "the %d-char OCR text (page was queued for unread content)",
+                        page_num, vision_plain_len, ocr_plain_len,
+                    )
+                    ocr_results[page_num]["text"] = (
+                        (ocr_results[page_num].get("text") or "").rstrip()
+                        + "\n\n[Vision read of this page]\n" + vision_text.strip()
+                    )
+                    _add_flag(ocr_results[page_num], "vision_appended")
                 elif vision_text is not None:
                     logger.info(
                         "Vision fallback page=%d: vision produced less text than OCR, keeping original",
@@ -590,6 +802,7 @@ def process_pdf(
         pages.append({
             "page": page_num,
             "processed_image": str(processed_path),
+            "original_image": str(original_map[page_num]) if page_num in original_map else None,
             "text_file": str(text_path),
             "text": text,
             "flag": ocr_result.get("flag"),
@@ -664,7 +877,7 @@ def process_pdf_full(
             "ocr_flag": p.get("flag"),
             "ocr_score": ocr_score,
             "ocr_flag_details": p.get("flag_details", []),
-            "image_path": p.get("processed_image"),
+            "image_path": p.get("original_image") or p.get("processed_image"),
         })
 
     extraction = run_extraction_pipeline(

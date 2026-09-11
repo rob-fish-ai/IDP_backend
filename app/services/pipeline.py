@@ -109,7 +109,13 @@ def run_extraction_pipeline(
             "score": pt.get("ocr_score"),
             "text": pt.get("text", ""),
         }
-        if isinstance(flag_details, list) and ("blank_page" in flag_details or "low_quality_scan" in flag_details):
+        codes = set()
+        for f in flag_details if isinstance(flag_details, list) else []:
+            codes.add(f if isinstance(f, str) else (f.get("code") if isinstance(f, dict) else None))
+        repaired = bool(codes & {"vision_fallback", "text_layer"})
+        if "blank_page" in codes:
+            skip_pages.add(pt["page"])
+        elif "low_quality_scan" in codes and not repaired:
             skip_pages.add(pt["page"])
         elif not pt.get("text", "").strip():
             skip_pages.add(pt["page"])
@@ -1175,7 +1181,10 @@ def _recover_required_fields_from_images(
             pn, len(pt.get("text") or ""), len(text),
         )
         pt["text"] = text
-        pt["ocr_flag"] = "yellow"
+        # Provenance, not a quality verdict: the transcript is the best read
+        # of the page, and "yellow" made the scorer treat "not found" on it
+        # as poor OCR.
+        pt["ocr_flag"] = "green"
         flags = pt.get("ocr_flag_details")
         if not isinstance(flags, list):
             flags = pt["ocr_flag_details"] = []
@@ -1184,7 +1193,7 @@ def _recover_required_fields_from_images(
                 flags.append(f)
         q = ocr_quality.setdefault(pn, {})
         q["text"] = text
-        q["flag"] = "yellow"
+        q["flag"] = "green"
     group.combined_text = "\n\n".join(
         f"--- Page {p} ---\n{(by_page.get(p) or {}).get('text', '')}" for p in group.pages
     )

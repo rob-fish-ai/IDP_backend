@@ -151,10 +151,18 @@ def call_llm_vision(
     settings: Settings,
     *,
     max_tokens: int | None = None,
+    thinking: dict | None = None,
+    reject_truncated: bool = False,
 ) -> str:
     """Send images + prompt to Claude Vision and return the raw text response.
 
     Uses base64-encoded images for multimodal input.
+
+    thinking: passed through as for call_llm; transcription calls disable
+        it so the whole max_tokens budget goes to the transcript.
+    reject_truncated: return "" when the response stopped at max_tokens —
+        a page transcript cut mid-table is worse than no transcript, because
+        the caller would replace a complete OCR read with a partial one.
     """
     import base64
     from pathlib import Path
@@ -196,10 +204,16 @@ def call_llm_vision(
     for attempt in range(1, _MAX_RETRIES + 1):
         try:
             message = client.messages.create(
-                **_request_kwargs(settings.llm_model, settings, max_tokens),
+                **_request_kwargs(settings.llm_model, settings, max_tokens, thinking),
                 system=system_prompt,
                 messages=[{"role": "user", "content": content}],
             )
+            if reject_truncated and message.stop_reason == "max_tokens":
+                logger.warning(
+                    "Vision: transcript truncated at max_tokens — discarding it "
+                    "rather than replacing a complete read with a partial one",
+                )
+                return ""
             return _response_text(message)
 
         except (anthropic.RateLimitError, anthropic.APIStatusError) as exc:

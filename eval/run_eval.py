@@ -298,7 +298,7 @@ def run_pipeline(page_texts: list[dict], cert_type: str | None) -> dict:
 def run_pdf(pdf: Path, cert_type: str | None) -> dict:
     from app.core.dependencies import get_settings
     from app.services.pdf_service import process_pdf_full
-    out = process_pdf_full(pdf, get_settings(), certification_type=cert_type)
+    out = process_pdf_full(pdf.read_bytes(), get_settings(), certification_type=cert_type)
     ex = out.get("extraction") if isinstance(out, dict) else out
     return ex.model_dump() if hasattr(ex, "model_dump") else ex
 
