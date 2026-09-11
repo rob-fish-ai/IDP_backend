@@ -13,15 +13,12 @@ from app.services.validation import normalize_date, to_title_case
 logger = logging.getLogger(__name__)
 
 # HUD compliance form types (handled by HUD inventory)
-_HUD_TYPES: set[str] = {
-    "HUD 9887", "HUD 9887-A", "HUD 92006",
-    "HUD Race and Ethnic Data Form",
-    "Acknowledgement of Receipt of HUD Forms",
-    "Authorization to Release Information",
-    "Tenant Release and Consent Form",
-    "EIV Summary Report", "EIV Income Report",
-    "Citizenship Declaration",
-}
+from app.services.doc_taxonomy import FAMILY_COMPLIANCE, labels_in_family
+
+# Every compliance-family label in the taxonomy; a literal copy here had
+# drifted ("Acknowledgement of Receipt of HUD Forms", "EIV Income Report")
+# and the VAWA addendum landed in the financial inventory.
+_HUD_TYPES: frozenset[str] = labels_in_family(FAMILY_COMPLIANCE)
 
 # Types to exclude entirely from financial inventory
 _EXCLUDE_FROM_FINANCIAL: set[str] = {

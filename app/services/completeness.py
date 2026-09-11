@@ -106,7 +106,9 @@ def _one_edit_apart(a: str, b: str) -> bool:
     if abs(len(a) - len(b)) > 1:
         return False
     if len(a) == len(b):
-        return sum(x != y for x, y in zip(a, b)) == 1
+        # A substitution never touches the leading digit: "2000" and "5000"
+        # are $20 and $50, two figures, not one misread.
+        return a[:1] == b[:1] and sum(x != y for x, y in zip(a, b)) == 1
     shorter, longer = (a, b) if len(a) < len(b) else (b, a)
     for i in range(len(longer)):
         if longer[:i] + longer[i + 1:] == shorter:

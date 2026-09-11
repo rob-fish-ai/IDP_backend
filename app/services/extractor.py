@@ -11,7 +11,7 @@ from app.schemas.extraction import (
     HouseholdDemographics,
     IncomeExtraction,
 )
-from app.services.doc_taxonomy import is_current_certification_form
+from app.services.doc_taxonomy import assert_known, is_current_certification_form
 from app.services.llm_service import call_llm_json
 from app.services import validation
 from app.services.text_sanitizer import (
@@ -418,7 +418,7 @@ def _build_texts(groups: list[DocumentGroup]) -> list[str]:
             continue
         texts.append(
             f"[Document: {g.document_type}, Pages: {g.page_range}, "
-            f"Person: {g.person_name or 'Unknown'}]\n{g.combined_text}"
+            f"Possibly about: {g.person_name or 'not stated'}]\n{g.combined_text}"
         )
     return texts
 
@@ -1103,6 +1103,10 @@ _ASSET_DECLARATION_TYPES = frozenset({
     "No Asset Certification",
     "Disposal of Assets Certification",
 })
+
+
+assert_known(_INCOME_DECLARATION_TYPES, "extractor._INCOME_DECLARATION_TYPES")
+assert_known(_ASSET_DECLARATION_TYPES, "extractor._ASSET_DECLARATION_TYPES")
 
 
 def _is_income_declaration(group: DocumentGroup) -> bool:
@@ -1792,9 +1796,10 @@ def _digits_last4(value: str | None) -> str | None:
 
 
 def _one_digit_apart(a: str, b: str) -> bool:
-    """Same length and exactly one differing character — an OCR digit slip
-    (6,294.34 against 6,294.74)."""
-    return len(a) == len(b) and sum(1 for x, y in zip(a, b) if x != y) == 1
+    """Same length, same leading digit, exactly one differing character — an
+    OCR digit slip (6,294.34 against 6,294.74). The leading digit must agree:
+    "20.00" and "50.00" are one character apart and are two different assets."""
+    return len(a) == len(b) and a[0] == b[0] and sum(1 for x, y in zip(a, b) if x != y) == 1
 
 
 def _amounts_close(a, b) -> bool:

@@ -20,6 +20,9 @@ class PageClassification(BaseModel):
     person_name: Optional[str] = None
     confidence: float = Field(default=1.0, ge=0.0, le=1.0)
     notes: Optional[str] = None
+    # How well the canonical label fits: exact | alias | nearest | none.
+    fit: Optional[str] = None
+    observed_title: Optional[str] = None
 
 
 class ClassificationResult(BaseModel):

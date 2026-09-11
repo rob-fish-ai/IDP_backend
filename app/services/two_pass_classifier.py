@@ -20,6 +20,9 @@ from app.core.config import Settings
 from app.core.exceptions import ClassificationUnavailableError
 from app.schemas.extraction import ClassificationResult, DocumentGroup, PageClassification
 from app.services.llm_service import call_llm_json
+from app.services.doc_taxonomy import (
+    canonical_label, category_of, family_of, known_labels, prompt_type_list,
+)
 from app.services.text_sanitizer import sanitize_for_extraction, strip_html
 
 logger = logging.getLogger(__name__)
@@ -40,6 +43,7 @@ def _prefilter_and_snippet(page_texts: list[dict]) -> list[dict]:
       {"page": int, "snippet": str, "text": str, "skip": bool, "flags": list[str]}
     """
     results = []
+    repeated = _repeated_lines([pt["text"] or "" for pt in page_texts])
 
     for pt in page_texts:
         page_num = pt["page"]
@@ -80,7 +84,7 @@ def _prefilter_and_snippet(page_texts: list[dict]) -> list[dict]:
             })
             continue
 
-        snippet = _make_snippet(strip_html(text))
+        snippet = _make_snippet(text, repeated)
         results.append({
             "page": page_num,
             "snippet": snippet,
@@ -108,36 +112,62 @@ def _flag_names(flags: list) -> list[str]:
     return names
 
 
-def _make_snippet(clean: str) -> str:
-    """Build a ~450 char snippet preserving key identifiers for the LLM.
+_SNIPPET_HEAD = 600
+_SNIPPET_MAX = 900
 
-    Head of the page plus any dollar amounts, dates, and proper names found
-    in the first 800 chars — enough for the LLM to recognize form type.
+
+def _repeated_lines(texts: list[str], min_pages: int = 3) -> set[str]:
+    """Lines that recur on several pages of the packet — letterhead, footers,
+    confidentiality notices. They spent ~100 of the old 350-character head
+    on every page of one packet and pushed the discriminating text out."""
+    counts: dict[str, int] = {}
+    for t in texts:
+        for line in {ln.strip() for ln in t.splitlines() if len(ln.strip()) >= 12}:
+            counts[line] = counts.get(line, 0) + 1
+    return {ln for ln, n in counts.items() if n >= min_pages}
+
+
+def _make_snippet(raw: str, repeated: set[str] | None = None) -> str:
+    """What the classifier sees of a page.
+
+    Headings first (the page's own title is the strongest signal), then the
+    first characters of the page with letterhead lines removed, then each
+    dollar amount with the five words before it so "$0.00" carries its
+    label, then dates. Names are not extracted separately: on a packet with
+    letterhead the regex returned the management company on every page.
     """
-    head = re.sub(r"\s+", " ", clean[:350]).strip()
-
+    repeated = repeated or set()
+    lines = [ln for ln in raw.splitlines() if ln.strip() and ln.strip() not in repeated]
+    body = "\n".join(lines)
+    clean = strip_html(body)
+    headings = [re.sub(r"^#+\s*", "", ln).strip() for ln in lines if ln.lstrip().startswith("#")]
+    head = re.sub(r"\s+", " ", clean[:_SNIPPET_HEAD]).strip()
+    parts = []
+    if headings:
+        parts.append("title: " + " / ".join(dict.fromkeys(h for h in headings[:3] if h)))
+    parts.append(head)
     extras = []
-    amounts = re.findall(r"\$[\d,]+\.?\d*", clean[:800])
+    amounts = []
+    for m in re.finditer(r"\$\s?[\d,]+\.?\d*", clean[:1200]):
+        before = clean[max(0, m.start() - 60):m.start()].split()[-5:]
+        amounts.append(" ".join(before + [m.group(0)]).strip())
+        if len(amounts) >= 3:
+            break
     if amounts:
-        extras.append(f"amounts:{','.join(amounts[:3])}")
-
-    dates = re.findall(r"\d{1,2}/\d{1,2}/\d{2,4}", clean[:800])
+        extras.append("amounts: " + " | ".join(amounts))
+    dates = re.findall(r"\d{1,2}/\d{1,2}/\d{2,4}", clean[:1200])
     if dates:
-        extras.append(f"dates:{','.join(dates[:2])}")
-
-    names = re.findall(r"[A-Z][a-z]+(?:[-\s][A-Z][a-z]+)+", clean[:400])
-    if names:
-        extras.append(f"names:{names[0]}")
-
-    extra_str = f" | {'; '.join(extras)}" if extras else ""
-    return f"{head}{extra_str}"[:500]
+        extras.append(f"dates: {','.join(dates[:2])}")
+    if extras:
+        parts.append("; ".join(extras))
+    return " || ".join(parts)[:_SNIPPET_MAX]
 
 
 # ---------------------------------------------------------------------------
 # LLM classification + grouping (single call)
 # ---------------------------------------------------------------------------
 
-GROUP_PROMPT = """\
+_GROUP_PROMPT_TEMPLATE = """\
 You are an expert document reviewer for HUD/Affordable Housing certification files.
 
 You will receive a list of pages from a PDF, each with:
@@ -149,82 +179,7 @@ Your job:
 2. GROUP consecutive pages that belong to the same logical document
 3. Set the correct category (include / compliance / ignore)
 
-CANONICAL DOCUMENT TYPES (use these exact names):
-
-  INCLUDE — data-extracted forms:
-    - HUD 50059                              (HUD Owner's Certification of Compliance)
-    - Tenant Income Certification (TIC)      (LIHTC TIC, state HFA TIC forms)
-    - HUD 3560 Form                          (USDA RD 3560-8 Tenant Certification)
-    - HUD Model Lease                        (HUD Section 8/202/236 lease — contains rent/effective date)
-    - Application / Housing Questionnaire
-    - Verification of Income (VOI)
-    - Verification of Assets (VOA)
-    - Work Number / Equifax Report
-    - Paystub
-    - SSA Benefit Letter
-    - SSI Benefit Letter
-    - SSDI Benefit Letter
-    - Verification of Disability Benefits    (private LTD/STD insurer benefit letters)
-    - Pension Statement
-    - TANF Verification
-    - TANF / Public Assistance Verification  (county benefit printouts: CalWORKs, GA/GR, cash aid.
-                                              Includes forms headed "Verification of Benefits" —
-                                              use THIS name, not the form's own heading)
-    - Child Support Statement
-    - Child Support / Alimony Affidavit      (resident affidavit, not a payer statement)
-    - Gift Income Verification               (third party attesting to ongoing cash contributions)
-    - Bank Statement
-    - Investment Account Statement           (brokerage, mutual fund, retirement account)
-    - Real Estate Verification               (county tax roll or assessor inquiry, deed, appraisal,
-                                              mortgage statement — evidence of property the
-                                              household owns and what it is worth)
-    - Life Insurance Policy
-    - Asset Self-Certification
-    - No Asset Certification                 (household attests it holds NO assets — distinct
-                                              from an asset self-certification, which lists some)
-    - Disposal of Assets Certification       (assets given away below fair market value)
-    - Direct Express Card Verification
-    - Student Status Certification
-    - Zero Income Certification
-    - Self-Employment Affidavit
-    - Debit Card Asset Self-Certification
-    - HomeBASE Verification
-    - Unemployment Affidavit
-    - Notice of Rent Change
-    - Owner Summary Sheet                    (management's roster/summary for the unit)
-    - Family Summary Sheet
-    - Identity Document                      (driver license / state ID / SSN card pages)
-
-  COMPLIANCE — required forms, not data-extracted:
-    - HUD 9887
-    - HUD 9887-A
-    - HUD 9887 Consent Package Cover    (the "Document Package for Applicant's/Tenant's
-                                         Consent to the Release Of Information" sheet that
-                                         introduces the package — not a consent form itself)
-    - HUD 9887/A Fact Sheet             (explanatory "Fact Sheet" page filed with the
-                                         package — informational, never signed)
-    - HUD 92006
-    - HUD Race and Ethnic Data Form
-    - Citizenship Declaration
-    - Acknowledgement of Receipt
-    - Tenant Release and Consent Form
-    - VAWA Lease Addendum
-    - Lead-Based Paint Certification
-    - EIV Summary Report
-
-  IGNORE — not processed:
-    - Income Calculation Worksheet           (INTERNAL staff calc sheet ONLY)
-    - Certification Review                   (reviewer/auditor findings & correction reports)
-    - Receipt / Purchase Documentation       (retail receipts, order summaries, billing receipts)
-    - File Order Form
-    - Blank Page
-    - Blank Form
-    - Correspondence
-    - Fax Cover Sheet
-    - Credit Screening Report
-    - Screening Affidavit
-    - Maintenance / Inspection Form
-    - Unknown
+{TYPE_LIST}
 
 CRITICAL CLASSIFICATION RULES:
 
@@ -334,9 +289,9 @@ CRITICAL CLASSIFICATION RULES:
   state IDs, passports, or Social Security cards = "Identity Document",
   INCLUDE. These carry the authoritative DOB and SSN for household members.
 
-- Criminal history / sex offender affidavits, background screening
-  authorizations = "Screening Affidavit", ignore (screening paperwork, not
-  certification data). Maintenance and inspection paperwork (apartment
+- Criminal history / sex offender affidavits, registry search results,
+  credit reports, background screening authorizations = "Background
+  Screening Report", ignore (screening paperwork, not certification data). Maintenance and inspection paperwork (apartment
   inspection checklists, work orders, unit condition statements) =
   "Maintenance / Inspection Form", ignore.
 
@@ -375,13 +330,10 @@ CRITICAL CLASSIFICATION RULES:
   lands in "ignore", and the pages of a real document are dropped from
   extraction on the strength of a page that was never meant to stand alone.
 
-- "Unknown" is a last resort, not a tie-break. Use it only when a page has
-  content that identifies no type at all. If a page carries identifying
-  markers — an agency or employer name, a form number, benefit or wage
-  amounts, a signature block — choose the closest matching type and say what
-  made it uncertain in `notes`. A wrong-but-specific label routes the page to
-  an extractor and can be corrected downstream; "Unknown" routes it nowhere
-  and the content is lost silently.
+- "Unknown" is a last resort. A page with identifying markers — an agency
+  or employer name, a form number, benefit or wage amounts, a signature
+  block — gets the closest canonical type with fit "nearest" and its own
+  title in observed_title, so it is routed for review rather than lost.
 
 PREVIOUS CERTIFICATION DETECTION:
   Files often contain BOTH the current cert AND a previous one for comparison.
@@ -390,73 +342,62 @@ PREVIOUS CERTIFICATION DETECTION:
   - More recent date = current; older = "<Type> (Previous)", category "ignore".
   - If dates are unclear, FIRST occurrence in page order = current.
 
+PERSON NAME: person_name is the household member the document is ABOUT —
+  the beneficiary of a benefit letter, the employee on a paystub or VOI, the
+  account holder on a statement, the applicant who signed an affidavit — as
+  the document prints it. null when the document concerns the household as
+  a whole (certification form, lease, notices) or names nobody.
+
+FIT: for every group say how well the canonical type fits:
+  - "exact": the page is that type.
+  - "nearest": no canonical type is this document; you chose the closest.
+    Put the document's own title in observed_title. Use this instead of
+    forcing a wrong-but-specific label — a nearest match is routed for
+    review, not silently extracted as something it is not.
+  - "none": nothing fits at all; document_type must be "Unknown", and
+    observed_title carries what the page calls itself.
+Never invent a type name: document_type is always one of the canonical
+names above.
+
 Return JSON in exactly this shape:
 {"groups": [
-  {"pages": [1,2,3], "document_type": "HUD Model Lease", "category": "include", "person_name": "Steven Moore", "notes": null},
-  {"pages": [4], "document_type": "Tenant Income Certification (TIC)", "category": "include", "person_name": "Steven Moore", "notes": null},
-  {"pages": [5,6], "document_type": "HUD 50059 (Previous)", "category": "ignore", "person_name": "Steven Moore", "notes": "Older effective date"}
+  {"pages": [1,2,3], "document_type": "HUD Model Lease", "person_name": null, "observed_title": "Model Lease for Subsidized Programs", "fit": "exact", "notes": null},
+  {"pages": [4], "document_type": "Tenant Income Certification (TIC)", "person_name": null, "observed_title": "Tenant Income Certification", "fit": "exact", "notes": null},
+  {"pages": [5,6], "document_type": "HUD 50059 (Previous)", "person_name": null, "observed_title": "HUD 50059", "fit": "exact", "notes": "Older effective date"},
+  {"pages": [7], "document_type": "Compliance — Other Signed HUD Form", "person_name": "Steven Moore", "observed_title": "Wage Match Agreement", "fit": "nearest", "notes": null}
 ]}
 Return ONLY valid JSON."""
 
+GROUP_PROMPT = _GROUP_PROMPT_TEMPLATE.replace("{TYPE_LIST}", prompt_type_list())
+
 
 def _known_document_types() -> frozenset[str]:
-    """The canonical type list, read from the prompt that defines it.
-
-    Parsed rather than restated so the two cannot drift. A second copy in
-    Python would be authoritative for validation while the prompt stayed
-    authoritative for the model, and the first divergence would make every
-    document of the new type look like a classifier error.
-
-    Returns an empty set if the prompt's shape ever changes enough to defeat
-    the parse, which disables validation rather than rejecting everything.
-    """
-    # A label may legitimately contain parentheses — "Tenant Income
-    # Certification (TIC)", "Verification of Income (VOI)". The explanatory
-    # comment beside it is set off by a run of spaces, so the column gap is
-    # what separates name from note, not the bracket.
-    types = set(
-        re.findall(r"^ {4}- (.+?)(?:\s{2,}\(|\s*$)", GROUP_PROMPT, re.M)
-    )
-    # Emitted by the pipeline itself, not chosen by the model.
-    types |= {"Unknown", "Blank Page", "OCR Failed"}
-    return frozenset(t.strip() for t in types if t.strip())
+    """The canonical type list, owned by doc_taxonomy and generated into the prompt."""
+    return known_labels()
 
 
 _reported_unknown_types: set[str] = set()
 
 
-def _validated_type(document_type: str) -> str:
-    """Return the label, reporting it if it is not one the prompt defines.
+def _validated_type(document_type: str) -> tuple[str, str]:
+    """(canonical label, fit) for a label the model returned.
 
-    The label is kept rather than corrected. Every consumer routes on it, so
-    an unknown type means the document reaches no extractor and contributes
-    nothing — but guessing at a replacement would put a document through the
-    wrong extractor, which is worse than putting it through none. The warning
-    is the fix; the label is evidence.
-
-    This is not hypothetical: the model returned "Tenant Income Certification
-    Questionnaire", a label no routing set contains, having been asked to
-    distinguish a questionnaire from the certification it is named after.
+    A recorded alias resolves to its canonical label ("SSI Benefit Letter"
+    is an SSA Benefit Letter, "Screening Affidavit" is a Background
+    Screening Report). A label outside the taxonomy becomes "Unknown" and
+    is reported once: the model invented "Tenant Income Certification
+    Questionnaire" on a real packet, and an invented label routes nowhere
+    while looking like a classification.
     """
-    known = _known_document_types()
-    if not known:
-        return document_type
-
-    base = document_type.replace(" (Previous)", "").strip()
-    if base in known:
-        return document_type
-
-    if document_type not in _reported_unknown_types:
+    label, fit = canonical_label(document_type)
+    if fit == "none" and document_type and document_type not in _reported_unknown_types:
         _reported_unknown_types.add(document_type)
         logger.warning(
-            "Classifier returned %r, which is not in the canonical type list. "
-            "No extractor routes on it, so these pages contribute nothing. "
-            "Either the prompt needs the type added or it needs to stop "
-            "inventing one.",
+            "Classifier returned %r, which is not in the canonical type list; "
+            "the pages are classified Unknown with the label kept in notes.",
             document_type,
         )
-    return document_type
-
+    return label, fit
 
 
 def _llm_classify_and_group(
@@ -573,6 +514,17 @@ def classify_and_group(
                 pc.category = new_category
                 pc.notes = "Split by post-group date/income check"
 
+    disagreements = _title_vote_disagreements(classification_pages, text_map)
+    if disagreements:
+        logger.warning(
+            "Classification: title vote disagrees on %d/%d page(s): %s",
+            len(disagreements), len(classification_pages),
+            "; ".join(f"p{pn} '{title[:40]}' looks {fam} but labelled {label}" for pn, title, fam, label in disagreements[:8]),
+        )
+        for pn, title, fam, label in disagreements:
+            for pc in classification_pages:
+                if pc.page == pn:
+                    pc.notes = (pc.notes + "; " if pc.notes else "") + f"title '{title[:50]}' suggests {fam}"
     classification = ClassificationResult(pages=classification_pages)
 
     logger.info(
@@ -586,6 +538,55 @@ def classify_and_group(
     return classification, document_groups
 
 
+# Keyword votes from a page's own title, by evidence family. Deliberately
+# coarse: this flags disagreement with the model's label for the log and
+# the page notes; it never overrides the label.
+_TITLE_VOTES = (
+    (("tenant income certification", "50059", "3560-8", "owner's certification"), "cert"),
+    (("wage match", "release of information", "authorization", "consent"), "compliance"),
+    (("worksheet", "calculation"), "ignore"),
+    (("registry", "screening", "credit report", "background"), "ignore"),
+    (("verification of deposit", "bank statement", "account statement", "statement of account"), "asset"),
+    (("benefit verification", "social security", "supplemental security", "pay stub", "paystub",
+      "earnings statement", "verification of employment", "verification of income", "child support"), "income"),
+    (("questionnaire", "application"), "declaration"),
+)
+
+
+def _title_family(text: str) -> tuple[str, str] | None:
+    """(title, family) the page's own heading suggests, or None."""
+    plain = strip_html(text or "")
+    title = ""
+    for ln in (text or "").splitlines():
+        if ln.lstrip().startswith("#") and len(ln.strip()) > 3:
+            title = re.sub(r"^#+\s*", "", ln).strip()
+            break
+    head = (title or plain[:120]).lower()
+    for words, fam in _TITLE_VOTES:
+        if any(w in head for w in words):
+            return (title or plain[:80]), fam
+    return None
+
+
+def _title_vote_disagreements(pages: list, text_map: dict[int, str]) -> list[tuple[int, str, str, str]]:
+    out = []
+    for pc in pages:
+        vote = _title_family(text_map.get(pc.page, ""))
+        if not vote:
+            continue
+        title, fam = vote
+        label_fam = family_of(pc.document_type)
+        if fam == "ignore" and label_fam in ("ignore", "compliance"):
+            continue
+        if fam == "declaration" and label_fam in ("declaration", "household"):
+            continue
+        if fam == "income" and label_fam == "declaration":
+            continue   # an affidavit about income is a declaration, not a disagreement
+        if fam != label_fam:
+            out.append((pc.page, title, fam, pc.document_type))
+    return out
+
+
 def _build_from_llm_groups(
     llm_groups: list[dict],
     page_results: list[dict],
@@ -597,22 +598,32 @@ def _build_from_llm_groups(
 
     for g in llm_groups:
         page_nums = g.get("pages", [])
-        doc_type = _validated_type(g.get("document_type", "Unknown"))
-        category = g.get("category", "ignore")
+        raw_type = g.get("document_type", "Unknown") or "Unknown"
+        doc_type, fit = _validated_type(raw_type)
+        model_fit = (g.get("fit") or "").strip().lower()
+        if model_fit in ("nearest", "none") and fit == "exact":
+            fit = model_fit
+        # The category is the taxonomy's, never the model's: a label routes
+        # the same way on every run.
+        category = category_of(doc_type)
         person_name = g.get("person_name")
+        observed_title = (g.get("observed_title") or "").strip() or None
         notes = g.get("notes")
-
+        if fit != "exact":
+            what = observed_title or raw_type
+            notes = f"{fit} match — page titled '{what}'" + (f"; {notes}" if notes else "")
         if not page_nums:
             continue
-
         for pn in page_nums:
             pages_classified[pn] = PageClassification(
                 page=pn,
                 document_type=doc_type,
                 category=category,
                 person_name=person_name,
-                confidence=0.90,
+                confidence=0.90 if fit == "exact" else 0.60,
                 notes=notes,
+                fit=fit,
+                observed_title=observed_title,
             )
 
         page_nums_sorted = sorted(page_nums)

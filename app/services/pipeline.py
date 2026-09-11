@@ -21,7 +21,10 @@ from app.schemas.extraction import (
 )
 from app.services.bug_detector import detect_known_bugs
 from app.services.completeness import check_completeness
-from app.services.doc_taxonomy import is_current_certification_form
+from app.services.doc_taxonomy import (
+    ROUTE_ASSET, ROUTE_CERT, ROUTE_DEMO, ROUTE_INCOME, assert_known,
+    is_current_certification_form, labels_for_route,
+)
 from app.services.findings import (
     ASSIGN_CLIENT, ASSIGN_INTERNAL, CATEGORY_FILE_REVIEW, CATEGORY_INCOME,
     CATEGORY_MEMBER, CATEGORY_UNIT_RENT, RESOLVE_PRESENCE, make_finding, slug,
@@ -158,40 +161,15 @@ def run_extraction_pipeline(
     # Only send relevant doc types to each LLM call to minimize tokens.
     # Each set matches the extractor's doc_type filter — no double filtering.
 
-    _DEMO_TYPES = {
-        "HUD 50059", "Tenant Income Certification (TIC)", "HUD 3560 Form",
-        "HUD Model Lease",
-        "Application / Housing Questionnaire", "Student Status Certification",
-        "Owner Summary Sheet", "Family Summary Sheet",
-        "Identity Document",
-    }
-    _CERT_TYPES = {
-        "HUD 50059", "Tenant Income Certification (TIC)", "HUD 3560 Form",
-        "HUD Model Lease",
-    }
-    _INCOME_TYPES = {
-        "Paystub", "Verification of Income (VOI)",
-        "SSA Benefit Letter", "SSI Benefit Letter", "SSDI Benefit Letter",
-        "Pension Statement", "TANF Verification", "TANF / Public Assistance Verification",
-        "Child Support Statement", "Child Support / Alimony Affidavit",
-        "Zero Income Certification", "Unemployment Affidavit",
-        "Gift Income Verification", "Verification of Disability Benefits",
-        "Work Number / Equifax Report",
-        "Application / Housing Questionnaire",
-        "Tenant Income Certification (TIC)", "HUD 50059", "HUD 3560 Form",
-    }
-    _ASSET_TYPES = {
-        "Verification of Assets (VOA)", "Bank Statement",
-        "Life Insurance Policy", "Asset Self-Certification",
-        "Investment Account Statement", "Direct Express Card Verification",
-        "Real Estate Verification",
-        "No Asset Certification", "Disposal of Assets Certification",
-        "Debit Card Asset Self-Certification",
-        "Application / Housing Questionnaire",
-        "Tenant Income Certification (TIC)", "HUD 50059", "HUD 3560 Form",
-    }
+    # Routing sets come from the taxonomy: a label feeds the extractors its
+    # entry names, so a new type routes the day it is added and no literal
+    # list here can drift from the classifier's (four of them had).
+    _DEMO_TYPES = labels_for_route(ROUTE_DEMO)
+    _CERT_TYPES = labels_for_route(ROUTE_CERT)
+    _INCOME_TYPES = labels_for_route(ROUTE_INCOME)
+    _ASSET_TYPES = labels_for_route(ROUTE_ASSET)
 
-    def _route(types: set[str]) -> list:
+    def _route(types) -> list:
         return [g for g in llm_eligible_groups if g.document_type in types]
 
     demo_groups = _route(_DEMO_TYPES)
@@ -500,6 +478,18 @@ def run_extraction_pipeline(
     findings.extend(required_field_findings)
     findings.extend(_reconciliation_findings(income, ctx))
     findings.extend(identity_findings)
+    # Pages the classifier could only place approximately: reviewable, not
+    # silently extracted as something they are not.
+    approx = [p for p in classification.pages if p.fit in ("nearest", "none")]
+    if approx:
+        listed = "; ".join(
+            f"p{p.page} '{(p.observed_title or 'untitled')[:40]}' → {p.document_type}"
+            for p in approx[:8]
+        )
+        findings.append(
+            f"{len(approx)} page(s) matched no canonical document type exactly and were "
+            f"routed by nearest match — confirm their type: {listed}"
+        )
     if draft_watermark:
         findings.append(
             "Certification form is a watermarked DRAFT ('not a final "
@@ -1540,8 +1530,11 @@ def _deduplicate_assets(asset_records: list) -> list:
     def _close(a: float, b: float) -> bool:
         if abs(a - b) <= max(0.02, abs(b) * 0.01):
             return True
+        # One digit apart, but never the leading one: a scan slip turns
+        # 6,294.74 into 6,294.34, it does not turn $20 into $50.
         sa, sb = f"{a:.2f}", f"{b:.2f}"
-        return len(sa) == len(sb) and sum(1 for x, y in zip(sa, sb) if x != y) == 1
+        return (len(sa) == len(sb) and sa[0] == sb[0]
+                and sum(1 for x, y in zip(sa, sb) if x != y) == 1)
 
     def _last4(v) -> str:
         return re.sub(r"\D", "", v or "")[-4:]
@@ -2077,8 +2070,9 @@ def _generate_findings(
     required_hud_forms = {
         "HUD 9887": "HUD 9887 (Notice and Consent) — required for HUD properties, signed by all adults",
         "HUD 9887-A": "HUD 9887-A (Applicant's Consent) — required per adult member for HUD properties",
-        "Acknowledgement of Receipt of HUD Forms": "Acknowledgement of Receipt of HUD Forms — signed by all adults",
+        "Acknowledgement of Receipt": "Acknowledgement of Receipt of HUD Forms — signed by all adults",
     }
+    assert_known(required_hud_forms, "pipeline.required_hud_forms")
     is_hud_property = any(
         "HUD 50059" in g.document_type for g in document_groups
         if "(Previous)" not in g.document_type

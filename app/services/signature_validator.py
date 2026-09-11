@@ -63,12 +63,12 @@ def validate_signatures(
                         findings, "HUD 50059 must be signed and dated (Section 11)")
 
     # --- 3. Tenant Release and Consent: signed by all adults ---
-    _check_all_adults_signed(by_type, "Tenant Release and Consent",
+    _check_all_adults_signed(by_type, "Tenant Release and Consent Form",
                              adult_count, findings,
                              "Tenant Release and Consent Form must be signed by all adult members (Section 11)")
 
     # --- 4. Student Status Certification: signed and dated ---
-    _check_signed_dated(by_type, "Student Status Affidavit / Certification",
+    _check_signed_dated(by_type, "Student Status Certification",
                         findings, "Student Status Certification must be signed and dated (Section 11)")
     # Also check under alternate name
     _check_signed_dated(by_type, "Student Status Certification",
@@ -79,7 +79,7 @@ def validate_signatures(
     funding = (ctx.funding_program or "").lower()
     is_hud_or_usda = any(p in funding for p in ("hud", "section", "usda")) or _has_hud_50059(group_types)
     if is_hud_or_usda:
-        cit_docs = by_type.get("Citizenship Declaration (Section 214)", [])
+        cit_docs = by_type.get("Citizenship Declaration", [])
         if not cit_docs:
             # Also check alternate names
             cit_docs = by_type.get("Citizenship Declaration", [])
@@ -102,7 +102,7 @@ def validate_signatures(
             )
 
     # --- 6. Race and Ethnic Data Form: one per member, signed, dated ---
-    race_docs = by_type.get("Race and Ethnic Data Reporting Form", [])
+    race_docs = by_type.get("HUD Race and Ethnic Data Form", [])
     if not race_docs:
         race_docs = by_type.get("Race and Ethnic Data Form", [])
     if member_count > 0 and not race_docs:
@@ -118,7 +118,7 @@ def validate_signatures(
         )
 
     # --- 7. HUD 92006: completed, signed, dated ---
-    _check_signed_dated(by_type, "HUD-92006",
+    _check_signed_dated(by_type, "HUD 92006",
                         findings, "HUD 92006 (Emergency Contact) must be completed, signed, and dated (Section 11)")
     _check_signed_dated(by_type, "HUD 92006",
                         findings, "HUD 92006 (Emergency Contact) must be completed, signed, and dated (Section 11)")
@@ -171,7 +171,7 @@ def validate_signatures(
             )
 
     # --- 10. Acknowledgement of Receipt: signed by all adults ---
-    _check_all_adults_signed(by_type, "Acknowledgement of Receipt of HUD Forms",
+    _check_all_adults_signed(by_type, "Acknowledgement of Receipt",
                              adult_count, findings,
                              "Acknowledgement of Receipt of HUD Forms must be signed by all adult members (Section 11)")
 
@@ -186,7 +186,7 @@ def validate_signatures(
             break
 
     # --- 12. HUD Model Lease ---
-    _check_signed_dated(by_type, "HUD Model Lease (Signature Page)",
+    _check_signed_dated(by_type, "HUD Model Lease",
                         findings, "HUD Model Lease must be signed and dated (Section 11)")
     _check_signed_dated(by_type, "HUD Model Lease",
                         findings, "HUD Model Lease must be signed and dated (Section 11)")
