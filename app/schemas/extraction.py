@@ -123,6 +123,11 @@ class PayStubEntry(BaseModel):
     payDate: Optional[str] = None
     payInterval: Optional[str] = None
     ytdGross: Optional[str] = None
+    # Provenance: the packet pages this record was read from (set by the
+    # extractor from the document group, never by the model) and, per amount
+    # field, the verbatim text on those pages that carries the figure.
+    sourcePages: list[int] = []
+    evidence: dict[str, str] = {}
 
 
 class Address(BaseModel):
@@ -154,6 +159,19 @@ class VerificationIncomeEntry(BaseModel):
     terminationDate: Optional[str] = None
     hireDate: Optional[str] = None
     dateReceived: Optional[str] = None  # Date VOI was received/signed by employer
+    # Provenance (see PayStubEntry) and the reconciliation verdict:
+    #   verified              read from a third-party document
+    #   declared_only         the household declared it (certification /
+    #                         questionnaire) and no source document carries it
+    #   verified_not_declared a source document carries it and the
+    #                         certification's own income table does not
+    sourcePages: list[int] = []
+    evidence: dict[str, str] = {}
+    verificationStatus: Optional[str] = None
+    # The figure the certification's own income table declares for this
+    # source, as printed, annualised only when the table's column is annual.
+    declaredAnnualAmount: Optional[str] = None
+    declaredSource: Optional[str] = None
 
     @field_validator("*", mode="before")
     @classmethod
@@ -168,8 +186,33 @@ class SourceIncome(BaseModel):
     verificationIncome: list[VerificationIncomeEntry] = []
 
 
+class DeclaredIncome(BaseModel):
+    """One line of the household's own account of its income: a row of the
+    certification's income table or a questionnaire disclosure. A
+    declaration, never a verification; the extractor reconciles it against
+    the records read from source documents."""
+    memberName: Optional[str] = None
+    memberNumber: Optional[str] = None
+    sourceName: Optional[str] = None
+    incomeType: Optional[str] = None
+    amount: Optional[str] = None
+    amountPeriod: Optional[str] = None   # annual | monthly | weekly | bi-weekly | per_period | unknown
+    page: Optional[int] = None
+    quote: Optional[str] = None
+    documentType: Optional[str] = None
+    matched: bool = False
+
+    @field_validator("memberNumber", "amount", mode="before")
+    @classmethod
+    def coerce_to_str(cls, v):
+        if v is not None and not isinstance(v, str):
+            return str(v)
+        return v
+
+
 class IncomeExtraction(BaseModel):
     sourceIncome: SourceIncome = Field(default_factory=SourceIncome)
+    declared: list[DeclaredIncome] = []
 
 
 # ---------------------------------------------------------------------------
@@ -220,10 +263,43 @@ class AssetEntry(BaseModel):
     address: Optional[Address] = None
     bankStatment: list[BankStatementEntry] = []
     verificationOfAsset: Optional[VerificationOfAsset] = None
+    # Provenance and reconciliation verdict (see VerificationIncomeEntry):
+    #   verified       read from a statement / verification document
+    #   declared_only  a self-certification or certification-form claim that
+    #                  no statement in the packet backs
+    sourcePages: list[int] = []
+    evidence: dict[str, str] = {}
+    verificationStatus: Optional[str] = None
+
+
+class DeclaredAsset(BaseModel):
+    """One asset the household itself declares: a certification-form asset
+    row, a self-certification line, a questionnaire disclosure. A claim
+    about an asset, not an asset; it is merged into the verified record it
+    describes or kept as a claim when nothing backs it."""
+    assetOwner: Optional[str] = None
+    accountType: Optional[str] = None
+    sourceName: Optional[str] = None
+    accountNumber: Optional[str] = None
+    amount: Optional[str] = None
+    incomeAmount: Optional[str] = None
+    kind: Optional[str] = None           # asset | no_assets | disposal
+    page: Optional[int] = None
+    quote: Optional[str] = None
+    documentType: Optional[str] = None
+    matched: bool = False
+
+    @field_validator("accountNumber", "amount", "incomeAmount", mode="before")
+    @classmethod
+    def coerce_to_str(cls, v):
+        if v is not None and not isinstance(v, str):
+            return str(v)
+        return v
 
 
 class AssetExtraction(BaseModel):
     assetInformation: list[AssetEntry] = []
+    declared: list[DeclaredAsset] = []
 
 
 # ---------------------------------------------------------------------------

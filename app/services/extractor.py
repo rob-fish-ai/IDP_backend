@@ -1,6 +1,7 @@
 """Field extraction service — uses LLM to extract structured data per MuleSoft schema."""
 
 import logging
+import re
 
 from app.core.config import Settings
 from app.schemas.extraction import (
@@ -14,6 +15,7 @@ from app.services.doc_taxonomy import is_current_certification_form
 from app.services.llm_service import call_llm_json
 from app.services import validation
 from app.services.text_sanitizer import (
+    strip_html,
     drop_records_without_identity,
     scrub_extracted_dict,
 )
@@ -223,7 +225,8 @@ Return ONLY valid JSON: {"certificationInfo": {...}}"""
 INCOME_SYSTEM_PROMPT = """\
 You are an expert data extractor for HUD/Affordable Housing income documents.
 
-Extract income data from the provided document text into the MuleSoft Income schema.
+Extract income data from the provided document into the MuleSoft Income schema.
+Each request contains ONE document; extract only what this document states.
 
 CRITICAL RULES:
 - SSN: transcribe exactly as printed — full when shown in full, masked as shown otherwise. Never invent digits.
@@ -244,7 +247,7 @@ benefit statement, not a future projection. The monthly amount in the
   - incomeType: "Social Security"
   - type_of_VOI: "SSA Benefit Letter"
 Do NOT skip the dollar amount because the letter says "will increase" — the
-current rate IS the new rate. Extract every dollar figure you see.
+current rate IS the new rate.
 
 CHILD SUPPORT STATEMENT — ALWAYS EXTRACT:
 Any "Child Support Statement", "Child Support Order", "Child Support Verification",
@@ -258,8 +261,8 @@ a verificationIncome entry:
   - rateOfPay: support amount per payment period, if shown
   - frequencyOfPay: payment frequency (weekly, bi-weekly, monthly), if shown
 Do NOT skip child support just because the form is brief or lacks typical wage fields.
-If a TIC or cert form lists household income that exceeds the sum of wage sources, and
-a Child Support Statement is present, the gap is almost always the child support amount.
+When the statement is a payment history (one line per month), report the most recent
+regular payment as rateOfPay with its frequency; do not add the lines up.
 
 PAYSTUB FIELDS:
 - sourceName: employer name, Title Case
@@ -306,10 +309,10 @@ VERIFICATION INCOME FIELDS:
 - frequencyOfPay: MUST be determined from the "Pay Cycle" field or pay period dates, NOT from the rate label. "Pay Cycle: Biweekly" → frequencyOfPay = "bi-weekly". "Pay Frequency: Hourly" is the RATE unit (goes in rateOfPay), not the pay frequency. If "Pay Cycle" says "Biweekly" and rate says "$18.00 Hourly", then rateOfPay = "18.00" and frequencyOfPay = "bi-weekly".
 - hireDate: Extract from "Original Hire Date" or "Most Recent Start Date".
 
-SELF-DECLARED AMOUNTS FROM QUESTIONNAIRE:
-- When an Application or Housing Questionnaire mentions income amounts (e.g., "income has changed", "currently earning", "expected income"), extract as selfDeclaredAmount on the matching verificationIncome entry.
-- Match self-declared amounts to the corresponding employer/source by name.
-- If a questionnaire states a specific dollar amount for an employer, place it in selfDeclaredAmount of that employer's verificationIncome entry.
+SELF-DECLARED AMOUNTS:
+- The certification form and the questionnaire are read separately and are never
+  part of this request. Leave selfDeclaredAmount null unless THIS document is
+  itself a self-declaration (affidavit, sworn statement, self-employment statement).
 
 FORMATTING:
 - Monetary: numeric string with 2 decimal places, no $ or commas
@@ -322,19 +325,14 @@ Return ONLY valid JSON: {"sourceIncome": {"payStub": [...], "verificationIncome"
 ASSET_SYSTEM_PROMPT = """\
 You are an expert data extractor for HUD/Affordable Housing asset documents.
 
-Extract asset data from the provided document text into the MuleSoft Asset schema.
+Extract asset data from the provided document into the MuleSoft Asset schema.
+Each request contains ONE document; extract only the accounts and property it shows.
 
 CRITICAL RULES:
 - SSN: transcribe exactly as printed — full when shown in full, masked as shown otherwise.
 - NAME FORMATTING: ALWAYS Title Case.
 - If document is a Calculation Worksheet, return {"assetInformation": []} immediately.
-- PROCESS EVERY DOCUMENT separated by "---". The input may contain 5+ asset
-  documents (multiple bank VOAs, a real estate worksheet, life insurance,
-  etc.). Each distinct account or property = ONE separate entry in the
-  output array. Do NOT stop after the first few. Do NOT skip pages.
-- Before returning, count the asset documents in the input — your output
-  array length should be at least equal to the number of distinct accounts/
-  properties shown across all documents.
+- Each distinct account or property on this document = ONE entry.
 
 DOCUMENT ROUTING:
 - bankStatment route: actual bank statements with transactions
@@ -405,13 +403,6 @@ Balance | Average Balance (6 months) | APR. Extract:
   - currentBalance: Current Balance column
   - averageSixMonthBalance: Average Balance column
   - verificationOfAsset: populate the nested object
-
-HUD 50059 / TIC ASSET EXTRACTION:
-- HUD 50059 Section D contains asset information (fields 76-80): Description, Status, Cash Value, Actual Yearly Income, Date Divested
-- Extract each asset row as a separate entry. Map "Cash Value" → currentBalance, "Actual Yearly Income" → incomeAmount
-- Common descriptions: "Checking account", "Savings account", "Other asset", "Life insurance", etc.
-- The member number column tells you which household member owns the asset — match to person name from Section C
-- TIC Part V contains similar asset data — extract the same way
 
 Return ONLY valid JSON: {"assetInformation": [...]}"""
 
@@ -878,116 +869,7 @@ def merge_member_fields(
     return recovered
 
 
-def extract_income(
-    groups: list[DocumentGroup],
-    settings: Settings,
-    certification_type: str | None = None,
-) -> IncomeExtraction:
-    """Extract income data from pre-routed income document groups.
 
-    After the first pass, any income record that was extracted WITH a source
-    but WITHOUT a dollar amount triggers one targeted retry for just those
-    records. LLM extraction is non-deterministic — the same prompt can name a
-    source on one run and drop its amount on the next. A focused retry ("find
-    the amount for these specific sources") usually recovers it. An income
-    record with a name but no amount is unusable downstream (no income
-    calculation, no MuleSoft comparison value), so it's worth one more look.
-
-    A second retry recovers income SOURCES dropped entirely: if a classified
-    benefit document (SSA/SSI/SSDI/pension/child support) yielded no record of
-    its type, that document is re-extracted on its own. Both retries go through
-    the shared _retry_if_incomplete driver; each is max 1 and fail-safe.
-    """
-    relevant_texts = _build_texts(groups)
-    if not relevant_texts:
-        logger.info("No income documents found")
-        return IncomeExtraction()
-
-    user_prompt = "Extract income data from these documents:\n\n" + "\n\n---\n\n".join(relevant_texts)
-    user_prompt += _get_cert_context(certification_type)
-
-    result = call_llm_json(INCOME_SYSTEM_PROMPT, user_prompt, settings)
-    result = validation.validate_income(result)
-
-    # Re-bind to the actual lists inside `result` so a retry that APPENDS
-    # (source recovery) propagates — `or []` on an empty list would otherwise
-    # hand back a fresh, disconnected list.
-    si = result.get("sourceIncome") or {}
-    result["sourceIncome"] = si
-    vi_entries = si.get("verificationIncome") or []
-    si["verificationIncome"] = vi_entries
-    ps_entries = si.get("payStub") or []
-    si["payStub"] = ps_entries
-
-    # --- Self-healing retry #1: recover income SOURCES dropped entirely.
-    # A classified benefit document (SSA/SSI/SSDI/pension/child support) whose
-    # income type produced no record means the source was dropped on the first
-    # pass — re-extract that document on its own. Runs BEFORE the amount retry
-    # so a recovered source can still get its amount filled below.
-    def _cov_gate():
-        return _income_coverage_gaps(groups, vi_entries) or None
-
-    def _cov_fill(gaps) -> None:
-        added = _retry_income_coverage(gaps, vi_entries, certification_type, settings)
-        if added:
-            logger.info("Income coverage retry recovered %d dropped source(s)", added)
-
-    _retry_if_incomplete("Income coverage", gate=_cov_gate, fill=_cov_fill)
-
-    # --- Self-healing retry #2: recover amounts for records that have a source
-    # but no dollar figure. Records with no name AND no amount are noise
-    # (validate_income already drops them), so they don't trigger a retry.
-    def _amt_gate():
-        amountless_vi = [
-            vi for vi in vi_entries
-            if (vi.get("sourceName") or vi.get("memberName")) and not _vi_has_amount(vi)
-        ]
-        amountless_ps = [
-            ps for ps in ps_entries
-            if (ps.get("sourceName") or ps.get("memberName")) and not ps.get("grossPay")
-        ]
-        return (amountless_vi, amountless_ps) if (amountless_vi or amountless_ps) else None
-
-    def _amt_fill(spec) -> None:
-        amountless_vi, amountless_ps = spec
-        recovered = _retry_income_amounts(
-            relevant_texts, amountless_vi, amountless_ps, certification_type, settings,
-        )
-        if recovered:
-            logger.info("Income retry recovered amounts for %d record(s)", recovered)
-
-    _retry_if_incomplete("Income amounts", gate=_amt_gate, fill=_amt_fill)
-
-    # Scrub HTML/markup from extracted strings, then drop records lacking
-    # any usable identity (no member AND no source name). Such records
-    # would otherwise propagate as junk findings against tag fragments.
-    result = scrub_extracted_dict(result) or {}
-    si = result.get("sourceIncome") if isinstance(result.get("sourceIncome"), dict) else {}
-    for bucket in ("verificationIncome", "payStub"):
-        recs = si.get(bucket) if isinstance(si, dict) else None
-        if isinstance(recs, list):
-            kept, dropped = drop_records_without_identity(
-                recs, identity_fields=("memberName", "sourceName"),
-            )
-            if dropped:
-                logger.warning(
-                    "Income: dropped %d %s record(s) with no member/source name "
-                    "(HTML/markup-only or empty after sanitization)",
-                    dropped, bucket,
-                )
-            si[bucket] = kept
-    if isinstance(si, dict):
-        result["sourceIncome"] = si
-
-    logger.info(
-        "Extracted %d pay stubs, %d verification income records",
-        len(ps_entries), len(vi_entries),
-    )
-    return IncomeExtraction.model_validate(result)
-
-
-# Amount fields that make a verificationIncome record "usable". At least one
-# must be populated, or we know the source exists but not how much it pays.
 _VI_AMOUNT_FIELDS = ("rateOfPay", "selfDeclaredAmount", "ytdAmount", "overtimeRate")
 
 # Income types whose amount is a fixed benefit, never a YTD figure (mirrors the
@@ -996,6 +878,13 @@ _FIXED_INCOME_TYPES = (
     "social security", "supplemental security income",
     "social security disability", "pension",
 )
+
+
+def _is_zero_money(value) -> bool:
+    try:
+        return float(str(value).replace(",", "")) == 0.0
+    except (TypeError, ValueError):
+        return False
 
 
 def _vi_has_amount(vi: dict) -> bool:
@@ -1009,7 +898,7 @@ DOLLAR AMOUNT for income sources that were extracted WITHOUT one on the first pa
 
 Each target below is an income source already identified in the documents but
 missing its amount. For each id, find the income figure in the document text.
-Look hard — the amount is almost always present near the source name.
+If the document does not print an amount for a target, return null for it.
 
 For each target return an object with:
   - id: the id exactly as given (e.g. "V0", "P1")
@@ -1128,183 +1017,6 @@ def _retry_income_amounts(
 # Grounded in a real classified document, so recovery re-reads what's actually
 # there rather than inventing income to close a dollar gap.
 #   doc_type -> (label, acceptable normalized incomeType values, sourceName keywords)
-_INCOME_DOC_TYPE_EXPECTATIONS: dict[str, tuple[str, set[str], set[str]]] = {
-    "SSA Benefit Letter": ("Social Security", {"social security"}, {"social security administration"}),
-    "SSI Benefit Letter": ("Supplemental Security Income", {"supplemental security income"}, {"supplemental security"}),
-    "SSDI Benefit Letter": ("Social Security Disability", {"social security disability"}, {"social security disability"}),
-    "Pension Statement": ("Pension", {"pension"}, {"pension"}),
-    "Child Support Statement": ("Child Support", {"child support"}, {"child support"}),
-    "Child Support / Alimony Affidavit": ("Child Support", {"child support"}, {"child support"}),
-    "TANF Verification": ("Temporary Assistance", {"temporary assistance"}, {"tanf"}),
-    "TANF / Public Assistance Verification": ("Temporary Assistance", {"temporary assistance"}, {"tanf", "public assistance"}),
-}
-
-
-def _income_type_present(types: set[str], keywords: set[str], vi_entries: list[dict]) -> bool:
-    """True if any extracted record represents this income type — by exact
-    normalized incomeType, or a distinctive sourceName keyword."""
-    for vi in vi_entries:
-        it = (vi.get("incomeType") or "").strip().lower()
-        sn = (vi.get("sourceName") or "").strip().lower()
-        if it in types:
-            return True
-        if any(kw in sn for kw in keywords):
-            return True
-    return False
-
-
-def _income_coverage_gaps(
-    groups: list[DocumentGroup], vi_entries: list[dict],
-) -> list[tuple[DocumentGroup, str, set[str], set[str]]]:
-    """Classified income documents whose expected income type has no record."""
-    gaps: list[tuple[DocumentGroup, str, set[str], set[str]]] = []
-    for g in groups:
-        spec = _INCOME_DOC_TYPE_EXPECTATIONS.get(g.document_type)
-        if not spec:
-            continue
-        label, types, kws = spec
-        if not _income_type_present(types, kws, vi_entries):
-            gaps.append((g, label, types, kws))
-    return gaps
-
-
-def _retry_income_coverage(
-    gaps: list[tuple[DocumentGroup, str, set[str], set[str]]],
-    vi_entries: list[dict],
-    certification_type: str | None,
-    settings: Settings,
-) -> int:
-    """Re-extract income from documents whose income type was dropped entirely.
-
-    Appends only records of the expected type that aren't already present, and
-    only ones the model finds in the document (the prompt forbids inventing).
-    Mutates vi_entries in place; returns the count added.
-    """
-    added = 0
-    for g, label, types, kws in gaps:
-        # An earlier gap's retry may already have supplied this type.
-        if _income_type_present(types, kws, vi_entries):
-            continue
-        doc_text = (
-            f"[Document: {g.document_type}, Pages: {g.page_range}, "
-            f"Person: {g.person_name or 'Unknown'}]\n{g.combined_text}"
-        )
-        prompt = (
-            f"This document is a '{g.document_type}' and documents {label} income "
-            f"for the household, but the first extraction pass produced no {label} "
-            f"income record. Re-read it and extract the income record(s) it contains.\n"
-            f"Extract ONLY income actually present in this document — do NOT invent "
-            f"an amount or a source.\n\n" + doc_text
-        )
-        prompt += _get_cert_context(certification_type)
-        try:
-            result = call_llm_json(INCOME_SYSTEM_PROMPT, prompt, settings)
-            result = validation.validate_income(result)
-        except Exception:
-            logger.exception("Income coverage retry failed for %s", g.document_type)
-            continue
-        new_vis = ((result.get("sourceIncome") or {}).get("verificationIncome")) or []
-        for vi in new_vis:
-            it = (vi.get("incomeType") or "").strip().lower()
-            sn = (vi.get("sourceName") or "").strip().lower()
-            if not (it in types or any(kw in sn for kw in kws)):
-                continue   # not the type we're recovering
-            if _income_type_present(types, kws, vi_entries):
-                break      # already recovered
-            vi_entries.append(vi)
-            added += 1
-    return added
-
-
-_ASSET_DOC_TYPES_PER_RECORD = {
-    # Document types that typically yield ONE asset record per document.
-    # Used for gap detection — if extraction count is far below the count
-    # of these doc types in the input, retry with the missed groups.
-    "Bank Statement",
-    "Verification of Assets (VOA)",
-    "Life Insurance Policy",
-    "Asset Self-Certification",
-    "Investment Account Statement",
-    "Real Estate Verification",
-    "Direct Express Card Verification",
-    "Debit Card Asset Self-Certification",
-}
-
-
-def extract_assets(
-    groups: list[DocumentGroup],
-    settings: Settings,
-    certification_type: str | None = None,
-) -> AssetExtraction:
-    """Extract asset data from pre-routed asset document groups.
-
-    After the first extraction, if the number of records is suspiciously
-    low compared to the number of asset documents in the input, retry the
-    missed groups with a targeted prompt. This catches the common LLM
-    failure mode of dropping records when 5+ asset documents are sent at once.
-    """
-    relevant_texts = _build_texts(groups)
-    if not relevant_texts:
-        logger.info("No asset documents found")
-        return AssetExtraction()
-
-    user_prompt = "Extract asset data from these documents:\n\n" + "\n\n---\n\n".join(relevant_texts)
-    user_prompt += _get_cert_context(certification_type)
-
-    result = call_llm_json(ASSET_SYSTEM_PROMPT, user_prompt, settings)
-    result = validation.validate_assets(result)
-
-    asset_records = result.get("assetInformation", []) or []
-    logger.info("Extracted %d asset records (initial pass)", len(asset_records))
-
-    # --- Self-healing retry: gap detection. Each Bank Statement / VOA / Real
-    # Estate / etc. group should yield at least one record; if we're short,
-    # re-extract just the missed groups.
-    def _gate():
-        expected = [g for g in groups if g.document_type in _ASSET_DOC_TYPES_PER_RECORD]
-        current = result.get("assetInformation", []) or []
-        return expected if (expected and len(current) < len(expected)) else None
-
-    def _fill(expected_groups) -> None:
-        records = result.get("assetInformation", []) or []
-        retry_records = _retry_missed_asset_groups(
-            records, expected_groups, certification_type, settings,
-        )
-        if not retry_records:
-            return
-        merged = _dedupe_asset_records(records + retry_records)
-        added = len(merged) - len(records)
-        if added > 0:
-            result["assetInformation"] = merged
-            logger.info(
-                "Asset retry added %d new records after dedup (total now %d)",
-                added, len(merged),
-            )
-        else:
-            logger.info(
-                "Asset retry returned %d records but all were duplicates — kept initial set",
-                len(retry_records),
-            )
-
-    _retry_if_incomplete("Assets", gate=_gate, fill=_fill)
-
-    # Scrub HTML/markup, then drop assets with no usable source identity
-    # (matches the gate used on members and income records).
-    result = scrub_extracted_dict(result) or {}
-    if isinstance(result.get("assetInformation"), list):
-        kept, dropped = drop_records_without_identity(
-            result["assetInformation"],
-            identity_fields=("sourceName", "accountType"),
-        )
-        if dropped:
-            logger.warning(
-                "Assets: dropped %d asset record(s) with no source/account-type "
-                "identity (HTML/markup-only or empty after sanitization)", dropped,
-            )
-        result["assetInformation"] = kept
-
-    return AssetExtraction.model_validate(result)
-
 
 def _asset_record_key(rec: dict) -> tuple:
     """Stable identity key for asset deduplication.
@@ -1349,94 +1061,989 @@ def _dedupe_asset_records(records: list[dict]) -> list[dict]:
     return list(seen.values())
 
 
-def _retry_missed_asset_groups(
-    extracted: list[dict],
-    expected_groups: list[DocumentGroup],
-    certification_type: str | None,
-    settings: Settings,
-) -> list[dict]:
-    """Identify asset groups whose pages aren't represented in extracted
-    records, then send a targeted retry for just those groups.
+# ---------------------------------------------------------------------------
+# Per-document extraction with provenance, and reconciliation of what the
+# household declares against what the packet verifies
+# ---------------------------------------------------------------------------
+#
+# Income and asset extraction used to be one call per category over every
+# document of that category concatenated, with the certification form and
+# the questionnaire inside the same context. The model then fused records
+# across documents: a questionnaire SSN on a benefit-letter record, a
+# questionnaire figure as a source's self-declared amount, and — worst — a
+# figure derived from the certification total presented as read from an
+# unreadable letter. The retries compounded it: a record-count gate re-read
+# self-certification pages alone and added their restatements as new assets,
+# and a coverage gate keyed on the classifier's label demanded an "SSI"
+# record from a retirement letter and got a $0.00 one.
+#
+# Now each SOURCE document is extracted in its own call, its records are
+# stamped with the pages they came from, and every amount must appear on
+# those pages or it is dropped. The household's own statements — the
+# certification's income and asset tables, the questionnaire, the
+# self-certifications — are read by separate calls into a DECLARED bucket
+# and reconciled in code: a declaration that matches a verified record
+# annotates it; one that matches nothing becomes a declared-only record and
+# a finding; a verified record the certification never declares is flagged
+# the other way. Declaration documents never owe a record, and a document
+# whose only figures are $0.00 never owes one either.
 
-    A group counts as covered only when a value that *distinguishes* one
-    extracted record from the others appears in it.
+# Documents that are the household's own account rather than third-party
+# evidence. They are read for declarations and never for source records.
+_INCOME_DECLARATION_TYPES = frozenset({
+    "Application / Housing Questionnaire",
+    "Zero Income Certification",
+    "Unemployment Affidavit",
+    "Child Support / Alimony Affidavit",
+})
+_ASSET_DECLARATION_TYPES = frozenset({
+    "Application / Housing Questionnaire",
+    "Asset Self-Certification",
+    "Debit Card Asset Self-Certification",
+    "No Asset Certification",
+    "Disposal of Assets Certification",
+})
 
-    Matching on any signature is not enough. Institution names are the
-    obvious signature and the least distinguishing one: two household
-    members holding accounts at the same bank is ordinary, so a record
-    extracted from one member's certification marks the other member's
-    pages as covered and their asset is never recovered. Owner names fail
-    the same way in the other direction, which is why they were excluded —
-    in a single-person household the owner appears on every page.
 
-    So the rule is not which field to trust, but which *values* can tell
-    records apart: a value shared by two extracted records carries no
-    discriminating power and is discarded, whichever field it came from.
-    Amounts are included because they are naturally distinguishing.
+def _is_income_declaration(group: DocumentGroup) -> bool:
+    return (is_current_certification_form(group.document_type)
+            or group.document_type in _INCOME_DECLARATION_TYPES)
 
-    When nothing distinguishing survives, every group is treated as missed
-    and re-asked. That is the safe direction — the retry is a single bounded
-    pass, and extracting an asset twice is caught by deduplication while
-    missing one is money that silently vanishes.
+
+def _is_asset_declaration(group: DocumentGroup) -> bool:
+    return (is_current_certification_form(group.document_type)
+            or group.document_type in _ASSET_DECLARATION_TYPES)
+
+
+_PROVENANCE_BLOCK = """
+
+PROVENANCE (REQUIRED):
+This request contains ONE document. Its pages are marked "--- Page N ---".
+For every record you return, also fill:
+  - "sourcePages": the page numbers you read the record from, e.g. [18, 19]
+  - "evidence": an object mapping each amount field you filled to the verbatim
+    text (at most 40 characters, exactly as printed on that page) that carries
+    the figure, e.g. {"rateOfPay": "benefit before any deductions is $1,489.50"}
+An amount you cannot quote from this document must be null. Never derive an
+amount from another amount, and never carry a figure over from any document
+that is not in this request."""
+
+_GROUNDING_BLOCK = """
+
+GROUNDING (CRITICAL):
+- Every number must be literal text on this document. Return null rather
+  than guess; a null is recoverable, an invented figure is not.
+- US dollar amounts: comma = thousands separator, period = decimal.
+  "$1,250" is 1250.00, not 1.25. Strip commas before writing the number.
+- socialSecurityNumber: only when printed on THIS document, else null."""
+
+_HOUSEHOLD_BLOCK = "\n\nHOUSEHOLD MEMBERS (from the certification form): {names}\nUse these spellings for memberName when the document names one of them."
+
+
+def _single_document_prompt(group: DocumentGroup, intro: str, certification_type: str | None,
+                            household_names: list[str] | None) -> str:
+    text = _build_texts([group])
+    prompt = intro + "\n\n" + (text[0] if text else group.combined_text)
+    if household_names:
+        prompt += _HOUSEHOLD_BLOCK.format(names="; ".join(household_names))
+    prompt += _get_cert_context(certification_type)
+    return prompt
+
+
+# --- provenance check --------------------------------------------------------
+
+_NUM_TOKEN_RE = re.compile(r"\d[\d,]*(?:\.\d+)?")
+_INCOME_AMOUNT_FIELDS = ("rateOfPay", "selfDeclaredAmount", "ytdAmount", "overtimeRate")
+_PAYSTUB_AMOUNT_FIELDS = ("grossPay", "ytdGross")
+_ASSET_AMOUNT_FIELDS = ("currentBalance", "averageSixMonthBalance", "selfDeclaredAmount", "incomeAmount")
+
+
+def _page_number_keys(text: str) -> tuple[set[str], str]:
+    """Numeric tokens of a page in comparable forms, plus its digit stream.
+
+    The token set is the strict check ("1489.50" must be a number on the
+    page). The digit stream is the lenient one for OCR that splits a figure
+    with stray spaces ("1, 489.50"): the value's digits must occur in order.
     """
-    def _signatures(rec: dict) -> set[str]:
-        out: set[str] = set()
-        for key in ("sourceName", "accountNumber", "assetOwner",
-                    "currentBalance", "selfDeclaredAmount"):
-            value = rec.get(key)
-            if value and len(str(value).strip()) >= 4:
-                out.add(str(value).lower().strip())
-        return out
+    plain = strip_html(text or "")
+    keys: set[str] = set()
+    for tok in _NUM_TOKEN_RE.findall(plain):
+        raw = tok.replace(",", "")
+        keys.add(raw)
+        try:
+            keys.add(f"{float(raw):.2f}")
+        except ValueError:
+            pass
+    return keys, re.sub(r"\D", "", plain)
 
-    per_record = [_signatures(rec) for rec in extracted]
 
-    # A value occurring in more than one record cannot distinguish between
-    # them, so it cannot be evidence that any particular group was read.
-    seen_count: dict[str, int] = {}
-    for sigs in per_record:
-        for sig in sigs:
-            seen_count[sig] = seen_count.get(sig, 0) + 1
-    distinguishing = [
-        {sig for sig in sigs if seen_count[sig] == 1} for sigs in per_record
-    ]
-
-    missed_groups: list[DocumentGroup] = []
-    for g in expected_groups:
-        text_lower = (g.combined_text or "").lower()
-        # Covered when some single record is identifiable within this group.
-        if any(
-            sigs and any(sig in text_lower for sig in sigs)
-            for sigs in distinguishing
-        ):
-            continue
-        missed_groups.append(g)
-
-    if not missed_groups:
-        return []
-
-    logger.info(
-        "Asset retry: %d missed groups (types: %s)",
-        len(missed_groups),
-        [g.document_type for g in missed_groups],
-    )
-
-    missed_texts = _build_texts(missed_groups)
-    if not missed_texts:
-        return []
-
-    retry_prompt = (
-        "These asset documents were missed in the first extraction pass. "
-        "Extract a separate asset record for EACH document below — do NOT "
-        "skip any. Return only the new records, not the previously extracted "
-        "ones.\n\n"
-        + "\n\n---\n\n".join(missed_texts)
-    )
-    retry_prompt += _get_cert_context(certification_type)
-
+def _value_forms(value: str) -> tuple[set[str], str]:
+    raw = str(value).replace("$", "").replace(",", "").strip()
+    forms = {raw}
     try:
-        retry_result = call_llm_json(ASSET_SYSTEM_PROMPT, retry_prompt, settings)
-        retry_result = validation.validate_assets(retry_result)
-        return retry_result.get("assetInformation", []) or []
-    except Exception:
-        logger.exception("Asset retry call failed — keeping initial records")
+        f = float(raw)
+        forms.add(f"{f:.2f}")
+        if f == int(f):
+            forms.add(str(int(f)))
+    except ValueError:
+        pass
+    return forms, re.sub(r"\D", "", raw)
+
+
+def _amount_on_pages(value, page_texts: dict[int, str], pages: list[int]) -> bool:
+    forms, digits = _value_forms(value)
+    if not digits:
+        return False
+    for pn in pages:
+        keys, stream = _page_number_keys(page_texts.get(pn, ""))
+        if forms & keys:
+            return True
+        if len(digits) >= 3 and digits in stream:
+            return True
+    return False
+
+
+def _enforce_provenance(records: list[dict], amount_fields: tuple[str, ...],
+                        group: DocumentGroup, label: str) -> int:
+    """Stamp records with the group's pages and drop amounts the pages do not carry.
+
+    sourcePages is set from the group, never taken from the model: the
+    document was the only thing in the request, so the pages are known.
+    An amount absent from every page of the group is set to null and the
+    field is recorded in evidence as "not on page", so the record survives
+    with an honest gap instead of a figure that came from nowhere.
+    Returns the count of amounts dropped.
+    """
+    page_texts = _group_page_texts(group)
+    dropped = 0
+    for rec in records:
+        rec["sourcePages"] = list(group.pages)
+        evidence = rec.get("evidence")
+        if not isinstance(evidence, dict):
+            evidence = {}
+        clean_evidence: dict[str, str] = {}
+        for k, v in evidence.items():
+            if isinstance(v, str) and v.strip():
+                clean_evidence[str(k)] = v.strip()[:80]
+            elif isinstance(v, dict) and isinstance(v.get("quote"), str):
+                clean_evidence[str(k)] = v["quote"].strip()[:80]
+        for field in amount_fields:
+            value = rec.get(field)
+            if value in (None, "", "null"):
+                continue
+            if not _amount_on_pages(value, page_texts, group.pages):
+                logger.warning(
+                    "%s: %s=%s is not on pages %s of '%s' — dropped (no provenance)",
+                    label, field, value, group.pages, group.document_type,
+                )
+                rec[field] = None
+                clean_evidence[field] = "not on page"
+                dropped += 1
+        rec["evidence"] = clean_evidence
+    return dropped
+
+
+_PAGE_MARK_RE = re.compile(r"--- Page (\d+) ---\n?")
+
+
+def _group_page_texts(group: DocumentGroup) -> dict[int, str]:
+    """Split a group's combined text back into per-page text."""
+    parts = _PAGE_MARK_RE.split(group.combined_text or "")
+    texts: dict[int, str] = {}
+    # parts = [prefix, num, text, num, text, ...]
+    for i in range(1, len(parts) - 1, 2):
+        try:
+            texts[int(parts[i])] = parts[i + 1]
+        except ValueError:
+            continue
+    if not texts and group.pages:
+        texts[group.pages[0]] = group.combined_text or ""
+    return texts
+
+
+# --- what a document owes ---------------------------------------------------
+
+_DOLLAR_RE = re.compile(r"\$\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?|\d+(?:\.\d{2})?)(?!\s*%)")
+_CENTS_RE = re.compile(r"(?<![\d.])(\d{1,3}(?:,\d{3})+\.\d{2}|\d{2,}\.\d{2})(?!\s*%)")
+
+
+def _document_amounts(group: DocumentGroup) -> set[float]:
+    """Dollar figures of at least $1 printed on the document.
+
+    A document with none owes no record; a document stating only $0.00 for
+    a program owes none either (the letter that says the SSI payment is
+    $0.00 is not evidence of SSI income).
+    """
+    plain = strip_html(group.combined_text or "")
+    found: set[float] = set()
+    for rx in (_DOLLAR_RE, _CENTS_RE):
+        for m in rx.finditer(plain):
+            try:
+                v = float(m.group(1).replace(",", ""))
+            except ValueError:
+                continue
+            if v >= 1.0:
+                found.add(round(v, 2))
+    return found
+
+
+def _run_per_group(groups: list[DocumentGroup], fn, settings: Settings, label: str) -> list:
+    """Run fn(group) for every group, a few at a time; a failed group is
+    logged and skipped so one bad document never empties the category."""
+    if not groups:
         return []
+    from concurrent.futures import ThreadPoolExecutor
+    results: list = []
+    workers = max(1, min(4, len(groups), getattr(settings, "ocr_concurrency", 4) or 4))
+
+    def _safe(g):
+        try:
+            return fn(g)
+        except Exception:
+            logger.exception("%s: extraction failed for '%s' pages %s — skipped",
+                             label, g.document_type, g.pages)
+            return None
+
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        for out in pool.map(_safe, groups):
+            if out is not None:
+                results.append(out)
+    return results
+
+
+# --- declared income ----------------------------------------------------------
+
+DECLARED_INCOME_PROMPT = """\
+You are reading the household's OWN statements of its income in a HUD /
+Affordable Housing certification packet: the certification form's income
+table (LIHTC TIC Part III, HUD 50059 income section fields 79-86, RD 3560-8
+income lines) and the application or recertification questionnaire. These
+are DECLARATIONS by the household or the manager, not third-party
+verifications.
+
+Return every income line declared, one entry per row or disclosure:
+{"declared": [{"memberName": ..., "memberNumber": ..., "sourceName": ...,
+  "incomeType": ..., "amount": ..., "amountPeriod": ..., "page": N,
+  "quote": "..."}]}
+
+Rules:
+- memberName: the household member the row belongs to. Certification tables
+  key rows by member number; resolve it against the household composition
+  on the same form and give the name as printed there.
+- sourceName: the employer / agency / payer as the row prints it ("SSA",
+  "Soc. Sec.", "Durango Lodge"), or null when the row shows only a type.
+- incomeType: one of Non-Federal Wage, Federal Wage, Social Security,
+  Supplemental Security Income, Social Security Disability, Pension,
+  Temporary Assistance, Child Support, Self-Employment, Zero Income,
+  Other Income.
+- amount: exactly as printed, numeric string, no $ or commas.
+- amountPeriod: the period the AMOUNT ITSELF covers — "annual" for an
+  Annual Income column or a yearly salary, "monthly" for "$X per month",
+  "weekly", "bi-weekly", "per_period". A pay-frequency checkbox or "Hours per
+  Week" beside a "Salary / Rate of Pay" field says how often the person is
+  paid, NOT what period the printed amount covers; when the amount's own
+  period is not printed, use "unknown".
+- page: the "--- Page N ---" the row is on. quote: at most 40 characters of
+  verbatim text from that row containing the amount.
+- NEVER return total rows, subtotals, income limits, or historical figures
+  ("at move-in", "prior", "previous certification").
+- A declaration of no income ("no income", "$0", zero-income certification)
+  is one entry with incomeType "Zero Income" and amount "0.00".
+- Do not invent a row the form does not print. Return {"declared": []} when
+  the pages declare nothing.
+
+Return ONLY valid JSON."""
+
+
+def _extract_declared_income(groups: list[DocumentGroup], settings: Settings,
+                             certification_type: str | None,
+                             household_names: list[str] | None) -> list[dict]:
+    if not groups:
+        return []
+    texts = _build_texts(groups)
+    if not texts:
+        return []
+    prompt = "Read the household's declared income from these documents:\n\n" + "\n\n---\n\n".join(texts)
+    if household_names:
+        prompt += _HOUSEHOLD_BLOCK.format(names="; ".join(household_names))
+    prompt += _get_cert_context(certification_type)
+    try:
+        result = call_llm_json(DECLARED_INCOME_PROMPT, prompt, settings)
+    except Exception:
+        logger.exception("Declared income: call failed — treating as no declarations")
+        return []
+    rows = result.get("declared") if isinstance(result, dict) else None
+    if not isinstance(rows, list):
+        return []
+    page_texts: dict[int, str] = {}
+    doc_of_page: dict[int, str] = {}
+    for g in groups:
+        page_texts.update(_group_page_texts(g))
+        for pn in g.pages:
+            doc_of_page[pn] = g.document_type
+    out: list[dict] = []
+    for r in rows:
+        if not isinstance(r, dict):
+            continue
+        amount = validation.normalize_money(str(r.get("amount"))) if r.get("amount") not in (None, "", "null") else None
+        try:
+            page = int(r.get("page")) if r.get("page") not in (None, "", "null") else None
+        except (TypeError, ValueError):
+            page = None
+        pages = [page] if page in page_texts else list(page_texts)
+        if amount is not None and float(amount) > 0 and not _amount_on_pages(amount, page_texts, pages):
+            logger.warning("Declared income: %s on page %s is not printed there — dropped", amount, page)
+            continue
+        out.append({
+            "memberName": validation.to_title_case(r.get("memberName")) if r.get("memberName") else None,
+            "memberNumber": str(r.get("memberNumber")) if r.get("memberNumber") not in (None, "") else None,
+            "sourceName": r.get("sourceName") or None,
+            "incomeType": r.get("incomeType") or None,
+            "amount": amount,
+            "amountPeriod": (r.get("amountPeriod") or "unknown").lower(),
+            "page": page,
+            "quote": (str(r.get("quote"))[:80] if r.get("quote") else None),
+            "documentType": doc_of_page.get(page) if page else (groups[0].document_type if len(groups) == 1 else None),
+            "matched": False,
+        })
+    return out
+
+
+_PERIOD_TO_FREQUENCY = {
+    "annual": "annually", "annually": "annually", "yearly": "annually",
+    "monthly": "monthly", "weekly": "weekly", "bi-weekly": "bi-weekly",
+    "biweekly": "bi-weekly", "semi-monthly": "semi-monthly",
+}
+_PERIOD_MULTIPLIER = {"annually": 1, "monthly": 12, "weekly": 52, "bi-weekly": 26, "semi-monthly": 24}
+
+
+def _annual_of(amount, period: str | None) -> float | None:
+    try:
+        v = float(str(amount).replace(",", ""))
+    except (TypeError, ValueError):
+        return None
+    freq = _PERIOD_TO_FREQUENCY.get((period or "").lower())
+    mult = _PERIOD_MULTIPLIER.get(freq or "")
+    return round(v * mult, 2) if mult else None
+
+
+def _name_last(name: str | None) -> str:
+    parts = (name or "").strip().lower().split()
+    return parts[-1] if parts else ""
+
+
+def _same_member(a: str | None, b: str | None) -> bool:
+    if not a or not b:
+        return False
+    la, lb = _name_last(a), _name_last(b)
+    if not la or la != lb:
+        return False
+    fa, fb = a.strip().lower().split()[0], b.strip().lower().split()[0]
+    return fa == fb or fa.startswith(fb) or fb.startswith(fa)
+
+
+_TYPE_SYNONYMS = {
+    "social security": {"social security", "ssa", "soc. sec.", "soc sec", "ss", "retirement"},
+    "supplemental security income": {"supplemental security income", "ssi"},
+    "social security disability": {"social security disability", "ssdi", "disability"},
+    "child support": {"child support"},
+    "pension": {"pension", "retirement"},
+    "non-federal wage": {"wage", "wages", "employment", "employer", "salary"},
+    "federal wage": {"wage", "federal wage"},
+    "temporary assistance": {"tanf", "temporary assistance", "public assistance", "cash aid"},
+    "self-employment": {"self-employment", "self employment", "business"},
+}
+_STOPWORDS = {"of", "the", "and", "inc", "llc", "co", "corp", "administration", "department", "services", "office"}
+
+
+def _type_key(income_type: str | None) -> str:
+    return (income_type or "").strip().lower()
+
+
+def _same_income_type(a: str | None, b: str | None) -> bool:
+    ka, kb = _type_key(a), _type_key(b)
+    if ka and ka == kb:
+        return True
+    sa = _TYPE_SYNONYMS.get(ka, {ka} if ka else set())
+    sb = _TYPE_SYNONYMS.get(kb, {kb} if kb else set())
+    return bool(sa & sb)
+
+
+def _source_words(name: str | None) -> set[str]:
+    return {w for w in re.findall(r"[a-z]{3,}", (name or "").lower()) if w not in _STOPWORDS}
+
+
+def _source_overlap(a: str | None, b: str | None) -> bool:
+    wa, wb = _source_words(a), _source_words(b)
+    if wa and wb and (wa & wb):
+        return True
+    # the declared source is often a type word ("SSA", "Soc. Sec.")
+    return _same_income_type(a, b)
+
+
+def _record_annual(vi: dict) -> float | None:
+    from app.services.income_calculator import get_frequency_multiplier
+    for field in ("rateOfPay", "selfDeclaredAmount"):
+        val = vi.get(field)
+        if not val:
+            continue
+        try:
+            v = float(val)
+        except ValueError:
+            continue
+        mult = get_frequency_multiplier(vi.get("frequencyOfPay") or "") if vi.get("frequencyOfPay") else None
+        hours = vi.get("hoursPerPayPeriod")
+        if mult and hours and field == "rateOfPay":
+            try:
+                return round(v * float(hours) * mult, 2)
+            except ValueError:
+                pass
+        if mult:
+            return round(v * mult, 2)
+    return None
+
+
+def _close(a: float | None, b: float | None, rel: float = 0.02) -> bool:
+    return a is not None and b is not None and abs(a - b) <= max(1.0, abs(b) * rel)
+
+
+_DECLARED_ANNUAL_CEILING = 400_000.0
+
+
+def _paystub_sources(ps_entries: list[dict]) -> list[dict]:
+    """Employment the paystubs verify, one pseudo-record per (member, employer)."""
+    out: dict[tuple[str, str], dict] = {}
+    for ps in ps_entries:
+        member = ps.get("memberName") or ""
+        employer = ps.get("sourceName") or ""
+        if not (member and employer):
+            continue
+        key = (member.lower(), employer.lower())
+        rec = out.setdefault(key, {"memberName": member, "sourceName": employer, "pages": set(), "stubs": 0})
+        rec["pages"].update(ps.get("sourcePages") or [])
+        rec["stubs"] += 1
+    return list(out.values())
+
+
+def _declaration_read_is_complete(declared: list[dict], declared_total) -> bool:
+    """True when the declared lines add up to the certification's own total.
+
+    The declared bucket comes from one model call. When that call under-reads
+    the income table, every verified source it missed would be reported as
+    "not declared" — a false finding per source. The form's total is the
+    check on the read: within 10% of it, the list is trusted; otherwise the
+    not-declared verdict is withheld and the gap is logged.
+    """
+    try:
+        total = float(str(declared_total).replace(",", "")) if declared_total not in (None, "") else None
+    except ValueError:
+        total = None
+    if not total or total <= 0:
+        return False
+    annual = [_annual_of(d.get("amount"), d.get("amountPeriod")) for d in declared if d.get("incomeType") != "Zero Income"]
+    known = [a for a in annual if a is not None]
+    if not known or len(known) < len(annual):
+        return False
+    return abs(sum(known) - total) <= max(50.0, total * 0.10)
+
+
+def _reconcile_income(vi_entries: list[dict], declared: list[dict], certification_type: str | None,
+                      ps_entries: list[dict] | None = None, declared_total=None) -> None:
+    """Annotate verified records with what the household declared for them;
+    keep unmatched declarations as declared-only records; mark verified
+    records the certification never declares.
+
+    Matching is member first (last name, first-name prefix), then any of:
+    the same income type, a shared source word, or an annual figure within
+    2%. A declared amount goes to selfDeclaredAmount only when the record
+    has none and the period is compatible with the record's frequency;
+    otherwise it is kept on declaredAnnualAmount so the calculator never
+    multiplies an annual figure by twelve.
+    """
+    for vi in vi_entries:
+        if vi.get("verificationStatus") is None and (_vi_has_amount(vi) or vi.get("sourceName")):
+            vi["verificationStatus"] = "verified"
+
+    stub_sources = _paystub_sources(ps_entries or [])
+
+    for d in declared:
+        if d.get("incomeType") == "Zero Income" and (d.get("amount") in (None, "0.00")):
+            d["matched"] = True   # informational; nothing to reconcile
+            continue
+        annual_d = _annual_of(d.get("amount"), d.get("amountPeriod"))
+        if annual_d is not None and annual_d > _DECLARED_ANNUAL_CEILING:
+            # A salary multiplied by a pay-frequency checkbox: the period the
+            # model attached is not the period the amount covers.
+            logger.info("Declared income: %s × %s = %.2f is not a plausible annual figure — period treated as unknown",
+                        d.get("amount"), d.get("amountPeriod"), annual_d)
+            d["amountPeriod"] = "unknown"
+            annual_d = None
+        candidates = [
+            vi for vi in vi_entries
+            if vi.get("verificationStatus") != "declared_only"
+            and _same_member(vi.get("memberName"), d.get("memberName"))
+            and (
+                _same_income_type(vi.get("incomeType"), d.get("incomeType"))
+                or _source_overlap(vi.get("sourceName"), d.get("sourceName"))
+                or _close(_record_annual(vi), annual_d)
+            )
+        ]
+        if candidates:
+            # prefer the candidate whose annual figure agrees, then the first
+            candidates.sort(key=lambda vi: 0 if _close(_record_annual(vi), annual_d) else 1)
+            vi = candidates[0]
+            d["matched"] = True
+            if annual_d is not None and not vi.get("declaredAnnualAmount"):
+                vi["declaredAnnualAmount"] = f"{annual_d:.2f}"
+                vi["declaredSource"] = d.get("documentType")
+            period_freq = _PERIOD_TO_FREQUENCY.get((d.get("amountPeriod") or "").lower())
+            if not vi.get("selfDeclaredAmount") and d.get("amount") and (
+                not vi.get("frequencyOfPay") or period_freq in (None, vi.get("frequencyOfPay"))
+            ):
+                vi["selfDeclaredAmount"] = d["amount"]
+                vi["selfDeclaredSource"] = d.get("documentType")
+                if period_freq and not vi.get("frequencyOfPay"):
+                    vi["frequencyOfPay"] = period_freq
+            continue
+        # Wages verified by paystubs alone have no verificationIncome record
+        # to match; the paystub employer is the verification. Create the
+        # employment record here so the paystubs attach to it downstream
+        # instead of being reconstructed as an amountless orphan source.
+        wage_like = _same_income_type(d.get("incomeType"), "Non-Federal Wage") or not d.get("incomeType")
+        stub_match = next(
+            (src for src in stub_sources
+             if _same_member(src["memberName"], d.get("memberName"))
+             and (not d.get("sourceName") or _source_overlap(src["sourceName"], d.get("sourceName")) or wage_like)),
+            None,
+        ) if wage_like or d.get("sourceName") else None
+        if stub_match is not None:
+            d["matched"] = True
+            period_freq = _PERIOD_TO_FREQUENCY.get((d.get("amountPeriod") or "").lower())
+            vi_entries.append({
+                "sourceName": stub_match["sourceName"],
+                "memberName": stub_match["memberName"],
+                "incomeType": d.get("incomeType") or "Non-Federal Wage",
+                "selfDeclaredAmount": d.get("amount"),
+                "selfDeclaredSource": d.get("documentType"),
+                "frequencyOfPay": period_freq,
+                "type_of_VOI": "Self-Declaration",
+                "sourcePages": sorted(stub_match["pages"]),
+                "evidence": {"selfDeclaredAmount": d["quote"]} if d.get("quote") else {},
+                "verificationStatus": "verified",
+                "declaredAnnualAmount": f"{annual_d:.2f}" if annual_d is not None else None,
+                "declaredSource": d.get("documentType"),
+            })
+            stub_sources.remove(stub_match)
+            continue
+        # Nothing in the packet verifies this declaration: keep it as the
+        # household's own statement, flagged as such.
+        period_freq = _PERIOD_TO_FREQUENCY.get((d.get("amountPeriod") or "").lower())
+        vi_entries.append({
+            "sourceName": d.get("sourceName") or (f"{d.get('incomeType')} (declared)" if d.get("incomeType") else "Self-Declaration"),
+            "memberName": d.get("memberName"),
+            "incomeType": d.get("incomeType"),
+            "selfDeclaredAmount": d.get("amount"),
+            "selfDeclaredSource": d.get("documentType"),
+            "frequencyOfPay": period_freq,
+            "type_of_VOI": "Self-Declaration",
+            "sourcePages": [d["page"]] if d.get("page") else [],
+            "evidence": {"selfDeclaredAmount": d["quote"]} if d.get("quote") else {},
+            "verificationStatus": "declared_only",
+            "declaredAnnualAmount": f"{annual_d:.2f}" if annual_d is not None else None,
+            "declaredSource": d.get("documentType"),
+        })
+        d["matched"] = True
+
+    declared_real = [d for d in declared if d.get("incomeType") != "Zero Income"]
+    if declared_real and not _declaration_read_is_complete(declared, declared_total):
+        logger.info(
+            "Declared income: %d line(s) do not add up to the certification total %s — "
+            "verified sources are not marked as undeclared", len(declared_real), declared_total,
+        )
+        declared_real = []
+    if declared_real:
+        for vi in vi_entries:
+            if vi.get("verificationStatus") == "verified" and not vi.get("declaredAnnualAmount") and _vi_has_amount(vi):
+                # matched declarations annotate declaredAnnualAmount or
+                # selfDeclaredSource; a verified record with neither was
+                # never declared.
+                if not vi.get("selfDeclaredSource"):
+                    vi["verificationStatus"] = "verified_not_declared"
+
+
+# --- declared assets ------------------------------------------------------------
+
+DECLARED_ASSET_PROMPT = """\
+You are reading the household's OWN statements about its assets in a HUD /
+Affordable Housing certification packet: the certification form's asset
+table (LIHTC TIC Part IV / V, HUD 50059 Section D fields 76-80, RD 3560-8
+asset lines), asset self-certifications, no-asset certifications, disposal
+of assets certifications, and application or questionnaire disclosures.
+These are DECLARATIONS, not statements from a bank or a verifier.
+
+Return every asset declared, one entry per row or line:
+{"declared": [{"assetOwner": ..., "accountType": ..., "sourceName": ...,
+  "accountNumber": ..., "amount": ..., "incomeAmount": ..., "kind": ...,
+  "page": N, "quote": "..."}]}
+
+Rules:
+- assetOwner: the household member, as the household composition on the
+  form prints the name; resolve member numbers.
+- accountType: Checking, Savings, Cash, Prepaid Card, Direct Express, CD,
+  Investment, Retirement, Life Insurance, Real Estate, Annuity, ABLE Account,
+  Cryptocurrency, Other.
+- sourceName: the institution or, for real estate, the property address, as
+  printed; null when the row shows only a type.
+- accountNumber: as printed (last four is fine); null when absent.
+- amount: the cash value / balance exactly as printed, numeric string, no $
+  or commas. incomeAmount: the yearly income from the asset if printed.
+- kind: "asset" for a declared holding, "no_assets" for a certification that
+  the household holds no assets, "disposal" for an asset disposed of.
+- page / quote: the "--- Page N ---" the line is on and at most 40
+  characters of verbatim text from that line containing the amount.
+- NEVER return totals, imputed-income lines, passbook rates, or thresholds
+  ("$5,000", "$50,000") printed as form text.
+- Do not invent a row. Return {"declared": []} when nothing is declared.
+
+Return ONLY valid JSON."""
+
+
+def _extract_declared_assets(groups: list[DocumentGroup], settings: Settings,
+                             certification_type: str | None,
+                             household_names: list[str] | None) -> list[dict]:
+    if not groups:
+        return []
+    texts = _build_texts(groups)
+    if not texts:
+        return []
+    prompt = "Read the household's declared assets from these documents:\n\n" + "\n\n---\n\n".join(texts)
+    if household_names:
+        prompt += _HOUSEHOLD_BLOCK.format(names="; ".join(household_names))
+    prompt += _get_cert_context(certification_type)
+    try:
+        result = call_llm_json(DECLARED_ASSET_PROMPT, prompt, settings)
+    except Exception:
+        logger.exception("Declared assets: call failed — treating as no declarations")
+        return []
+    rows = result.get("declared") if isinstance(result, dict) else None
+    if not isinstance(rows, list):
+        return []
+    page_texts: dict[int, str] = {}
+    doc_of_page: dict[int, str] = {}
+    for g in groups:
+        page_texts.update(_group_page_texts(g))
+        for pn in g.pages:
+            doc_of_page[pn] = g.document_type
+    out: list[dict] = []
+    for r in rows:
+        if not isinstance(r, dict):
+            continue
+        amount = validation.normalize_money(str(r.get("amount"))) if r.get("amount") not in (None, "", "null") else None
+        income = validation.normalize_money(str(r.get("incomeAmount"))) if r.get("incomeAmount") not in (None, "", "null") else None
+        try:
+            page = int(r.get("page")) if r.get("page") not in (None, "", "null") else None
+        except (TypeError, ValueError):
+            page = None
+        pages = [page] if page in page_texts else list(page_texts)
+        if amount is not None and float(amount) > 0 and not _amount_on_pages(amount, page_texts, pages):
+            logger.warning("Declared asset: %s on page %s is not printed there — dropped", amount, page)
+            continue
+        out.append({
+            "assetOwner": validation.to_title_case(r.get("assetOwner")) if r.get("assetOwner") else None,
+            "accountType": r.get("accountType") or None,
+            "sourceName": r.get("sourceName") or None,
+            "accountNumber": str(r.get("accountNumber")) if r.get("accountNumber") not in (None, "", "null") else None,
+            "amount": amount,
+            "incomeAmount": income,
+            "kind": (r.get("kind") or "asset").lower(),
+            "page": page,
+            "quote": (str(r.get("quote"))[:80] if r.get("quote") else None),
+            "documentType": doc_of_page.get(page) if page else (groups[0].document_type if len(groups) == 1 else None),
+            "matched": False,
+        })
+    return out
+
+
+_ASSET_FAMILIES = {
+    "cash": {"checking", "savings", "cash", "prepaid card", "direct express", "debit card", "money market", "cd", "certificate of deposit"},
+    "real estate": {"real estate", "property", "home"},
+    "investment": {"investment", "retirement", "annuity", "able account", "cryptocurrency", "peer-to-peer", "brokerage", "401k", "ira"},
+    "life insurance": {"life insurance"},
+}
+
+
+def _asset_family(account_type: str | None) -> str:
+    t = (account_type or "").strip().lower()
+    for fam, names in _ASSET_FAMILIES.items():
+        if any(n in t for n in names):
+            return fam
+    return t or "other"
+
+
+def _digits_last4(value: str | None) -> str | None:
+    d = re.sub(r"\D", "", value or "")
+    return d[-4:] if len(d) >= 4 else None
+
+
+def _one_digit_apart(a: str, b: str) -> bool:
+    """Same length and exactly one differing character — an OCR digit slip
+    (6,294.34 against 6,294.74)."""
+    return len(a) == len(b) and sum(1 for x, y in zip(a, b) if x != y) == 1
+
+
+def _amounts_close(a, b) -> bool:
+    try:
+        fa, fb = float(a), float(b)
+    except (TypeError, ValueError):
+        return False
+    if abs(fa - fb) <= max(0.02, abs(fb) * 0.01):
+        return True
+    return _one_digit_apart(f"{fa:.2f}", f"{fb:.2f}")
+
+
+def _reconcile_assets(records: list[dict], declared: list[dict]) -> None:
+    """Merge each declared asset into the verified record it describes, or
+    keep it as a claim when nothing backs it.
+
+    A declaration matches a verified record of the same owner when the
+    account numbers share their last four, or when the type family matches
+    and the amounts are within 1% or one digit apart. Two records that each
+    carry a full account number are never merged; a declaration never
+    overwrites a verified balance — it lands on selfDeclaredAmount, where a
+    disagreement surfaces as the existing self-declared-vs-verified finding
+    instead of as a second asset that doubles the total.
+    """
+    for rec in records:
+        if rec.get("verificationStatus") is None:
+            rec["verificationStatus"] = "verified"
+
+    for d in declared:
+        if d.get("kind") in ("no_assets", "disposal"):
+            d["matched"] = True
+            continue
+        d_last4 = _digits_last4(d.get("accountNumber"))
+        fam = _asset_family(d.get("accountType"))
+        best = None
+        for rec in records:
+            if rec.get("verificationStatus") == "declared_only":
+                continue
+            if d.get("assetOwner") and rec.get("assetOwner") and not _same_member(rec.get("assetOwner"), d.get("assetOwner")):
+                continue
+            r_last4 = _digits_last4(rec.get("accountNumber"))
+            if d_last4 and r_last4:
+                if d_last4 == r_last4:
+                    best = rec
+                    break
+                continue
+            r_value = rec.get("currentBalance") or rec.get("averageSixMonthBalance")
+            same_family = _asset_family(rec.get("accountType")) == fam
+            untyped = fam in ("other", "")
+            if d.get("amount") is None or not r_value:
+                continue
+            # Same family within tolerance, or — for a line the form does not
+            # type ("Personal Property Held as an Investment", "Government
+            # Benefits") — the same owner's balance to the cent: a
+            # self-certification restates the accounts the statements verify.
+            if (same_family and _amounts_close(d["amount"], r_value)) or (
+                untyped and _amounts_close(d["amount"], r_value)
+            ):
+                best = rec
+                break
+        if best is not None:
+            d["matched"] = True
+            if not best.get("selfDeclaredAmount") and d.get("amount") is not None:
+                best["selfDeclaredAmount"] = d["amount"]
+                best["selfDeclaredSource"] = d.get("documentType")
+            if not best.get("incomeAmount") and d.get("incomeAmount") is not None:
+                best["incomeAmount"] = d["incomeAmount"]
+            if not best.get("sourceName") and d.get("sourceName"):
+                best["sourceName"] = d["sourceName"]
+            continue
+        records.append({
+            "documentType": d.get("documentType"),
+            "assetOwner": d.get("assetOwner"),
+            "sourceName": d.get("sourceName"),
+            "selfDeclaredAmount": d.get("amount"),
+            "selfDeclaredSource": d.get("documentType"),
+            "accountType": d.get("accountType"),
+            "accountNumber": d.get("accountNumber"),
+            "incomeAmount": d.get("incomeAmount"),
+            "sourcePages": [d["page"]] if d.get("page") else [],
+            "evidence": {"selfDeclaredAmount": d["quote"]} if d.get("quote") else {},
+            "verificationStatus": "declared_only",
+        })
+        d["matched"] = True
+
+
+def extract_income(
+    groups: list[DocumentGroup],
+    settings: Settings,
+    certification_type: str | None = None,
+    household_names: list[str] | None = None,
+    declared_total=None,
+) -> IncomeExtraction:
+    """Extract income: one call per source document, provenance enforced,
+    the household's declarations read separately and reconciled in code.
+
+    See the section header above for why. Per document, in order: extract;
+    stamp the group's pages and drop any amount the pages do not carry; if a
+    record names a source without an amount, ask once more for the amount
+    from this document alone; if the document prints dollar figures and
+    produced no record at all, read it once more with neutral wording.
+    """
+    source_groups = [g for g in groups if g.category != "ignore" and not _is_income_declaration(g)]
+    decl_groups = [g for g in groups if g.category != "ignore" and _is_income_declaration(g)]
+    if not source_groups and not decl_groups:
+        logger.info("No income documents found")
+        return IncomeExtraction()
+    system_prompt = INCOME_SYSTEM_PROMPT + _PROVENANCE_BLOCK + _GROUNDING_BLOCK
+
+    def _read(g: DocumentGroup, intro: str) -> tuple[list[dict], list[dict]]:
+        prompt = _single_document_prompt(g, intro, certification_type, household_names)
+        result = validation.validate_income(call_llm_json(system_prompt, prompt, settings))
+        si = result.get("sourceIncome") or {}
+        vis = [r for r in (si.get("verificationIncome") or []) if isinstance(r, dict)]
+        pss = [r for r in (si.get("payStub") or []) if isinstance(r, dict)]
+        _enforce_provenance(vis, _INCOME_AMOUNT_FIELDS, g, "Income")
+        _enforce_provenance(pss, _PAYSTUB_AMOUNT_FIELDS, g, "Income")
+        # A program line reading $0.00 (the retirement letter that also says
+        # the SSI payment is $0.00) is not income and never owes a record.
+        kept = []
+        for vi in vis:
+            amounts = [vi.get(f) for f in _INCOME_AMOUNT_FIELDS if vi.get(f) not in (None, "", "null")]
+            if amounts and all(_is_zero_money(a) for a in amounts):
+                logger.info("Income: '%s' pages %s states $0.00 for %s — not a record",
+                            g.document_type, g.pages, vi.get("incomeType") or vi.get("sourceName"))
+                continue
+            kept.append(vi)
+        return kept, pss
+
+    def _one(g: DocumentGroup) -> tuple[DocumentGroup, list[dict], list[dict]]:
+        vis, pss = _read(g, "Extract income data from this document:")
+        amountless_vi = [vi for vi in vis if (vi.get("sourceName") or vi.get("memberName")) and not _vi_has_amount(vi)]
+        amountless_ps = [ps for ps in pss if (ps.get("sourceName") or ps.get("memberName")) and not ps.get("grossPay")]
+        if amountless_vi or amountless_ps:
+            logger.info("Income: '%s' pages %s has %d record(s) without an amount — asking this document once more",
+                        g.document_type, g.pages, len(amountless_vi) + len(amountless_ps))
+            recovered = _retry_income_amounts(_build_texts([g]), amountless_vi, amountless_ps, certification_type, settings)
+            if recovered:
+                _enforce_provenance(amountless_vi, _INCOME_AMOUNT_FIELDS, g, "Income (amount retry)")
+                _enforce_provenance(amountless_ps, _PAYSTUB_AMOUNT_FIELDS, g, "Income (amount retry)")
+        # A fixed-benefit record with no amount after the retry is a program
+        # the letter mentions without paying ("payments were stopped", a
+        # second program on the same letter): not income, and it would pair
+        # with the paying record as a duplicate source.
+        before = len(vis)
+        vis = [
+            vi for vi in vis
+            if _vi_has_amount(vi) or (vi.get("incomeType") or "").strip().lower() not in _FIXED_INCOME_TYPES
+        ]
+        if len(vis) < before:
+            logger.info("Income: '%s' pages %s: dropped %d fixed-benefit record(s) with no amount",
+                        g.document_type, g.pages, before - len(vis))
+        if not vis and not pss and _document_amounts(g):
+            logger.info("Income: '%s' pages %s prints dollar figures but produced no record — reading it once more",
+                        g.document_type, g.pages)
+            vis, pss = _read(
+                g,
+                "This document was read once and produced no income record. Read it again and "
+                "extract only the income it actually states. If it states no current income for "
+                "anyone, or every figure on it is $0.00, return empty lists:",
+            )
+        return g, vis, pss
+
+    vi_entries: list[dict] = []
+    ps_entries: list[dict] = []
+    for g, vis, pss in _run_per_group(source_groups, _one, settings, "Income"):
+        vi_entries.extend(vis)
+        ps_entries.extend(pss)
+
+    declared = _extract_declared_income(decl_groups, settings, certification_type, household_names)
+    _reconcile_income(vi_entries, declared, certification_type, ps_entries, declared_total)
+
+    result = scrub_extracted_dict({
+        "sourceIncome": {"payStub": ps_entries, "verificationIncome": vi_entries},
+        "declared": declared,
+    }) or {}
+    si = result.get("sourceIncome") if isinstance(result.get("sourceIncome"), dict) else {}
+    for bucket in ("verificationIncome", "payStub"):
+        recs = si.get(bucket) if isinstance(si, dict) else None
+        if isinstance(recs, list):
+            kept, dropped = drop_records_without_identity(recs, identity_fields=("memberName", "sourceName"))
+            if dropped:
+                logger.warning("Income: dropped %d %s record(s) with no member/source name", dropped, bucket)
+            si[bucket] = kept
+    if isinstance(si, dict):
+        result["sourceIncome"] = si
+    vi_final = si.get("verificationIncome", []) if isinstance(si, dict) else []
+    logger.info(
+        "Extracted %d pay stubs, %d verification income records from %d source document(s); "
+        "%d declared line(s), %d declared-only, %d verified-not-declared",
+        len(si.get("payStub", []) if isinstance(si, dict) else []), len(vi_final), len(source_groups),
+        len(declared),
+        sum(1 for v in vi_final if v.get("verificationStatus") == "declared_only"),
+        sum(1 for v in vi_final if v.get("verificationStatus") == "verified_not_declared"),
+    )
+    return IncomeExtraction.model_validate(result)
+
+
+def extract_assets(
+    groups: list[DocumentGroup],
+    settings: Settings,
+    certification_type: str | None = None,
+    household_names: list[str] | None = None,
+) -> AssetExtraction:
+    """Extract assets: one call per statement or verification document,
+    provenance enforced; self-certifications and certification-form asset
+    rows are read as declarations and merged into the records they describe.
+    """
+    source_groups = [g for g in groups if g.category != "ignore" and not _is_asset_declaration(g)]
+    decl_groups = [g for g in groups if g.category != "ignore" and _is_asset_declaration(g)]
+    if not source_groups and not decl_groups:
+        logger.info("No asset documents found")
+        return AssetExtraction()
+    system_prompt = ASSET_SYSTEM_PROMPT + _PROVENANCE_BLOCK + _GROUNDING_BLOCK
+
+    def _read(g: DocumentGroup, intro: str) -> list[dict]:
+        prompt = _single_document_prompt(g, intro, certification_type, household_names)
+        result = validation.validate_assets(call_llm_json(system_prompt, prompt, settings))
+        recs = [r for r in (result.get("assetInformation") or []) if isinstance(r, dict)]
+        _enforce_provenance(recs, _ASSET_AMOUNT_FIELDS, g, "Assets")
+        return recs
+
+    def _one(g: DocumentGroup) -> list[dict]:
+        recs = _read(g, "Extract asset data from this document:")
+        if not recs and _document_amounts(g):
+            logger.info("Assets: '%s' pages %s prints dollar figures but produced no record — reading it once more",
+                        g.document_type, g.pages)
+            recs = _read(
+                g,
+                "This document was read once and produced no asset record. Read it again and "
+                "extract only the accounts or property it actually shows; if it shows none, "
+                "return an empty list:",
+            )
+        return recs
+
+    records: list[dict] = []
+    for recs in _run_per_group(source_groups, _one, settings, "Assets"):
+        records.extend(recs)
+    records = _dedupe_asset_records(records)
+    logger.info("Extracted %d asset records from %d source document(s)", len(records), len(source_groups))
+
+    declared = _extract_declared_assets(decl_groups, settings, certification_type, household_names)
+    _reconcile_assets(records, declared)
+
+    result = scrub_extracted_dict({"assetInformation": records, "declared": declared}) or {}
+    if isinstance(result.get("assetInformation"), list):
+        kept, dropped = drop_records_without_identity(
+            result["assetInformation"], identity_fields=("sourceName", "accountType", "assetOwner"),
+        )
+        if dropped:
+            logger.warning("Assets: dropped %d asset record(s) with no identity", dropped)
+        result["assetInformation"] = kept
+    logger.info(
+        "Assets: %d record(s) after reconciling %d declared line(s); %d declared-only",
+        len(result.get("assetInformation", [])), len(declared),
+        sum(1 for r in result.get("assetInformation", []) if r.get("verificationStatus") == "declared_only"),
+    )
+    return AssetExtraction.model_validate(result)

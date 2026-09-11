@@ -9,24 +9,51 @@
     "isSigned": "Yes",
     "signatureDate": null,
     "householdSize": 1,
-    "householdIncome": 21723.00,
-    "tenantRent": 421.00,
-    "utilityAllowance": 58.00,
-    "grossRent": 691.00,
-    "federalRentAssistance": 212.00
+    "householdIncome": 21723.0,
+    "tenantRent": 421.0,
+    "utilityAllowance": 58.0,
+    "grossRent": 691.0,
+    "federalRentAssistance": 212.0
   },
   "members": [
-    {"first": "Randy", "last": "Buck", "dob": "1949-07-15", "ssn_last4": "1789", "relationship": "Head"}
+    {
+      "first": "Randy",
+      "last": "Buck",
+      "dob": "1949-07-15",
+      "ssn_last4": "1789",
+      "relationship": "Head"
+    }
   ],
   "income": [
-    {"member_last": "Buck", "member_first": "Randy", "source_aliases": ["Social Security"], "annual": 21720.00, "optional": true,
-     "note": "50059 p2 prints SS = 21,720; whether a readable third-party verification exists is unknown (EIV pages were never read). Absence is not scored as a miss; a value other than 21,720 is."}
+    {
+      "member_last": "Buck",
+      "member_first": "Randy",
+      "source_aliases": [
+        "Social Security",
+        "Soc. Sec.",
+        "Soc Sec",
+        "SSA"
+      ],
+      "annual": 21720.0,
+      "optional": true,
+      "note": "50059 p2 prints SS = 21,720; whether a readable third-party verification exists is unknown (EIV pages were never read). Absence is not scored as a miss; a value other than 21,720 is."
+    }
   ],
   "assets": [
-    {"type": "checking", "balance": 556.00, "income": 0.00},
-    {"type": "savings",  "balance": 886.00, "income": 3.00}
+    {
+      "type": "checking",
+      "balance": 556.0,
+      "income": 0.0
+    },
+    {
+      "type": "savings",
+      "balance": 886.0,
+      "income": 3.0
+    }
   ],
-  "asset_total": 1442.00,
-  "expect_findings": ["SIGNATURE_DATE_MISSING"],
+  "asset_total": 1442.0,
+  "expect_findings": [
+    "SIGNATURE_DATE_MISSING"
+  ],
   "forbid_findings": []
 }

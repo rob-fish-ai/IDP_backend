@@ -123,7 +123,12 @@ def _annual_for(ex: dict, gi: dict) -> tuple[float | None, str]:
     ]
     if calcs:
         calcs.sort(key=lambda c: _METHOD_PRIORITY.get(c.get("method") or "", 99))
-        return _money(calcs[0].get("annualIncome")), f"calc:{calcs[0].get('method')}"
+        status = ""
+        for vi in _income_records_for(ex, gi):
+            if vi.get("verificationStatus"):
+                status = "/" + vi["verificationStatus"]
+                break
+        return _money(calcs[0].get("annualIncome")), f"calc:{calcs[0].get('method')}{status}"
     # No calculation: fall back to the record's own rate × frequency.
     from app.services.income_calculator import get_frequency_multiplier
     for vi in ex.get("income", {}).get("sourceIncome", {}).get("verificationIncome", []):
@@ -146,7 +151,10 @@ def _income_records_for(ex: dict, gi: dict) -> list[dict]:
     ]
 
 
-def score(gold: dict, ex: dict) -> tuple[list[Check], dict]:
+def score(gold: dict, ex: dict, *, no_images: bool = False) -> tuple[list[Check], dict]:
+    """no_images: the run replayed stored OCR without page images, so the
+    vision-only verdicts (signature presence and its findings) are not
+    measurable and are reported as n/a rather than as misses."""
     checks: list[Check] = []
     ci = ex.get("certification_info") or {}
 
@@ -161,6 +169,8 @@ def score(gold: dict, ex: dict) -> tuple[list[Check], dict]:
         elif field == "householdSize":
             ok = _money(got) == float(gv)
             checks.append(Check("cert", field, gv, got, ok))
+        elif field == "isSigned" and no_images:
+            checks.append(Check("cert", field, gv, got, True, "n/a: signature needs page images"))
         else:
             ok = _norm_str(got) == _norm_str(gv)
             checks.append(Check("cert", field, gv, got, ok))
@@ -245,6 +255,9 @@ def score(gold: dict, ex: dict) -> tuple[list[Check], dict]:
     # --- findings ---
     codes = [f.get("code") for f in ex.get("finding_records", [])]
     for c in gold.get("expect_findings", []):
+        if no_images and c.startswith("SIGNATURE"):
+            checks.append(Check("find", f"expect {c}", True, c in codes, True, "n/a: signature needs page images"))
+            continue
         checks.append(Check("find", f"expect {c}", True, c in codes, c in codes))
     for c in gold.get("forbid_findings", []):
         checks.append(Check("find", f"forbid {c}", False, c in codes, c not in codes))
@@ -315,11 +328,11 @@ def classification_map(ex: dict) -> dict[int, str]:
     return {p["page"]: p.get("document_type") for p in (ex.get("classification") or {}).get("pages", [])}
 
 
-def report(case_id: str, gold: dict, runs: list[tuple[str, dict]], verbose: bool) -> None:
+def report(case_id: str, gold: dict, runs: list[tuple[str, dict]], verbose: bool, no_images: bool = False) -> None:
     print(f"\n{'=' * 100}\n{case_id} — {gold.get('packet', '')}\n{'=' * 100}")
     per_run: list[list[Check]] = []
     for tag, ex in runs:
-        checks, summary = score(gold, ex)
+        checks, summary = score(gold, ex, no_images=no_images and tag.startswith("run"))
         per_run.append(checks)
         print(f"\n[{tag}] passed {summary['passed']}/{summary['checks']} | confidence {summary['confidence']} {summary['flag']} | "
               f"members {summary['members']} income {summary['income_records']} assets {summary['asset_records']} "
@@ -386,7 +399,7 @@ def main() -> None:
                 runs.append((f"run{i}", ex))
         if not runs:
             ap.error("nothing to score: pass --stored, --runs N, or --json")
-        report(case_id, gold, runs, args.verbose)
+        report(case_id, gold, runs, args.verbose, no_images=bool(args.runs and not args.pdf))
 
 
 if __name__ == "__main__":

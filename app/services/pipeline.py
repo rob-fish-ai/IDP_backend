@@ -279,12 +279,23 @@ def run_extraction_pipeline(
                     verdict["page"],
                 )
 
+    # The roster is passed to the income and asset extractors so memberName
+    # comes back in the certification's spelling; each of their calls now
+    # sees a single document and would otherwise have no roster to match.
+    household_names = [
+        f"{m.FirstName or ''} {m.LastName or ''}".strip()
+        for m in (household.houseHold if household else [])
+        if (m.FirstName or m.LastName)
+    ]
+
     # Income
     income = _llm_fallback(
         "Income", extract_income,
         income_groups or llm_eligible_groups, settings,
         default=IncomeExtraction(),
         certification_type=ctx.certification_type,
+        household_names=household_names,
+        declared_total=certification_info.householdIncome if certification_info else None,
     )
 
     # Assets
@@ -293,6 +304,7 @@ def run_extraction_pipeline(
         asset_groups or llm_eligible_groups, settings,
         default=AssetExtraction(),
         certification_type=ctx.certification_type,
+        household_names=household_names,
     )
 
     # Step 3b1: Deduplicate asset records.
@@ -535,6 +547,7 @@ def run_extraction_pipeline(
     )
     findings.extend(name_findings)
     findings.extend(required_field_findings)
+    findings.extend(_reconciliation_findings(income, ctx))
     if draft_watermark:
         findings.append(
             "Certification form is a watermarked DRAFT ('not a final "
@@ -1254,6 +1267,62 @@ def _recover_required_fields_from_images(
             )
 
     return findings
+
+
+def _reconciliation_findings(income, ctx) -> list:
+    """Findings from reconciling the household's declared income against the
+    packet's verification documents (see extractor._reconcile_income).
+
+    declared_only: the certification or questionnaire declares a source and
+    nothing in the packet verifies it. On an AR-SC the certification is the
+    source of truth and no third-party verification is expected, so the
+    finding is not raised there.
+    verified_not_declared: a source document carries income the
+    certification's own income table does not list.
+    """
+    out: list = []
+    if not income:
+        return out
+    for vi in income.sourceIncome.verificationIncome:
+        member = vi.memberName or "A household member"
+        what = vi.incomeType or vi.sourceName or "income"
+        amount = vi.declaredAnnualAmount or vi.selfDeclaredAmount
+        amount_txt = f" of ${float(amount):,.2f}" if amount and str(amount).replace('.', '', 1).isdigit() else ""
+        if vi.verificationStatus == "declared_only" and ctx.certification_type != "AR-SC":
+            where = vi.declaredSource or vi.selfDeclaredSource or "the certification"
+            out.append(make_finding(
+                "INCOME_DECLARED_NOT_VERIFIED",
+                f"{member}: {what} income{amount_txt} is declared on the {where} but no "
+                f"verification document in the packet carries it — third-party "
+                f"verification required (Section 9)",
+                label=f"Declared {what} income for {member} has no verification",
+                category=CATEGORY_INCOME,
+                subject_type="income_record",
+                subject_ref={"member_name": vi.memberName, "source_name": vi.sourceName},
+                result="non_compliant",
+                assignment=ASSIGN_CLIENT,
+                correction_required=f"Obtain third-party verification of {member}'s {what} income",
+                resolution_type=RESOLVE_PRESENCE,
+                pages=list(vi.sourcePages or []),
+            ))
+        elif vi.verificationStatus == "verified_not_declared":
+            pages = ", ".join(str(p) for p in (vi.sourcePages or [])) or "?"
+            out.append(make_finding(
+                "INCOME_VERIFIED_NOT_DECLARED",
+                f"{member}: {what} income from {vi.sourceName or 'a source document'} is "
+                f"verified in the packet (page(s) {pages}) but the certification's income "
+                f"table does not declare it — the certification may be incomplete (Section 9)",
+                label=f"Verified {what} income for {member} is not on the certification",
+                category=CATEGORY_INCOME,
+                subject_type="income_record",
+                subject_ref={"member_name": vi.memberName, "source_name": vi.sourceName},
+                result="non_compliant",
+                assignment=ASSIGN_CLIENT,
+                correction_required=f"Add {member}'s {what} income to the certification or document why it is excluded",
+                resolution_type=RESOLVE_PRESENCE,
+                pages=list(vi.sourcePages or []),
+            ))
+    return out
 
 
 def _supplement_cert_info_from_rent_change(
