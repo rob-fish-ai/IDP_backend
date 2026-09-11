@@ -25,6 +25,32 @@ from app.services.findings import (
 
 logger = logging.getLogger(__name__)
 
+
+def _member_key(name: str | None) -> str:
+    parts = (name or "").strip().lower().split()
+    return f"{parts[0]} {parts[-1]}" if parts else ""
+
+
+def _record_key(member: str | None, source: str | None, income_type: str | None) -> tuple[str, str, str]:
+    """Identity of an income record: who, from whom, which program.
+
+    Keyed on the payer name alone, three household members paid by the
+    Social Security Administration collapsed into one bucket, the first
+    value won, and a correct extraction was reported as a 53% shortfall
+    against the certification total.
+    """
+    return (
+        _member_key(member),
+        (source or "").strip().lower(),
+        (income_type or "").strip().lower(),
+    )
+
+
+def _record_label(member: str | None, source: str | None) -> str:
+    who = (member or "").strip() or "unknown member"
+    what = (source or "").strip() or "unknown source"
+    return f"{who} — {what}"
+
 # Threshold for flagging income discrepancies
 _DISCREPANCY_THRESHOLD = 0.10  # 10%
 
@@ -52,16 +78,20 @@ def validate_income_consistency(
         return findings
 
     # Group calculations by source
-    by_source: dict[str, dict[str, float]] = {}
+    by_source: dict[tuple[str, str, str], dict[str, float]] = {}
+    labels: dict[tuple[str, str, str], tuple[str | None, str | None]] = {}
     for calc in income_calculations:
-        key = (calc.sourceName or "Unknown").lower()
+        key = _record_key(calc.memberName, calc.sourceName, calc.incomeType)
+        labels.setdefault(key, (calc.memberName, calc.sourceName))
         if calc.annualIncome:
             try:
                 by_source.setdefault(key, {})[calc.method or "unknown"] = float(calc.annualIncome)
             except ValueError:
                 continue
 
-    for source, methods in by_source.items():
+    for key, methods in by_source.items():
+        member_name, source_name = labels[key]
+        source = _record_label(member_name, source_name)
         if len(methods) < 2:
             continue
 
@@ -116,7 +146,7 @@ def validate_income_consistency(
                 label="An income calculation method disagrees with the others",
                 category=CATEGORY_INCOME,
                 subject_type="income_record",
-                subject_ref={"source_name": source},
+                subject_ref={"member_name": member_name, "source_name": source_name},
                 assignment=ASSIGN_INTERNAL,
                 correction_required=(
                     "Determine which calculation method is correct for this "
@@ -140,7 +170,7 @@ def validate_income_consistency(
                     label="No income calculation method agrees with any other",
                     category=CATEGORY_INCOME,
                     subject_type="income_record",
-                    subject_ref={"source_name": source},
+                    subject_ref={"member_name": member_name, "source_name": source_name},
                     assignment=ASSIGN_INTERNAL,
                     correction_required=(
                         "Establish which verification is authoritative for this "
@@ -648,8 +678,10 @@ def validate_tic_totals(
     if tic_total is None or tic_total == 0:
         return findings
 
-    # Strategy 1: Use income_calculations (best method per source)
-    best_by_source: dict[str, float] = {}
+    # Strategy 1: Use income_calculations (best method per record)
+    best_by_source: dict[tuple[str, str, str], float] = {}
+    best_method: dict[tuple[str, str, str], int] = {}
+    key_labels: dict[tuple[str, str, str], str] = {}
     _METHOD_PRIORITY = {"voi-based": 0, "self-declared": 1, "ytd-based": 2, "paystub-based": 3}
     for calc in income_calculations:
         if not calc.annualIncome:
@@ -663,13 +695,12 @@ def validate_tic_totals(
             val = float(calc.annualIncome)
         except ValueError:
             continue
-        key = (calc.sourceName or calc.memberName or "unknown").lower()
-        method = calc.method or ""
-        priority = _METHOD_PRIORITY.get(method, 99)
-        if key not in best_by_source or priority < _METHOD_PRIORITY.get(
-            _best_method_for_key(key, income_calculations, best_by_source), 99
-        ):
+        key = _record_key(calc.memberName, calc.sourceName, calc.incomeType)
+        key_labels.setdefault(key, _record_label(calc.memberName, calc.sourceName))
+        priority = _METHOD_PRIORITY.get(calc.method or "", 99)
+        if key not in best_by_source or priority < best_method[key]:
             best_by_source[key] = val
+            best_method[key] = priority
 
     # Strategy 2: If no calculations, sum selfDeclaredAmount from VI entries
     # Annualize based on frequencyOfPay — selfDeclaredAmount is often a
@@ -682,7 +713,8 @@ def validate_tic_totals(
                 continue
             mult = get_frequency_multiplier(vi.frequencyOfPay) if vi.frequencyOfPay else None
             annual = sd * mult if mult else sd
-            key = (vi.sourceName or vi.incomeType or "unknown").lower()
+            key = _record_key(vi.memberName, vi.sourceName, vi.incomeType)
+            key_labels.setdefault(key, _record_label(vi.memberName, vi.sourceName))
             best_by_source.setdefault(key, 0)
             best_by_source[key] += annual
 
@@ -693,7 +725,8 @@ def validate_tic_totals(
             rate = _parse_money(vi.rateOfPay)
             if not rate:
                 continue
-            key = (vi.sourceName or vi.incomeType or "unknown").lower()
+            key = _record_key(vi.memberName, vi.sourceName, vi.incomeType)
+            key_labels.setdefault(key, _record_label(vi.memberName, vi.sourceName))
             mode = _classify_income_mode((vi.incomeType or "").lower())
             if mode == "fixed_monthly":
                 best_by_source[key] = rate * 12
@@ -728,9 +761,35 @@ def validate_tic_totals(
     diff = abs(tic_total - calc_total)
     diff_pct = diff / tic_total if tic_total > 0 else 0
 
-    if diff_pct > 0.15:
+    # Per-record disagreements between what the certification declares for
+    # a source and what its verification computes are raised with a precise
+    # subject by validate_cert_summary_vs_income. Whatever part of the total
+    # gap those already explain is not reported again at case level, where
+    # it would repaint every income record.
+    explained = 0.0
+    if income:
+        for vi in income.sourceIncome.verificationIncome:
+            declared = _parse_money(vi.declaredAnnualAmount)
+            if declared is None:
+                continue
+            key = _record_key(vi.memberName, vi.sourceName, vi.incomeType)
+            calc_val = best_by_source.get(key)
+            if calc_val is not None and abs(declared - calc_val) / max(declared, 1.0) > 0.10:
+                explained += abs(declared - calc_val)
+    residual = max(0.0, diff - explained)
+    residual_pct = residual / tic_total if tic_total > 0 else 0
+
+    if diff_pct > 0.15 and residual_pct <= 0.15:
+        logger.info(
+            "TIC total: %.0f%% gap of $%.2f is explained by per-record declared-vs-"
+            "calculated differences ($%.2f) — no case-level finding",
+            diff_pct * 100, diff, explained,
+        )
+    elif diff_pct > 0.15:
         direction = "higher" if calc_total > tic_total else "lower"
-        source_detail = ", ".join(f"{k}: ${v:,.0f}" for k, v in best_by_source.items())
+        source_detail = ", ".join(
+            f"{key_labels.get(k, '?')}: ${v:,.0f}" for k, v in best_by_source.items()
+        )
         findings.append(make_finding(
             "TIC_TOTAL_MISMATCH",
             f"Income total mismatch: TIC declares ${tic_total:,.2f} but extracted sources "
@@ -778,161 +837,79 @@ def validate_tic_totals(
     return findings
 
 
-def _best_method_for_key(
-    key: str,
-    calculations: list[IncomeCalculationResult],
-    current_best: dict[str, float],
-) -> str:
-    """Find the method name of the current best calculation for a source key."""
-    if key not in current_best:
-        return ""
-    target_val = current_best[key]
-    for calc in calculations:
-        if (calc.sourceName or calc.memberName or "unknown").lower() == key:
-            try:
-                if calc.annualIncome and float(calc.annualIncome) == target_val:
-                    return calc.method or ""
-            except ValueError:
-                continue
-    return ""
-
-
 def validate_cert_summary_vs_income(
     income: IncomeExtraction | None,
     income_calculations: list[IncomeCalculationResult],
-    document_groups: list[DocumentGroup],
+    document_groups: list[DocumentGroup] | None = None,
 ) -> list[Finding]:
-    """Cross-validate individual income records against cert summary tables.
+    """Compare what the certification declares for each income source with
+    what its verification computes.
 
-    Certification forms (USDA RD 3560-8, LIHTC TIC page 3, HUD 50059 Section D)
-    contain per-person income/employer summary tables that serve as ground truth.
-    If VOI-extracted rate × hours × frequency differs >10% from the summary's
-    annual salary, flag it and report the summary value.
-
-    This works across ALL cert form types — not doc-specific regex.
+    The declared figure comes from the reconciled declared bucket
+    (VerificationIncomeEntry.declaredAnnualAmount, set when a row of the
+    certification's income table matched the record). This replaced a regex
+    over the OCR'd table that required a name in the first cell, which no
+    real form prints — the forms key rows by member number — so the check
+    had never fired on a real layout. The finding names the record, so the
+    scorer lowers that record rather than the whole case.
     """
-    import re
-
     findings: list[Finding] = []
     if not income:
         return findings
-
-    # Step 1: Extract per-person annual salary from cert summary tables
-    # Pattern: table rows with (Resident/Name, Employer, Annual salary, ...)
-    # This pattern exists in USDA RD, LIHTC TIC page 3 worksheets, HUD 50059 Section D
-    summary_entries: list[dict] = []
-
-    for g in document_groups:
-        if g.category == "ignore" and "(Previous)" in g.document_type:
+    calc_by_key: dict[tuple[str, str, str], float] = {}
+    _METHOD_PRIORITY = {"voi-based": 0, "self-declared": 1, "ytd-based": 2, "paystub-based": 3}
+    best_method: dict[tuple[str, str, str], int] = {}
+    for calc in income_calculations:
+        if not calc.annualIncome or (calc.details or "").startswith(("[audit]", "[historical]")):
             continue
-        if not any(kw in g.document_type for kw in (
-            "TIC", "HUD 50059", "Certification",
-        )):
+        try:
+            val = float(calc.annualIncome)
+        except ValueError:
             continue
+        key = _record_key(calc.memberName, calc.sourceName, calc.incomeType)
+        priority = _METHOD_PRIORITY.get(calc.method or "", 99)
+        if key not in calc_by_key or priority < best_method[key]:
+            calc_by_key[key] = val
+            best_method[key] = priority
 
-        text = g.combined_text
-        # Look for HTML table rows: Resident | Employer | Annual salary
-        # Match: <td>Name</td><td>Employer</td><td>amount</td>
-        for m in re.finditer(
-            r"<tr><td>([A-Z][a-z][\w\s-]+?)</td><td>([\w\s&]+?)</td><td>([\d,]+\.\d{2})</td>",
-            text,
-        ):
-            name = m.group(1).strip()
-            employer = m.group(2).strip()
-            amount = m.group(3).replace(",", "")
-            # Skip "Total" rows
-            if name.lower() in ("total", "totals"):
-                continue
-            try:
-                annual = float(amount)
-                if annual > 0:
-                    summary_entries.append({
-                        "name": name.lower(),
-                        "employer": employer.lower(),
-                        "annual": annual,
-                        "raw_name": name,
-                        "raw_employer": employer,
-                    })
-            except ValueError:
-                continue
-
-    if not summary_entries:
-        return findings
-
-    # Step 2: Match summary entries to income records and compare
-    vi_entries = income.sourceIncome.verificationIncome
-    for se in summary_entries:
-        # Find matching VI entry by member name + employer name
-        best_vi = None
-        best_calc_annual = None
-        for vi in vi_entries:
-            vi_name = (vi.memberName or "").lower()
-            vi_source = (vi.sourceName or "").lower()
-            # Match by name overlap
-            if not vi_name or not (
-                se["name"] in vi_name or vi_name in se["name"]
-                or set(vi_name.split()) & set(se["name"].split())
-            ):
-                continue
-            # Match by employer overlap
-            if not vi_source or not (
-                se["employer"] in vi_source or vi_source in se["employer"]
-                or set(vi_source.split()) & set(se["employer"].split())
-            ):
-                continue
-            best_vi = vi
-            break
-
-        if not best_vi:
+    for vi in income.sourceIncome.verificationIncome:
+        declared = _parse_money(vi.declaredAnnualAmount)
+        if declared is None or declared <= 0:
             continue
-
-        # Find the best calculation for this source
-        source_key = (best_vi.sourceName or best_vi.memberName or "").lower()
-        for calc in income_calculations:
-            calc_key = (calc.sourceName or calc.memberName or "").lower()
-            if calc_key == source_key or (
-                set(calc_key.split()) & set(source_key.split())
-            ):
-                try:
-                    best_calc_annual = float(calc.annualIncome)
-                except (ValueError, TypeError):
-                    continue
-                break
-
-        if best_calc_annual is None:
+        if vi.verificationStatus == "declared_only":
+            continue   # nothing verified to compare against; reported separately
+        key = _record_key(vi.memberName, vi.sourceName, vi.incomeType)
+        calc_val = calc_by_key.get(key)
+        if calc_val is None:
             continue
-
-        # Compare
-        summary_annual = se["annual"]
-        diff = abs(best_calc_annual - summary_annual)
-        if summary_annual > 0:
-            diff_pct = diff / summary_annual
-        else:
+        diff = abs(calc_val - declared)
+        diff_pct = diff / declared
+        if diff_pct <= 0.10:
             continue
-
-        if diff_pct > 0.10:
-            direction = "higher" if best_calc_annual > summary_annual else "lower"
-            findings.append(make_finding(
-                "CERT_SUMMARY_INCOME_MISMATCH",
-                f"Income mismatch for {se['raw_name']} at {se['raw_employer']}: "
-                f"cert summary shows ${summary_annual:,.2f}/year but VOI-based calculation "
-                f"is ${best_calc_annual:,.2f} ({diff_pct:.0%} {direction}). "
-                f"Cert summary is typically more reliable — verify VOI rate/hours.",
-                label="Calculated income disagrees with the certification summary table",
-                category=CATEGORY_INCOME,
-                subject_type="income_record",
-                subject_ref={
-                    "member_name": best_vi.memberName,
-                    "source_name": best_vi.sourceName,
-                },
-                assignment=ASSIGN_INTERNAL,
-                correction_required=(
-                    "Re-verify the rate and hours on the verification of income "
-                    "against the certification summary, then recompute"
-                ),
-                resolution_type=RESOLVE_RECALC,
-            ))
-
+        direction = "higher" if calc_val > declared else "lower"
+        where = vi.declaredSource or "certification"
+        findings.append(make_finding(
+            "CERT_SUMMARY_INCOME_MISMATCH",
+            f"Income mismatch for {vi.memberName or 'a member'} from {vi.sourceName or 'a source'}: "
+            f"the {where} declares ${declared:,.2f}/year but the verification computes "
+            f"${calc_val:,.2f} ({diff_pct:.0%} {direction}) — verify the rate, frequency and "
+            f"hours on the source document against the certification (Section 9)",
+            label="Calculated income disagrees with what the certification declares for this source",
+            category=CATEGORY_INCOME,
+            subject_type="income_record",
+            subject_ref={
+                "member_name": vi.memberName,
+                "source_name": vi.sourceName,
+                "field": "declaredAnnualAmount",
+            },
+            assignment=ASSIGN_INTERNAL,
+            correction_required=(
+                "Re-verify the rate, frequency and hours on the verification "
+                "against the certification, then recompute"
+            ),
+            resolution_type=RESOLVE_RECALC,
+            pages=list(vi.sourcePages or []),
+        ))
     return findings
 
 

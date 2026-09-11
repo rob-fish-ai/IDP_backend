@@ -54,8 +54,15 @@ _AMOUNT_RE = re.compile(
 # Words a certification uses to label a figure that is not the household's:
 # the program's income limits, and the statutory fines quoted in the perjury
 # certification. Whole words, so "fine" does not fire inside "defined".
+# Also a label class: the certification restates figures that are not the
+# household's current income or assets — the income at move-in, the prior
+# certification's numbers, adjusted or imputed derivations, the passbook
+# rate. Each is a comparative or a computation, not a record the engine
+# could have missed.
 _NOT_HOUSEHOLD_RE = re.compile(
-    r"\b(limits?|penalt(?:y|ies)|fined?|fines)\b|\bnot (?:less|more) than\b",
+    r"\b(limits?|penalt(?:y|ies)|fined?|fines)\b|\bnot (?:less|more) than\b"
+    r"|\bat move[\s-]?in\b|\bmove[\s-]?in income\b|\bprior\b|\bprevious\b"
+    r"|\badjusted\b|\bimputed\b|\bpassbook\b",
     re.IGNORECASE,
 )
 # How far back to look for that label. Far enough for "Designated Income
@@ -102,6 +109,24 @@ def _one_edit_apart(a: str, b: str) -> bool:
     shorter, longer = (a, b) if len(a) < len(b) else (b, a)
     for i in range(len(longer)):
         if longer[:i] + longer[i + 1:] == shorter:
+            return True
+    return False
+
+
+def _is_same_figure(amount: float, seen: set[float]) -> bool:
+    """The same printed figure, allowing only a digit-level scan error.
+
+    Used for the form's own scalars. The 0.1% drift that _is_near allows is
+    right for a record value read twice, and wrong here: a 50059 printed
+    "SS = Soc. Sec. 21,720" beside a total of 21,723, the drift rule called
+    them one figure, and the one income line the extraction had missed
+    raised no finding.
+    """
+    digits = _digits(amount)
+    for other in seen:
+        if other and abs(amount - other) <= 0.02:
+            return True
+        if _one_edit_apart(digits, _digits(other)):
             return True
     return False
 
@@ -236,6 +261,8 @@ def _extracted_amounts(extraction: ExtractionResult) -> tuple[Counter, set[float
         record(
             entry.selfDeclaredAmount, entry.rateOfPay, entry.ytdAmount,
             entry.overtimeRate, entry.hoursPerPayPeriod,
+            # the certification's own row for this source, once reconciled
+            entry.declaredAnnualAmount,
         )
     for stub in extraction.income.sourceIncome.payStub:
         record(stub.grossPay, stub.ytdGross)
@@ -348,7 +375,7 @@ def check_unaccounted_amounts(extraction: ExtractionResult) -> list:
         for _ in range(printed):
             if _consume(amount, pool):
                 continue
-            if amount in unlimited or _is_near(amount, unlimited):
+            if amount in unlimited or _is_same_figure(amount, unlimited):
                 continue
             unaccounted.append(amount)
     if not unaccounted:
