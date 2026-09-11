@@ -610,6 +610,12 @@ def _value_in_source(value: str, source_text: str) -> bool:
         for v in variants:
             if v.lower() in source_text:
                 return True
+        # OCR pads a part with a stray digit ("071/15/1949"); a token that
+        # normalises to the value is the value.
+        from app.services.identity import _normalize_dob
+        for tok in re.findall(r"(?<![\d/])\d{1,3}[/-]\d{1,3}[/-]\d{2,4}(?![\d/])", source_text):
+            if _normalize_dob(tok) == val:
+                return True
 
     # SSN (masked or full): verify by last 4 digits. Full SSNs are stored
     # dash-formatted but documents print them with dashes, spaces, or bare

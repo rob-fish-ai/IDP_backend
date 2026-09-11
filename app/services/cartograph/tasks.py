@@ -16,6 +16,7 @@ URL and ends at an HTTP POST, and it is what survives the migration.
 
 import logging
 import shutil
+from datetime import datetime
 
 from app.core.dependencies import get_settings
 from app.services.audit.job_store import get_job_store
@@ -104,6 +105,18 @@ def audit_case(
         post_failure(case_ref, str(exc), settings, error_code="extraction_failed")
         return
     finally:
+        # The work directory (page renders, OCR text) is deleted, but the
+        # extraction JSON is kept under output/results/ so a run can be
+        # inspected as a file after the fact; the job store holds it too.
+        try:
+            src = work_dir / "extraction_result.json"
+            if src.exists():
+                keep_dir = settings.output_dir / "results"
+                keep_dir.mkdir(parents=True, exist_ok=True)
+                stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+                shutil.copy2(src, keep_dir / f"{case_ref}_{stamp}.json")
+        except Exception:
+            logger.exception("Could not keep the extraction result for case_ref=%s", case_ref)
         shutil.rmtree(work_dir, ignore_errors=True)
 
     extraction = result["extraction"]
