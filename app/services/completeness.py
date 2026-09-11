@@ -31,6 +31,7 @@ from collections import Counter
 from app.schemas.extraction import ExtractionResult
 from app.services.doc_taxonomy import is_current_certification_form
 from app.services.findings import (
+    CATEGORY_INCOME,
     ASSIGN_INTERNAL,
     CATEGORY_ASSET,
     CATEGORY_MEMBER,
@@ -178,6 +179,8 @@ def _amounts_in(text: str) -> Counter:
     """
     out: Counter = Counter()
     prev_end = 0
+    contexts: dict[float, set[str]] = {}
+    _amounts_in.contexts = contexts
     for match in _AMOUNT_RE.finditer(text or ""):
         # The form labels what a figure is, and the label sits between the
         # previous number and this one. Read it: a certification prints
@@ -190,10 +193,21 @@ def _amounts_in(text: str) -> Counter:
         if _NOT_HOUSEHOLD_RE.search(label):
             continue
         try:
-            out[round(float(match.group(1).replace(",", "")), 2)] += 1
+            amount = round(float(match.group(1).replace(",", "")), 2)
         except ValueError:
             continue
+        out[amount] += 1
+        # Which table the figure sits in, from the label beside it.
+        low = label.lower()
+        if _ASSET_LABEL_RE.search(low):
+            contexts.setdefault(amount, set()).add("asset")
+        elif _INCOME_LABEL_RE.search(low):
+            contexts.setdefault(amount, set()).add("income")
     return out
+
+
+_INCOME_LABEL_RE = re.compile(r"income|wage|salary|benefit|support|employ|pension|ssa|social security|annual")
+_ASSET_LABEL_RE = re.compile(r"asset|balance|checking|savings|account|cash value|market value|equity|interest")
 
 
 def _consume(amount: float, pool: Counter) -> bool:
@@ -381,29 +395,42 @@ def check_unaccounted_amounts(extraction: ExtractionResult) -> list:
     if not unaccounted:
         return []
 
-    listed = ", ".join(f"${a:,.2f}" for a in unaccounted[:_MAX_LISTED])
-    if len(unaccounted) > _MAX_LISTED:
-        listed += f" and {len(unaccounted) - _MAX_LISTED} more"
-
-    return [make_finding(
-        "CERT_AMOUNT_UNACCOUNTED",
-        f"{len(unaccounted)} amount(s) on the certification match no "
-        f"extracted record: {listed}. Confirm no income source or asset was "
-        f"missed — limits and subtotals are expected here, a balance or a "
-        f"wage figure is not",
-        label="Certification carries amounts that appear in no extracted record",
-        category=CATEGORY_ASSET,
-        # Not a compliance failure by the file: it flags that the extraction
-        # may be incomplete, which is a question about the audit rather than
-        # about the household.
-        result="na",
-        assignment=ASSIGN_INTERNAL,
-        correction_required=(
-            "Check each amount against the household's income sources and "
-            "assets; add any record the extraction missed"
-        ),
-        resolution_type=RESOLVE_PRESENCE,
-    )]
+    contexts = getattr(_amounts_in, "contexts", {}) or {}
+    by_table: dict[str, list[float]] = {}
+    for amount in unaccounted:
+        ctx = contexts.get(amount) or set()
+        table = "asset" if ctx == {"asset"} else "income" if ctx == {"income"} else "unknown"
+        by_table.setdefault(table, []).append(amount)
+    out = []
+    for table, amounts in by_table.items():
+        listed = ", ".join(f"${a:,.2f}" for a in amounts[:_MAX_LISTED])
+        if len(amounts) > _MAX_LISTED:
+            listed += f" and {len(amounts) - _MAX_LISTED} more"
+        where = {"asset": "asset", "income": "income", "unknown": "unplaced"}[table]
+        out.append(make_finding(
+            "CERT_AMOUNT_UNACCOUNTED",
+            f"{len(amounts)} {where} amount(s) on the certification match no "
+            f"extracted record: {listed}. Confirm no income source or asset was "
+            f"missed — limits and subtotals are expected here, a balance or a "
+            f"wage figure is not",
+            label="Certification carries amounts that appear in no extracted record",
+            # The table the figure sits in decides whose records the finding
+            # is about; it used to be "asset" for every amount, so an income
+            # line the extraction missed marked down the bank accounts.
+            category=CATEGORY_ASSET if table == "asset" else CATEGORY_INCOME,
+            subject_ref={"table": table},
+            # Not a compliance failure by the file: it flags that the extraction
+            # may be incomplete, which is a question about the audit rather than
+            # about the household.
+            result="na",
+            assignment=ASSIGN_INTERNAL,
+            correction_required=(
+                "Check each amount against the household's income sources and "
+                "assets; add any record the extraction missed"
+            ),
+            resolution_type=RESOLVE_PRESENCE,
+        ))
+    return out
 
 
 def check_completeness(extraction: ExtractionResult) -> list:

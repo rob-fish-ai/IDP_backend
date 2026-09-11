@@ -93,6 +93,12 @@ _DISPUTES_EXTRACTION = frozenset({
     # is precisely when it used to rise.
     "TIC_TOTAL_NO_CALCULATIONS",
     "TIC_TOTAL_NOT_EXTRACTED",
+    # Two reads of the engine's own that do not agree
+    "SIGNATURE_VERDICT_CONFLICTS_WITH_DATE",
+    "ASSET_SELF_DECLARED_VS_VERIFIED",
+    # A document read as something it is not
+    "CALC_WORKSHEET_AS_VOI",
+    "FIXED_INCOME_PAYSTUB",
 })
 
 

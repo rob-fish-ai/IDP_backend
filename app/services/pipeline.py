@@ -42,6 +42,7 @@ from app.services.cross_doc_validator import (
 )
 from app.services.extractor import (
     CRITICAL_CERT_FIELDS,
+    source_names_overlap,
     build_group_texts,
     extract_assets,
     extract_certification_info,
@@ -627,14 +628,22 @@ def run_extraction_pipeline(
     score_cross_doc_consistency(score_cards)
 
     # Stage 3: Business rule validation (range, format, logic checks)
-    score_business_rules(score_cards, certification_type=ctx.certification_type)
+    cert_form_type = next(
+        (g.document_type for g in cert_groups if is_current_certification_form(g.document_type)),
+        None,
+    )
+    score_business_rules(
+        score_cards, certification_type=ctx.certification_type, cert_form_type=cert_form_type,
+    )
 
     # Stage 4: the audit's own findings. Every stage above asks a question of
     # one value in isolation, so none of them can see that the extracted
     # sources sum to something the certification contradicts — that is a
     # relationship between values, not a property of one. Runs last so a
     # dispute has the final word over a field that passed its format check.
-    score_findings(score_cards, findings)
+    # Dedupe first: a finding raised once per source document would otherwise
+    # be counted once per copy against the same field.
+    score_findings(score_cards, dedupe_findings(findings))
 
     # Build summary and surface red/yellow fields as findings.
     # Suppress field-level duplicates of facts the business rules already
@@ -856,13 +865,29 @@ def _link_questionnaire_to_income(
         matched = False
         for source_key, idx in existing_sources.items():
             if (employer_norm in source_key or source_key in employer_norm
-                    or _fuzzy_employer_match(employer_norm, source_key)):
+                    or _fuzzy_employer_match(employer_norm, source_key)
+                    or source_names_overlap(employer_norm, source_key)):
                 vi = vi_entries[idx]
                 if not vi.selfDeclaredSource:
                     vi.selfDeclaredSource = _get_questionnaire_source(document_groups)
                 matched = True
                 break
 
+        # Paystubs verify employment without a verificationIncome record of
+        # their own; an employer they name is not an undisclosed one.
+        if not matched and any(
+            source_names_overlap(employer_norm, (ps.sourceName or "").lower())
+            for ps in income.sourceIncome.payStub
+        ):
+            matched = True
+        # The declared bucket (extractor) already reads the questionnaire;
+        # a line it produced for this employer is reconciled there and
+        # reported as declared-only when nothing verifies it.
+        if not matched and any(
+            source_names_overlap(employer_norm, (d.sourceName or "").lower())
+            for d in (income.declared or [])
+        ):
+            matched = True
         if not matched:
             # Disclosed employer with no matching income record — flag, don't guess
             logger.info("Questionnaire employer '%s' has no matching income record", employer)
@@ -870,7 +895,9 @@ def _link_questionnaire_to_income(
                 sourceName=normalize_source_name(employer) or employer,
                 selfDeclaredSource=_get_questionnaire_source(document_groups),
                 incomeType="Non-Federal Wage",
-                employmentStatus="Flagged — disclosed on questionnaire but no VOI/paystub found",
+                # A declaration nobody verified; the status field is a
+                # picklist and does not carry prose.
+                verificationStatus="declared_only",
             )
             vi_entries.append(stub)
 

@@ -1481,6 +1481,9 @@ def _source_overlap(a: str | None, b: str | None) -> bool:
     return _same_income_type(a, b)
 
 
+source_names_overlap = _source_overlap
+
+
 def _record_annual(vi: dict) -> float | None:
     from app.services.income_calculator import get_frequency_multiplier
     for field in ("rateOfPay", "selfDeclaredAmount"):

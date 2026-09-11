@@ -309,6 +309,7 @@ def _check_signature_date_agreement(
             f"signature block before requiring a resubmission (Section 11)",
             label="Unsigned certification carries a signature date",
             category=CATEGORY_FILE_REVIEW,
+            subject_ref={"field": "isSigned"},
             assignment=ASSIGN_INTERNAL,
             correction_required=(
                 "Check the certification's signature block directly and correct "

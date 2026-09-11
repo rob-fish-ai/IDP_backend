@@ -167,7 +167,7 @@ def score_pydantic_records(
             for field in ("sourceName", "memberName", "selfDeclaredAmount",
                            "rateOfPay", "frequencyOfPay",
                            "hoursPerPayPeriod", "incomeType", "employmentStatus",
-                           "ytdAmount", "hireDate"):
+                           "ytdAmount", "hireDate", "terminationDate"):
                 val = getattr(vi, field, None)
                 scorer.score_field(field, str(val) if val else None)
             card = scorer.build()
@@ -751,15 +751,39 @@ _DISPUTED_SCORE = 0.15
 # names it.
 _DISPUTED_CASE_SCORE = 0.40
 
-# Which record types a finding category is about, so a case-level dispute
-# lands on the records that could have caused it rather than on all of them.
-_CATEGORY_RECORD_TYPES = {
-    "income": ("income",),
-    "asset": ("asset",),
-    "household_member": ("household_member",),
-    "unit_rent": ("certification",),
-    "expense": ("income", "asset"),
-    "file_review": (),          # about the file, not about any extracted record
+# Which fields a finding category is about. A dispute lands on the fields
+# it could be wrong about — the amounts of an income dispute, the balances
+# of an asset dispute — not on every field of every record in the category.
+# One case-level income dispute used to stamp 0.40 on memberName,
+# accountType and assetOwner alike, and the highest-weighted stage was the
+# least attributed.
+_CATEGORY_FIELDS: dict[str, dict[str, tuple[str, ...]]] = {
+    "income": {
+        "income": ("rateOfPay", "selfDeclaredAmount", "ytdAmount", "hoursPerPayPeriod", "frequencyOfPay"),
+        "certification": ("householdIncome",),
+    },
+    "asset": {
+        "asset": ("currentBalance", "selfDeclaredAmount", "incomeAmount"),
+    },
+    "household_member": {
+        "household_member": ("FirstName", "LastName", "DOB", "socialSecurityNumber"),
+    },
+    "unit_rent": {
+        "certification": ("tenantRent", "utilityAllowance", "grossRent"),
+    },
+    "expense": {
+        "income": ("rateOfPay", "selfDeclaredAmount", "ytdAmount"),
+        "asset": ("currentBalance", "selfDeclaredAmount", "incomeAmount"),
+    },
+    "file_review": {},          # about the file; lands only where a field is named
+}
+# Fields a finding may name in subject_ref["field"], and the record type
+# that carries them, for findings whose category alone says nothing.
+_NAMED_FIELD_RECORD = {
+    "isSigned": "certification", "signatureDate": "certification",
+    "effectiveDate": "certification", "householdIncome": "certification",
+    "tenantRent": "certification", "utilityAllowance": "certification",
+    "grossRent": "certification", "householdSize": "certification",
 }
 
 
@@ -772,14 +796,19 @@ def score_findings(cards: list[RecordScoreCard], findings: list) -> None:
     certification declares, because that is a relationship between values
     rather than a property of one.
 
-    So the strongest evidence the engine produces about its own reliability was
-    excluded from its confidence score. On a real packet that meant an
-    extraction reporting $48,360,000 of wages against a $31,470 certification
-    scored 0.769 and flagged "yellow", with the field that caused it — a
-    salary transcribed into a rate — scoring 0.96 green.
-
-    Only findings that dispute the extraction are read; see findings.py for
-    which those are and why a missing-document finding is not one of them.
+    Attribution, narrowest first:
+      - a finding that names a field (subject_ref["field"]) lowers that field
+        on the record it names, or on the certification card for a
+        certification field;
+      - a finding that names a record (member_name / source_name /
+        account_type) lowers that record's category fields at _DISPUTED_SCORE;
+      - a case-level finding lowers the category fields of every candidate
+        record, with the penalty shared among them — the contradiction is
+        real, which record carries it is unknown;
+      - an income dispute with no income records at all lands on the
+        certification's householdIncome, the figure the missing records were
+        supposed to account for.
+    Only findings that dispute the extraction are read (findings.py).
     """
     disputing = [
         f for f in findings
@@ -789,70 +818,92 @@ def score_findings(cards: list[RecordScoreCard], findings: list) -> None:
         return
 
     for finding in disputing:
-        subject = {
-            slug(v) for v in (finding.subject_ref or {}).values() if v
-        }
-        targets = _CATEGORY_RECORD_TYPES.get(finding.category, ())
-        # A dispute about records that do not exist has nowhere to land, and
-        # that is the case where it matters most: when extraction produced
-        # nothing there is no card to mark down, so the flat mean over the
-        # remaining records rises. Observed live — a run that classified the
-        # income pages as Unknown found no income at all and scored 0.907
-        # green, higher than the run that found the household's $21,720.
-        #
-        # The certification card carries the declared totals the missing
-        # records were supposed to account for, so it is where a
-        # contradiction about absent records belongs.
-        absent = bool(targets) and not any(c.record_type in targets for c in cards)
-        if absent:
-            targets = ("certification",)
-        for card in cards:
-            if card.record_type not in targets:
-                continue
-            # A finding naming a subject applies to the record carrying that
-            # subject. Matching on the record's label rather than on a field
-            # keeps this working for every record type without a per-type map.
-            label_parts = {slug(p) for p in (card.record_label or "").split("—")}
-            named = bool(subject and (subject & label_parts))
-            if subject and not named:
-                continue
-            # A dispute whose records exist is shared among them: the
-            # contradiction is real but which record carries the error is
-            # unknown, so the penalty is moderate. A dispute whose records do
-            # not exist at all admits no such ambiguity — the certification
-            # declares a figure and the extraction produced nothing to set
-            # against it. That is the strongest evidence of extraction failure
-            # the engine can have, and it is scored as such.
-            if named or absent:
-                score = _DISPUTED_SCORE
+        ref = finding.subject_ref or {}
+        named_field = ref.get("field")
+        subject = {slug(v) for k, v in ref.items() if v and k not in ("field", "table")}
+        fields_by_type = _CATEGORY_FIELDS.get(finding.category, {})
+        reason = f"Disputed by {finding.code}"
+
+        # Named field on a named record, or on the certification card.
+        if named_field:
+            if subject:
+                targets = [c for c in cards if c.record_type in fields_by_type
+                           and subject & {slug(p) for p in (c.record_label or "").split("—")}]
             else:
-                score = _DISPUTED_CASE_SCORE
-            reason = f"Disputed by {finding.code}"
-            for field in card.fields:
-                if field.flag == ScoreFlag.NA:
-                    continue
-                update_field_score(
-                    card, field.field_name, stage="finding",
-                    score=score, reason=reason,
-                )
-        # Cards are recomputed once below rather than per finding.
+                rt = _NAMED_FIELD_RECORD.get(named_field)
+                targets = [c for c in cards if c.record_type == rt] if rt else []
+            for card in targets:
+                if any(f.field_name == named_field for f in card.fields):
+                    _lower_fields(card, (named_field,), _DISPUTED_SCORE, reason)
+                else:
+                    # The named field is not one the card scores (a
+                    # reconciliation field such as declaredAnnualAmount):
+                    # the dispute is still about this record's amounts.
+                    _lower_fields(card, fields_by_type.get(card.record_type, ()), _DISPUTED_SCORE, reason)
+            if targets:
+                continue
+
+        candidates = [c for c in cards if c.record_type in fields_by_type]
+        if subject:
+            targets = [c for c in candidates
+                       if subject & {slug(p) for p in (c.record_label or "").split("—")}]
+            for card in targets:
+                _lower_fields(card, fields_by_type[card.record_type], _DISPUTED_SCORE, reason)
+            continue
+
+        # Case level. When the category's records do not exist, an income
+        # dispute lands on the declared total it was measured against.
+        record_types = [rt for rt in fields_by_type if rt != "certification"]
+        present = [c for c in candidates if c.record_type in record_types]
+        if not present and finding.category in ("income", "expense"):
+            for card in cards:
+                if card.record_type == "certification":
+                    _lower_fields(card, ("householdIncome",), _DISPUTED_SCORE, reason)
+            continue
+        if not present:
+            continue
+        # Shared penalty: with n candidate records, each carries 1/n of it.
+        share = 1.0 - (1.0 - _DISPUTED_CASE_SCORE) / len(present)
+        for card in present:
+            _lower_fields(card, fields_by_type[card.record_type], share, reason)
 
     for card in cards:
         card.recompute()
 
 
+def _lower_fields(card: RecordScoreCard, field_names: tuple, score: float, reason: str) -> None:
+    for field in card.fields:
+        if field.field_name in field_names and field.flag != ScoreFlag.NA and field.value is not None:
+            update_field_score(card, field.field_name, stage="finding", score=score, reason=reason)
+
+
+# Member fields each certification form actually prints. A null in a field
+# the form does not carry is not a gap; a null in one it carries is.
+_FORM_MEMBER_FIELDS = {
+    "HUD 50059": {"disabled", "student"},
+    "HUD 3560 Form": {"disabled", "student"},
+    "Tenant Income Certification (TIC)": {"student"},
+    "HUD Model Lease": set(),
+}
+
+
 def score_business_rules(
     cards: list[RecordScoreCard],
     certification_type: str | None = None,
+    cert_form_type: str | None = None,
 ) -> None:
-    """Apply business rule checks to field values."""
+    """Apply business rule checks to field values.
+
+    cert_form_type: the current certification form's document type, so a
+    member field the form does not print is N/A rather than red.
+    """
     for card in cards:
         if card.record_type == "income":
             _score_income_rules(card, certification_type)
         elif card.record_type == "asset":
             _score_asset_rules(card)
         elif card.record_type == "household_member":
-            _score_member_rules(card)
+            _score_member_rules(card, cert_form_type)
         elif card.record_type == "certification":
             _score_certification_rules(card, certification_type)
         card.recompute()
@@ -876,6 +927,10 @@ def _score_income_rules(card: RecordScoreCard, cert_type: str | None) -> None:
     # still a real gap. When an amount IS present (in any field), a null
     # selfDeclaredAmount is not a gap, so mark it N/A instead of false-RED.
     is_terminated = "terminated" in (vals.get("employmentStatus") or "").lower()
+    if not is_terminated:
+        for fs in card.fields:
+            if fs.field_name == "terminationDate" and fs.value is None:
+                fs.mark_na("Employment not terminated")
     if any(vals.get(f) for f in _INCOME_AMOUNT_FIELDS):
         for fs in card.fields:
             if fs.field_name == "selfDeclaredAmount" and fs.value is None:
@@ -1071,6 +1126,14 @@ def _score_asset_rules(card: RecordScoreCard) -> None:
         for fs in card.fields:
             if fs.field_name == "selfDeclaredAmount" and fs.value is None:
                 fs.mark_na("Balance captured in currentBalance")
+    # A statement for a non-interest account states no interest. A null
+    # incomeAmount there is what the document says, not a missed field.
+    if vals.get("currentBalance") and not vals.get("incomeAmount"):
+        atype = (vals.get("accountType") or "").lower()
+        if any(t in atype for t in ("checking", "cash", "prepaid", "direct express", "debit")):
+            for fs in card.fields:
+                if fs.field_name == "incomeAmount" and fs.value is None:
+                    fs.mark_na("No interest stated for this account type")
 
     # currentBalance: numeric >= 0
     balance = vals.get("currentBalance")
@@ -1111,8 +1174,9 @@ def _score_asset_rules(card: RecordScoreCard) -> None:
                                score=0.60, reason=f"Uncommon type '{atype}'")
 
 
-def _score_member_rules(card: RecordScoreCard) -> None:
+def _score_member_rules(card: RecordScoreCard, cert_form_type: str | None = None) -> None:
     vals = {f.field_name: f.value for f in card.fields}
+    form_fields = _FORM_MEMBER_FIELDS.get(cert_form_type or "")
 
     # Name fields: basic validation (alphabetic, not garbage)
     for field_name in ("FirstName", "LastName"):
@@ -1155,15 +1219,21 @@ def _score_member_rules(card: RecordScoreCard) -> None:
             update_field_score(card, "socialSecurityNumber", stage="business_rule",
                                score=0.40, reason=f"Invalid format: {ssn}")
 
-    # disabled / student: Y or N
+    # disabled / student: Y or N. Absent on a form that carries the column is
+    # a gap to verify; absent on a form that has no such column is nothing.
     for field_name in ("disabled", "student"):
         val = vals.get(field_name)
         if val in ("Y", "N"):
             update_field_score(card, field_name, stage="business_rule",
                                score=1.0, reason="Valid Y/N")
         elif val is None:
-            update_field_score(card, field_name, stage="business_rule",
-                               score=0.30, reason="Missing — verify against cert form")
+            if form_fields is not None and field_name not in form_fields:
+                for fs in card.fields:
+                    if fs.field_name == field_name:
+                        fs.mark_na(f"Not a field on the {cert_form_type}")
+            else:
+                update_field_score(card, field_name, stage="business_rule",
+                                   score=0.30, reason="Missing — verify against cert form")
 
 
 def _score_certification_rules(card: RecordScoreCard, cert_type: str | None) -> None:
