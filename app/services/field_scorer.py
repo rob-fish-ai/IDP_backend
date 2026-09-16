@@ -173,6 +173,7 @@ def score_pydantic_records(
             card = scorer.build()
             card.source_pages = list(getattr(vi, "sourcePages", None) or [])
             card.verification_status = getattr(vi, "verificationStatus", None)
+            _mark_redacted(card, getattr(vi, "evidence", None))
             cards.append(card)
 
     # Assets
@@ -204,9 +205,17 @@ def score_pydantic_records(
             card = scorer.build()
             card.source_pages = list(getattr(a, "sourcePages", None) or [])
             card.verification_status = getattr(a, "verificationStatus", None)
+            _mark_redacted(card, getattr(a, "evidence", None))
             cards.append(card)
 
     return cards
+
+
+def _mark_redacted(card: RecordScoreCard, evidence: dict | None) -> None:
+    """A field the page shows blacked out is not available, not missed."""
+    for fs in card.fields:
+        if fs.value is None and (evidence or {}).get(fs.field_name) == "redacted on page":
+            fs.mark_na("Redacted on the page — verify from the original document")
 
 
 # ---------------------------------------------------------------------------
@@ -272,6 +281,7 @@ def score_source_verification(
     }
 
     _SKIP_SOURCE_VERIFY = {("certification", "certificationType")}
+    _DECLARED_FIELDS = {"selfDeclaredAmount", "declaredAnnualAmount"}
 
     def _texts(pages: list[int]) -> list[str]:
         return [page_text.get(pn, "") for pn in pages]
@@ -304,7 +314,16 @@ def score_source_verification(
                 continue
 
             hit = _find_value(fs.value, fs.field_name, own_texts)
-            if hit == "strong" and declared_only and card.record_type in ("income", "asset"):
+            if (fs.field_name in _DECLARED_FIELDS and card.record_type in ("income", "asset")
+                    and hit != "strong"
+                    and _find_value(fs.value, fs.field_name, _texts(household_pages)) == "strong"):
+                # A declared amount lives on the declaration, not on the
+                # record's source document: the 50059's $886 merged into the
+                # bank-verified savings account is verified when the 50059
+                # prints it, and "found elsewhere" would be the wrong verdict.
+                stage = StageScore(stage="source_verification", score=1.0,
+                                   reason="Declared on the certification form or questionnaire")
+            elif hit == "strong" and declared_only and card.record_type in ("income", "asset"):
                 stage = StageScore(stage="source_verification", score=0.85, ceiling=UNVERIFIED_CEILING,
                                    reason="Declared by the household; no verification document carries it")
             elif hit == "strong":
@@ -1155,6 +1174,13 @@ def _score_asset_rules(card: RecordScoreCard) -> None:
             for fs in card.fields:
                 if fs.field_name == "incomeAmount" and fs.value is None:
                     fs.mark_na("No interest stated for this account type")
+        elif card.verification_status in ("verified", None):
+            # A verification of deposit states a balance and a rate; the
+            # annual income is imputed on the worksheet, not printed. Its
+            # absence is what the document says, not a missed field.
+            for fs in card.fields:
+                if fs.field_name == "incomeAmount" and fs.value is None:
+                    fs.mark_na("Document states no income figure — imputed on the asset worksheet")
 
     # currentBalance: numeric >= 0
     balance = vals.get("currentBalance")

@@ -136,19 +136,19 @@ def validate_signatures(
 
         signed_count = sum(1 for d in hud_9887_docs if d.isSigned == "Yes")
         if adult_count > 0 and signed_count < 1:
-            findings.append(
+            findings.append(_unverified(
                 "HUD 9887 must be signed by all adult household members (Section 11)"
-            )
+            ))
 
     # --- 9. HUD 9887-A: signed ---
     hud_9887a_docs = by_type.get("HUD 9887-A", [])
     if hud_9887a_docs:
         unsigned = [d for d in hud_9887a_docs if d.isSigned == "No"]
         if unsigned:
-            findings.append(
-                f"HUD 9887-A: {len(unsigned)} unsigned form(s) — "
-                f"each must be signed by tenant and owner (Section 11)"
-            )
+            findings.append(_unverified(
+                f"HUD 9887-A must be signed by tenant and owner on each form "
+                f"({len(unsigned)} form(s) show no signature in the text) (Section 11)"
+            ))
 
     # --- 10. Acknowledgement of Receipt: signed by all adults ---
     _check_all_adults_signed(by_type, "Acknowledgement of Receipt",
@@ -159,15 +159,13 @@ def validate_signatures(
     initial_docs = by_type.get("Initial Notice of Recertification", [])
     for doc in initial_docs:
         if doc.isSigned == "No":
-            findings.append(
+            findings.append(_unverified(
                 "Initial Notice of Recertification must be signed, dated, and witnessed "
                 "by all adult members (Section 11)"
-            )
+            ))
             break
 
     # --- 12. HUD Model Lease ---
-    _check_signed_dated(by_type, "HUD Model Lease",
-                        findings, "HUD Model Lease must be signed and dated (Section 11)")
     _check_signed_dated(by_type, "HUD Model Lease",
                         findings, "HUD Model Lease must be signed and dated (Section 11)")
 
@@ -192,8 +190,20 @@ def _check_signed_dated(
     docs = by_type.get(doc_type, [])
     for doc in docs:
         if doc.isSigned == "No":
-            findings.append(message)
+            findings.append(_unverified(message))
             return  # One finding per doc type is enough
+
+
+def _unverified(message: str) -> str:
+    """The requirement, stated with what the text can prove.
+
+    isSigned comes from the OCR text, and handwritten signatures are not
+    machine-readable: "No" means no signature could be found in the text,
+    not that the form is unsigned. The finding keeps the requirement and
+    asks for a visual check instead of asserting a failure."""
+    base = message.replace(" (Section 11)", "").rstrip(".")
+    return (f"{base}; a signature could not be verified from the document text "
+            f"(handwritten signatures are not machine-readable) — verify visually (Section 11)")
 
 
 def _check_all_adults_signed(
@@ -207,7 +217,7 @@ def _check_all_adults_signed(
     docs = by_type.get(doc_type, [])
     signed_count = sum(1 for d in docs if d.isSigned == "Yes")
     if adult_count > 0 and docs and signed_count < adult_count:
-        findings.append(message)
+        findings.append(_unverified(message))
 
 
 def _count_adults(

@@ -443,6 +443,10 @@ def run_extraction_pipeline(
         income.sourceIncome.verificationIncome = _resolve_duplicate_self_declarations(
             income.sourceIncome.verificationIncome
         )
+        income.sourceIncome.verificationIncome, declared_findings = _collapse_declared_duplicates(
+            income.sourceIncome.verificationIncome
+        )
+        name_findings.extend(declared_findings)
     # Step 4g: identity fields by document authority. The extractor picked
     # whichever SSN or date of birth it read first; the certification's
     # printed value now wins over a questionnaire's handwriting, and every
@@ -1720,6 +1724,78 @@ def _resolve_duplicate_self_declarations(vi_entries: list) -> list:
         )
         out.append(keeper)
     return out
+
+
+def _collapse_declared_duplicates(vi_entries: list) -> tuple[list, list[str]]:
+    """Two declared-only records for one member and income type are one
+    income declared on two documents, not two incomes.
+
+    The 50059 lists "Soc. Sec. 21,720" and the zero-income certification
+    lists "Social Security 1,810" for the same person; kept as two records
+    they doubled the calculated total and raised a false TIC mismatch. The
+    certification form's line is kept. A second figure that is one twelfth
+    of it is its monthly basis and is noted; any other disagreement becomes
+    a finding, since the household stated two different amounts.
+    """
+    from app.services.doc_taxonomy import is_certification_form
+
+    def _annual(v) -> float | None:
+        for f in ("declaredAnnualAmount", "selfDeclaredAmount"):
+            val = getattr(v, f, None)
+            if val:
+                try:
+                    return float(str(val).replace(",", ""))
+                except ValueError:
+                    continue
+        return None
+
+    groups: dict[tuple[str, str], list] = {}
+    for vi in vi_entries:
+        if vi.verificationStatus not in ("declared_only", "self_certified"):
+            continue
+        key = ((vi.memberName or "").lower().strip(), (vi.incomeType or "").lower().strip())
+        if key[0] and key[1]:
+            groups.setdefault(key, []).append(vi)
+
+    findings: list[str] = []
+    drop: set[int] = set()
+    for (member, itype), entries in groups.items():
+        if len(entries) < 2:
+            continue
+        entries.sort(key=lambda v: (
+            0 if is_certification_form(v.declaredSource or v.selfDeclaredSource or "") else 1,
+            -(_annual(v) or 0.0),
+        ))
+        keeper = entries[0]
+        k_annual = _annual(keeper)
+        for other in entries[1:]:
+            o_annual = _annual(other)
+            k_doc = keeper.declaredSource or keeper.selfDeclaredSource or "the certification"
+            o_doc = other.declaredSource or other.selfDeclaredSource or "another declaration"
+            if k_annual and o_annual:
+                ratio = o_annual / k_annual if k_annual else 0
+                if abs(o_annual - k_annual) <= 0.02 * k_annual:
+                    note = "same figure"
+                elif abs(ratio - 1 / 12) < 0.01 or abs(ratio - 12) < 0.12:
+                    note = "monthly basis of the same figure"
+                    if not keeper.rateOfPay and abs(ratio - 1 / 12) < 0.01:
+                        keeper.rateOfPay = other.selfDeclaredAmount
+                        keeper.rateUnit = "monthly"
+                else:
+                    note = "different figure"
+                    findings.append(
+                        f"{keeper.memberName}: {keeper.incomeType} is declared as "
+                        f"${k_annual:,.2f}/year on the {k_doc} and ${o_annual:,.2f} on the "
+                        f"{o_doc} — the certification figure is used; confirm which applies (Section 9)"
+                    )
+            else:
+                note = "no comparable amount"
+            keeper.evidence = dict(keeper.evidence or {})
+            keeper.evidence.setdefault("alsoDeclared", f"{o_doc}: {other.selfDeclaredAmount} ({note})")
+            logger.info("Income: %s / %s declared on %s and %s — one income (%s); the %s line is kept",
+                        member, itype, k_doc, o_doc, note, k_doc)
+            drop.add(id(other))
+    return [vi for vi in vi_entries if id(vi) not in drop], findings
 
 
 def _llm_fallback(label, func, groups, settings, *, default=None, **kwargs):

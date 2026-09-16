@@ -159,7 +159,11 @@ def _dates_in(text: str) -> list[str]:
     return out
 
 
-_CELL_RE = re.compile(r"<td[^>]*>(.*?)</td>", re.IGNORECASE | re.DOTALL)
+# Header cells arrive as <th> from the OCR's table markup; reading only
+# <td> left every household-composition table headerless, so the TIC's
+# own "Last 4 Digits of Social Security No." column was never a claim and
+# a handwritten questionnaire outranked the certification by default.
+_CELL_RE = re.compile(r"<t[dh][^>]*>(.*?)</t[dh]>", re.IGNORECASE | re.DOTALL)
 _SSN_HEADER_RE = re.compile(r"social security|\bssn\b|\bss ?#|ss no", re.IGNORECASE)
 _DOB_HEADER_RE = re.compile(r"birth", re.IGNORECASE)
 _LAST_HEADER_RE = re.compile(r"last name", re.IGNORECASE)

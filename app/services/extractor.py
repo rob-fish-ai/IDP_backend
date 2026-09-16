@@ -1351,6 +1351,32 @@ def _prune_payment_history(records: list[dict], group: DocumentGroup, label: str
     return dropped
 
 
+_REDACTION_RE = re.compile(
+    r"\[(?:blank\s*-\s*)?blacked[\s-]*out\]|\[redacted\]|\bredacted\b|█{2,}|\[blank\s*-\s*(?:hidden|masked)\]",
+    re.IGNORECASE,
+)
+
+
+def _note_redactions(records: list[dict], amount_fields: tuple[str, ...], group: DocumentGroup) -> None:
+    """Mark amounts missing from a page that carries redacted cells.
+
+    A bank's verification with the balance blacked out is not a value the
+    extractor missed; the scorer reads this note and scores the field as
+    not available rather than not extracted. Only the fields the document
+    itself would carry are noted — a declaration's fields (selfDeclaredAmount)
+    are never on a bank's page.
+    """
+    if not _REDACTION_RE.search(group.combined_text or ""):
+        return
+    for rec in records:
+        evidence = rec.get("evidence")
+        if not isinstance(evidence, dict):
+            evidence = rec["evidence"] = {}
+        for field in amount_fields:
+            if rec.get(field) in (None, "", "null") and not evidence.get(field):
+                evidence[field] = "redacted on page"
+
+
 _PAGE_MARK_RE = re.compile(r"--- Page (\d+) ---\n?")
 
 
@@ -1693,25 +1719,34 @@ def _drop_total_rows(declared: list[dict], label: str) -> list[dict]:
         except (TypeError, ValueError):
             return None
 
+    def _sums_to(value, others) -> bool:
+        others = [o for o in others if o]
+        if not value or len(others) < 2:
+            return False
+        # Any subset of two or more other lines summing to this one.
+        from itertools import combinations
+        for k in range(2, min(len(others), 6) + 1):
+            for c in combinations(others, k):
+                total = round(sum(c), 2)
+                # to the cent, or one misread digit apart (6,376.19 read
+                # where the page prints 6,376.79)
+                if abs(total - value) <= 0.011 or _one_digit_apart(f"{total:.2f}", f"{value:.2f}"):
+                    return True
+        return False
+
+    def _untyped(d) -> bool:
+        t = (d.get("incomeType") or d.get("accountType") or "").strip().lower()
+        return t in ("", "other", "other income", "total", "household", "household income", "all sources")
+
     kept: list[dict] = []
     for d in declared:
         value = _amt(d)
-        others = [_amt(o) for o in declared if o is not d and o.get("page") == d.get("page")]
-        others = [o for o in others if o]
-        is_total = False
-        if value and len(others) >= 2:
-            # Any subset of two or more other lines summing to this one.
-            from itertools import combinations
-            for k in range(2, min(len(others), 6) + 1):
-                for c in combinations(others, k):
-                    total = round(sum(c), 2)
-                    # to the cent, or one misread digit apart (6,376.19 read
-                    # where the page prints 6,376.79)
-                    if abs(total - value) <= 0.011 or _one_digit_apart(f"{total:.2f}", f"{value:.2f}"):
-                        is_total = True
-                        break
-                if is_total:
-                    break
+        is_total = _sums_to(value, [_amt(o) for o in declared if o is not d and o.get("page") == d.get("page")])
+        # A questionnaire's "total household income" restates lines that
+        # sit on other pages (the certification's). An untyped line equal
+        # to the sum of lines anywhere in the declarations is that total.
+        if not is_total and _untyped(d):
+            is_total = _sums_to(value, [_amt(o) for o in declared if o is not d])
         if is_total:
             logger.info("%s: declared line %s on page %s is the sum of other lines — a total row, not a claim",
                         label, d.get("amount"), d.get("page"))
@@ -1974,6 +2009,28 @@ _ASSET_FAMILIES = {
 }
 
 
+# Finer than the family: the account kinds a certification lists one line
+# each for. Two checking accounts are two kinds-of-the-same; a checking and
+# a savings are different kinds even though both are "cash".
+_ASSET_KINDS = (
+    ("certificate of deposit", "cd"), ("cd", "cd"), ("money market", "money market"),
+    ("checking", "checking"), ("savings", "savings"), ("prepaid card", "prepaid card"),
+    ("direct express", "direct express"), ("debit card", "debit card"), ("cash", "cash"),
+    ("real estate", "real estate"), ("property", "real estate"), ("home", "real estate"),
+    ("life insurance", "life insurance"), ("retirement", "retirement"), ("401k", "retirement"),
+    ("ira", "retirement"), ("annuity", "annuity"), ("able account", "able account"),
+    ("cryptocurrency", "cryptocurrency"), ("brokerage", "investment"), ("investment", "investment"),
+)
+
+
+def _asset_kind(account_type: str | None) -> str:
+    t = (account_type or "").strip().lower()
+    for name, kind in _ASSET_KINDS:
+        if name in t:
+            return kind
+    return "other"
+
+
 def _asset_family(account_type: str | None) -> str:
     t = (account_type or "").strip().lower()
     for fam, names in _ASSET_FAMILIES.items():
@@ -2039,7 +2096,8 @@ def _reconcile_assets(records: list[dict], declared: list[dict]) -> None:
         if rec.get("verificationStatus") is None:
             rec["verificationStatus"] = "verified"
 
-    for d in _drop_total_rows(declared, "Declared assets"):
+    kept_declared = _drop_total_rows(declared, "Declared assets")
+    for d in kept_declared:
         if d.get("kind") in ("no_assets", "disposal"):
             d["matched"] = True
             continue
@@ -2093,6 +2151,38 @@ def _reconcile_assets(records: list[dict], declared: list[dict]) -> None:
                     )
                     best = rec
                     break
+        if best is None and d.get("amount") is not None:
+            # The certification lists the household's accounts one line per
+            # kind. When the owner has exactly one verified account of that
+            # kind and declares exactly one, they are the same account
+            # whatever the balances say — the 50059's checking $556 and the
+            # bank's verification of the only checking account are one
+            # record with a discrepancy, not two accounts and a doubled
+            # total. The discrepancy surfaces through selfDeclaredAmount.
+            kind = _asset_kind(d.get("accountType"))
+            if kind != "other":
+                def _owners_ok(rec):
+                    return (not d.get("assetOwner") or not rec.get("assetOwner")
+                            or _same_member(rec.get("assetOwner"), d.get("assetOwner")))
+                same_kind = [
+                    rec for rec in records
+                    if rec.get("verificationStatus") != "declared_only"
+                    and _asset_kind(rec.get("accountType")) == kind and _owners_ok(rec)
+                ]
+                declared_same = [
+                    o for o in kept_declared
+                    if o is not d and o.get("kind") not in ("no_assets", "disposal")
+                    and _asset_kind(o.get("accountType")) == kind and _owners_ok(o)
+                    and o.get("documentType") == d.get("documentType")
+                ]
+                if len(same_kind) == 1 and not declared_same:
+                    logger.info(
+                        "Declared assets: the only %s account declared (%s) is the only %s account "
+                        "verified (%s) — treated as the same account",
+                        kind, d.get("amount"), kind,
+                        same_kind[0].get("currentBalance") or same_kind[0].get("averageSixMonthBalance"),
+                    )
+                    best = same_kind[0]
         if best is not None:
             d["matched"] = True
             if not best.get("selfDeclaredAmount") and d.get("amount") is not None:
@@ -2149,6 +2239,7 @@ def extract_income(
         vis = [r for r in (si.get("verificationIncome") or []) if isinstance(r, dict)]
         pss = [r for r in (si.get("payStub") or []) if isinstance(r, dict)]
         _enforce_provenance(vis, _INCOME_AMOUNT_FIELDS, g, "Income")
+        _note_redactions(vis, ("rateOfPay", "ytdAmount", "overtimeRate"), g)
         _prune_payment_history(vis, g, "Income")
         _enforce_provenance(pss, _PAYSTUB_AMOUNT_FIELDS, g, "Income")
         # A program line reading $0.00 (the retirement letter that also says
@@ -2255,6 +2346,7 @@ def extract_assets(
         result = validation.validate_assets(call_llm_json(system_prompt, prompt, settings))
         recs = [r for r in (result.get("assetInformation") or []) if isinstance(r, dict)]
         _enforce_provenance(recs, _ASSET_AMOUNT_FIELDS, g, "Assets")
+        _note_redactions(recs, ("currentBalance", "averageSixMonthBalance", "incomeAmount"), g)
         return recs
 
     def _one(g: DocumentGroup) -> list[dict]:
