@@ -1318,6 +1318,80 @@ def _enforce_provenance(records: list[dict], amount_fields: tuple[str, ...],
     return dropped
 
 
+# A year-to-date figure is at least the period's gross and at most a
+# year's worth of periods of it; pay stubs that print figures without a
+# decimal point ("YTD Gross Wages 759768") come through a hundred times
+# too large when the reader does not restore the point.
+_YTD_MAX_PERIODS = 60
+
+
+def _repair_paystub_ytd(stubs: list[dict]) -> int:
+    """Put a source's pay-stub YTD figures back in sequence.
+
+    Within one member's stubs from one employer, YTD must climb with the
+    pay date by about the grosses in between, and no YTD can be less than
+    its own gross or more than sixty periods of it. A figure that breaks
+    this but fits once divided by a hundred is a lost decimal point and is
+    repaired, with the printed value kept in evidence; one that fits
+    neither way is dropped rather than shipped. Returns the count changed.
+    """
+    def _f(v):
+        try:
+            return float(str(v).replace(",", "")) if v not in (None, "", "null") else None
+        except ValueError:
+            return None
+
+    groups: dict[tuple[str, str], list[dict]] = {}
+    for ps in stubs:
+        key = ((ps.get("memberName") or "").lower().strip(), (ps.get("sourceName") or "").lower().strip())
+        groups.setdefault(key, []).append(ps)
+
+    changed = 0
+    for key, group in groups.items():
+        dated = sorted(
+            (ps for ps in group if _f(ps.get("ytdGross")) is not None),
+            key=lambda ps: (str(ps.get("payDate") or ""), ),
+        )
+        for ps in dated:
+            ytd, gross = _f(ps.get("ytdGross")), _f(ps.get("grossPay"))
+            if ytd is None:
+                continue
+            others = [
+                (str(o.get("payDate") or ""), _f(o.get("ytdGross"))) for o in dated if o is not ps and _f(o.get("ytdGross")) is not None
+            ]
+            date = str(ps.get("payDate") or "")
+
+            def _fits(value: float) -> bool:
+                if gross and (value < gross * 0.999 or value > gross * _YTD_MAX_PERIODS):
+                    return False
+                same_year = [(d, y) for d, y in others if d[:4] == date[:4]] if date else []
+                before = [y for d, y in same_year if d < date]
+                after = [y for d, y in same_year if d > date]
+                if before and value < max(before) * 0.999:
+                    return False
+                if after and value > min(after) * 1.001:
+                    return False
+                return True
+
+            if _fits(ytd):
+                continue
+            evidence = ps.get("evidence") if isinstance(ps.get("evidence"), dict) else {}
+            ps["evidence"] = evidence
+            printed = ps.get("ytdGross")
+            if _fits(ytd / 100):
+                ps["ytdGross"] = f"{ytd / 100:.2f}"
+                evidence["ytdGross"] = f"printed without a decimal point ({printed}); read as {ps['ytdGross']}"
+                logger.info("Income: pay stub YTD %s for %s / %s is a lost decimal — read as %s",
+                            printed, key[0] or "?", key[1] or "?", ps["ytdGross"])
+            else:
+                ps["ytdGross"] = None
+                evidence["ytdGross"] = f"printed {printed}, out of sequence with the other stubs — dropped"
+                logger.warning("Income: pay stub YTD %s for %s / %s is out of sequence and fits no repair — dropped",
+                               printed, key[0] or "?", key[1] or "?")
+            changed += 1
+    return changed
+
+
 def _prune_payment_history(records: list[dict], group: DocumentGroup, label: str) -> int:
     """Drop payment-history rows whose amount the document does not print.
 
@@ -1806,6 +1880,57 @@ def _reconcile_income(vi_entries: list[dict], declared: list[dict], certificatio
                 or _close(_record_annual(vi), annual_d)
             )
         ]
+        if not candidates and (d.get("incomeType") or "").lower() in ("", "other", "other income"):
+            # A questionnaire's "other income" line for a member is the
+            # member's income the form had no box for. When that member has
+            # exactly one verified record no declaration has claimed, this
+            # line is about it — the $2,867.30 "other income" beside Arnold's
+            # name is his child support, whichever type the read attached.
+            unclaimed = [
+                vi for vi in vi_entries
+                if vi.get("verificationStatus") not in ("declared_only", "self_certified")
+                and _same_member(vi.get("memberName"), d.get("memberName"))
+                and not vi.get("declaredAnnualAmount") and not vi.get("selfDeclaredSource")
+            ]
+            if len(unclaimed) == 1:
+                logger.info(
+                    "Declared income: '%s' %s for %s matches the member's one unclaimed verified record (%s)",
+                    d.get("incomeType") or "untyped", d.get("amount"), d.get("memberName"), unclaimed[0].get("sourceName"),
+                )
+                candidates = unclaimed
+            elif not unclaimed and annual_d:
+                # Every verified record of this member is already declared
+                # elsewhere (the certification claimed them). An untyped
+                # line on a second document is then a second declaration of
+                # one of them, not a new income: attach it to the record
+                # whose figure is nearest, where it is reported alongside
+                # the certification's, rather than minting an "other
+                # income" record nothing in the packet backs.
+                mine = [
+                    vi for vi in vi_entries
+                    if vi.get("verificationStatus") not in ("declared_only", "self_certified")
+                    and _same_member(vi.get("memberName"), d.get("memberName"))
+                ]
+                def _gap(vi):
+                    ref = _record_annual(vi)
+                    try:
+                        ref = float(vi.get("declaredAnnualAmount")) if vi.get("declaredAnnualAmount") else ref
+                    except ValueError:
+                        pass
+                    return abs((ref or 0.0) - annual_d) / max(annual_d, ref or 0.0, 1.0)
+                if mine:
+                    nearest = min(mine, key=_gap)
+                    if _gap(nearest) <= 0.5:
+                        evidence = nearest.get("evidence") if isinstance(nearest.get("evidence"), dict) else {}
+                        nearest["evidence"] = evidence
+                        evidence.setdefault("alsoDeclared", f"{d.get('documentType')}: {d.get('amount')} ({d.get('incomeType') or 'untyped'})")
+                        d["matched"] = True
+                        logger.info(
+                            "Declared income: '%s' %s for %s on the %s is a second declaration of %s — noted, not a record",
+                            d.get("incomeType") or "untyped", d.get("amount"), d.get("memberName"),
+                            d.get("documentType"), nearest.get("sourceName"),
+                        )
+                        continue
         if not candidates and (d.get("incomeType") or "").lower() in _HOUSEHOLD_LEVEL_INCOME_TYPES:
             same_type = [
                 vi for vi in vi_entries
@@ -2294,6 +2419,7 @@ def extract_income(
     for g, vis, pss in _run_per_group(source_groups, _one, settings, "Income"):
         vi_entries.extend(vis)
         ps_entries.extend(pss)
+    _repair_paystub_ytd(ps_entries)
 
     declared = _extract_declared_income(decl_groups, settings, certification_type, household_names)
     _reconcile_income(vi_entries, declared, certification_type, ps_entries, declared_total)

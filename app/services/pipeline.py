@@ -419,8 +419,9 @@ def run_extraction_pipeline(
         questionnaire_disclosures = parse_questionnaire(include_groups)
 
     # Step 4c: Link questionnaire disclosures to income entries
+    questionnaire_findings: list = []
     if questionnaire_disclosures and income:
-        _link_questionnaire_to_income(questionnaire_disclosures, income, document_groups)
+        questionnaire_findings = _link_questionnaire_to_income(questionnaire_disclosures, income, document_groups)
 
     # Step 4d: Reconcile name variants across all records
     from app.services.name_reconciler import reconcile_names
@@ -480,6 +481,7 @@ def run_extraction_pipeline(
         previous_certification=previous_certification,
     )
     findings.extend(name_findings)
+    findings.extend(questionnaire_findings)
     findings.extend(required_field_findings)
     findings.extend(_reconciliation_findings(income, ctx))
     findings.extend(identity_findings)
@@ -771,17 +773,18 @@ def _link_questionnaire_to_income(
     disclosures,
     income: IncomeExtraction,
     document_groups: list,
-) -> None:
+) -> list:
     """Link questionnaire employer disclosures to income entries.
 
-    If the questionnaire names employers, try to match them to existing VI records
-    and populate selfDeclaredSource. Also create stub VI entries for disclosed
-    employers that have no matching income record (e.g., Mobil from questionnaire).
+    If the questionnaire names employers, try to match them to existing VI
+    records and populate selfDeclaredSource. An employer nothing in the
+    packet accounts for becomes a finding. Returns the findings.
     """
     from app.services.parsers.source_normalizer import normalize_source_name
 
+    findings: list = []
     if not disclosures or not disclosures.employers:
-        return
+        return findings
 
     vi_entries = income.sourceIncome.verificationIncome
 
@@ -836,17 +839,27 @@ def _link_questionnaire_to_income(
         ):
             matched = True
         if not matched:
-            # Disclosed employer with no matching income record — flag, don't guess
+            # The questionnaire names an employer and states no figure. That
+            # is a finding about the packet, not an income record: as a
+            # record it arrived with eight empty fields scored red and no
+            # member, and Cartograph received an earner nobody could place.
             logger.info("Questionnaire employer '%s' has no matching income record", employer)
-            stub = VerificationIncomeEntry(
-                sourceName=normalize_source_name(employer) or employer,
-                selfDeclaredSource=_get_questionnaire_source(document_groups),
-                incomeType="Non-Federal Wage",
-                # A declaration nobody verified; the status field is a
-                # picklist and does not carry prose.
-                verificationStatus="declared_only",
-            )
-            vi_entries.append(stub)
+            name = normalize_source_name(employer) or employer
+            findings.append(make_finding(
+                "QUESTIONNAIRE_EMPLOYER_UNVERIFIED",
+                f"The {_get_questionnaire_source(document_groups) or 'questionnaire'} names "
+                f"'{name}' as an employer, but the packet carries no verification, pay stubs "
+                f"or certification line for it — verify whether this employment is current "
+                f"and obtain third-party verification if so (Section 11)",
+                label="Employer named on the questionnaire with nothing to verify it",
+                category=CATEGORY_INCOME,
+                subject_type="income_record",
+                subject_ref={"source_name": name},
+                assignment=ASSIGN_CLIENT,
+                correction_required="Obtain an employer verification or pay stubs, or a statement that the employment has ended",
+                resolution_type=RESOLVE_PRESENCE,
+            ))
+    return findings
 
 
 _SIGNATURE_VISION_PROMPT = """\

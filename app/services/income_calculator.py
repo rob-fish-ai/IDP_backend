@@ -625,7 +625,17 @@ def calculate_all_methods(
         candidates.append(("paystub-based", _paystubs))
     if len(history_rows) >= 2:
         candidates.append(("history-based", lambda: calculate_history_based(history_rows)))
-    if vi_entry and vi_entry.rateOfPay and calc_mode != "annual_net":
+    # A self-employment affidavit that states "$17/hour, 80 hours" is a wage
+    # calculation whatever its income type says; only a rate with no unit
+    # and no hours is taken as the annual net figure.
+    rate_unit = normalize_rate_unit(getattr(vi_entry, "rateUnit", None)) if vi_entry else None
+    wage_like_rate = bool(
+        vi_entry and vi_entry.rateOfPay and (
+            rate_unit in ("hourly", "daily", "weekly", "bi-weekly", "semi-monthly", "monthly", "quarterly", "per_period")
+            or (rate_unit is None and vi_entry.hoursPerPayPeriod)
+        )
+    )
+    if vi_entry and vi_entry.rateOfPay and (calc_mode != "annual_net" or wage_like_rate):
         def _voi():
             annual, details, _findings = calculate_voi_based(
                 vi_entry.rateOfPay,
@@ -639,7 +649,7 @@ def calculate_all_methods(
             )
             return annual, details, []
         candidates.append(("voi-based", _voi))
-    if vi_entry and (vi_entry.selfDeclaredAmount or (calc_mode == "annual_net" and vi_entry.rateOfPay)):
+    if vi_entry and (vi_entry.selfDeclaredAmount or (calc_mode == "annual_net" and vi_entry.rateOfPay and not wage_like_rate)):
         def _self_declared():
             # selfDeclaredAmount is annual by schema convention (TIC Part III
             # columns, Schedule C net, gift/child-support affidavits) — but
