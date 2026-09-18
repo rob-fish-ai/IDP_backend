@@ -37,6 +37,7 @@ rather than dropped silently — a payload that quietly loses a date is
 indistinguishable from a packet that never had one.
 """
 
+import hashlib
 import logging
 import re
 import uuid
@@ -536,6 +537,7 @@ def build_income_records(
                 "gross_pay": _money(stub.grossPay),
                 "ytd_amount": _money(stub.ytdGross),
                 "pay_frequency": stub.payInterval,
+                "pages": _pages_of(stub),
             }
             for stub in grouped.get(index, [])
         ]
@@ -569,6 +571,8 @@ def build_income_records(
             "termination_date": _iso_date(entry.terminationDate),
             "self_declared_amount": _money(entry.selfDeclaredAmount),
             "source_of_declaration": entry.selfDeclaredSource,
+            "verification_status": entry.verificationStatus,
+            "pages": _pages_of(entry),
             "paystubs": paystubs,
             "vois": vois,
             "zero_income": None,
@@ -623,12 +627,15 @@ def build_income_records(
                 "termination_date": None,
                 "self_declared_amount": None,
                 "source_of_declaration": None,
+                "verification_status": "verified",
+                "pages": sorted({p for s in stubs for p in _pages_of(s)}),
                 "paystubs": [
                     {
                         "pay_date": _iso_date(s.payDate),
                         "gross_pay": _money(s.grossPay),
                         "ytd_amount": _money(s.ytdGross),
                         "pay_frequency": s.payInterval,
+                        "pages": _pages_of(s),
                     }
                     for s in stubs
                 ],
@@ -715,11 +722,109 @@ def build_asset_records(
             "annual_income_from_assets": _money(asset.incomeAmount),
             "interest_type": asset.interestType,
             "percentage_of_ownership": asset.percentageOfOwnership,
+            "verification_status": asset.verificationStatus,
+            "pages": _pages_of(asset),
             "bank_statements": statements,
             "voa": voa,
         })
 
     return records
+
+
+def _pages_of(record) -> list[int]:
+    """The packet pages a record was read from, as the extractor set them."""
+    pages = getattr(record, "sourcePages", None) or []
+    return sorted({int(p) for p in pages if p is not None})
+
+
+# Per-field review notes ("[YELLOW] Randy Buck — Savings → incomeAmount:
+# Review recommended") are the scorer's commentary, not findings: they
+# have no subject a reviewer acts on and would fill the thread twenty rows
+# deep. They stay out of the findings section.
+_FIELD_NOTE_RE = re.compile(r"^\[(GREEN|YELLOW|RED)\]")
+_DIGITS_RE = re.compile(r"[\d$,.]+")
+
+
+def _note_key(text: str) -> str:
+    """A stable key for a finding that is still plain text.
+
+    Digits and amounts are stripped before hashing so a re-scan that reads
+    a figure slightly differently updates the same row instead of opening
+    a new one; two notes of the same shape about different people still
+    differ, since the names stay in.
+    """
+    shape = _DIGITS_RE.sub("", text.lower())
+    shape = re.sub(r"\s+", " ", shape).strip()
+    return f"NOTE:{hashlib.sha1(shape.encode()).hexdigest()[:12]}"
+
+
+def _subject_label(ref: dict) -> str | None:
+    parts = [
+        ref.get(k) for k in ("member_name", "source_name", "account_type", "document_type", "table", "field")
+        if ref.get(k) and str(ref.get(k)).lower() not in ("unknown", "none")
+    ]
+    return " — ".join(str(p) for p in parts) or None
+
+
+def build_findings(extraction: ExtractionResult, members: list[dict]) -> list[dict]:
+    """Every finding of the audit, one object each, in the shape Cartograph's
+    Scan Findings thread stores.
+
+    Structured findings carry their derived key (code + subject), so a
+    re-scan reporting the same finding updates the same row. Findings that
+    are still plain strings get a hash key with code NOTE. Field-level
+    review notes are not findings and are left out.
+    """
+    structured = list(getattr(extraction, "finding_records", None) or [])
+    covered = {f.text for f in structured}
+    out: list[dict] = []
+    for f in structured:
+        ref = dict(f.subject_ref or {})
+        member_ref = _resolve_member_ref(ref.get("member_name"), members, [], "findings") if ref.get("member_name") else None
+        out.append({
+            "finding_key": f.finding_key,
+            "code": f.code,
+            "category": f.category,
+            "result": f.result,
+            "subject_type": f.subject_type,
+            "subject_label": _subject_label(ref),
+            "member_ref": member_ref,
+            "pages": sorted({int(p) for p in (f.pages or [])}),
+            "label": f.label,
+            "description": f.text,
+            "correction_required": f.correction_required,
+            "assignment": f.assignment,
+            "resolution_type": f.resolution_type,
+            "disputes_extraction": bool(f.disputes_extraction),
+        })
+    for text in getattr(extraction, "findings", None) or []:
+        if not text or text in covered or _FIELD_NOTE_RE.match(text):
+            continue
+        out.append({
+            "finding_key": _note_key(text),
+            "code": "NOTE",
+            "category": "file_review",
+            "result": "non_compliant",
+            "subject_type": None,
+            "subject_label": None,
+            "member_ref": None,
+            "pages": [],
+            "label": None,
+            "description": text,
+            "correction_required": None,
+            "assignment": None,
+            "resolution_type": None,
+            "disputes_extraction": False,
+        })
+    # One row per key: the dedupe upstream is by key too, but a NOTE whose
+    # shape repeats (the same wording about two different pages) would
+    # otherwise arrive twice and update one row twice.
+    seen: set = set(); unique: list[dict] = []
+    for row in out:
+        if row["finding_key"] in seen:
+            continue
+        seen.add(row["finding_key"]); unique.append(row)
+    return unique
 
 
 def build_payload(
@@ -765,6 +870,7 @@ def build_payload(
         "household_members": members,
         "income_records": income,
         "asset_records": assets,
+        "findings": build_findings(extraction, members),
     }
 
     if warnings:
