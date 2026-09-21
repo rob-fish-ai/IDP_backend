@@ -63,7 +63,8 @@ _AMOUNT_RE = re.compile(
 _NOT_HOUSEHOLD_RE = re.compile(
     r"\b(limits?|penalt(?:y|ies)|fined?|fines)\b|\bnot (?:less|more) than\b"
     r"|\bat move[\s-]?in\b|\bmove[\s-]?in income\b|\bprior\b|\bprevious\b"
-    r"|\badjusted\b|\bimputed\b|\bpassbook\b",
+    r"|\badjusted\b|\bimputed\b|\bpassbook\b|\binflation\b|\bfactor\b|\bthreshold\b"
+    r"|\brent\b|\bsubsid(?:y|ies)\b",
     re.IGNORECASE,
 )
 # How far back to look for that label. Far enough for "Designated Income

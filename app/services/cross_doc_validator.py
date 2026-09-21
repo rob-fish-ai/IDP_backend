@@ -494,7 +494,14 @@ def validate_asset_worksheet_rules(
 
     # Check for zero-asset scenario: no assets extracted but no "No Asset Certification"
     if not assets.assetInformation:
-        has_no_asset_cert = any("No Asset" in dt for dt in doc_types)
+        # The certification is a document titled for it, or a self-
+        # certification whose declared lines say the household has none
+        # ("I/We DO NOT have any assets"), which the declared read records
+        # as a no_assets line.
+        has_no_asset_cert = any("No Asset" in dt or "Asset Self-Certification" in dt for dt in doc_types) or any(
+            (getattr(d, "kind", None) or (d.get("kind") if isinstance(d, dict) else None)) == "no_assets"
+            for d in (getattr(assets, "declared", None) or [])
+        )
         has_asset_doc = any(
             dt for dt in doc_types
             if any(kw in dt.lower() for kw in ("bank statement", "voa", "verification of asset"))

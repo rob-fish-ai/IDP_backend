@@ -720,7 +720,7 @@ def score_cross_doc_consistency(cards: list[RecordScoreCard]) -> None:
 
 _FIXED_INCOME_TYPES = {
     "temporary assistance", "social security", "supplemental security income",
-    "social security disability", "child support", "pension", "other income",
+    "social security disability", "child support", "pension", "veterans benefits", "other income",
     "zero income", "self-employment", "self-declared",
 }
 

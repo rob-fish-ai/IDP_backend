@@ -249,6 +249,16 @@ benefit statement, not a future projection. The monthly amount in the
 Do NOT skip the dollar amount because the letter says "will increase" — the
 current rate IS the new rate.
 
+OTHER AGENCY BENEFIT LETTERS (Department of Veterans Affairs, pension plan,
+unemployment agency, state assistance) — same treatment as the SSA letter:
+  - rateOfPay: the current benefit as stated, rateUnit as the letter states it
+    ("$1,435.02 monthly" → rateUnit "monthly"), frequencyOfPay the same
+  - incomeType: "Veterans Benefits" for any VA letter (disability compensation,
+    VA pension, DIC), "Pension" for a pension plan, "Temporary Assistance" for
+    state assistance, otherwise "Other Income"
+  - sourceName: the paying agency, e.g. "Department of Veterans Affairs"
+  - type_of_VOI: "Agency Benefit Letter"
+
 CHILD SUPPORT STATEMENT — ALWAYS EXTRACT:
 Any "Child Support Statement", "Child Support Order", "Child Support Verification",
 court order with ordered amounts, or DOR/State Disbursement Unit statement → create
@@ -314,7 +324,7 @@ VERIFICATION INCOME FIELDS:
 - overtimeFrequency: same frequency as regular pay
 - ytdAmount: only if document explicitly states "year to date". MUST BE null for SSA/fixed income.
 - ytdStartDate, ytdEndDate: YYYY-MM-DD
-- incomeType: one of: Non-Federal Wage, Federal Wage, Social Security, Supplemental Security Income, Social Security Disability, Pension, Temporary Assistance, Child Support, Self-Employment, Zero Income, Other Income
+- incomeType: one of: Non-Federal Wage, Federal Wage, Social Security, Supplemental Security Income, Social Security Disability, Pension, Veterans Benefits, Temporary Assistance, Child Support, Self-Employment, Zero Income, Other Income
 - type_of_VOI: Employer Verification, SSA Benefit Letter, Agency Benefit Letter, Child Support Order, Pension Statement, Self-Declaration, Work Number, ScreeningWorks, Vault Verify
 - address: {street, city, state (2-letter), zip (5-digit)} or null
 - employmentStatus: "Active" if currently employed, "Terminated" if employment has ended, "On Leave" if on leave. Extract from "Presently Employed" checkbox or employment status field. This is CRITICAL for understanding the income picture.
@@ -947,7 +957,7 @@ _VI_AMOUNT_FIELDS = ("rateOfPay", "selfDeclaredAmount", "ytdAmount", "overtimeRa
 # rule in validation.validate_income). YTD recovered for these is discarded.
 _FIXED_INCOME_TYPES = (
     "social security", "supplemental security income",
-    "social security disability", "pension",
+    "social security disability", "pension", "veterans benefits",
 )
 
 
@@ -1556,7 +1566,7 @@ Rules:
 - sourceName: the employer / agency / payer as the row prints it ("SSA",
   "Soc. Sec.", "Durango Lodge"), or null when the row shows only a type.
 - incomeType: one of Non-Federal Wage, Federal Wage, Social Security,
-  Supplemental Security Income, Social Security Disability, Pension,
+  Supplemental Security Income, Social Security Disability, Pension, Veterans Benefits,
   Temporary Assistance, Child Support, Self-Employment, Zero Income,
   Other Income.
 - amount: exactly as printed, numeric string, no $ or commas.
@@ -1777,7 +1787,7 @@ def _declaration_read_is_complete(declared: list[dict], declared_total) -> bool:
     return abs(sum(known) - total) <= max(50.0, total * 0.10)
 
 
-def _drop_total_rows(declared: list[dict], label: str) -> list[dict]:
+def _drop_total_rows(declared: list[dict], label: str, reference_total=None) -> list[dict]:
     """Remove declared lines that are the sum of other lines on the same page.
 
     A certification's asset or income table ends in a total, and a
@@ -1812,6 +1822,11 @@ def _drop_total_rows(declared: list[dict], label: str) -> list[dict]:
         t = (d.get("incomeType") or d.get("accountType") or "").strip().lower()
         return t in ("", "other", "other income", "total", "household", "household income", "all sources")
 
+    try:
+        ref_total = float(str(reference_total).replace(",", "")) if reference_total not in (None, "", "null") else None
+    except ValueError:
+        ref_total = None
+
     kept: list[dict] = []
     for d in declared:
         value = _amt(d)
@@ -1821,6 +1836,12 @@ def _drop_total_rows(declared: list[dict], label: str) -> list[dict]:
         # to the sum of lines anywhere in the declarations is that total.
         if not is_total and _untyped(d):
             is_total = _sums_to(value, [_amt(o) for o in declared if o is not d])
+        # The sum test needs every component line to have been read. When
+        # one was not, the certification's own total still identifies the
+        # row: an untyped line within a few percent of it is the household
+        # total, not a member's income (05318: 39,326.90 against 39,819.16).
+        if not is_total and _untyped(d) and value and ref_total and ref_total > 0:
+            is_total = abs(value - ref_total) / ref_total <= 0.03
         if is_total:
             logger.info("%s: declared line %s on page %s is the sum of other lines — a total row, not a claim",
                         label, d.get("amount"), d.get("page"))
@@ -1858,7 +1879,7 @@ def _reconcile_income(vi_entries: list[dict], declared: list[dict], certificatio
 
     stub_sources = _paystub_sources(ps_entries or [])
 
-    for d in _drop_total_rows(declared, "Declared income"):
+    for d in _drop_total_rows(declared, "Declared income", declared_total):
         if d.get("incomeType") == "Zero Income" and (d.get("amount") in (None, "0.00")):
             d["matched"] = True   # informational; nothing to reconcile
             continue
@@ -2186,6 +2207,13 @@ def _amounts_close(a, b) -> bool:
     return _one_digit_apart(f"{fa:.2f}", f"{fb:.2f}")
 
 
+def _amt_or_none(value) -> float | None:
+    try:
+        return float(str(value).replace(",", "")) if value not in (None, "", "null") else None
+    except ValueError:
+        return None
+
+
 def _amounts_equal(a, b) -> bool:
     try:
         return abs(float(str(a).replace(",", "")) - float(str(b).replace(",", ""))) < 0.005
@@ -2222,9 +2250,21 @@ def _reconcile_assets(records: list[dict], declared: list[dict]) -> None:
             rec["verificationStatus"] = "verified"
 
     kept_declared = _drop_total_rows(declared, "Declared assets")
+    zero_lines = 0
     for d in kept_declared:
         if d.get("kind") in ("no_assets", "disposal"):
             d["matched"] = True
+            continue
+        # A self-certification prints every asset kind with a blank or $0
+        # beside it: "Cash on hand $0", "Bonds $0". Those lines say the
+        # household has none of that kind; they are not assets, and as
+        # records they filled Cartograph with five $0 accounts for a
+        # household with no assets at all. A $0 line with an account
+        # number is a real account at zero and is kept.
+        d_amount = _amt_or_none(d.get("amount"))
+        if (d_amount is None or d_amount == 0) and not _digits_last4(d.get("accountNumber")):
+            d["matched"] = True
+            zero_lines += 1
             continue
         d_last4 = _digits_last4(d.get("accountNumber"))
         fam = _asset_family(d.get("accountType"))
@@ -2497,6 +2537,12 @@ def extract_assets(
     declared = _extract_declared_assets(decl_groups, settings, certification_type, household_names)
     _reconcile_assets(records, declared)
 
+    zero_lines = sum(
+        1 for d in declared
+        if d.get("kind") == "asset" and (_amt_or_none(d.get("amount")) in (None, 0.0)) and not _digits_last4(d.get("accountNumber"))
+    )
+    if zero_lines:
+        logger.info("Assets: %d declared line(s) state $0 or no amount with no account number — none of that kind, not records", zero_lines)
     result = scrub_extracted_dict({"assetInformation": records, "declared": declared}) or {}
     if isinstance(result.get("assetInformation"), list):
         kept, dropped = drop_records_without_identity(

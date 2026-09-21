@@ -583,7 +583,7 @@ def validate_income(data: dict) -> dict:
         # SSA / fixed income must NOT have YTD
         income_type = (vi.get("incomeType") or "").lower()
         if income_type in ("social security", "supplemental security income",
-                           "social security disability", "pension"):
+                           "social security disability", "pension", "veterans benefits"):
             vi["ytdAmount"] = None
 
     # Remove empty entries
