@@ -149,12 +149,20 @@ class FieldScore(BaseModel):
 
         self.flag = compute_flag(self.composite)
 
-        # Auto-generate flag message from low-scoring stages
+        # The flag message names what held the field back. A stage that
+        # scored well but set a ceiling counts, and so does the unverified
+        # cap: "Review recommended" with no reason was what two thirds of
+        # the yellow fields on the delivered cases said.
         if self.flag == ScoreFlag.RED:
             reasons = [s.reason for s in self.stages if s.score < YELLOW_THRESHOLD and s.reason]
             self.flag_message = "; ".join(reasons) if reasons else "Low confidence — manual review required"
         elif self.flag == ScoreFlag.YELLOW:
-            reasons = [s.reason for s in self.stages if s.score < GREEN_THRESHOLD and s.reason]
+            reasons = [
+                s.reason for s in self.stages
+                if s.reason and (s.score < GREEN_THRESHOLD or s.ceiling is not None)
+            ]
+            if not reasons and not verified:
+                reasons = ["Not verified against a source document"]
             self.flag_message = "; ".join(reasons) if reasons else "Review recommended"
         else:
             self.flag_message = None

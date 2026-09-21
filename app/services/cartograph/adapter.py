@@ -827,6 +827,63 @@ def build_findings(extraction: ExtractionResult, members: list[dict]) -> list[di
     return unique
 
 
+def _confidence_of(card) -> dict:
+    """The engine's confidence in one record: its score, its flag, and the
+    fields a reviewer should look at with the reason for each."""
+    review = [
+        {"field": f.field_name, "flag": f.flag.value, "reason": f.flag_message}
+        for f in card.fields if f.flag.value in ("yellow", "red")
+    ]
+    return {"score": round(card.composite, 3), "flag": card.flag.value, "review": review}
+
+
+def attach_confidence(payload: dict, extraction: ExtractionResult) -> None:
+    """Put each score card's confidence on the payload record it scored.
+
+    Cards are built from the same lists the records are, in the same
+    order: one per household member, one per income entry, one per asset,
+    one for the certification. Income records reconstructed from orphan
+    pay stubs have no card and get none. When the counts do not line up
+    the cards are matched on their label instead, and a record no card
+    matches is left without confidence rather than given another's.
+    """
+    scores = getattr(extraction, "field_scores", None)
+    if not scores:
+        return
+    by_type: dict[str, list] = {}
+    for card in scores.records:
+        by_type.setdefault(card.record_type, []).append(card)
+
+    def _assign(records: list[dict], cards: list, label_of) -> None:
+        if not records or not cards:
+            return
+        if len(records) == len(cards):
+            for rec, card in zip(records, cards):
+                rec["confidence"] = _confidence_of(card)
+            return
+        by_label = {(c.record_label or "").lower(): c for c in cards}
+        for rec in records:
+            card = by_label.get(label_of(rec).lower())
+            if card:
+                rec["confidence"] = _confidence_of(card)
+
+    members = payload.get("household_members") or []
+    _assign(members, by_type.get("household_member", []),
+            lambda m: " ".join(p for p in (m.get("first_name"), m.get("last_name")) if p))
+    ref_name = {m.get("ref"): " ".join(p for p in (m.get("first_name"), m.get("last_name")) if p) for m in members}
+    income = [r for r in (payload.get("income_records") or []) if r.get("vois") or r.get("self_declared_amount") is not None or not r.get("paystubs")]
+    _assign(income, by_type.get("income", []),
+            lambda r: f"{ref_name.get(r.get('member_ref'), '')} — {r.get('source_name') or ''}".strip(" —"))
+    _assign(payload.get("asset_records") or [], by_type.get("asset", []),
+            lambda r: f"{ref_name.get(r.get('member_ref'), '')} — {r.get('asset_type') or ''}".strip(" —"))
+    cert_cards = by_type.get("certification", [])
+    if cert_cards and isinstance(payload.get("cert_review"), dict):
+        payload["cert_review"]["confidence"] = _confidence_of(cert_cards[0])
+    payload["confidence"] = {"score": round(scores.overall_composite, 3), "flag": scores.overall_flag.value,
+                             "fields": {"green": scores.green_fields, "yellow": scores.yellow_fields,
+                                        "red": scores.red_fields, "na": scores.na_fields}}
+
+
 def build_payload(
     extraction: ExtractionResult,
     settings: Settings,
@@ -872,6 +929,7 @@ def build_payload(
         "asset_records": assets,
         "findings": build_findings(extraction, members),
     }
+    attach_confidence(payload, extraction)
 
     if warnings:
         logger.info(

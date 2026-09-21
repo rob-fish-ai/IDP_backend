@@ -29,7 +29,7 @@ from app.schemas.scoring import (
     StageScore,
 )
 from app.services.doc_taxonomy import is_current_certification_form, is_previous_certification
-from app.services.findings import slug
+from app.services.findings import dispute_strength, slug
 # The scorer's bounds and the annualizer's arithmetic have to agree about
 # how long a pay period is, so both read the same multiplier table.
 from app.services.income_calculator import get_frequency_multiplier
@@ -835,9 +835,12 @@ def score_findings(cards: list[RecordScoreCard], findings: list) -> None:
         supposed to account for.
     Only findings that dispute the extraction are read (findings.py).
     """
+    # An informational finding (result "na" or "compliant" — a subtotal
+    # noted, a name spelled two ways) is not a contradiction and must not
+    # lower anything, whatever its code's registration says.
     disputing = [
         f for f in findings
-        if isinstance(f, Finding) and f.disputes_extraction
+        if isinstance(f, Finding) and f.disputes_extraction and f.result == "non_compliant"
     ]
     if not disputing:
         return
@@ -848,6 +851,7 @@ def score_findings(cards: list[RecordScoreCard], findings: list) -> None:
         subject = {slug(v) for k, v in ref.items() if v and k not in ("field", "table")}
         fields_by_type = _CATEGORY_FIELDS.get(finding.category, {})
         reason = f"Disputed by {finding.code}"
+        strength = dispute_strength(finding.code)
 
         # Named field on a named record, or on the certification card.
         if named_field:
@@ -860,12 +864,12 @@ def score_findings(cards: list[RecordScoreCard], findings: list) -> None:
             for card in targets:
                 card.disputed = True
                 if any(f.field_name == named_field for f in card.fields):
-                    _lower_fields(card, (named_field,), _DISPUTED_SCORE, reason)
+                    _lower_fields(card, (named_field,), strength, reason)
                 else:
                     # The named field is not one the card scores (a
                     # reconciliation field such as declaredAnnualAmount):
                     # the dispute is still about this record's amounts.
-                    _lower_fields(card, fields_by_type.get(card.record_type, ()), _DISPUTED_SCORE, reason)
+                    _lower_fields(card, fields_by_type.get(card.record_type, ()), strength, reason)
             if targets:
                 continue
 
@@ -874,7 +878,7 @@ def score_findings(cards: list[RecordScoreCard], findings: list) -> None:
             targets = [c for c in candidates if _names_record(subject, c)]
             for card in targets:
                 card.disputed = True
-                _lower_fields(card, fields_by_type[card.record_type], _DISPUTED_SCORE, reason)
+                _lower_fields(card, fields_by_type[card.record_type], strength, reason)
             continue
 
         # Case level. When the category's records do not exist, an income
@@ -884,12 +888,12 @@ def score_findings(cards: list[RecordScoreCard], findings: list) -> None:
         if not present and finding.category in ("income", "expense"):
             for card in cards:
                 if card.record_type == "certification":
-                    _lower_fields(card, ("householdIncome",), _DISPUTED_SCORE, reason)
+                    _lower_fields(card, ("householdIncome",), strength, reason)
             continue
         if not present:
             continue
         # Shared penalty: with n candidate records, each carries 1/n of it.
-        share = 1.0 - (1.0 - _DISPUTED_CASE_SCORE) / len(present)
+        share = 1.0 - (1.0 - max(strength, _DISPUTED_CASE_SCORE)) / len(present)
         for card in present:
             _lower_fields(card, fields_by_type[card.record_type], share, reason)
 

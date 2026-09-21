@@ -2,10 +2,10 @@
 
 | | |
 |---|---|
-| Version | 1.1 |
-| Date | 18 September 2026 |
+| Version | 1.2 |
+| Date | 21 September 2026 |
 | Author | Maria Azevedo |
-| Status | Generated from delivered payloads; v1.1 adds `findings`, `pages` and `verification_status` |
+| Status | Generated from delivered payloads; v1.1 added `findings`, `pages`, `verification_status`; v1.2 adds `confidence` |
 
 Every field the audit engine sends today, what each one means, and what it needs on the Cartograph side.
 
@@ -112,6 +112,7 @@ One per income source. Paystubs arrive nested underneath rather than as a flat l
 | `source_of_declaration` | `Application` | Where the self-declared figure came from |
 | `verification_status` | `verified` | `verified` (read from a third-party document), `declared_only` (the household declared it and nothing in the packet backs it), `verified_not_declared` (a document carries it and the certification does not), `self_certified` (AR-SC) |
 | `pages` | `[20, 21]` | Packet pages this record was read from. Positions in the file Cartograph sent; a reviewer opens the same file and lands on the page |
+| `confidence` | `{score, flag, review[]}` | The engine's confidence in this record: `score` 0 to 1, `flag` green / yellow / red, and `review`, the fields a reviewer should look at with `field`, `flag` and `reason`. See section 8a |
 | `paystubs[]` | | `pay_date`, `gross_pay`, `ytd_amount`, `pay_frequency`, `pages` |
 | `vois[]` | | `voi_type`, `date_received`, `rate_of_pay`, `hours_per_pay_period`, `frequency_of_pay`, `ytd_amount`, `ytd_start_date`, `ytd_end_date` |
 | `zero_income` | `null` | Object when a zero-income affidavit was filed |
@@ -136,6 +137,7 @@ A source can arrive with paystubs and no verification entry. That is not an erro
 | `source_of_declaration` | `null` | |
 | `verification_status` | `verified` | Same values as on income records |
 | `pages` | `[13]` | Packet pages this record was read from |
+| `confidence` | `{score, flag, review[]}` | As on income records |
 | `bank_statements[]` | | `statement_date`, `balance`. Only statements carrying at least one of the two are sent |
 | `voa` | `null` | `voa_date`, `reported_value`, `source` |
 
@@ -187,6 +189,22 @@ Every scan sends the complete set. A key present in an earlier scan and absent f
 Verdicts come back on a separate `findings_feedback` event, nightly, one per case: `case_ref`, `scan_id`, then `verdicts[]` of `finding_key`, `verdict` (`valid` / `invalid`), `verdict_reason`, and `manual_findings[]` of `description`, `page`, `subject_label`, `source: "manual"`, `matched_checklist_item` (key and name). The import-result callback is not the place for them: it arrives once at import time and a later call on it would overwrite the import outcome.
 
 **`expense_records`** is still not sent. The engine does not extract expenses.
+
+---
+
+## 8a. `confidence`
+
+On every household member, income record and asset record, on `cert_review`, and once at the top level for the case.
+
+| Field | Example | Meaning |
+|---|---|---|
+| `score` | `0.79` | 0 to 1. Green is 0.80 and above, yellow 0.50 and above, red below. A value never found on a source page is capped at 0.79, so green means "found in the document" |
+| `flag` | `yellow` | What a reviewer triages by. A record the household only declared, or one a finding disputes, cannot be green |
+| `review` | `[{"field": "rateOfPay", "flag": "yellow", "reason": "Found only on the certification form, not in this record's documents"}]` | The fields to look at, each with the reason. Empty on a green record |
+
+The top-level object carries `score`, `flag` and the field counts (`green`, `yellow`, `red`, `na`). The case flag is bounded by the worst disputed record and is yellow whenever any income is declared-only; it is a triage signal, not an average.
+
+Green fields can go straight in. Yellow and red are the review list; the reason says what to check.
 
 ---
 

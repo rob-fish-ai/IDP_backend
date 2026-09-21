@@ -2301,21 +2301,26 @@ def _reconcile_assets(records: list[dict], declared: list[dict]) -> None:
             # (or an untyped line) to the cent is that account, not a
             # second one — "Child Support Fund 82.05" under the daughter is
             # the head's checking account ending 2788 with $82.05 in it.
-            for rec in records:
-                if rec.get("verificationStatus") == "declared_only":
-                    continue
-                r_value = rec.get("currentBalance") or rec.get("averageSixMonthBalance")
-                if not r_value or _digits_last4(d.get("accountNumber")):
-                    continue
-                same_family = _asset_family(rec.get("accountType")) == fam
-                if (same_family or fam in ("other", "")) and _amounts_equal(d["amount"], r_value):
-                    logger.info(
-                        "Declared assets: %s listed under %s equals %s's verified %s balance to the cent "
-                        "— treated as the same account", d["amount"], d.get("assetOwner"),
-                        rec.get("assetOwner"), rec.get("accountType") or "asset",
-                    )
-                    best = rec
-                    break
+            # Same family first; failing that, any verified record. A
+            # distinctive figure equal to the cent is stronger evidence than
+            # the type the read attached: "Cash 6,294.74" beside the verified
+            # real estate at $6,294.74 is the property, typed wrong.
+            exact = [
+                rec for rec in records
+                if rec.get("verificationStatus") != "declared_only"
+                and (rec.get("currentBalance") or rec.get("averageSixMonthBalance"))
+                and not _digits_last4(d.get("accountNumber"))
+                and _amounts_equal(d["amount"], rec.get("currentBalance") or rec.get("averageSixMonthBalance"))
+            ]
+            exact.sort(key=lambda rec: 0 if _asset_family(rec.get("accountType")) == fam or fam in ("other", "") else 1)
+            if exact:
+                rec = exact[0]
+                logger.info(
+                    "Declared assets: %s %s listed under %s equals %s's verified %s balance to the cent "
+                    "— treated as the same asset", d.get("accountType") or "untyped", d["amount"],
+                    d.get("assetOwner"), rec.get("assetOwner"), rec.get("accountType") or "asset",
+                )
+                best = rec
         if best is None and d.get("amount") is not None:
             # The certification lists the household's accounts one line per
             # kind. When the owner has exactly one verified account of that

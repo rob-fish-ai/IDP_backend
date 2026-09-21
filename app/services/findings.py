@@ -111,6 +111,33 @@ def disputes_extraction(code: str) -> bool:
     return code in _DISPUTES_EXTRACTION
 
 
+# How hard a dispute lowers the fields it names. A contradiction of the
+# certification's own figures, or of one member's identity, is strong
+# evidence the extraction misread something. Two of the engine's own
+# projections disagreeing, or a declaration differing from a verified
+# figure, is a reason to look, not evidence of a misread: income changes
+# mid-year and households round. Both used to score 0.15, and a correct
+# wage record went yellow because its YTD projection ran ahead of the
+# stub average.
+DISPUTE_STRONG = 0.15
+DISPUTE_WEAK = 0.50
+_WEAK_DISPUTES = frozenset({
+    "INCOME_METHODS_DISAGREE",
+    "INCOME_METHOD_OUTLIER",
+    "TIC_TOTAL_MINOR_DIFF",
+    "NEAR_DUPLICATE_INCOME",
+    "DUPLICATE_EMPLOYER",
+    "DUPLICATE_INCOME_RECORD",
+    "ASSET_SELF_DECLARED_VS_VERIFIED",
+    "CERT_AMOUNT_UNACCOUNTED",
+})
+
+
+def dispute_strength(code: str) -> float:
+    """The score a disputing finding puts on the fields it names."""
+    return DISPUTE_WEAK if code in _WEAK_DISPUTES else DISPUTE_STRONG
+
+
 def slug(value: str | None) -> str:
     """Normalize a name into a stable key fragment.
 
