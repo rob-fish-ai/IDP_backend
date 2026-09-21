@@ -515,10 +515,24 @@ def annualize_history(rows: list) -> float | None:
 # stock. A result outside the envelope is a misread basis, not income: it
 # is rejected with a finding and the next method gets its turn.
 _PLAUSIBLE_ANNUAL_MAX = {
-    "employment": 1_000_000.0,
+    "employment": 300_000.0,
     "fixed_monthly": 250_000.0,
-    "annual_net": 1_000_000.0,
+    "annual_net": 300_000.0,
+    "other": 300_000.0,
 }
+
+
+def _declared_is_annual(vi_entry) -> bool:
+    """Whether a record's selfDeclaredAmount is already an annual figure:
+    it was read from a certification form, whose income table is annual,
+    or it equals the annual figure the certification declares."""
+    from app.services.doc_taxonomy import is_certification_form
+    source = getattr(vi_entry, "selfDeclaredSource", None) or ""
+    if is_certification_form(source) or "tic" in source.lower() or "50059" in source or "certification" in source.lower():
+        return True
+    declared = _money(getattr(vi_entry, "declaredAnnualAmount", None))
+    stated = _money(getattr(vi_entry, "selfDeclaredAmount", None))
+    return declared is not None and stated is not None and abs(declared - stated) < 0.01
 
 
 def _plausibility_problem(annual: float, calc_mode: str) -> str | None:
@@ -659,7 +673,13 @@ def calculate_all_methods(
             # (annual_net) stays as-is — Schedule C net is annual regardless
             # of any stray frequency value.
             amount = vi_entry.selfDeclaredAmount or vi_entry.rateOfPay
-            freq = None if calc_mode == "annual_net" else vi_entry.frequencyOfPay
+            # A figure declared on the certification form is the annual
+            # figure its income table prints; multiplying it by the record's
+            # pay frequency turned a $31,469 TIC line into $818,196. Only a
+            # declaration made in the record's own period (a benefit letter's
+            # monthly amount, a questionnaire's "per month") is annualised.
+            declared_annual = _declared_is_annual(vi_entry)
+            freq = None if calc_mode == "annual_net" or declared_annual else vi_entry.frequencyOfPay
             annual_str = calculate_self_declared(amount, freq)
             if annual_str is None:
                 return None, None, []

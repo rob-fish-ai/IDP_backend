@@ -1927,10 +1927,15 @@ def _reconcile_income(vi_entries: list[dict], declared: list[dict], certificatio
                 # whose figure is nearest, where it is reported alongside
                 # the certification's, rather than minting an "other
                 # income" record nothing in the packet backs.
+                # The member's own records, plus the household-level incomes
+                # (child support, assistance) whichever member they sit
+                # under — a questionnaire lists those under whoever filled
+                # it in.
                 mine = [
                     vi for vi in vi_entries
                     if vi.get("verificationStatus") not in ("declared_only", "self_certified")
-                    and _same_member(vi.get("memberName"), d.get("memberName"))
+                    and (_same_member(vi.get("memberName"), d.get("memberName"))
+                         or (vi.get("incomeType") or "").lower() in _HOUSEHOLD_LEVEL_INCOME_TYPES)
                 ]
                 def _gap(vi):
                     ref = _record_annual(vi)
@@ -2159,7 +2164,7 @@ _ASSET_FAMILIES = {
 # each for. Two checking accounts are two kinds-of-the-same; a checking and
 # a savings are different kinds even though both are "cash".
 _ASSET_KINDS = (
-    ("certificate of deposit", "cd"), ("cd", "cd"), ("money market", "money market"),
+    ("certificates of deposit", "cd"), ("certificate of deposit", "cd"), ("money market", "money market"),
     ("checking", "checking"), ("savings", "savings"), ("prepaid card", "prepaid card"),
     ("direct express", "direct express"), ("debit card", "debit card"), ("cash", "cash"),
     ("real estate", "real estate"), ("property", "real estate"), ("home", "real estate"),
@@ -2174,6 +2179,8 @@ def _asset_kind(account_type: str | None) -> str:
     for name, kind in _ASSET_KINDS:
         if name in t:
             return kind
+    if re.search(r"\bcds?\b", t):
+        return "cd"
     return "other"
 
 

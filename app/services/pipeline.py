@@ -1309,6 +1309,28 @@ def _reconciliation_findings(income, ctx) -> list:
                 resolution_type=RESOLVE_PRESENCE,
                 pages=list(vi.sourcePages or []),
             ))
+        also = (vi.evidence or {}).get("alsoDeclared") if isinstance(vi.evidence, dict) else None
+        if also:
+            # A declared line the reconciliation folded into this record as a
+            # second declaration of the same income. The fold is a judgement
+            # (same member, nearest figure); it is stated here so a reviewer
+            # can disagree and treat the line as a separate income.
+            out.append(make_finding(
+                "INCOME_SECOND_DECLARATION",
+                f"{member}: a further declaration ({also}) was read as a second statement of the "
+                f"{what} income from {vi.sourceName or 'this source'}"
+                f"{amount_txt.replace(' of ', ' declared at ') if amount_txt else ''} — confirm it is "
+                f"the same income and not a separate one (Section 9)",
+                label=f"A second declaration was folded into {member}'s {what} income",
+                category=CATEGORY_INCOME,
+                subject_type="income_record",
+                subject_ref={"member_name": vi.memberName, "source_name": vi.sourceName},
+                result="non_compliant",
+                assignment=ASSIGN_INTERNAL,
+                correction_required="If the declaration is a separate income, add it as its own source and verify it",
+                resolution_type=RESOLVE_PRESENCE,
+                pages=list(vi.sourcePages or []),
+            ))
     return out
 
 

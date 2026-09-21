@@ -35,3 +35,11 @@ Measured 2026-09-11 on the three benchmark cases (one run each, same code): iden
 scores on 05754 and 05319; on 05318 the adaptive run read the declared tables more
 carefully (37/37 against 35/38) but took 3m48s against 55s. The declared-read guards
 added afterwards (total rows, household-level income) close that gap in code.
+
+Rule tests: every reconciliation, calculation, normaliser, identity, scoring and payload
+rule is pinned in `tests/` with one case where it must fire and one where it must not,
+so a change that widens a rule fails before it reaches a packet the rule was never
+written against. No model calls, under two seconds:
+
+    .venv/bin/pip install -r requirements-dev.txt
+    .venv/bin/python -m pytest -q tests
