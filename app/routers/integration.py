@@ -14,6 +14,10 @@ Two endpoints, one per direction:
                                    itself.
   POST /integration/import_result  Cartograph reports how the import went.
                                    HMAC auth, JSON.
+  POST /integration/findings_feedback  Reviewer verdicts on our findings and
+                                   the findings added by hand. HMAC auth, JSON.
+                                   Also accepted on /import_result when the
+                                   body says event_type: findings_feedback.
 
 The delivery leg — engine to Cartograph — is not here. It is an outbound
 call, made by the background task in `cartograph.client`.
@@ -168,6 +172,12 @@ async def cartograph_import_result(request: Request) -> dict:
     case_ref = payload.get("case_ref") or payload.get("job_id")
     status = payload.get("status")
 
+    # The nightly feedback may arrive here too, told apart by its event
+    # field. It must not be stored as an import result: that would replace
+    # the record of how the import went with a list of verdicts.
+    if (payload.get("event_type") or payload.get("event") or "").strip().lower() == "findings_feedback":
+        return _store_findings_feedback(payload)
+
     # Store it against the job before logging. A case that was delivered and
     # then rejected during their import is otherwise indistinguishable here
     # from one that imported cleanly — both leave the job row saying "done".
@@ -202,3 +212,45 @@ async def cartograph_import_result(request: Request) -> dict:
         )
 
     return {"ok": True, "received": case_ref}
+
+
+def _store_findings_feedback(payload: dict) -> dict:
+    case_ref = payload.get("case_ref") or payload.get("job_id")
+    if not case_ref:
+        raise HTTPException(status_code=400, detail="case_ref is required")
+    try:
+        counts = get_job_store(get_settings().audit_job_db).record_findings_feedback(
+            str(case_ref), payload,
+        )
+    except Exception:
+        logger.exception("Could not store findings feedback for case_ref=%s", case_ref)
+        raise HTTPException(status_code=500, detail="could not store feedback")
+    logger.info(
+        "Findings feedback case_ref=%s scan_id=%s verdicts=%d manual=%d",
+        case_ref, payload.get("scan_id"), counts["verdicts"], counts["manual_findings"],
+    )
+    return {"ok": True, "received": case_ref, "stored": counts}
+
+
+@router.post(
+    "/findings_feedback",
+    status_code=200,
+    dependencies=[Depends(verify_cartograph_signature)],
+)
+async def cartograph_findings_feedback(request: Request) -> dict:
+    """Receive a reviewer's verdicts on our findings, and the findings the
+    reviewer added by hand, for one case.
+
+    Sent nightly, one event per reviewed case:
+      {"event_type": "findings_feedback", "case_ref": ..., "scan_id": ...,
+       "verdicts": [{"finding_key", "verdict": "valid"|"invalid", "verdict_reason"}],
+       "manual_findings": [{"description", "page", "subject_label",
+                            "source": "manual", "matched_checklist_item": {"key", "name"}}]}
+    The same body on /import_result, carrying the event_type, is accepted
+    identically. A later event for the same case replaces earlier verdicts.
+    """
+    try:
+        payload = json.loads(await request.body())
+    except ValueError:
+        raise HTTPException(status_code=400, detail="invalid JSON body")
+    return _store_findings_feedback(payload)

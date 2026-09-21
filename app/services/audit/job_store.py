@@ -82,6 +82,28 @@ CREATE TABLE IF NOT EXISTS audit_jobs (
 );
 
 CREATE INDEX IF NOT EXISTS idx_state ON audit_jobs(state);
+
+-- What reviewers said about the findings we sent (source 'runpod'), and
+-- what they found that the scan missed (source 'manual'). One row per
+-- verdict or manual finding; a later verdict on the same finding key
+-- replaces the earlier one — the reviewer's last word is the one kept.
+CREATE TABLE IF NOT EXISTS finding_feedback (
+    case_id TEXT NOT NULL,
+    scan_id TEXT,
+    source TEXT NOT NULL,              -- 'runpod' | 'manual'
+    finding_key TEXT,                  -- ours, for source 'runpod'
+    code TEXT,                         -- derived from the key's prefix
+    verdict TEXT,                      -- 'valid' | 'invalid' (runpod rows)
+    verdict_reason TEXT,
+    description TEXT,                  -- manual rows: what the reviewer wrote
+    page INTEGER,
+    subject_label TEXT,
+    matched_checklist_item TEXT,       -- JSON: key and name, when given
+    raw TEXT NOT NULL,                 -- the row as received
+    received_at REAL NOT NULL,
+    PRIMARY KEY (case_id, source, finding_key, description)
+);
+CREATE INDEX IF NOT EXISTS idx_feedback_code ON finding_feedback(code);
 """
 
 
@@ -349,6 +371,66 @@ class JobStore:
                 "cartograph_import_at = ?, updated_at = ? WHERE case_id = ?",
                 (json.dumps(payload, default=str), time.time(), time.time(), case_id),
             )
+
+    def record_findings_feedback(self, case_id: str, payload: dict[str, Any]) -> dict[str, int]:
+        """Store a reviewer's verdicts on our findings and the findings the
+        reviewer added by hand, from one findings_feedback event.
+
+        Rows are keyed on (case, source, finding key, description), so a
+        second event for the same case replaces earlier verdicts rather
+        than stacking them. Returns how many of each were stored.
+        """
+        now = time.time()
+        scan_id = payload.get("scan_id")
+        scan_id = str(scan_id) if scan_id is not None else None
+        verdicts = [v for v in (payload.get("verdicts") or []) if isinstance(v, dict)]
+        manual = [m for m in (payload.get("manual_findings") or []) if isinstance(m, dict)]
+        with self._lock, self._connect() as conn:
+            for v in verdicts:
+                key = str(v.get("finding_key") or "").strip()
+                if not key:
+                    continue
+                conn.execute(
+                    "INSERT OR REPLACE INTO finding_feedback (case_id, scan_id, source, finding_key, code, "
+                    "verdict, verdict_reason, description, page, subject_label, matched_checklist_item, raw, received_at) "
+                    "VALUES (?, ?, 'runpod', ?, ?, ?, ?, '', NULL, NULL, NULL, ?, ?)",
+                    (case_id, scan_id, key, key.split(":", 1)[0], (v.get("verdict") or "").strip().lower() or None,
+                     v.get("verdict_reason"), json.dumps(v, default=str), now),
+                )
+            for m in manual:
+                description = str(m.get("description") or "").strip()
+                if not description:
+                    continue
+                item = m.get("matched_checklist_item")
+                conn.execute(
+                    "INSERT OR REPLACE INTO finding_feedback (case_id, scan_id, source, finding_key, code, "
+                    "verdict, verdict_reason, description, page, subject_label, matched_checklist_item, raw, received_at) "
+                    "VALUES (?, ?, 'manual', '', NULL, NULL, NULL, ?, ?, ?, ?, ?, ?)",
+                    (case_id, scan_id, description, m.get("page") if isinstance(m.get("page"), int) else None,
+                     m.get("subject_label"), json.dumps(item, default=str) if item is not None else None,
+                     json.dumps(m, default=str), now),
+                )
+        return {"verdicts": len(verdicts), "manual_findings": len(manual)}
+
+    def feedback_summary(self) -> list[dict[str, Any]]:
+        """Per finding code: how many verdicts, how many valid, and the
+        precision that implies. The manual rows are counted separately."""
+        with self._lock, self._connect() as conn:
+            rows = conn.execute(
+                "SELECT code, COUNT(*) AS n, SUM(CASE WHEN verdict = 'valid' THEN 1 ELSE 0 END) AS valid "
+                "FROM finding_feedback WHERE source = 'runpod' AND verdict IN ('valid', 'invalid') "
+                "GROUP BY code ORDER BY n DESC"
+            ).fetchall()
+            manual = conn.execute(
+                "SELECT COUNT(*) FROM finding_feedback WHERE source = 'manual'"
+            ).fetchone()[0]
+        out = [
+            {"code": r["code"], "verdicts": r["n"], "valid": r["valid"],
+             "precision": round(r["valid"] / r["n"], 2) if r["n"] else None}
+            for r in rows
+        ]
+        out.append({"code": "(manual findings)", "verdicts": manual, "valid": None, "precision": None})
+        return out
 
     def mark_comparison_failed(self, case_id: str, error: str) -> None:
         self._set_state(case_id, COMPARISON_FAILED, error=error)

@@ -26,6 +26,7 @@ The engine is addressed by a stable custom domain rather than a raw pod URL, so 
 | 3 | Ingest | Engine → Cartograph | Deliver the extraction result |
 | 4 | Result callback | Cartograph → Engine | Report the outcome of the background import |
 | 5 | Reconciliation | Engine → Cartograph | Safety-net poll for missed triggers |
+| 6 | Findings feedback | Cartograph → Engine | Reviewer verdicts on our findings, and findings added by hand |
 
 ---
 
@@ -111,6 +112,34 @@ Because the ingest endpoint returns before the inserts run, its response cannot 
 ```
 
 Populate `warnings` for every value that collapses to `other`, every date that fails to parse, and every member that arrives without a relationship. These identify where the engine's vocabulary mapping is lossy. Without them, that information is only recoverable by manual spot-checking.
+
+---
+
+## 5a. Flow 6: Findings feedback (Cartograph → Engine)
+
+`POST https://<engine-domain>/integration/findings_feedback`
+
+Sent nightly, one event per case whose review finished that day. Signed like the trigger and the result callback (same inbound secret). The same body is also accepted on `/integration/import_result` when it carries `"event_type": "findings_feedback"`; it is stored as feedback either way and never as an import result.
+
+```
+{
+  "event_type":  "findings_feedback",
+  "case_ref":    "J-TBRE-06337",
+  "scan_id":     140,
+  "verdicts": [
+    { "finding_key": "SIGNATURE_DATE_MISSING:case", "verdict": "valid" },
+    { "finding_key": "NAME_VARIANT:arnold_lyons", "verdict": "invalid",
+      "verdict_reason": "same person, middle initial" }
+  ],
+  "manual_findings": [
+    { "description": "VAWA lease addendum on file, not signed",
+      "page": 35, "subject_label": "VAWA Lease Addendum", "source": "manual",
+      "matched_checklist_item": { "key": "VAWA_SIGNED", "name": "VAWA addendum signed" } }
+  ]
+}
+```
+
+`finding_key` echoes what the engine sent in `findings`. `verdict` is `valid` (a real issue) or `invalid` (a false positive); only findings a reviewer actually judged are included. A later event for the same case replaces earlier verdicts, so the reviewer's last word is the one kept. Response: `{"ok": true, "received": "<case_ref>", "stored": {"verdicts": n, "manual_findings": m}}`.
 
 ---
 
