@@ -50,10 +50,51 @@ def test_hourly_looking_rate_without_hours_is_rejected_for_wages_only():
 def test_payment_history_annualises_from_what_was_paid():
     rows = [PaymentHistoryRow(date=f"2026-{m:02d}-01", amount="100.00") for m in range(1, 13)] + [PaymentHistoryRow(date="2025-12-01", amount="900.00")]
     annual, details, _ = calculate_history_based(rows)
-    assert annual == "1200.00" and "12 most recent" in details
+    assert annual == "1200.00" and "12 months ending 2026-12-01" in details
     short = [PaymentHistoryRow(date="2026-08-01", amount="81.35"), PaymentHistoryRow(date="2026-07-01", amount="244.05")]
     assert calculate_history_based(short)[0] == f"{(81.35 + 244.05) / 2 * 12:.2f}"
     assert calculate_history_based([PaymentHistoryRow(date="2026-08-01", amount="81.35")])[0] is None
+
+
+def test_a_year_of_weekly_payments_is_summed_over_the_trailing_twelve_months():
+    # 52 ledger rows: 51 weekly payments and one made a year to the day
+    # before the last. A manager's twelve-month calculation counts 51.
+    from datetime import timedelta
+    last = date(2026, 8, 5)
+    rows = [PaymentHistoryRow(date=(last - timedelta(days=7 * k)).isoformat(), amount="3.59") for k in range(51)]
+    rows.append(PaymentHistoryRow(date=(last - timedelta(days=365)).isoformat(), amount="3.59"))
+    annual, details, _ = calculate_history_based(rows)
+    assert annual == f"{51 * 3.59:.2f}" and "51 weekly payments" in details
+    # Fewer than a year of a fixed payment is that payment times the year's
+    # periods, whatever rows the transcription lost or doubled.
+    partial = rows[:30] + [PaymentHistoryRow(date=rows[3].date, amount="3.59")]
+    annual, details, _ = calculate_history_based(partial)
+    assert annual == f"{3.59 * 52:.2f}" and "fixed weekly payment" in details
+    # Varying payments are averaged and scaled.
+    varying = [PaymentHistoryRow(date="2026-08-01", amount="81.35"), PaymentHistoryRow(date="2026-07-01", amount="244.05"),
+               PaymentHistoryRow(date="2026-06-01", amount="100.00"), PaymentHistoryRow(date="2026-05-01", amount="120.00")]
+    assert calculate_history_based(varying)[0] == f"{(81.35 + 244.05 + 100 + 120) / 4 * 12:.2f}"
+
+
+def test_one_or_two_stubs_yield_a_noted_figure_after_an_employer_rate():
+    stubs = [
+        PayStubEntry(sourceName="Staffmark", memberName="A P", grossPay="432.00", payDate="2026-06-21", payInterval="weekly", ytdGross="6250.50"),
+        PayStubEntry(sourceName="Staffmark", memberName="A P", grossPay="688.50", payDate="2026-06-28", payInterval="weekly", ytdGross="6939.00"),
+    ]
+    only_stubs = VerificationIncomeEntry(memberName="A P", sourceName="Staffmark", incomeType="Non-Federal Wage")
+    rows = calculate_all_methods(only_stubs, stubs)
+    primary = next(r for r in rows if r.annualIncome and not (r.details or "").startswith("[audit]"))
+    assert primary.method == "paystub-based" and primary.annualIncome == f"{(432.00 + 688.50) / 2 * 52:.2f}"
+    assert "only 2 pay stub(s)" in primary.details
+    # An employer's stated rate outranks two stubs; three stubs outrank it.
+    with_voi = VerificationIncomeEntry(memberName="A P", sourceName="Staffmark", incomeType="Non-Federal Wage",
+                                       rateOfPay="18.00", rateUnit="hourly", frequencyOfPay="weekly", hoursPerPayPeriod="30")
+    rows = calculate_all_methods(with_voi, stubs)
+    assert next(r for r in rows if r.annualIncome).method == "voi-based"
+    three = stubs + [PayStubEntry(sourceName="Staffmark", memberName="A P", grossPay="540.00", payDate="2026-07-05", payInterval="weekly", ytdGross="7479.00")]
+    rows = calculate_all_methods(with_voi, three)
+    assert next(r for r in rows if r.annualIncome).method == "paystub-based"
+    assert "only" not in next(r for r in rows if r.annualIncome).details
 
 
 def test_hourly_self_employment_takes_the_wage_path_and_a_bare_rate_is_annual_net():

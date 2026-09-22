@@ -59,7 +59,7 @@ from app.services.extractor import (
     retry_cert_info_fields,
     retry_member_fields,
 )
-from app.services.income_calculator import calculate_all_methods, match_paystubs_to_sources
+from app.services.income_calculator import PAYSTUB_GUIDANCE_COUNT, calculate_all_methods, match_paystubs_to_sources
 from app.services.inventory_builder import build_financial_inventory, build_hud_inventory
 from app.services.parsers.questionnaire_parser import parse_questionnaire
 from app.services.questionnaire_extractor import (
@@ -444,6 +444,9 @@ def run_extraction_pipeline(
         income.sourceIncome.verificationIncome = _resolve_duplicate_self_declarations(
             income.sourceIncome.verificationIncome
         )
+        income.sourceIncome.verificationIncome = _merge_household_level_sources(
+            income.sourceIncome.verificationIncome
+        )
         income.sourceIncome.verificationIncome, declared_findings = _collapse_declared_duplicates(
             income.sourceIncome.verificationIncome
         )
@@ -519,6 +522,24 @@ def run_extraction_pipeline(
                 f"Income source '{calc.sourceName}'{who}: {calc.method} calculation "
                 f"rejected — {note} (Section 9)"
             )
+        elif calc.method == "paystub-based" and calc.annualIncome:
+            m = re.search(r"avg\((\d+) stubs?\)", details)
+            if m and int(m.group(1)) < PAYSTUB_GUIDANCE_COUNT:
+                n = int(m.group(1))
+                findings.append(make_finding(
+                    "PAYSTUB_COUNT_BELOW_GUIDANCE",
+                    f"{calc.memberName or 'Member'}: income from {calc.sourceName or 'employer'} is "
+                    f"calculated from {n} pay stub(s) (${float(calc.annualIncome):,.2f}/year); verification "
+                    f"guidance expects at least {PAYSTUB_GUIDANCE_COUNT} consecutive stubs or an employer "
+                    f"verification — obtain the missing stubs or a VOI (Section 9)",
+                    label="Fewer pay stubs than verification guidance expects",
+                    category=CATEGORY_INCOME,
+                    subject_type="income_record",
+                    subject_ref={"member_name": calc.memberName, "source_name": calc.sourceName},
+                    assignment=ASSIGN_CLIENT,
+                    correction_required=f"Obtain at least {PAYSTUB_GUIDANCE_COUNT} consecutive pay stubs or an employer verification",
+                    resolution_type=RESOLVE_PRESENCE,
+                ))
     from app.services.income_calculator import ytd_divergence_findings
     findings.extend(ytd_divergence_findings(income_calculations))
 
@@ -800,6 +821,29 @@ def _link_questionnaire_to_income(
     # questionnaires; "n/a", "none", etc. come from empty form fields.
     _REJECT_NAMES = {"ss", "s s", "n/a", "na", "none", "null", "tbd", "unknown", "-"}
 
+    # The application's employment section states when each job began; a
+    # wage record with no hire date takes it, so a year-to-date projection
+    # for a job that started in April is measured from April, not January.
+    start_dates: dict[str, str] = {}
+    for block in (getattr(disclosures, "employment", None) or []):
+        name = (normalize_source_name(block.employer or "") or block.employer or "").lower().strip()
+        if name and block.start_date:
+            start_dates[name] = block.start_date
+
+    def _adopt_start_date(employer_norm: str, vi) -> None:
+        if getattr(vi, "hireDate", None):
+            return
+        for name, start in start_dates.items():
+            if name == employer_norm or _fuzzy_employer_match(name, employer_norm) or source_names_overlap(name, employer_norm):
+                vi.hireDate = start
+                vi.evidence = dict(vi.evidence or {})
+                vi.evidence.setdefault("hireDate", f"start date stated on the application for {block_label(name)}")
+                return
+
+    def block_label(name: str) -> str:
+        return next((b.employer for b in (getattr(disclosures, "employment", None) or [])
+                     if (normalize_source_name(b.employer or "") or b.employer or "").lower().strip() == name), name)
+
     for employer in disclosures.employers:
         employer_norm = (normalize_source_name(employer) or employer).lower().strip()
 
@@ -820,6 +864,7 @@ def _link_questionnaire_to_income(
                 vi = vi_entries[idx]
                 if not vi.selfDeclaredSource:
                     vi.selfDeclaredSource = _get_questionnaire_source(document_groups)
+                _adopt_start_date(employer_norm, vi)
                 matched = True
                 break
 
@@ -838,6 +883,22 @@ def _link_questionnaire_to_income(
             for d in (income.declared or [])
         ):
             matched = True
+        # The only job on the application and the only wage source in the
+        # file are the same job even when the scan spells the employer two
+        # ways ("Stafmark" on the application, "Staffink" on the stub): the
+        # start date goes to that record, and the record says on what basis.
+        if matched and len(disclosures.employers) == 1 and employer_norm in start_dates:
+            wage_records = [vi for vi in vi_entries if "wage" in (vi.incomeType or "").lower()
+                            and vi.verificationStatus != "declared_only"]
+            if len(wage_records) == 1 and not wage_records[0].hireDate:
+                sole = wage_records[0]
+                sole.hireDate = start_dates[employer_norm]
+                sole.evidence = dict(sole.evidence or {})
+                sole.evidence.setdefault(
+                    "hireDate",
+                    f"start date stated on the application for {block_label(employer_norm)}, the only employer "
+                    f"it names; this is the only wage source in the file",
+                )
         if not matched:
             # The questionnaire names an employer and states no figure. That
             # is a finding about the packet, not an income record: as a
@@ -1759,6 +1820,83 @@ def _resolve_duplicate_self_declarations(vi_entries: list) -> list:
         )
         out.append(keeper)
     return out
+
+
+def _dated_history(vi) -> int:
+    from app.services.income_calculator import _parse_history_date
+    return sum(1 for row in (getattr(vi, "paymentHistory", None) or [])
+               if _parse_history_date(getattr(row, "date", None)))
+
+
+def _generic_source(vi) -> bool:
+    """A source named after its income type or its statement, not a payer."""
+    name = (vi.sourceName or "").lower().strip()
+    itype = (vi.incomeType or "").lower().strip()
+    return not name or name == itype or itype in name or any(
+        w in name for w in ("worksheet", "calculation", "statement", "ledger", "agency", "support"))
+
+
+def _merge_household_level_sources(vi_entries: list) -> list:
+    """One member's records of one household-level income type are one source.
+
+    A child-support file carries the agency's ledger and, beside it, the
+    manager's worksheet that totals the same payments; read one document at
+    a time they became two records — the worksheet took the certification's
+    declared line and the ledger was reported as verified income the
+    certification never declared. Child support, alimony and assistance
+    reach a household from one order or one agency; two records of the
+    type for one member are two documents about it unless both carry their
+    own dated payment history under distinct payer names, when they stay
+    two. The keeper is the record with the dated history (else the better-
+    evidenced one); it takes the other's pages, declaration and payer name.
+    """
+    from collections import defaultdict
+    from app.services.extractor import _HOUSEHOLD_LEVEL_INCOME_TYPES
+
+    groups: dict[tuple[str, str], list] = defaultdict(list)
+    for vi in vi_entries:
+        itype = (vi.incomeType or "").lower().strip()
+        member = (vi.memberName or "").lower().strip()
+        if member and any(t in itype for t in _HOUSEHOLD_LEVEL_INCOME_TYPES):
+            groups[(member, itype)].append(vi)
+
+    drop: set[int] = set()
+    for (member, itype), entries in groups.items():
+        if len(entries) < 2:
+            continue
+        entries.sort(key=lambda v: (
+            -_dated_history(v),
+            _EVIDENCE_RANK.get(v.verificationStatus or "verified", 1),
+        ))
+        keeper = entries[0]
+        for other in entries[1:]:
+            if (_dated_history(keeper) and _dated_history(other)
+                    and not _generic_source(keeper) and not _generic_source(other)
+                    and (keeper.sourceName or "").lower().strip() != (other.sourceName or "").lower().strip()):
+                continue  # two payers, each with its own ledger
+            keeper.sourcePages = sorted(set(keeper.sourcePages or []) | set(other.sourcePages or []))
+            for f in ("selfDeclaredAmount", "selfDeclaredSource", "declaredAnnualAmount",
+                      "declaredSource", "rateOfPay", "rateUnit", "frequencyOfPay", "programName", "dateReceived"):
+                if not getattr(keeper, f, None) and getattr(other, f, None):
+                    setattr(keeper, f, getattr(other, f))
+            if _generic_source(keeper) and not _generic_source(other):
+                keeper.sourceName = other.sourceName
+            statuses = {keeper.verificationStatus, other.verificationStatus}
+            if "verified" in statuses or "verified_not_declared" in statuses:
+                keeper.verificationStatus = (
+                    "verified" if keeper.declaredAnnualAmount or keeper.selfDeclaredAmount
+                    else "verified_not_declared"
+                )
+            keeper.evidence = dict(keeper.evidence or {})
+            keeper.evidence.setdefault(
+                "alsoDocumented",
+                f"{other.type_of_VOI or 'record'} on page(s) {', '.join(str(p) for p in (other.sourcePages or [])) or '?'}"
+                f" ({other.sourceName or itype}) — same source",
+            )
+            logger.info("Income: %s / %s on pages %s and %s — one source; kept the record with the payment history",
+                        member, itype, keeper.sourcePages, other.sourcePages)
+            drop.add(id(other))
+    return [vi for vi in vi_entries if id(vi) not in drop]
 
 
 def _collapse_declared_duplicates(vi_entries: list) -> tuple[list, list[str]]:

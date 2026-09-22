@@ -2,7 +2,7 @@
 
 import logging
 import re
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from statistics import median
 
 from app.schemas.extraction import (
@@ -481,21 +481,46 @@ def calculate_history_based(
     ordered = sorted(buckets.items(), key=lambda kv: first_date[kv[0]], reverse=True)
     label = _PERIOD_LABEL[periodicity]
 
-    if len(ordered) >= per_year:
-        window = ordered[:per_year]
+    # A year of history is summed over the twelve months ending at the most
+    # recent payment — what a manager's twelve-month calculation does — not
+    # over "the N most recent periods": weekly payments land twice in some
+    # weeks and skip others, so 52 buckets of a ledger that also carries
+    # the payment made a year ago to the day counted 53 payments.
+    last = max(d for d, _ in payments)
+    first = min(d for d, _ in payments)
+    period_days = 365 / per_year
+    full_year = len(ordered) >= per_year or (last - first).days >= 365 - 2 * period_days
+    if full_year:
+        window_start = last - timedelta(days=365)
+        window = [(d, v) for d, v in payments if d > window_start]
         annual = sum(v for _, v in window)
         details = (
-            f"sum of the {per_year} most recent {label} payments "
-            f"({window[-1][0]} to {window[0][0]}) = {annual:.2f}"
+            f"sum of the {len(window)} {label} payments in the 12 months ending "
+            f"{last.isoformat()} ({min(d for d, _ in window).isoformat()} to {last.isoformat()}) = {annual:.2f}"
         )
     else:
-        avg = sum(v for _, v in ordered) / len(ordered)
-        annual = avg * per_year
-        details = (
-            f"avg of {len(ordered)} {label} payments ({ordered[-1][0]} to {ordered[0][0]}) "
-            f"= {avg:.2f} × {per_year} = {annual:.2f} — history covers {len(ordered)} of "
-            f"{per_year} periods"
-        )
+        amounts = [v for _, v in payments]
+        fixed = len(amounts) >= 4 and max(amounts) - min(amounts) < 0.01
+        if fixed:
+            # Every transcribed payment is the same amount: a fixed periodic
+            # payment. Its year is the amount times the periods in a year,
+            # however many rows the transcription kept — a dense agency
+            # ledger loses rows and doubles others in OCR, and an average
+            # of period buckets carried both errors into the annual figure.
+            annual = amounts[0] * per_year
+            details = (
+                f"fixed {label} payment of {amounts[0]:.2f} × {per_year} = {annual:.2f} — "
+                f"{len(ordered)} of {per_year} {label} periods transcribed "
+                f"({ordered[-1][0]} to {ordered[0][0]})"
+            )
+        else:
+            avg = sum(v for _, v in ordered) / len(ordered)
+            annual = avg * per_year
+            details = (
+                f"avg of {len(ordered)} {label} payments ({ordered[-1][0]} to {ordered[0][0]}) "
+                f"= {avg:.2f} × {per_year} = {annual:.2f} — history covers {len(ordered)} of "
+                f"{per_year} periods"
+            )
     if undated:
         details += f"; {undated} undated row(s) ignored"
     return f"{annual:.2f}", details, [d for d, _ in payments]
@@ -580,6 +605,12 @@ def _stale_wage_note(
     return _stale_note([d for d in (_parse_date(ps.payDate) for ps in paystubs) if d], reference_date)
 
 
+# How many consecutive stubs verification guidance expects before a stub
+# average stands on its own. Fewer still produce the figure; the row and a
+# finding say the file is short.
+PAYSTUB_GUIDANCE_COUNT = 3
+
+
 def calculate_all_methods(
     vi_entry: VerificationIncomeEntry | None,
     matching_paystubs: list[PayStubEntry],
@@ -594,6 +625,7 @@ def calculate_all_methods(
       payment history (≥2 rows)   → history-based (child support ledgers,
                                     benefit payment records)
       VOI rate (+unit, hours)     → voi-based (wages, fixed benefits)
+      paystubs (1–2)              → paystub-based, noted as below guidance
       Self-employment / self-cert → self-declared
 
     A method that cannot produce a figure from what the record states, or
@@ -631,11 +663,18 @@ def calculate_all_methods(
 
     # Candidate methods in evidence order; each returns (annual, details, dates).
     candidates: list[tuple[str, callable]] = []
-    if len(matching_paystubs) >= 3:
-        def _paystubs():
-            annual, details = calculate_paystub_based(matching_paystubs)
-            dates = [d for d in (_parse_date(ps.payDate) for ps in matching_paystubs) if d]
-            return annual, details, dates
+
+    def _paystubs():
+        annual, details = calculate_paystub_based(matching_paystubs)
+        dates = [d for d in (_parse_date(ps.payDate) for ps in matching_paystubs) if d]
+        if annual is not None and len(matching_paystubs) < PAYSTUB_GUIDANCE_COUNT:
+            details = (
+                f"{details} — only {len(matching_paystubs)} pay stub(s) in the file; "
+                f"guidance expects at least {PAYSTUB_GUIDANCE_COUNT} consecutive"
+            )
+        return annual, details, dates
+
+    if len(matching_paystubs) >= PAYSTUB_GUIDANCE_COUNT:
         candidates.append(("paystub-based", _paystubs))
     if len(history_rows) >= 2:
         candidates.append(("history-based", lambda: calculate_history_based(history_rows)))
@@ -663,6 +702,12 @@ def calculate_all_methods(
             )
             return annual, details, []
         candidates.append(("voi-based", _voi))
+    # One or two stubs are thin evidence, not none: a manager who has only
+    # two averages them, and the file then certifies that figure. They rank
+    # below an employer's stated rate and above the household's own word,
+    # and the row says how few there were.
+    if 0 < len(matching_paystubs) < PAYSTUB_GUIDANCE_COUNT:
+        candidates.append(("paystub-based", _paystubs))
     if vi_entry and (vi_entry.selfDeclaredAmount or (calc_mode == "annual_net" and vi_entry.rateOfPay and not wage_like_rate)):
         def _self_declared():
             # selfDeclaredAmount is annual by schema convention (TIC Part III

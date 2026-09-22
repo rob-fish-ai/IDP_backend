@@ -273,13 +273,21 @@ a verificationIncome entry:
     or payment), copy EVERY line as {"date": ..., "amount": ...} exactly as printed —
     date as YYYY-MM-DD (a month-only label such as "08/26" becomes "2026-08-01"),
     amount as a numeric string of what was actually paid that period (disbursements),
-    never an arrears balance. Do NOT add the lines up, do NOT pick one line as the
-    rate, and do NOT put a total in selfDeclaredAmount — the engine annualises the
-    history itself.
+    never an arrears balance. The date is the date PRINTED on that line: a worksheet
+    that numbers its payments (1, 2, 3 …) without dates gets rows with "date": null —
+    never invent dates or spread numbered rows across months. Do NOT add the lines
+    up, do NOT pick one line as the rate, and do NOT put a total in
+    selfDeclaredAmount — the engine annualises the history itself.
 Do NOT skip child support just because the form is brief or lacks typical wage fields.
 
 PAYSTUB FIELDS:
-- sourceName: employer name, Title Case
+- sourceName: the employer that ISSUED the stub — the company named in the stub's
+  header (name, address, phone), the payer of record. A staffing or payroll stub
+  also prints where the person was placed ("Customer", "Client", "Assignment",
+  "Worksite", "Department"): that is NOT the employer. If the header is not
+  legible, leave sourceName null rather than naming the customer.
+- employeeId: the employee / ID number the stub prints ("Employee ID: 1342892",
+  "Emp #"), verbatim. null if none.
 - memberName: employee name, Title Case
 - socialSecurityNumber: exactly as printed on the stub
 - grossPay: exact dollar amount with cents, numeric string ("1250.00"), no $ or commas
@@ -311,8 +319,9 @@ VERIFICATION INCOME FIELDS:
 - paymentHistory: list of {"date": "YYYY-MM-DD", "amount": "123.45"} — ONLY when this
   document is a payment record listing individual payments over time (child support
   ledger, agency payment history, benefit payment record). One row per printed line,
-  in the order printed, amounts as printed. Empty list otherwise. Never for pay stubs
-  or employer wage tables (those are payStub entries).
+  in the order printed, amounts as printed, date null when the line prints no date.
+  Empty list otherwise. Never for pay stubs or employer wage tables (those are
+  payStub entries).
 - frequencyOfPay: lowercase. This is how often the person is PAID (weekly / bi-weekly / semi-monthly / monthly), NOT the rate unit. If rate is "hourly" but pay dates are 14 days apart, frequencyOfPay is "bi-weekly". Determine from pay period structure, not from rate label.
 - hoursPerPayPeriod: ONLY when rateUnit is "hourly" (or "daily": then days). null for a
   salary or a periodic rate — hours never multiply those. When hourly: hours worked in
@@ -1335,6 +1344,93 @@ def _enforce_provenance(records: list[dict], amount_fields: tuple[str, ...],
 _YTD_MAX_PERIODS = 60
 
 
+def _name_key(text) -> str:
+    return re.sub(r"[^a-z0-9]+", "", str(text or "").lower())
+
+
+def _unify_paystub_sources(stubs: list[dict]) -> int:
+    """One member's stubs from one employer carry one employer name.
+
+    A staffing agency's stub prints the agency in the header and the
+    customer it placed the person with lower down; a scan reads the header
+    on one stub and not the next; OCR spells the agency two ways. Read one
+    page at a time, the same job came out as three employers with one stub
+    each, and with fewer than three stubs apiece nothing was annualised.
+    Within a member, stubs that share a printed employee ID or whose
+    employer names are near-identical are one source: they take the name
+    most of them carry (a null header yields to any read name), and each
+    renamed stub records what its page printed. Returns stubs renamed.
+    """
+    from difflib import SequenceMatcher
+
+    by_member: dict[str, list[dict]] = {}
+    for ps in stubs:
+        by_member.setdefault((ps.get("memberName") or "").lower().strip(), []).append(ps)
+
+    changed = 0
+    for group in by_member.values():
+        if len(group) < 2:
+            continue
+        parent = list(range(len(group)))
+
+        def _find(i):
+            while parent[i] != i:
+                parent[i] = parent[parent[i]]
+                i = parent[i]
+            return i
+
+        def _same_source(a: dict, b: dict) -> str | None:
+            ida, idb = _name_key(a.get("employeeId")), _name_key(b.get("employeeId"))
+            if ida and idb and ida == idb:
+                return "same employee ID"
+            na, nb = _name_key(a.get("sourceName")), _name_key(b.get("sourceName"))
+            if na and nb and (na == nb or SequenceMatcher(None, na, nb).ratio() >= 0.8):
+                return "near-identical employer name"
+            return None
+
+        reasons: dict[tuple[int, int], str] = {}
+        for i in range(len(group)):
+            for j in range(i + 1, len(group)):
+                why = _same_source(group[i], group[j])
+                if why:
+                    parent[_find(i)] = _find(j)
+                    reasons[(i, j)] = why
+
+        clusters: dict[int, list[int]] = {}
+        for i in range(len(group)):
+            clusters.setdefault(_find(i), []).append(i)
+        for members in clusters.values():
+            if len(members) < 2:
+                continue
+            names = [group[i].get("sourceName") for i in members if (group[i].get("sourceName") or "").strip()]
+            if not names:
+                continue
+            counts: dict[str, int] = {}
+            first_seen: dict[str, str] = {}
+            for n in names:
+                k = _name_key(n)
+                counts[k] = counts.get(k, 0) + 1
+                first_seen.setdefault(k, n)
+            canonical = first_seen[max(counts, key=lambda k: (counts[k], len(k)))]
+            for i in members:
+                ps = group[i]
+                printed = ps.get("sourceName")
+                if _name_key(printed) == _name_key(canonical):
+                    continue
+                why = next((r for (a, b), r in reasons.items() if i in (a, b)), "same source")
+                evidence = ps.get("evidence") if isinstance(ps.get("evidence"), dict) else {}
+                ps["evidence"] = evidence
+                evidence["sourceName"] = (
+                    f"page names {printed!r}; one employer with the other stub(s) ({why}) — read as {canonical!r}"
+                    if printed else f"employer not legible on this page; {why} with the other stub(s) — read as {canonical!r}"
+                )
+                ps["sourceName"] = canonical
+                changed += 1
+                logger.info("Income: pay stub employer %r for %s unified to %r (%s)",
+                            printed, ps.get("memberName") or "?", canonical, why)
+    return changed
+
+
 def _repair_paystub_ytd(stubs: list[dict]) -> int:
     """Put a source's pay-stub YTD figures back in sequence.
 
@@ -1402,35 +1498,80 @@ def _repair_paystub_ytd(stubs: list[dict]) -> int:
     return changed
 
 
+def _month_on_text(iso: str, text: str) -> bool:
+    """Whether a month is printed on the text the ways a payment record
+    labels one: 08/26, 08/2026, Aug 2026, August 2026."""
+    m = re.fullmatch(r"(\d{4})-(\d{2})-\d{2}", iso.strip())
+    if not m:
+        return False
+    y, mo = m.group(1), int(m.group(2))
+    name = _MONTH_NAMES[mo - 1]
+    low = text.lower()
+    patterns = (
+        rf"(?<![\d/.-]){mo:02d}\s*/\s*(?:{y}|{y[2:]})(?![\d/])",
+        rf"(?<![\d/.-]){mo}\s*/\s*(?:{y}|{y[2:]})(?![\d/])",
+        rf"(?:{name}|{name[:3]}\.?)\s*,?\s*{y}\b",
+    )
+    return any(re.search(rx, low) for rx in patterns)
+
+
 def _prune_payment_history(records: list[dict], group: DocumentGroup, label: str) -> int:
-    """Drop payment-history rows whose amount the document does not print.
+    """Keep a payment history to what the document prints.
 
     A ledger row is an amount like any other: one the pages do not carry
-    came from nowhere and must not be annualised. Returns rows dropped.
+    came from nowhere and must not be annualised, so the row is dropped.
+    A row's date is held to the same standard: a worksheet that numbers
+    its payments prints no dates, and dates the model supplied for it ran
+    from January 2026 to March 2030 and were then windowed as "the twelve
+    most recent". A date the pages do not print, or one after today, is
+    cleared and the row kept undated. Returns rows dropped.
     """
+    from datetime import date as _date
     page_texts = _group_page_texts(group)
+    joined = "\n".join(page_texts.get(pn) or "" for pn in group.pages)
+    today = _date.today().isoformat()
     dropped = 0
     for rec in records:
         rows = rec.get("paymentHistory")
         if not isinstance(rows, list) or not rows:
             continue
         kept = []
+        undated = 0
         for row in rows:
             amount = row.get("amount") if isinstance(row, dict) else None
             if amount in (None, "", "null"):
                 continue
-            if _amount_on_pages(amount, page_texts, group.pages):
-                kept.append(row)
-            else:
+            if not _amount_on_pages(amount, page_texts, group.pages):
                 dropped += 1
+                continue
+            raw_date = row.get("date")
+            if raw_date not in (None, "", "null"):
+                iso = str(raw_date).strip()
+                printed = _date_on_text(iso, joined) or (
+                    iso.endswith("-01") and _month_on_text(iso, joined)
+                )
+                if not printed or iso > today:
+                    row = dict(row)
+                    row["date"] = None
+                    undated += 1
+            kept.append(row)
+        notes = []
         if dropped:
             logger.warning(
                 "%s: %d payment-history row(s) not on pages %s of '%s' — dropped (no provenance)",
                 label, dropped, group.pages, group.document_type,
             )
+            notes.append(f"{dropped} row(s) not on page")
+        if undated:
+            logger.warning(
+                "%s: %d payment-history date(s) not printed on pages %s of '%s' — rows kept undated",
+                label, undated, group.pages, group.document_type,
+            )
+            notes.append(f"{undated} row date(s) not printed on the page — rows kept undated")
+        if notes:
             evidence = rec.get("evidence")
             if isinstance(evidence, dict):
-                evidence["paymentHistory"] = f"{dropped} row(s) not on page"
+                evidence["paymentHistory"] = "; ".join(notes)
         rec["paymentHistory"] = kept
     return dropped
 
@@ -2471,6 +2612,7 @@ def extract_income(
     for g, vis, pss in _run_per_group(source_groups, _one, settings, "Income"):
         vi_entries.extend(vis)
         ps_entries.extend(pss)
+    _unify_paystub_sources(ps_entries)
     _repair_paystub_ytd(ps_entries)
 
     declared = _extract_declared_income(decl_groups, settings, certification_type, household_names)

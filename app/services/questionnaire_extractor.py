@@ -18,6 +18,10 @@ income sources, assets, and status.
 FIELDS TO EXTRACT (all boolean — true if disclosed/affirmed, false if denied, null if not asked):
 - has_employment: Does the applicant report having a job or employment income?
 - employers: List of employer names mentioned (empty list if none). Title Case.
+- employment: the application's employment section, one object per block that
+  names an employer: {"employer": "...", "start_date": "YYYY-MM-DD" or null}.
+  start_date is the "Starting Date" / "Date of Hire" the applicant wrote, as
+  written (a two-digit year is the 2000s). Empty list when no employer is named.
 - has_student_status: Does any household member report being a student?
 - has_ssa_benefits: Does the applicant report receiving Social Security (SSA/SSI/SSDI)?
 - has_checking_account: Does the applicant report having a checking account?
@@ -93,6 +97,14 @@ def _merge_applicant_disclosures(items: list) -> dict:
             if e and e not in employers:
                 employers.append(e)
     merged["employers"] = employers
+    employment: list = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        for block in (item.get("employment") or []):
+            if isinstance(block, dict) and block not in employment:
+                employment.append(block)
+    merged["employment"] = employment
     return merged
 
 
@@ -166,20 +178,19 @@ def validate_affirmative_responses(
     doc_types = {g.document_type for g in document_groups if g.category != "ignore"}
     doc_types_lower = {dt.lower() for dt in doc_types}
 
-    # Employment → VOI + paystubs required
+    # Employment → verified by an employer verification, a Work Number
+    # report or pay stubs. Any one of them is verification; demanding a
+    # VOI beside the stubs called a stub-verified job unverified, and the
+    # stub count has its own finding when the file holds fewer than three.
     if disclosures.has_employment is True:
-        has_voi = any("voi" in dt or "verification of income" in dt for dt in doc_types_lower)
+        has_voi = any("voi" in dt or "verification of income" in dt or "employment verification" in dt
+                      for dt in doc_types_lower)
         has_paystub = any("paystub" in dt or "pay stub" in dt or "pay-slip" in dt for dt in doc_types_lower)
         has_work_number = any("work number" in dt or "equifax" in dt for dt in doc_types_lower)
-        if not has_voi and not has_work_number:
+        if not (has_voi or has_paystub or has_work_number):
             findings.append(
-                "Employment disclosed on questionnaire but no Verification of Income (VOI) "
-                "or Work Number report found — independent verification required (Section 11)"
-            )
-        if not has_paystub and not has_work_number:
-            findings.append(
-                "Employment disclosed on questionnaire but no pay stubs or Work Number report "
-                "found — pay stubs required for employment verification (Section 11)"
+                "Employment disclosed on questionnaire but no Verification of Income (VOI), "
+                "pay stubs or Work Number report found — independent verification required (Section 11)"
             )
 
     # Student status → Student Status Certification required
@@ -201,25 +212,21 @@ def validate_affirmative_responses(
                 "found — independent verification required (Section 11)"
             )
 
-    # Checking account → bank verification required
-    if disclosures.has_checking_account is True:
-        has_bank = any("bank statement" in dt or "voa" in dt or "verification of asset" in dt
-                       for dt in doc_types_lower)
-        if not has_bank:
-            findings.append(
-                "Checking account disclosed on questionnaire but no bank statement or VOA "
-                "found — bank verification required (Section 11)"
-            )
-
-    # Savings account → bank verification required
-    if disclosures.has_savings_account is True:
-        has_bank = any("bank statement" in dt or "voa" in dt or "verification of asset" in dt
-                       for dt in doc_types_lower)
-        if not has_bank:
-            findings.append(
-                "Savings account disclosed on questionnaire but no bank statement or VOA "
-                "found — bank verification required (Section 11)"
-            )
+    # Checking / savings account → a bank statement or VOA, or the household's
+    # asset self-certification, which HOTMA lets stand for net assets under
+    # the threshold and which the zero-asset rule already accepts.
+    has_bank = any("bank statement" in dt or "voa" in dt or "verification of asset" in dt
+                   or "asset self-certification" in dt for dt in doc_types_lower)
+    if disclosures.has_checking_account is True and not has_bank:
+        findings.append(
+            "Checking account disclosed on questionnaire but no bank statement, VOA or asset "
+            "self-certification found — bank verification required (Section 11)"
+        )
+    if disclosures.has_savings_account is True and not has_bank:
+        findings.append(
+            "Savings account disclosed on questionnaire but no bank statement, VOA or asset "
+            "self-certification found — bank verification required (Section 11)"
+        )
 
     # Child support → verification required
     if disclosures.has_child_support is True:

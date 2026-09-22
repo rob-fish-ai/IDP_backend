@@ -122,6 +122,9 @@ class PayStubEntry(BaseModel):
     sourceName: Optional[str] = None
     memberName: Optional[str] = None
     socialSecurityNumber: Optional[str] = None
+    # The employee / ID number the stub prints. Two stubs for one member
+    # that share it come from one employer whatever their headers read.
+    employeeId: Optional[str] = None
     grossPay: Optional[str] = None
     payDate: Optional[str] = None
     payInterval: Optional[str] = None
@@ -366,10 +369,26 @@ class IncomeCalculationResult(BaseModel):
 # Questionnaire Disclosures (Section 11 — Affirmative Response)
 # ---------------------------------------------------------------------------
 
+class QuestionnaireEmployment(BaseModel):
+    """One employment block on an application: who, since when."""
+    employer: Optional[str] = None
+    start_date: Optional[str] = None   # YYYY-MM-DD as the applicant wrote it
+
+    @field_validator("*", mode="before")
+    @classmethod
+    def coerce_to_str(cls, v):
+        if v is not None and not isinstance(v, str):
+            return str(v)
+        return v
+
+
 class QuestionnaireDisclosures(BaseModel):
     """Yes/no disclosures extracted from application/questionnaire."""
     has_employment: Optional[bool] = None
     employers: list[str] = []
+    # The application's employment section, block by block: the start date
+    # is the basis for a year-to-date projection when the job began this year.
+    employment: list[QuestionnaireEmployment] = []
     has_student_status: Optional[bool] = None
     has_ssa_benefits: Optional[bool] = None
     has_checking_account: Optional[bool] = None

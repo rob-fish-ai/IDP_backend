@@ -4,17 +4,24 @@ reaches a packet the rule was never written against.
 
 Run from the repository root:  .venv/bin/python -m pytest -q
 """
-from app.schemas.extraction import VerificationIncomeEntry
+from app.schemas.extraction import (
+    DeclaredIncome, DocumentGroup, IncomeExtraction, PaymentHistoryRow, QuestionnaireDisclosures,
+    QuestionnaireEmployment, SourceIncome, VerificationIncomeEntry,
+)
 from app.services.extractor import (
     _asset_kind,
     _date_on_text,
     _distinctive_amount,
     _drop_total_rows,
+    _prune_payment_history,
     _reconcile_assets,
     _reconcile_income,
     _repair_paystub_ytd,
+    _unify_paystub_sources,
 )
-from app.services.pipeline import _collapse_declared_duplicates
+from app.services.pipeline import (
+    _collapse_declared_duplicates, _link_questionnaire_to_income, _merge_household_level_sources,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -270,3 +277,145 @@ def test_date_on_text_reads_every_printed_form():
 def test_date_on_text_rejects_other_dates_and_embedded_digits():
     assert not _date_on_text("2026-08-12", "Date 08/13/2026")
     assert not _date_on_text("2026-08-12", "108/12/2026x")
+
+
+# ---------------------------------------------------------------------------
+# One employer, one source
+# ---------------------------------------------------------------------------
+
+def _ps(source, member="Aridia Perez", emp_id=None, page=26):
+    return {"sourceName": source, "memberName": member, "employeeId": emp_id, "grossPay": "432.00",
+            "payDate": "2026-06-21", "payInterval": "weekly", "sourcePages": [page], "evidence": {}}
+
+
+def test_stubs_sharing_an_employee_id_are_one_employer():
+    stubs = [_ps("Intralot, Inc.", emp_id="1342892"), _ps("Staffink Investment LLC", emp_id="1342892", page=27)]
+    assert _unify_paystub_sources(stubs) == 1
+    assert {s["sourceName"] for s in stubs} == {"Staffink Investment LLC"}
+    renamed = next(s for s in stubs if s["evidence"].get("sourceName"))
+    assert "Intralot" in renamed["evidence"]["sourceName"] and "employee ID" in renamed["evidence"]["sourceName"]
+
+
+def test_near_identical_employer_names_are_one_employer_and_a_blank_header_yields():
+    stubs = [_ps("Staffmark Investment LLC"), _ps("Staffink Investment LLC", page=27), _ps("Staffmark Investment LLC", page=28)]
+    _unify_paystub_sources(stubs)
+    assert {s["sourceName"] for s in stubs} == {"Staffmark Investment LLC"}
+    stubs = [_ps(None, emp_id="77"), _ps("Acme Staffing", emp_id="77", page=27)]
+    _unify_paystub_sources(stubs)
+    assert {s["sourceName"] for s in stubs} == {"Acme Staffing"}
+
+
+def test_different_employers_and_different_members_stay_apart():
+    stubs = [_ps("Kroger"), _ps("Walmart", page=27)]
+    assert _unify_paystub_sources(stubs) == 0
+    stubs = [_ps("Kroger", member="A B", emp_id="1"), _ps("Kroger Co", member="C D", emp_id="1", page=27)]
+    assert _unify_paystub_sources(stubs) == 0
+
+
+# ---------------------------------------------------------------------------
+# Payment-history dates are printed or absent
+# ---------------------------------------------------------------------------
+
+def _ledger_group(text, pages=(28,)):
+    return DocumentGroup(document_type="Child Support Statement", category="include", pages=list(pages),
+                         page_range="-".join(str(p) for p in pages), combined_text=text)
+
+
+def test_history_dates_the_page_does_not_print_are_cleared_and_rows_kept():
+    worksheet = _ledger_group("Child Support Income Worksheet\n1 $3.59\n2 $3.59\n3 $3.59\nTotal $10.77", pages=(27,))
+    rec = {"paymentHistory": [{"date": "2026-01-01", "amount": "3.59"}, {"date": "2026-02-01", "amount": "3.59"},
+                              {"date": "2030-03-01", "amount": "3.59"}], "evidence": {}}
+    _prune_payment_history([rec], worksheet, "t")
+    assert [r["date"] for r in rec["paymentHistory"]] == [None, None, None]
+    assert "not printed" in rec["evidence"]["paymentHistory"]
+
+
+def test_printed_history_dates_survive_in_every_form():
+    ledger = _ledger_group("08/05/2026 3.59\n07/27/2026 3.59\nAug 2026 925.90\n07/26 925.90")
+    rec = {"paymentHistory": [{"date": "2026-08-05", "amount": "3.59"}, {"date": "2026-07-27", "amount": "3.59"},
+                              {"date": "2026-08-01", "amount": "925.90"}, {"date": "2026-07-01", "amount": "925.90"}], "evidence": {}}
+    _prune_payment_history([rec], ledger, "t")
+    assert [r["date"] for r in rec["paymentHistory"]] == ["2026-08-05", "2026-07-27", "2026-08-01", "2026-07-01"]
+    assert "paymentHistory" not in rec["evidence"]
+
+
+# ---------------------------------------------------------------------------
+# One member, one household-level type, one source
+# ---------------------------------------------------------------------------
+
+def _cs(source, pages, status, history=None, declared=None):
+    return VerificationIncomeEntry(
+        memberName="Tionna Simmons", sourceName=source, incomeType="Child Support", type_of_VOI="Child Support Order",
+        sourcePages=pages, verificationStatus=status, declaredAnnualAmount=declared,
+        selfDeclaredAmount=declared, declaredSource="Tenant Income Certification (TIC)" if declared else None,
+        paymentHistory=[PaymentHistoryRow(date=d, amount="3.59") for d in (history or [])],
+    )
+
+
+def test_worksheet_and_ledger_are_one_child_support_source():
+    worksheet = _cs("Child Support", [27], "verified", history=[None, None], declared="183.09")
+    ledger = _cs("Keith A. Amos", [28, 29, 30], "verified_not_declared", history=["2026-08-05", "2026-07-27"])
+    out = _merge_household_level_sources([worksheet, ledger])
+    assert len(out) == 1
+    kept = out[0]
+    assert kept.sourceName == "Keith A. Amos" and kept.sourcePages == [27, 28, 29, 30]
+    assert kept.verificationStatus == "verified" and kept.declaredAnnualAmount == "183.09"
+    assert len(kept.paymentHistory) == 2 and "page(s) 27" in kept.evidence["alsoDocumented"]
+
+
+def test_two_payers_with_their_own_ledgers_stay_two_and_wages_never_merge():
+    a = _cs("Keith A. Amos", [28], "verified", history=["2026-08-05", "2026-07-27"])
+    b = _cs("John Doe", [31], "verified", history=["2026-08-01", "2026-07-01"])
+    assert len(_merge_household_level_sources([a, b])) == 2
+    w1 = VerificationIncomeEntry(memberName="A B", sourceName="Kroger", incomeType="Non-Federal Wage", sourcePages=[3])
+    w2 = VerificationIncomeEntry(memberName="A B", sourceName="Walmart", incomeType="Non-Federal Wage", sourcePages=[4])
+    assert len(_merge_household_level_sources([w1, w2])) == 2
+
+
+# ---------------------------------------------------------------------------
+# The application's start date reaches the wage record
+# ---------------------------------------------------------------------------
+
+def test_application_start_date_becomes_the_hire_date_when_the_record_has_none():
+    vi = VerificationIncomeEntry(memberName="Aridia Perez", sourceName="Staffmark Investment LLC", incomeType="Non-Federal Wage")
+    income = IncomeExtraction(sourceIncome=SourceIncome(payStub=[], verificationIncome=[vi]))
+    disclosures = QuestionnaireDisclosures(has_employment=True, employers=["Staffmark"],
+                                           employment=[QuestionnaireEmployment(employer="Staffmark", start_date="2026-04-13")])
+    findings = _link_questionnaire_to_income(disclosures, income, [])
+    assert vi.hireDate == "2026-04-13" and "application" in vi.evidence["hireDate"]
+    assert not findings
+    stated = VerificationIncomeEntry(memberName="A", sourceName="Staffmark", incomeType="Non-Federal Wage", hireDate="2025-01-06")
+    income = IncomeExtraction(sourceIncome=SourceIncome(payStub=[], verificationIncome=[stated]))
+    _link_questionnaire_to_income(disclosures, income, [])
+    assert stated.hireDate == "2025-01-06"
+
+
+def test_the_only_employer_on_the_application_dates_the_only_wage_source():
+    vi = VerificationIncomeEntry(memberName="Aridia Perez", sourceName="Staffink Investment LLC",
+                                 incomeType="Non-Federal Wage", verificationStatus="verified")
+    income = IncomeExtraction(sourceIncome=SourceIncome(payStub=[], verificationIncome=[vi]))
+    income.declared = [DeclaredIncome(memberName="Aridia Perez", sourceName="Stafmark", incomeType="Non-Federal Wage",
+                                      amount="3320.00", amountPeriod="monthly", page=19, documentType="Application")]
+    disclosures = QuestionnaireDisclosures(has_employment=True, employers=["Stafmark"],
+                                           employment=[QuestionnaireEmployment(employer="Stafmark", start_date="2026-04-13")])
+    _link_questionnaire_to_income(disclosures, income, [])
+    assert vi.hireDate == "2026-04-13" and "only employer" in vi.evidence["hireDate"]
+    # Two wage sources in the file: the application's one employer names neither.
+    other = VerificationIncomeEntry(memberName="B C", sourceName="Kroger", incomeType="Non-Federal Wage", verificationStatus="verified")
+    vi.hireDate = None
+    income = IncomeExtraction(sourceIncome=SourceIncome(payStub=[], verificationIncome=[vi, other]))
+    income.declared = [DeclaredIncome(memberName="Aridia Perez", sourceName="Stafmark", incomeType="Non-Federal Wage",
+                                      amount="3320.00", amountPeriod="monthly", page=19, documentType="Application")]
+    _link_questionnaire_to_income(disclosures, income, [])
+    assert vi.hireDate is None and other.hireDate is None
+
+
+def test_stubs_alone_verify_a_disclosed_job_and_a_self_certification_covers_a_checking_account():
+    from app.services.questionnaire_extractor import validate_affirmative_responses
+    groups = [DocumentGroup(document_type="Pay Stub", category="include", pages=[26], page_range="26", combined_text="x"),
+              DocumentGroup(document_type="Asset Self-Certification", category="include", pages=[23], page_range="23", combined_text="x")]
+    disclosures = QuestionnaireDisclosures(has_employment=True, has_checking_account=True)
+    assert validate_affirmative_responses(disclosures, groups) == []
+    bare = [DocumentGroup(document_type="Tenant Income Certification (TIC)", category="include", pages=[1], page_range="1", combined_text="x")]
+    texts = validate_affirmative_responses(disclosures, bare)
+    assert any("Employment disclosed" in t for t in texts) and any("Checking account disclosed" in t for t in texts)
