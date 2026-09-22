@@ -578,3 +578,23 @@ def test_a_surname_one_letter_off_on_the_same_given_name_is_the_same_member():
                  "page": 2, "documentType": "HUD 50059", "matched": False}]
     _reconcile_assets(records, declared)
     assert len(records) == 2 and [r.get("selfDeclaredAmount") for r in records] == ["1073.00", "152.00"]
+
+
+def test_two_benefit_lines_on_one_certification_are_two_incomes():
+    ss = VerificationIncomeEntry(memberName="Concepcion Guerra", sourceName="Social Security (declared)", incomeType="Social Security",
+                                 selfDeclaredAmount="8736.00", declaredAnnualAmount="8736.00", declaredSource="HUD 50059",
+                                 verificationStatus="declared_only", sourcePages=[2])
+    ssi = VerificationIncomeEntry(memberName="Concepcion Guerra", sourceName="Supplemental Security Income (declared)", incomeType="Supplemental Security Income",
+                                  selfDeclaredAmount="6191.00", declaredAnnualAmount="6191.00", declaredSource="HUD 50059",
+                                  verificationStatus="declared_only", sourcePages=[2])
+    out, findings = _collapse_declared_duplicates([ss, ssi])
+    assert len(out) == 2 and findings == []
+    # The same income restated on a second document still folds.
+    tic = VerificationIncomeEntry(memberName="Rebecca Knott", sourceName="SS (declared)", incomeType="Social Security",
+                                  selfDeclaredAmount="11928.00", declaredAnnualAmount="11928.00",
+                                  declaredSource="Tenant Income Certification (TIC)", verificationStatus="declared_only", sourcePages=[1])
+    sworn = VerificationIncomeEntry(memberName="Rebecca Knott", sourceName="SSI (declared)", incomeType="Supplemental Security Income",
+                                    selfDeclaredAmount="994.00", declaredSource="Application / Housing Questionnaire",
+                                    frequencyOfPay="monthly", verificationStatus="declared_only", sourcePages=[18])
+    out, findings = _collapse_declared_duplicates([tic, sworn])
+    assert len(out) == 1

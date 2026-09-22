@@ -203,13 +203,15 @@ def validate_affirmative_responses(
             )
 
     # SSA benefits → SSA Benefit Letter required
+    # SSA → a benefit letter, or HUD's own EIV income report, which is the
+    # third-party verification of Social Security and SSI on a HUD file.
     if disclosures.has_ssa_benefits is True:
-        has_ssa = any("ssa" in dt or "ssi" in dt or "ssdi" in dt or "social security" in dt
+        has_ssa = any("ssa" in dt or "ssi" in dt or "ssdi" in dt or "social security" in dt or "eiv" in dt
                       for dt in doc_types_lower)
         if not has_ssa:
             findings.append(
                 "SSA/SSI/SSDI benefits disclosed on questionnaire but no benefit letter "
-                "found — independent verification required (Section 11)"
+                "or EIV report found — independent verification required (Section 11)"
             )
 
     # Checking / savings account → a bank statement or VOA, or the household's

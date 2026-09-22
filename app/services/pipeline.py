@@ -2123,6 +2123,14 @@ def _collapse_declared_duplicates(vi_entries: list) -> tuple[list, list[str]]:
             o_annual = _annual(other)
             k_doc = keeper.declaredSource or keeper.selfDeclaredSource or "the certification"
             o_doc = other.declaredSource or other.selfDeclaredSource or "another declaration"
+            # Two lines on ONE document are two incomes the form lists
+            # separately — a 50059 prints Social Security $8,736 and SSI
+            # $6,191 for one member, and they add up to its total. Only a
+            # second document restating the income is a duplicate.
+            if k_doc == o_doc or (_ss_family(keeper.incomeType) and _ss_family(other.incomeType)
+                                  and (keeper.incomeType or "").lower() != (other.incomeType or "").lower()
+                                  and k_doc == o_doc):
+                continue
             if k_annual and o_annual:
                 ratio = o_annual / k_annual if k_annual else 0
                 if abs(o_annual - k_annual) <= 0.02 * k_annual:
