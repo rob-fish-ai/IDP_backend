@@ -277,6 +277,8 @@ def _parse_date(value: str | None) -> date | None:
 # allow a few days for signatures to be collected. Beyond this many days
 # the household certified figures for a period that was already running.
 SIGNATURE_LAG_DAYS = 14
+# How far ahead of the effective date a signature can plausibly be dated.
+SIGNATURE_LEAD_DAYS_MAX = 365
 
 
 def _check_signed_after_effective(
@@ -296,6 +298,24 @@ def _check_signed_after_effective(
     if not signed or not effective:
         return []
     lag = (signed - effective).days
+    if lag < -SIGNATURE_LEAD_DAYS_MAX:
+        # A certification is not executed a year or more before it takes
+        # effect. A read of 2024-08-28 on a form effective 2026-05-29 is a
+        # misread digit, and the date stays on the record only as doubted.
+        return [make_finding(
+            "CERT_SIGNATURE_DATE_IMPLAUSIBLE",
+            f"Certification effective {effective.isoformat()} carries a signature date of "
+            f"{signed.isoformat()}, {-lag} days earlier — a certification is not signed that far "
+            f"ahead of its effective date; the date is probably misread, confirm it on the form (Section 11)",
+            label="Signature date long before the effective date",
+            category=CATEGORY_FILE_REVIEW,
+            subject_type="certification",
+            subject_ref={"field": "signatureDate"},
+            result="na",
+            assignment=ASSIGN_INTERNAL,
+            correction_required="Read the signature date from the form's signature block",
+            resolution_type=RESOLVE_PRESENCE,
+        )]
     if lag <= SIGNATURE_LAG_DAYS:
         return []
     return [make_finding(

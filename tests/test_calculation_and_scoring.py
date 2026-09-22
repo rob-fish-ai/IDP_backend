@@ -261,3 +261,38 @@ def test_confidence_attaches_by_position_then_label():
     payload = {"household_members": [{"ref": "m01", "first_name": "Kobe", "last_name": "Kuykendall"}], "income_records": [], "asset_records": [], "cert_review": {}}
     attach_confidence(payload, ex)
     assert "confidence" in payload["household_members"][0] and payload["confidence"]["fields"]["na"] >= 0
+
+
+def test_a_first_paycheck_sets_the_year_to_date_basis():
+    from app.services.income_calculator import calculate_paystub_ytd
+    stubs = [PayStubEntry(sourceName="Bickford", memberName="J S", grossPay="1010.23", payDate="2026-06-05", payInterval="bi-weekly", ytdGross="1010.23"),
+             PayStubEntry(sourceName="Bickford", memberName="J S", grossPay="756.38", payDate="2026-06-18", payInterval="bi-weekly", ytdGross="1766.61")]
+    annual, details = calculate_paystub_ytd(stubs)
+    assert "2026-05-22 to 2026-06-18" in details and "first paycheck" in details
+    assert annual == f"{1766.61 / 27 * 365:.2f}"
+    # A stated hire date wins; a stub mid-year with YTD above its gross measures from January.
+    assert "2026-04-13 to" in calculate_paystub_ytd(stubs, "2026-04-13")[1]
+    mid = [PayStubEntry(sourceName="A", memberName="B", grossPay="432.00", payDate="2026-06-21", payInterval="weekly", ytdGross="6250.50")]
+    assert "2026-01-01 to 2026-06-21" in calculate_paystub_ytd(mid)[1]
+
+
+def test_ocr_gate_catches_a_repeated_phrase_page_and_unread_choice_marks():
+    from app.services.pdf_service import _is_degenerate, _selection_marks_unread
+    looped = "DEVONTE CORNIELIES 2421 EASTON " + "Payrolls by Paychex, Inc. rights by Paychex, Inc. " * 40
+    assert _is_degenerate(looped)[0]
+    form = "Do you have a checking account? " + "○ Yes ○ No " * 12 + "1. 1. 1. 1. 1. 1. 1. 1. 1. 1." * 6
+    # A form's own repetition (numbered marks, "$ - $ -") carries no word and
+    # is not a phrase loop; the compression rule still judges the page.
+    from app.services.pdf_service import _repeated_phrase_fraction
+    assert _repeated_phrase_fraction("Name: A B " + "1. 1. 1. " * 40 + "Signature")[0] < 0.1
+    assert _selection_marks_unread(form)
+    assert not _selection_marks_unread("Job 1 o Yes ☑No Job 2 o Yes ☑No Child Support ☑Yes o No " + "○ Yes ○ No " * 4)
+    assert not _selection_marks_unread("○ Yes ○ No ○ Yes ○ No")
+
+
+def test_a_signature_date_a_year_before_the_effective_date_is_doubted_not_asserted():
+    from app.schemas.extraction import CertificationInfo
+    from app.services.signature_validator import _check_signed_after_effective
+    out = _check_signed_after_effective(CertificationInfo(effectiveDate="2026-05-29", signatureDate="2024-08-28"))
+    assert len(out) == 1 and out[0].code == "CERT_SIGNATURE_DATE_IMPLAUSIBLE" and out[0].result == "na"
+    assert _check_signed_after_effective(CertificationInfo(effectiveDate="2026-05-29", signatureDate="2026-05-20")) == []

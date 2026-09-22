@@ -114,13 +114,74 @@ def _degenerate_signals(text: str) -> tuple[float, float]:
     return ratio, dominant
 
 
+# A phrase of a few words repeated over the page. Two pay stubs came back
+# as "Payrolls by Paychex, Inc." two hundred times with the earnings table
+# absent, at composite 0.94: the compression ratio was 0.31 and no single
+# token reached half the page, so neither signal above fired.
+_REPEATED_PHRASE_FRACTION = 0.35
+_REPEATED_PHRASE_MIN_TOKENS = 60
+
+
+def _repeated_phrase_fraction(text: str) -> tuple[float, str]:
+    """(fraction of the page's words inside the most repeated three-word
+    phrase, that phrase)."""
+    tokens = _plain_text(text).split()
+    if len(tokens) < _REPEATED_PHRASE_MIN_TOKENS:
+        return 0.0, ""
+    best, best_phrase = 0.0, ""
+    for width in (2, 3):
+        counts: dict[tuple[str, ...], int] = {}
+        for i in range(len(tokens) - width + 1):
+            key = tuple(tokens[i:i + width])
+            # A phrase of numbers or marks ("1. 1.", "$ - $ -") is a form's
+            # own repetition, not a decoder loop: it must carry a word.
+            if not any(len(re.sub(r"[^A-Za-z]", "", t)) >= 3 for t in key):
+                continue
+            counts[key] = counts.get(key, 0) + 1
+        if counts:
+            phrase, n = max(counts.items(), key=lambda kv: kv[1])
+            frac = min(1.0, n * width / len(tokens))
+            if frac > best:
+                best, best_phrase = frac, " ".join(phrase)
+    return best, best_phrase
+
+
 def _is_degenerate(text: str) -> tuple[bool, str]:
     ratio, dominant = _degenerate_signals(text)
     if ratio < _DEGENERATE_ZLIB_RATIO:
         return True, f"compresses to {ratio:.3f} of its length"
     if dominant >= _DOMINANT_TOKEN_FRACTION:
         return True, f"one token is {dominant:.0%} of the page"
+    repeated, phrase = _repeated_phrase_fraction(text)
+    if repeated >= _REPEATED_PHRASE_FRACTION:
+        return True, f"the phrase {phrase!r} is {repeated:.0%} of the page"
     return False, ""
+
+
+# A questionnaire's answers are marks beside printed choices. When the OCR
+# returns every Yes/No pair with both marks empty, it did not read the
+# marks: the page then reports no disclosure at all, and any figure the
+# transcription put in an answer column has nothing to anchor it (one such
+# page produced a $14,400 Direct Express balance at 7.2% that the form does
+# not carry). Such a page gets a second read from its image.
+_CHOICE_PAIR_RE = re.compile(
+    r"(?:[○◯oO0]|\[\s?\]|\(\s?\))\s*Yes\s*(?:<br\s*/?>)?\s*(?:[○◯oO0]|\[\s?\]|\(\s?\))\s*No",
+    re.IGNORECASE,
+)
+_FILLED_MARK_RE = re.compile(r"[☑☒■●✓✔xX]\s*(?:Yes|No)|\[\s?[xX✓✔]\s?\]|\((?:x|X)\)", re.IGNORECASE)
+# A bare circle in a table cell or at a line start: a choice mark the OCR
+# drew but did not read as marked.
+_BARE_MARK_RE = re.compile(r"(?:^|>|\s)[○◯](?=\s*(?:<|$))", re.MULTILINE)
+_UNREAD_MARKS_MIN = 6
+
+
+def _selection_marks_unread(text: str) -> bool:
+    """A form page whose choice marks all came back unmarked."""
+    text = text or ""
+    unmarked = len(_CHOICE_PAIR_RE.findall(text)) + len(_BARE_MARK_RE.findall(text))
+    if unmarked < _UNREAD_MARKS_MIN:
+        return False
+    return not _FILLED_MARK_RE.search(text)
 
 
 _DET_BOX_RE = re.compile(r"<\|det\|>\[\[(\d+),\s*(\d+),\s*(\d+),\s*(\d+)\]\]<\|/det\|>")
@@ -665,6 +726,14 @@ def process_pdf(
             )
             _add_flag(ocr_result, "unread_region")
             low_quality_pages.append(page_num)
+            continue
+        if _selection_marks_unread(ocr_result.get("text") or ""):
+            logger.warning(
+                "Page %d: every Yes/No pair on the page came back unmarked — "
+                "the answers were not read; queueing vision fallback", page_num,
+            )
+            _add_flag(ocr_result, "unread_marks")
+            low_quality_pages.append(page_num)
 
     # Phase B1.9: pages queued for a second read that carry a PDF text
     # layer take it verbatim — exact, deterministic, free — and leave the
@@ -745,7 +814,7 @@ def process_pdf(
         # Queued because part of the page was unread, not because the read
         # text is wrong: a shorter vision read is still worth keeping, as an
         # addition rather than a replacement.
-        _PARTIAL_READ_FLAGS = {"unread_region", "suspected_content_loss", "text_layer_disagrees"}
+        _PARTIAL_READ_FLAGS = {"unread_region", "suspected_content_loss", "text_layer_disagrees", "unread_marks"}
         _MIN_VISION_CHARS = 200
 
         with ThreadPoolExecutor(max_workers=settings.ocr_concurrency) as pool:
@@ -758,7 +827,24 @@ def process_pdf(
                 vision_plain_len = len(_plain_text(vision_text or ""))
                 page_flags = flag_codes(ocr_results[page_num].get("flag_details"))
                 ocr_unreliable = bool(_UNRELIABLE_OCR_FLAGS & page_flags)
-                if vision_text and (
+                # A page whose text was complete but whose answer marks were
+                # not read keeps both reads: the extractor then confirms a
+                # figure the first read produced against the second before it
+                # becomes a record. A page with content lost is different —
+                # its first read is known to be short, and the fuller read
+                # replaces it below.
+                if vision_text and "unread_marks" in page_flags and not ocr_unreliable and vision_plain_len >= 40:
+                    logger.info(
+                        "Vision fallback page=%d: appended a %d-char confirming vision read to "
+                        "the %d-char OCR text (answer marks were unread)",
+                        page_num, vision_plain_len, ocr_plain_len,
+                    )
+                    ocr_results[page_num]["text"] = (
+                        (ocr_results[page_num].get("text") or "").rstrip()
+                        + "\n\n[Vision read of this page — confirming read]\n" + vision_text.strip()
+                    )
+                    _add_flag(ocr_results[page_num], "vision_appended")
+                elif vision_text and (
                     vision_plain_len > ocr_plain_len
                     or (ocr_unreliable and vision_plain_len >= _MIN_VISION_CHARS)
                 ):
@@ -774,17 +860,41 @@ def process_pdf(
                     ocr_results[page_num]["flag_message"] = "Text re-extracted via Vision fallback"
                     ocr_results[page_num]["needs_external_ocr"] = False
                     _add_flag(ocr_results[page_num], "vision_fallback")
-                elif vision_text and page_flags & _PARTIAL_READ_FLAGS and vision_plain_len >= 40:
+                page_flags = flag_codes(ocr_results[page_num].get("flag_details"))
+                ocr_unreliable = bool(_UNRELIABLE_OCR_FLAGS & page_flags)
+                # A page whose text was complete but whose answer marks were
+                # not read keeps both reads: the extractor then confirms a
+                # figure the first read produced against the second before it
+                # becomes a record. A page with content lost is different —
+                # its first read is known to be short, and the fuller read
+                # replaces it below.
+                if vision_text and "unread_marks" in page_flags and not ocr_unreliable and vision_plain_len >= 40:
                     logger.info(
-                        "Vision fallback page=%d: appended a %d-char vision read to "
-                        "the %d-char OCR text (page was queued for unread content)",
+                        "Vision fallback page=%d: appended a %d-char confirming vision read to "
+                        "the %d-char OCR text (answer marks were unread)",
                         page_num, vision_plain_len, ocr_plain_len,
                     )
                     ocr_results[page_num]["text"] = (
                         (ocr_results[page_num].get("text") or "").rstrip()
-                        + "\n\n[Vision read of this page]\n" + vision_text.strip()
+                        + "\n\n[Vision read of this page — confirming read]\n" + vision_text.strip()
                     )
                     _add_flag(ocr_results[page_num], "vision_appended")
+                elif vision_text and (
+                    vision_plain_len > ocr_plain_len
+                    or (ocr_unreliable and vision_plain_len >= _MIN_VISION_CHARS)
+                ):
+                    logger.info(
+                        "Vision fallback page=%d: replaced %d chars with %d chars",
+                        page_num, ocr_plain_len, vision_plain_len,
+                    )
+                    ocr_results[page_num]["text"] = vision_text
+                    # Provenance, not a quality verdict: the text in use is
+                    # a transcription of the page. Scoring "not found" as
+                    # "poor OCR" on the best-read pages was backwards.
+                    ocr_results[page_num]["flag"] = "green"
+                    ocr_results[page_num]["flag_message"] = "Text re-extracted via Vision fallback"
+                    ocr_results[page_num]["needs_external_ocr"] = False
+                    _add_flag(ocr_results[page_num], "vision_fallback")
                 elif vision_text is not None:
                     logger.info(
                         "Vision fallback page=%d: vision produced less text than OCR, keeping original",

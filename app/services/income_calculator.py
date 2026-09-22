@@ -331,18 +331,44 @@ def calculate_paystub_ytd(
         return None, None
     pay_date, ytd = best
     start = date(pay_date.year, 1, 1)
+    basis = ""
     hired = _parse_date(hire_date)
     if hired and start < hired < pay_date:
         start = hired
+    else:
+        # A stub whose year-to-date equals its own gross is the first
+        # paycheck of the year: the job began within that pay period. Its
+        # period start is the basis, not January 1 — measured from January
+        # a May hire's two stubs projected $2,500 a year.
+        first = _first_paycheck_start(paystubs)
+        if first and start < first < pay_date:
+            start = first
+            basis = " (from the first paycheck's pay period: its YTD equals its gross)"
     days = (pay_date - start).days
     if days <= 0:
         return None, None
     annual = ytd / days * 365
     details = (
-        f"paystub YTD {ytd:.2f} ({start.isoformat()} to {pay_date.isoformat()}) "
+        f"paystub YTD {ytd:.2f} ({start.isoformat()} to {pay_date.isoformat()}){basis} "
         f"/ {days} days × 365 = {annual:.2f}"
     )
     return f"{annual:.2f}", details
+
+
+_PERIOD_DAYS = {"weekly": 7, "bi-weekly": 14, "semi-monthly": 15, "monthly": 30}
+
+
+def _first_paycheck_start(paystubs: list[PayStubEntry]) -> date | None:
+    """Start of the pay period of a stub whose YTD is its own gross."""
+    for ps in sorted(paystubs, key=lambda ps: str(ps.payDate or "")):
+        ytd, gross, pay_date = _money(ps.ytdGross), _money(ps.grossPay), _parse_date(ps.payDate)
+        if ytd is None or gross is None or pay_date is None or gross <= 0:
+            continue
+        if abs(ytd - gross) <= max(0.01 * gross, 0.02):
+            days = _PERIOD_DAYS.get(normalize_frequency(ps.payInterval) or "", 14)
+            return pay_date - timedelta(days=days)
+        return None
+    return None
 
 
 def calculate_paystub_based(

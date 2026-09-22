@@ -270,7 +270,8 @@ def run_extraction_pipeline(
         if (m.FirstName or m.LastName)
     ]
 
-    # Income
+    # Income. The page reader lets the extractor re-read, from the image, a
+    # stub or benefit letter whose amount the text did not carry.
     income = _llm_fallback(
         "Income", extract_income,
         income_groups or llm_eligible_groups, settings,
@@ -278,6 +279,7 @@ def run_extraction_pipeline(
         certification_type=ctx.certification_type,
         household_names=household_names,
         declared_total=certification_info.householdIncome if certification_info else None,
+        page_reader=_image_page_reader(page_texts, ocr_quality, income_groups or llm_eligible_groups, settings),
     )
 
     # Assets
@@ -468,9 +470,10 @@ def run_extraction_pipeline(
         income.sourceIncome.verificationIncome = _resolve_duplicate_self_declarations(
             income.sourceIncome.verificationIncome
         )
-        income.sourceIncome.verificationIncome = _merge_household_level_sources(
+        income.sourceIncome.verificationIncome, merge_findings = _merge_household_level_sources(
             income.sourceIncome.verificationIncome
         )
+        name_findings.extend(merge_findings)
         income.sourceIncome.verificationIncome, declared_findings = _collapse_declared_duplicates(
             income.sourceIncome.verificationIncome
         )
@@ -913,18 +916,25 @@ def _link_questionnaire_to_income(
         # file are the same job even when the scan spells the employer two
         # ways ("Stafmark" on the application, "Staffink" on the stub): the
         # start date goes to that record, and the record says on what basis.
-        if matched and len(disclosures.employers) == 1 and employer_norm in start_dates:
+        if len(disclosures.employers) == 1:
             wage_records = [vi for vi in vi_entries if "wage" in (vi.incomeType or "").lower()
                             and vi.verificationStatus != "declared_only"]
-            if len(wage_records) == 1 and not wage_records[0].hireDate:
+            if len(wage_records) == 1:
+                # "Stafmark" on the application, "Staffink" on the stubs: the
+                # names need not match for the one job on the application to
+                # be the one wage source in the file.
                 sole = wage_records[0]
-                sole.hireDate = start_dates[employer_norm]
-                sole.evidence = dict(sole.evidence or {})
-                sole.evidence.setdefault(
-                    "hireDate",
-                    f"start date stated on the application for {block_label(employer_norm)}, the only employer "
-                    f"it names; this is the only wage source in the file",
-                )
+                matched = True
+                if not sole.selfDeclaredSource:
+                    sole.selfDeclaredSource = _get_questionnaire_source(document_groups)
+                if employer_norm in start_dates and not sole.hireDate:
+                    sole.hireDate = start_dates[employer_norm]
+                    sole.evidence = dict(sole.evidence or {})
+                    sole.evidence.setdefault(
+                        "hireDate",
+                        f"start date stated on the application for {block_label(employer_norm)}, the only employer "
+                        f"it names; this is the only wage source in the file",
+                    )
         if not matched:
             # The questionnaire names an employer and states no figure. That
             # is a finding about the packet, not an income record: as a
@@ -1183,6 +1193,83 @@ def _required_member_field_finding(name: str, fields: list[str], pages: list[int
         resolution_type=RESOLVE_PRESENCE,
         pages=pages,
     )
+
+
+_MAX_IMAGE_PAGES_PER_READ = 3
+
+
+def _image_page_reader(page_texts: list[dict], ocr_quality: dict[int, dict], groups, settings: Settings):
+    """A callable the income extractor uses to re-read pages from their images.
+
+    Transcribes up to _MAX_IMAGE_PAGES_PER_READ of the pages asked for,
+    once each per case, swaps the transcript in wherever page text is read
+    (the page record, the OCR quality map, the owning group's text) and
+    returns the pages re-read. A "Pay Statement Preview" stub scored green
+    with its gross unread, and an SSA letter's "payment is 994.00" came
+    back as "0.00": both are pages whose image says what the text did not.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+    from app.services.llm_service import call_llm_vision
+
+    paths = {pt["page"]: pt.get("image_path") for pt in page_texts}
+    by_page = {pt["page"]: pt for pt in page_texts}
+    done: set[int] = set()
+
+    def _read(pages: list[int]) -> list[int]:
+        todo = []
+        for pn in pages:
+            flags = (by_page.get(pn) or {}).get("ocr_flag_details") or []
+            already = pn in done or any(
+                (f.get("code") if isinstance(f, dict) else f) in ("vision_fallback", "required_field_recovery")
+                for f in flags
+            )
+            if paths.get(pn) and not already and pn not in todo:
+                todo.append(pn)
+        todo = todo[:_MAX_IMAGE_PAGES_PER_READ]
+        if not todo:
+            return []
+        logger.info("Income page recovery: transcribing page(s) %s from image", todo)
+
+        def _transcribe(pn: int) -> tuple[int, str | None]:
+            try:
+                return pn, call_llm_vision(
+                    _FORM_TRANSCRIPTION_PROMPT,
+                    f"Transcribe packet page {pn}, an income document (a pay stub or a benefit letter). "
+                    f"Keep every earnings row with its rate, hours, current and year-to-date amounts, the pay "
+                    f"date and pay period, and every sentence that states a benefit amount, exactly as printed.",
+                    [str(paths[pn])], settings,
+                )
+            except Exception:
+                logger.exception("Income page recovery: transcription failed for page %d", pn)
+                return pn, None
+
+        got: list[int] = []
+        with ThreadPoolExecutor(max_workers=len(todo)) as pool:
+            for pn, text in pool.map(_transcribe, todo):
+                done.add(pn)
+                if not text or len(text.strip()) < _MIN_TRANSCRIPT_CHARS:
+                    continue
+                pt = by_page[pn]
+                pt["text"] = text
+                pt["ocr_flag"] = "green"
+                flags = pt.get("ocr_flag_details")
+                if not isinstance(flags, list):
+                    flags = pt["ocr_flag_details"] = []
+                for f in ("vision_fallback", "income_page_recovery"):
+                    if f not in flags:
+                        flags.append(f)
+                q = ocr_quality.setdefault(pn, {})
+                q["text"] = text
+                q["flag"] = "green"
+                got.append(pn)
+        for g in groups:
+            if any(pn in got for pn in g.pages):
+                g.combined_text = "\n\n".join(
+                    f"--- Page {p} ---\n{(by_page.get(p) or {}).get('text', '')}" for p in g.pages
+                )
+        return got
+
+    return _read
 
 
 def _recover_required_fields_from_images(
@@ -1888,8 +1975,18 @@ def _merge_household_level_sources(vi_entries: list) -> list:
         member = (vi.memberName or "").lower().strip()
         if member and any(t in itype for t in _HOUSEHOLD_LEVEL_INCOME_TYPES):
             groups[(member, itype)].append(vi)
+    # A worksheet names no member; the household's one member with that
+    # type is whom it is about.
+    for vi in vi_entries:
+        itype = (vi.incomeType or "").lower().strip()
+        if (vi.memberName or "").strip() or not any(t in itype for t in _HOUSEHOLD_LEVEL_INCOME_TYPES):
+            continue
+        owners = [k for k in groups if k[1] == itype]
+        if len(owners) == 1:
+            groups[owners[0]].append(vi)
 
     drop: set[int] = set()
+    findings: list = []
     for (member, itype), entries in groups.items():
         if len(entries) < 2:
             continue
@@ -1922,10 +2019,45 @@ def _merge_household_level_sources(vi_entries: list) -> list:
                 f"{other.type_of_VOI or 'record'} on page(s) {', '.join(str(p) for p in (other.sourcePages or [])) or '?'}"
                 f" ({other.sourceName or itype}) — same source",
             )
+            # The folded record's undated rows are a manager's worksheet:
+            # its total is the figure the file was certified on, and the
+            # ledger's annualised figure is compared against it.
+            _note_worksheet_total(keeper, other, findings)
             logger.info("Income: %s / %s on pages %s and %s — one source; kept the record with the payment history",
                         member, itype, keeper.sourcePages, other.sourcePages)
             drop.add(id(other))
-    return [vi for vi in vi_entries if id(vi) not in drop]
+    return [vi for vi in vi_entries if id(vi) not in drop], findings
+
+
+def _note_worksheet_total(keeper, other, findings: list) -> None:
+    from app.services.income_calculator import _money, annualize_history
+    rows = getattr(other, "paymentHistory", None) or []
+    undated = [r for r in rows if not getattr(r, "date", None)]
+    if len(undated) < 4 or _dated_history(other):
+        return
+    total = sum(_money(getattr(r, "amount", None)) or 0.0 for r in undated)
+    if total <= 0:
+        return
+    keeper.evidence["worksheetTotal"] = (
+        f"{total:.2f} over {len(undated)} listed payments "
+        f"(page(s) {', '.join(str(p) for p in (other.sourcePages or []))})"
+    )
+    ledger = annualize_history(keeper.paymentHistory or [])
+    if ledger and abs(ledger - total) / max(total, ledger) > 0.10:
+        findings.append(make_finding(
+            "LEDGER_WORKSHEET_DIFFER",
+            f"{keeper.memberName}: the {keeper.incomeType} worksheet totals ${total:,.2f} over {len(undated)} "
+            f"payments, but the agency ledger's payments annualise to ${ledger:,.2f} — the two documents in the "
+            f"file disagree; confirm which payments the certification counted (Section 9)",
+            label="Manager's worksheet and agency ledger disagree",
+            category=CATEGORY_INCOME,
+            subject_type="income_record",
+            subject_ref={"member_name": keeper.memberName, "source_name": keeper.sourceName},
+            assignment=ASSIGN_INTERNAL,
+            correction_required="Reconcile the worksheet's payments against the ledger",
+            resolution_type=RESOLVE_PRESENCE,
+            pages=sorted(set(keeper.sourcePages or [])),
+        ))
 
 
 def _collapse_declared_duplicates(vi_entries: list) -> tuple[list, list[str]]:
@@ -1951,11 +2083,16 @@ def _collapse_declared_duplicates(vi_entries: list) -> tuple[list, list[str]]:
                     continue
         return None
 
+    from app.services.extractor import _ss_family
+
     groups: dict[tuple[str, str], list] = {}
     for vi in vi_entries:
         if vi.verificationStatus not in ("declared_only", "self_certified"):
             continue
-        key = ((vi.memberName or "").lower().strip(), (vi.incomeType or "").lower().strip())
+        itype = (vi.incomeType or "").lower().strip()
+        # The certification writes "SS" for a benefit the questionnaire
+        # calls SSI: one heading, one income.
+        key = ((vi.memberName or "").lower().strip(), "social security" if _ss_family(itype) else itype)
         if key[0] and key[1]:
             groups.setdefault(key, []).append(vi)
 

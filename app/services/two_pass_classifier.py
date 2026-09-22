@@ -233,6 +233,12 @@ CRITICAL CLASSIFICATION RULES:
   A page headed "Student Certification" / "Student Status Certification" is
   "Student Status Certification", never part of an application.
 
+- A tenant's signed statement about where their pay or benefits are
+  deposited ("my paychecks go into my wife's account", "I receive my son's
+  checks on his Direct Express card") is an "Asset Self-Certification" or a
+  "Direct Express Card Verification" — not a Gift Income Verification, which
+  states money GIVEN to the household by someone outside it.
+
 - "Correspondence" means letters, emails, notices — NOT any form containing
   legal or boilerplate language.
 
@@ -621,6 +627,18 @@ def _name_on(name: str, text: str) -> bool:
 # two or more of another form's phrases and none of its own label's is
 # that form.
 _CERT_FINGERPRINTS = {
+    # Forms whose title is a logo the OCR does not read: their body text is
+    # the fingerprint. The application's own phrases are listed so a page
+    # that is an application keeps its label.
+    "Student Status Certification": (
+        "will you be a student this calendar year", "full-time student", "single parent with a child",
+        "foster care", "job training program", "title iv of the social security act",
+    ),
+    "Application / Housing Questionnaire": (
+        "rental application", "family data", "household composition", "employment information",
+        "apartment size desired", "income sources i have or receive", "sworn income and asset",
+        "questionnaire",
+    ),
     "Tenant Income Certification (TIC)": (
         "tenant income certification", "hh meets income restriction", "income equates to", "amgi",
         "part ii - household composition", "part iii - income other than assets",
@@ -649,7 +667,10 @@ def _cert_label_by_fingerprint(current: str, text: str) -> tuple[str, str] | Non
         if label == current:
             continue
         hits = [ph for ph in phrases if ph in plain]
-        if len(hits) >= 2 and (best is None or len(hits) > best[0]):
+        # A certification form is identified by two of its phrases; another
+        # form (a student certification against an application) needs three.
+        need = 2 if family_of(label) == "cert" else 3
+        if len(hits) >= need and (best is None or len(hits) > best[0]):
             best = (len(hits), label, hits[0])
     return (best[1], best[2]) if best else None
 

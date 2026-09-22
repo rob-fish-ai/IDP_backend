@@ -355,8 +355,8 @@ def _cs(source, pages, status, history=None, declared=None):
 def test_worksheet_and_ledger_are_one_child_support_source():
     worksheet = _cs("Child Support", [27], "verified", history=[None, None], declared="183.09")
     ledger = _cs("Keith A. Amos", [28, 29, 30], "verified_not_declared", history=["2026-08-05", "2026-07-27"])
-    out = _merge_household_level_sources([worksheet, ledger])
-    assert len(out) == 1
+    out, notes = _merge_household_level_sources([worksheet, ledger])
+    assert len(out) == 1 and notes == []
     kept = out[0]
     assert kept.sourceName == "Keith A. Amos" and kept.sourcePages == [27, 28, 29, 30]
     assert kept.verificationStatus == "verified" and kept.declaredAnnualAmount == "183.09"
@@ -366,10 +366,10 @@ def test_worksheet_and_ledger_are_one_child_support_source():
 def test_two_payers_with_their_own_ledgers_stay_two_and_wages_never_merge():
     a = _cs("Keith A. Amos", [28], "verified", history=["2026-08-05", "2026-07-27"])
     b = _cs("John Doe", [31], "verified", history=["2026-08-01", "2026-07-01"])
-    assert len(_merge_household_level_sources([a, b])) == 2
+    assert len(_merge_household_level_sources([a, b])[0]) == 2
     w1 = VerificationIncomeEntry(memberName="A B", sourceName="Kroger", incomeType="Non-Federal Wage", sourcePages=[3])
     w2 = VerificationIncomeEntry(memberName="A B", sourceName="Walmart", incomeType="Non-Federal Wage", sourcePages=[4])
-    assert len(_merge_household_level_sources([w1, w2])) == 2
+    assert len(_merge_household_level_sources([w1, w2])[0]) == 2
 
 
 # ---------------------------------------------------------------------------
@@ -425,6 +425,9 @@ def test_stubs_of_one_person_spelled_two_ways_with_continuous_ytd_are_one_employ
     a = _ps(None, member="Aridia Perez Trinidad", emp_id=None, page=26)
     a.update({"payDate": "2026-06-21", "grossPay": "432.00", "ytdGross": "6250.50"})
     b = _ps("Staffink Investment LLC", member="Aridia Perez", emp_id=None, page=27)
+    misread = [_ps(None, member="Aridia Perez Trinidad", emp_id="1342892", page=26),
+               _ps("Staffink Investment LLC", member="Aridia Perez Irinidad", emp_id="1342892", page=27)]
+    assert _unify_paystub_sources(misread) == 1
     b.update({"payDate": "2026-06-28", "grossPay": "688.50", "ytdGross": "6939.00"})
     assert _unify_paystub_sources([a, b]) == 1
     assert a["sourceName"] == "Staffink Investment LLC" and "year-to-date" in a["evidence"]["sourceName"]
@@ -436,3 +439,121 @@ def test_stubs_of_one_person_spelled_two_ways_with_continuous_ytd_are_one_employ
     e = _ps(None, member="A B", page=1); e.update({"payDate": "2026-06-21", "grossPay": "432.00", "ytdGross": "6250.50"})
     f = _ps("Other Co", member="A B", page=2); f.update({"payDate": "2026-06-28", "grossPay": "688.50", "ytdGross": "9000.00"})
     assert _unify_paystub_sources([e, f]) == 0
+
+
+def test_a_memberless_worksheet_joins_the_one_member_with_the_type_and_its_total_is_compared():
+    from datetime import date, timedelta
+    last = date(2026, 7, 21)
+    ledger = VerificationIncomeEntry(
+        memberName="Samantha Turner", sourceName="Jason Brewer", incomeType="Child Support",
+        type_of_VOI="Child Support Order", sourcePages=[25, 26], verificationStatus="verified",
+        paymentHistory=[PaymentHistoryRow(date=(last - timedelta(days=7 * k)).isoformat(), amount="74.08") for k in range(52)],
+    )
+    worksheet = VerificationIncomeEntry(
+        memberName=None, sourceName="Child Support", incomeType="Child Support", type_of_VOI="Child Support Order",
+        sourcePages=[24], verificationStatus="verified",
+        paymentHistory=[PaymentHistoryRow(date=None, amount="74.08") for _ in range(30)],
+    )
+    out, notes = _merge_household_level_sources([ledger, worksheet])
+    assert len(out) == 1 and out[0].sourcePages == [24, 25, 26]
+    assert out[0].evidence["worksheetTotal"].startswith(f"{74.08 * 30:.2f}")
+    assert len(notes) == 1 and notes[0].code == "LEDGER_WORKSHEET_DIFFER"
+    # A worksheet that agrees with the ledger raises nothing.
+    agree = VerificationIncomeEntry(memberName=None, sourceName="Child Support", incomeType="Child Support",
+                                    sourcePages=[24], verificationStatus="verified",
+                                    paymentHistory=[PaymentHistoryRow(date=None, amount="74.08") for _ in range(52)])
+    out, notes = _merge_household_level_sources([ledger, agree])
+    assert len(out) == 1 and notes == []
+
+
+def test_a_declared_line_above_the_certification_total_loses_its_leading_digit_or_is_dropped():
+    from app.services.extractor import _repair_declared_magnitudes
+    lines = [{"amount": "642997.50", "amountPeriod": "annual", "quote": "Paupstobs 642,997.50"},
+             {"amount": "3850.76", "amountPeriod": "annual"},
+             {"amount": "999999.00", "amountPeriod": "annual"}]
+    _repair_declared_magnitudes(lines, "46700.10", [43875.0])
+    assert lines[0]["amount"] == "42997.50" and "printed 642997.50" in lines[0]["quote"]
+    assert lines[1]["amount"] == "3850.76"
+    assert lines[2]["amount"] is None and lines[2]["matched"] is True
+    # No total: nothing changes.
+    lines = [{"amount": "642997.50", "amountPeriod": "annual"}]
+    _repair_declared_magnitudes(lines, None)
+    assert lines[0]["amount"] == "642997.50"
+
+
+def test_a_childs_benefit_letter_matches_the_line_declared_under_the_parent():
+    letter = {"memberName": "Kyzer Sammons", "sourceName": "Social Security Administration",
+              "incomeType": "Supplemental Security Income", "rateOfPay": "994.00", "rateUnit": "monthly",
+              "frequencyOfPay": "monthly", "sourcePages": [27], "evidence": {}}
+    declared = [{"memberName": "Rebecca Knott", "incomeType": "Social Security", "amount": "11928.00",
+                 "amountPeriod": "annual", "page": 1, "documentType": "Tenant Income Certification (TIC)", "matched": False}]
+    vis = [letter]
+    _reconcile_income(vis, declared, "MI", [], "11928.00")
+    assert declared[0]["matched"] and letter["declaredAnnualAmount"] == "11928.00"
+    assert [v.get("verificationStatus") for v in vis] == ["verified"]
+    # Two members each with a benefit record: the parent's line is not the child's.
+    parent = {"memberName": "Rebecca Knott", "sourceName": "SSA", "incomeType": "Social Security",
+              "rateOfPay": "500.00", "rateUnit": "monthly", "sourcePages": [30], "evidence": {}}
+    child = dict(letter, declaredAnnualAmount=None)
+    declared = [{"memberName": "Rebecca Knott", "incomeType": "Social Security", "amount": "6000.00",
+                 "amountPeriod": "annual", "page": 1, "documentType": "TIC", "matched": False}]
+    _reconcile_income([parent, child], declared, "MI", [], None)
+    assert parent["declaredAnnualAmount"] == "6000.00" and not child.get("declaredAnnualAmount")
+
+
+def test_on_a_page_with_a_confirming_read_both_reads_must_print_a_declared_amount():
+    from app.services.extractor import _amount_confirmed
+    ocr = "Checking account Current Balance: 25.00 Direct Express Card Balance: 14,400 Interest Rate: 7.2%"
+    vision = "[Vision read of this page — confirming read]\nDirect Express Card? No. Balance: [blank] Checking account: Yes, $25.00"
+    texts = {19: ocr + "\n\n" + vision, 20: ocr, 21: "short OCR\n\n[Vision read of this page]\nBalance: 14,400"}
+    assert _amount_confirmed("25.00", texts, [19])
+    assert not _amount_confirmed("14400.00", texts, [19])
+    assert _amount_confirmed("14400.00", texts, [20])
+    # A completing read (content was lost) is the page: one read suffices.
+    assert _amount_confirmed("14400.00", texts, [21])
+
+
+def test_the_ssa_letter_template_yields_the_positive_program_for_the_named_beneficiary():
+    from app.services.extractor import _ssa_letter_records
+    text = ("Social Security Administration Benefit Verification Letter Date: September 8, 2026 "
+            "You asked us for information from KKYZER SCOTT ADAM SAMMONS' record. "
+            "Beginning September 2022, the full monthly Social Security benefit before any deductions is 0.00. "
+            "Benefits were suspended beginning September 2022. "
+            "Beginning September 2026, the current Supplemental Security Income payment is 994.00.")
+    g = DocumentGroup(document_type="SSA Benefit Letter", category="include", pages=[27], page_range="27", combined_text=text)
+    recs = _ssa_letter_records(g, ["Rebecca Knott", "Kyzer Sammons"])
+    assert [(r["incomeType"], r["rateOfPay"], r["memberName"], r["rateUnit"]) for r in recs] == [
+        ("Supplemental Security Income", "994.00", "Kyzer Sammons", "monthly")]
+    # A letter with a positive Social Security benefit and no SSI section.
+    text2 = "Social Security Administration You asked us for information from ANN LEE'S record. The full monthly Social Security benefit before any deductions is 1,234.50."
+    g2 = DocumentGroup(document_type="SSA Benefit Letter", category="include", pages=[5], page_range="5", combined_text=text2)
+    assert [(r["incomeType"], r["rateOfPay"]) for r in _ssa_letter_records(g2, None)] == [("Social Security", "1234.50")]
+    # Not an SSA letter: nothing.
+    g3 = DocumentGroup(document_type="Paystub", category="include", pages=[9], page_range="9", combined_text="Gross Pay 1,010.23")
+    assert _ssa_letter_records(g3, None) == []
+
+
+def test_a_magnitude_repair_needs_a_corroborating_verified_figure():
+    from app.services.extractor import _repair_declared_magnitudes
+    # Total misread as $4,000: the "2,997.50" a naive repair would produce matches nothing → dropped.
+    lines = [{"amount": "642997.50", "amountPeriod": "annual"}]
+    _repair_declared_magnitudes(lines, "4000.00", [43875.0])
+    assert lines[0]["amount"] is None
+    # A plausible line above a misread total is left alone for the mismatch finding.
+    lines = [{"amount": "42997.50", "amountPeriod": "annual"}]
+    _repair_declared_magnitudes(lines, "4000.00", [43875.0])
+    assert lines[0]["amount"] == "42997.50"
+    # Total read right and the stubs average $43,875: repaired to $42,997.50.
+    lines = [{"amount": "642997.50", "amountPeriod": "annual", "quote": "x"}]
+    _repair_declared_magnitudes(lines, "46700.10", [43875.0])
+    assert lines[0]["amount"] == "42997.50"
+
+
+def test_the_only_job_on_the_application_is_the_only_wage_source_even_when_the_names_differ():
+    vi = VerificationIncomeEntry(memberName="Aridia Perez", sourceName="Staffink Investment LLC",
+                                 incomeType="Non-Federal Wage", verificationStatus="verified", sourcePages=[27])
+    income = IncomeExtraction(sourceIncome=SourceIncome(payStub=[], verificationIncome=[vi]))
+    disclosures = QuestionnaireDisclosures(has_employment=True, employers=["Stafmark"],
+                                           employment=[QuestionnaireEmployment(employer="Stafmark", start_date="2026-04-13")])
+    findings = _link_questionnaire_to_income(disclosures, income, [])
+    assert vi.hireDate == "2026-04-13" and findings == []

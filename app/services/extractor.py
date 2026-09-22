@@ -259,6 +259,19 @@ benefit statement, not a future projection. The monthly amount in the
 Do NOT skip the dollar amount because the letter says "will increase" — the
 current rate IS the new rate.
 
+A BENEFIT LETTER THAT STATES SEVERAL PROGRAMS: an SSA verification letter
+often carries a Social Security section AND a Supplemental Security Income
+section. A section whose amount is $0.00, or which says the benefit is
+"suspended" / "stopped" / "not currently receiving", is NOT income and gets no
+record. The record is the section with a positive current amount, typed by
+that section: "Supplemental Security Income" for the SSI section (rateOfPay =
+the current SSI payment, rateUnit "monthly"), "Social Security" or "Social
+Security Disability" for the Social Security section. Never return a $0.00
+record for a letter that also states a positive amount.
+- memberName is the BENEFICIARY the letter is about ("information from KYZER
+  SAMMONS' record"), even when that person is a child and a parent receives the
+  payment; the payee is not the member.
+
 OTHER AGENCY BENEFIT LETTERS (Department of Veterans Affairs, pension plan,
 unemployment agency, state assistance) — same treatment as the SSA letter:
   - rateOfPay: the current benefit as stated, rateUnit as the letter states it
@@ -1451,7 +1464,10 @@ def _unify_paystub_sources(stubs: list[dict]) -> int:
         if _given_names_conflict(na, nb):
             return False
         ka, kb = _name_key(na), _name_key(nb)
-        return ka.startswith(kb) or kb.startswith(ka)
+        # One stub prints the whole surname and the next half of it, or the
+        # scan misreads a letter ("Trinidad" / "Irinidad"): a prefix or a
+        # near-identical key is the same person.
+        return ka.startswith(kb) or kb.startswith(ka) or SequenceMatcher(None, ka, kb).ratio() >= 0.85
 
     def _f(v):
         try:
@@ -1711,6 +1727,50 @@ def _note_redactions(records: list[dict], amount_fields: tuple[str, ...], group:
 _PAGE_MARK_RE = re.compile(r"--- Page (\d+) ---\n?")
 
 
+_VISION_MARK = "[Vision read of this page]"
+_CONFIRMING_MARK = "[Vision read of this page — confirming read]"
+
+
+def _confirming_page_texts(page_texts: dict[int, str]) -> dict[int, str]:
+    """Per page, the text an amount must be printed in to count as read.
+
+    A page that needed a second read carries the OCR text and the vision
+    read of its image. A figure the OCR alone produced on such a page is
+    the read the page was queued for doubting: a questionnaire whose
+    answer marks all came back unread was transcribed with a $14,400 card
+    balance at 7.2% that the form does not carry. On those pages the
+    vision read is the confirming text; elsewhere the page text is.
+    """
+    out: dict[int, str] = {}
+    for pn, text in page_texts.items():
+        i = (text or "").find(_VISION_MARK)
+        out[pn] = text[i + len(_VISION_MARK):] if i >= 0 else text
+    return out
+
+
+def _amount_confirmed(value, page_texts: dict[int, str], pages: list[int]) -> bool:
+    """Whether an amount is printed on the pages by every read they carry.
+
+    A page read once must print it. A page read twice (OCR text and the
+    vision read appended after _VISION_MARK) must print it in both: a
+    figure one read produced and the other did not is the read the page
+    was queued for doubting.
+    """
+    for pn in pages:
+        text = page_texts.get(pn) or ""
+        i = text.find(_CONFIRMING_MARK)
+        if i < 0:
+            # One read, or a second read that completes a short first one:
+            # the page's text as a whole is the page.
+            if _amount_on_pages(value, {pn: text}, [pn]):
+                return True
+            continue
+        parts = [text[:i], text[i + len(_CONFIRMING_MARK):]]
+        if all(_amount_on_pages(value, {pn: part}, [pn]) for part in parts):
+            return True
+    return False
+
+
 def _group_page_texts(group: DocumentGroup) -> dict[int, str]:
     """Split a group's combined text back into per-page text."""
     parts = _PAGE_MARK_RE.split(group.combined_text or "")
@@ -1871,7 +1931,7 @@ def _extract_declared_income(groups: list[DocumentGroup], settings: Settings,
         except (TypeError, ValueError):
             page = None
         pages = [page] if page in page_texts else list(page_texts)
-        if amount is not None and float(amount) > 0 and not _amount_on_pages(amount, page_texts, pages):
+        if amount is not None and float(amount) > 0 and not _amount_confirmed(amount, page_texts, pages):
             logger.warning("Declared income: %s on page %s is not printed there — dropped", amount, page)
             continue
         if amount is not None and float(amount) > 0 and _labelled_total(amount, page_texts, pages):
@@ -2110,6 +2170,143 @@ _HOUSEHOLD_LEVEL_INCOME_TYPES = ("child support", "alimony", "temporary assistan
                                  "public assistance", "general assistance")
 
 
+def _ss_family(income_type) -> bool:
+    """Social Security, SSI and SSDI: the programs one SSA letter states,
+    and which a certification lists under one heading ("SS")."""
+    t = (income_type or "").lower()
+    return bool(t) and ("social security" in t or "supplemental security" in t or t in ("ss", "ssi", "ssdi", "ssa"))
+
+
+_SSA_BENEFICIARY_RE = re.compile(r"information from\s+(.+?)'\s*s?\s*record", re.IGNORECASE)
+_SSA_PROGRAM_RES = (
+    ("Supplemental Security Income",
+     re.compile(r"current Supplemental Security Income payment is\s*\$?\s*([\d,]+\.\d{2})", re.IGNORECASE)),
+    ("Social Security",
+     re.compile(r"full monthly Social Security benefit before any deductions is\s*\$?\s*([\d,]+\.\d{2})", re.IGNORECASE)),
+)
+
+
+def _ssa_letter_records(group: DocumentGroup, household_names: list[str] | None) -> list[dict]:
+    """Records the SSA Benefit Verification Letter states, read from its
+    fixed wording.
+
+    The letter is a template: "the full monthly Social Security benefit
+    before any deductions is 0.00 … Benefits were suspended" followed by
+    "the current Supplemental Security Income payment is 994.00". Read as
+    prose the model returned the suspended program and nothing else, twice,
+    for two households. The programs with a positive amount are the
+    records; the beneficiary the letter names is the member.
+    """
+    plain = strip_html(group.combined_text or "")
+    if "social security administration" not in plain.lower() and "benefit verification letter" not in plain.lower():
+        return []
+    m = _SSA_BENEFICIARY_RE.search(plain)
+    member = validation.to_title_case(re.sub(r"\s+", " ", m.group(1)).strip()) if m else None
+    if member and household_names:
+        # OCR doubles a letter ("KKYZER"); the roster spelling is used when
+        # one member's name is contained in, or contains, the letter's.
+        low = member.lower()
+        for name in household_names:
+            n = name.lower()
+            if n in low or low in n or (n.split()[-1] == low.split()[-1] if n.split() and low.split() else False):
+                member = name
+                break
+    out: list[dict] = []
+    for program, rx in _SSA_PROGRAM_RES:
+        for pm in rx.finditer(plain):
+            amount = validation.normalize_money(pm.group(1))
+            if amount is None or float(amount) <= 0:
+                continue
+            out.append({
+                "sourceName": "Social Security Administration",
+                "memberName": member,
+                "programName": program,
+                "incomeType": program,
+                "type_of_VOI": "SSA Benefit Letter",
+                "rateOfPay": amount,
+                "rateUnit": "monthly",
+                "frequencyOfPay": "monthly",
+                "sourcePages": list(group.pages),
+                "verificationStatus": "verified",
+                "evidence": {"rateOfPay": pm.group(0)[:80], "memberName": (m.group(0)[:60] if m else "letter names no beneficiary")},
+            })
+            break
+    if out:
+        logger.info("Income: SSA letter pages %s read by template — %s",
+                    group.pages, [(r["incomeType"], r["rateOfPay"], r["memberName"]) for r in out])
+    return out
+
+
+def _independent_annuals(vi_entries: list[dict], ps_entries: list[dict]) -> list[float]:
+    """Annual figures the packet's verifications imply, for corroboration."""
+    out: list[float] = []
+    for vi in vi_entries:
+        a = _record_annual(vi)
+        if a:
+            out.append(a)
+    by_source: dict[tuple[str, str], list[dict]] = {}
+    for ps in ps_entries:
+        by_source.setdefault(((ps.get("memberName") or "").lower(), (ps.get("sourceName") or "").lower()), []).append(ps)
+    from app.services.income_calculator import FREQUENCY_MULTIPLIERS, normalize_frequency
+    for stubs in by_source.values():
+        grosses = [float(str(ps.get("grossPay")).replace(",", "")) for ps in stubs if ps.get("grossPay") not in (None, "", "null")]
+        freq = next((normalize_frequency(ps.get("payInterval")) for ps in stubs if ps.get("payInterval")), None)
+        mult = FREQUENCY_MULTIPLIERS.get(freq or "")
+        if grosses and mult:
+            out.append(sum(grosses) / len(grosses) * mult)
+    return out
+
+
+def _repair_declared_magnitudes(declared: list[dict], reference_total, corroborating: list[float] = ()) -> None:
+    """No line of a certification's income table exceeds the table's total.
+
+    A "$42,997.50" read as "642,997.50" (the dollar sign taken for a six)
+    is a common scan error, and the line then failed every plausibility
+    test while the certification's own total said what it was. A line
+    above the total whose leading digit, dropped, brings it to at most the
+    total AND within 20% of a figure the packet verifies independently (a
+    stub average, a verification's annual) is that misread and is repaired
+    with the printed value kept in evidence. The total can itself be a
+    misread — a "$4,000.00" beside a $47,000 household — so a repair that
+    nothing corroborates is not made; the line is dropped as unreadable.
+    """
+    try:
+        total = float(str(reference_total).replace(",", "")) if reference_total not in (None, "", "null") else None
+    except ValueError:
+        total = None
+    if not total or total <= 0:
+        return
+    from app.services.income_calculator import _PLAUSIBLE_ANNUAL_MAX
+    ceiling = max(_PLAUSIBLE_ANNUAL_MAX.values())
+    for d in declared:
+        annual = _annual_of(d.get("amount"), d.get("amountPeriod"))
+        # The total can be the misread ("$4,000.00" beside a $47,000
+        # household): a line that is plausible on its own is left to the
+        # total-mismatch finding, and only an impossible one is repaired.
+        if annual is None or annual <= total * 1.02 or annual <= ceiling:
+            continue
+        raw = str(d.get("amount")).replace(",", "")
+        repaired = raw[1:] if len(raw) > 1 and raw[0].isdigit() else ""
+        try:
+            fixed = float(repaired) if repaired else None
+        except ValueError:
+            fixed = None
+        fixed_annual = _annual_of(f"{fixed:.2f}", d.get("amountPeriod")) if fixed else None
+        corroborated = fixed_annual is not None and any(
+            abs(fixed_annual - c) / max(c, fixed_annual) <= 0.20 for c in corroborating if c and c > 0
+        )
+        if fixed and fixed_annual is not None and fixed_annual <= total * 1.02 and corroborated:
+            logger.info("Declared income: %s exceeds the certification total %.2f — a leading digit is the "
+                        "dollar sign; read as %.2f (corroborated by a verified figure)", d.get("amount"), total, fixed)
+            d["quote"] = f"{d.get('quote') or ''} [printed {d.get('amount')}; read as {fixed:.2f}]".strip()
+            d["amount"] = f"{fixed:.2f}"
+        else:
+            logger.warning("Declared income: %s exceeds the certification total %.2f and fits no repair — line dropped",
+                           d.get("amount"), total)
+            d["amount"] = None
+            d["matched"] = True
+
+
 def _reconcile_income(vi_entries: list[dict], declared: list[dict], certification_type: str | None,
                       ps_entries: list[dict] | None = None, declared_total=None) -> None:
     """Annotate verified records with what the household declared for them;
@@ -2128,6 +2325,7 @@ def _reconcile_income(vi_entries: list[dict], declared: list[dict], certificatio
             vi["verificationStatus"] = "verified"
 
     stub_sources = _paystub_sources(ps_entries or [])
+    _repair_declared_magnitudes(declared, declared_total, _independent_annuals(vi_entries, ps_entries or []))
 
     for d in _drop_total_rows(declared, "Declared income", declared_total):
         if d.get("incomeType") == "Zero Income" and (d.get("amount") in (None, "0.00")):
@@ -2207,11 +2405,20 @@ def _reconcile_income(vi_entries: list[dict], declared: list[dict], certificatio
                             d.get("documentType"), nearest.get("sourceName"),
                         )
                         continue
-        if not candidates and (d.get("incomeType") or "").lower() in _HOUSEHOLD_LEVEL_INCOME_TYPES:
+        if not candidates and (
+            (d.get("incomeType") or "").lower() in _HOUSEHOLD_LEVEL_INCOME_TYPES
+            or _ss_family(d.get("incomeType"))
+        ):
+            # Child support and assistance reach the household through one
+            # member; so does a child's Social Security or SSI, which the
+            # certification lists under the parent who receives it while
+            # the letter names the child. One verified record of the type,
+            # under another member, with nothing declared for it, is this line.
             same_type = [
                 vi for vi in vi_entries
                 if vi.get("verificationStatus") != "declared_only"
-                and _same_income_type(vi.get("incomeType"), d.get("incomeType"))
+                and (_same_income_type(vi.get("incomeType"), d.get("incomeType"))
+                     or (_ss_family(d.get("incomeType")) and _ss_family(vi.get("incomeType"))))
             ]
             declared_member_has_one = any(
                 _same_member(vi.get("memberName"), d.get("memberName")) for vi in same_type
@@ -2447,8 +2654,8 @@ def _read_declared_assets(prompt: str, settings: Settings, page_texts: dict[int,
         except (TypeError, ValueError):
             page = None
         pages = [page] if page in page_texts else list(page_texts)
-        if amount is not None and float(amount) > 0 and not _amount_on_pages(amount, page_texts, pages):
-            logger.warning("Declared asset: %s on page %s is not printed there — dropped", amount, page)
+        if amount is not None and float(amount) > 0 and not _amount_confirmed(amount, page_texts, pages):
+            logger.warning("Declared asset: %s on page %s is not printed there by every read of the page — dropped", amount, page)
             continue
         if amount is not None and float(amount) > 0 and (r.get("kind") or "asset").lower() == "asset" \
                 and _labelled_total(amount, page_texts, pages):
@@ -2705,12 +2912,31 @@ def _reconcile_assets(records: list[dict], declared: list[dict]) -> None:
         d["matched"] = True
 
 
+def _is_benefit_letter_group(g: DocumentGroup) -> bool:
+    label = (g.document_type or "").lower()
+    if "benefit letter" in label or label.startswith("ssa"):
+        return True
+    text = (g.combined_text or "").lower()
+    return "benefit verification letter" in text and "social security administration" in text
+
+
+def _is_stub_group(g: DocumentGroup) -> bool:
+    label = (g.document_type or "").lower()
+    return "paystub" in label or "pay stub" in label or "pay-slip" in label
+
+
+def _wage_type(income_type) -> bool:
+    t = (income_type or "").lower()
+    return not t or "wage" in t or "employment" in t or "salary" in t
+
+
 def extract_income(
     groups: list[DocumentGroup],
     settings: Settings,
     certification_type: str | None = None,
     household_names: list[str] | None = None,
     declared_total=None,
+    page_reader=None,
 ) -> IncomeExtraction:
     """Extract income: one call per source document, provenance enforced,
     the household's declarations read separately and reconciled in code.
@@ -2752,6 +2978,14 @@ def extract_income(
 
     def _one(g: DocumentGroup) -> tuple[DocumentGroup, list[dict], list[dict]]:
         vis, pss = _read(g, "Extract income data from this document:")
+        if _is_stub_group(g):
+            # A stub's "Child Support" line is a deduction from the wage,
+            # not income received; a stub verifies wages and nothing else.
+            kept_vis = [vi for vi in vis if _wage_type(vi.get("incomeType"))]
+            if len(kept_vis) < len(vis):
+                logger.info("Income: '%s' pages %s: dropped %d non-wage record(s) read off a pay stub",
+                            g.document_type, g.pages, len(vis) - len(kept_vis))
+            vis = kept_vis
         amountless_vi = [vi for vi in vis if (vi.get("sourceName") or vi.get("memberName")) and not _vi_has_amount(vi)]
         amountless_ps = [ps for ps in pss if (ps.get("sourceName") or ps.get("memberName")) and not ps.get("grossPay")]
         if amountless_vi or amountless_ps:
@@ -2787,7 +3021,38 @@ def extract_income(
 
     vi_entries: list[dict] = []
     ps_entries: list[dict] = []
+    by_group: dict[int, tuple[list[dict], list[dict]]] = {}
     for g, vis, pss in _run_per_group(source_groups, _one, settings, "Income"):
+        if not any(_vi_has_amount(vi) for vi in vis):
+            vis = vis + _ssa_letter_records(g, household_names)
+        by_group[id(g)] = (vis, pss)
+
+    # A stub the read took no gross from, or a benefit letter it took no
+    # amount from, is a page the text did not carry: the caller's page
+    # reader transcribes it from the image and the document is read again
+    # — here, before reconciliation, so the records it yields meet the
+    # certification's lines like any other.
+    if page_reader:
+        want: list[int] = []
+        for g in source_groups:
+            vis, pss = by_group.get(id(g), ([], []))
+            if any(not ps.get("grossPay") for ps in pss) or (
+                _is_benefit_letter_group(g) and not any(_vi_has_amount(vi) for vi in vis)
+            ):
+                want.extend(pn for pn in g.pages if pn not in want)
+        if want:
+            reread = set(page_reader(want) or [])
+            for g in source_groups:
+                if any(pn in reread for pn in g.pages):
+                    logger.info("Income: '%s' pages %s re-read from image — extracting the document again",
+                                g.document_type, g.pages)
+                    _, vis, pss = _one(g)
+                    if not any(_vi_has_amount(vi) for vi in vis):
+                        vis = vis + _ssa_letter_records(g, household_names)
+                    by_group[id(g)] = (vis, pss)
+
+    for g in source_groups:
+        vis, pss = by_group.get(id(g), ([], []))
         vi_entries.extend(vis)
         ps_entries.extend(pss)
     _unify_paystub_sources(ps_entries)
