@@ -252,14 +252,30 @@ def _name_similarity(a: str, b: str) -> float:
     # Strategy 3: Character-level similarity
     char_sim = _char_similarity(a_lower, b_lower)
 
-    # Guard: if both names have 2+ parts (first + last) and first names clearly
-    # differ (no prefix match), cap similarity — they're different people
-    if (len(a_parts) >= 2 and len(b_parts) >= 2
-            and not first_match and last_match):
-        # Same last name, different first name → likely siblings/relatives, not variants
-        return min(max(token_sim, name_part_sim, char_sim), 0.40)
+    # Guard: two full names whose given names are different names belong to
+    # different people, whatever the surnames and the letters they share.
+    # "Juan Garcia Ortega" and "Maria Garcia" scored 0.56 on bigrams alone
+    # and a husband's records were renamed after his wife. A given name one
+    # letter off ("Aima" / "Alma") or a prefix ("Mary" / "Maria") is the
+    # same name; anything further apart is not.
+    if len(a_parts) >= 2 and len(b_parts) >= 2 and not first_match:
+        fa, fb = a_parts[0].strip("."), b_parts[0].strip(".")
+        close = (len(fa) >= 4 and len(fb) >= 4 and _edit_distance(fa, fb) <= 1) or (
+            len(fa) == 1 and fb.startswith(fa)) or (len(fb) == 1 and fa.startswith(fb))
+        if not close:
+            return min(max(token_sim, name_part_sim, char_sim), 0.40)
 
     return max(token_sim, name_part_sim, char_sim)
+
+
+def _edit_distance(a: str, b: str) -> int:
+    prev = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        cur = [i]
+        for j, cb in enumerate(b, 1):
+            cur.append(min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (ca != cb)))
+        prev = cur
+    return prev[-1]
 
 
 def _char_similarity(a: str, b: str) -> float:

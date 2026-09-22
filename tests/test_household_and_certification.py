@@ -245,3 +245,13 @@ def test_compound_surnames_printed_whole_or_cut_are_one_member():
     assert _same_member("Arnold Lyons", "Arnold J Lyons")
     assert not _same_member("Juan Garcia Ortega", "Maria Garcia")
     assert not _same_member("Beatriz Ibarra Almanza", "Beatriz Elena Ibarra Morales")
+
+
+def test_different_given_names_are_different_people_whatever_the_surname():
+    from app.services.name_reconciler import _name_similarity, _CLUSTER_THRESHOLD as T
+    assert _name_similarity("Juan Garcia Ortega", "Maria Garcia") < T
+    assert _name_similarity("Doug Ibarra Alfianza", "Aima Morales Ibarra") < T
+    # Variants of one given name still cluster: a letter off, a prefix, an initial.
+    assert _name_similarity("Aima Morales Ibarra", "Alma Morales") >= T
+    assert _name_similarity("Maria Caldera", "Mary A. Caldera") >= T
+    assert _name_similarity("Neftali Arredondo Mora", "Neftali Arredondo") >= T
