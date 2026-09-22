@@ -225,6 +225,14 @@ CRITICAL CLASSIFICATION RULES:
   "Housing Assistance Payments (HAP) Contract", "HUD-Approved Market Rent",
   or a numbered list of tenant/landlord obligations.
 
+- A property's OWN residential lease ("THIS LEASE is made on…", New Lease /
+  Renewal boxes, numbered lease paragraphs, a household table) that is not the
+  HUD model lease is "Lease Agreement", INCLUDE. A "Low Income Housing Tax
+  Credit Lease Addendum" (Section 42 obligations) is "LIHTC Lease Addendum" —
+  it is not the VAWA addendum, which names the Violence Against Women Act.
+  A page headed "Student Certification" / "Student Status Certification" is
+  "Student Status Certification", never part of an application.
+
 - "Correspondence" means letters, emails, notices — NOT any form containing
   legal or boilerplate language.
 
@@ -514,6 +522,17 @@ def classify_and_group(
                 pc.category = new_category
                 pc.notes = "Split by post-group date/income check"
 
+    # A page whose printed heading names another taxonomy label, while
+    # nothing on the page names the label it was given, carries that label.
+    document_groups, relabel_updates = _post_group_title_relabel(document_groups, text_map)
+    for page_num, new_type, new_category, note in relabel_updates:
+        for pc in classification_pages:
+            if pc.page == page_num:
+                pc.document_type = new_type
+                pc.category = new_category
+                pc.fit = "exact"
+                pc.notes = (pc.notes + "; " if pc.notes else "") + note
+
     disagreements = _title_vote_disagreements(classification_pages, text_map)
     if disagreements:
         logger.warning(
@@ -566,6 +585,158 @@ def _title_family(text: str) -> tuple[str, str] | None:
         if any(w in head for w in words):
             return (title or plain[:80]), fam
     return None
+
+
+_MIN_TITLE_NAME = 10   # shorter label names ("TIC", "Lease") match inside other titles
+_HEAD_CHARS = 300      # a form's own title sits at the top of the page
+
+
+def _title_names() -> list[tuple[str, str]]:
+    """(lowercased name, canonical label) for every label and alias the
+    classifier may emit, longest first, for the include and compliance
+    categories only — an ignored type is never assigned by title."""
+    from app.services.doc_taxonomy import COMPLIANCE, INCLUDE, TAXONOMY
+    out: list[tuple[str, str]] = []
+    for label, spec in TAXONOMY.items():
+        if spec["category"] not in (INCLUDE, COMPLIANCE):
+            continue
+        names = {label}
+        names.update(spec["aliases"])
+        bare = re.sub(r"\s*\([^)]*\)\s*$", "", label)
+        if bare != label:
+            names.add(bare)
+        for n in names:
+            low = n.lower().strip()
+            if len(low) >= _MIN_TITLE_NAME:
+                out.append((low, label))
+    return sorted(out, key=lambda t: -len(t[0]))
+
+
+def _name_on(name: str, text: str) -> bool:
+    return re.search(r"(?<![a-z])" + re.escape(name).replace(r"\ ", r"\s+") + r"(?![a-z])", text) is not None
+
+
+# What each certification form prints on its own pages beyond a title the
+# OCR may miss (the OHFA logo header of a TIC is an image). A page scoring
+# two or more of another form's phrases and none of its own label's is
+# that form.
+_CERT_FINGERPRINTS = {
+    "Tenant Income Certification (TIC)": (
+        "tenant income certification", "hh meets income restriction", "income equates to", "amgi",
+        "part ii - household composition", "part iii - income other than assets",
+        "income from assets (use annual amounts)", "unit meets rent restriction",
+    ),
+    "HUD 50059": (
+        "50059", "owner's certification of compliance", "tracs", "hud's tenant eligibility",
+        "anticipated voucher date", "total tenant payment",
+    ),
+    "HUD 3560 Form": (
+        "3560-8", "rd 3560", "rural development", "tenant certification", "usda",
+    ),
+}
+
+
+def _cert_label_by_fingerprint(current: str, text: str) -> tuple[str, str] | None:
+    """(label, phrase) another certification form's printed markers assign
+    to a page labelled as a certification form, or None."""
+    if current not in _CERT_FINGERPRINTS:
+        return None
+    plain = re.sub(r"\s+", " ", strip_html(text or "")).lower()
+    if any(phrase in plain for phrase in _CERT_FINGERPRINTS[current]):
+        return None
+    best: tuple[int, str, str] | None = None
+    for label, phrases in _CERT_FINGERPRINTS.items():
+        if label == current:
+            continue
+        hits = [ph for ph in phrases if ph in plain]
+        if len(hits) >= 2 and (best is None or len(hits) > best[0]):
+            best = (len(hits), label, hits[0])
+    return (best[1], best[2]) if best else None
+
+
+def _label_by_printed_title(current: str, text: str) -> tuple[str, str] | None:
+    """(label, title name) the page's own heading assigns, or None.
+
+    The heading is the top of the page. The longest label name printed there
+    wins; if the page anywhere names the label it already has, it keeps it.
+    """
+    plain = re.sub(r"\s+", " ", strip_html(text or "")).lower()
+    head = plain[:_HEAD_CHARS]
+    names = _title_names()
+    own = [n for n, label in names if label == current]
+    if any(_name_on(n, plain) for n in own):
+        return None
+    for name, label in names:
+        if label != current and _name_on(name, head):
+            return label, name
+    return _cert_label_by_fingerprint(current, text)
+
+
+def _post_group_title_relabel(
+    groups: list[DocumentGroup],
+    text_map: dict[int, str],
+) -> tuple[list[DocumentGroup], list[tuple[int, str, str, str]]]:
+    """Give a page the label its printed title names.
+
+    The model labelled an OHFA Tenant Income Certification as the RD 3560
+    form on one run and grouped a "Student Certification" into the
+    application on another; the labels decide which member fields are
+    required and which forms are present, so the packet was then scored
+    for a column the form does not have and told it lacked a form it held.
+    A label the page itself prints, when nothing on the page names the
+    label assigned, is not a judgement call. Pages that change label leave
+    their group; runs of pages with one label become groups.
+    """
+    from app.services.doc_taxonomy import TAXONOMY
+    updated: list[DocumentGroup] = []
+    updates: list[tuple[int, str, str, str]] = []
+    for g in groups:
+        if g.document_type not in TAXONOMY or category_of(g.document_type) not in ("include", "compliance"):
+            updated.append(g)
+            continue
+        labels: list[tuple[int, str, str | None]] = []
+        for pn in g.pages:
+            found = _label_by_printed_title(g.document_type, text_map.get(pn, ""))
+            labels.append((pn, found[0] if found else g.document_type, found[1] if found else None))
+        if all(label == g.document_type for _, label, _ in labels):
+            updated.append(g)
+            continue
+        # A certification form is one document over its pages: when the
+        # pages that carry a title all name one other form and no page
+        # names the assigned one, the form's second page follows the first.
+        if family_of(g.document_type) == "cert":
+            named = {label for _, label, t in labels if t}
+            if len(named) == 1:
+                target = next(iter(named))
+                title = next(t for _, label, t in labels if t)
+                labels = [(pn, target, t or title) for pn, _, t in labels]
+        runs: list[list[tuple[int, str, str | None]]] = []
+        for item in labels:
+            if runs and runs[-1][-1][1] == item[1]:
+                runs[-1].append(item)
+            else:
+                runs.append([item])
+        for run in runs:
+            pages = [pn for pn, _, _ in run]
+            label = run[0][1]
+            title = next((t for _, _, t in run if t), None)
+            note = None
+            if label != g.document_type:
+                note = f"relabelled from '{g.document_type}': the page is headed '{title}'"
+                for pn in pages:
+                    updates.append((pn, label, category_of(label), note))
+                logger.info("Classification: pages %s relabelled '%s' → '%s' (page headed %r)",
+                            pages, g.document_type, label, title)
+            updated.append(DocumentGroup(
+                document_type=label,
+                category=category_of(label),
+                person_name=g.person_name,
+                pages=pages,
+                page_range=str(pages[0]) if len(pages) == 1 else f"{pages[0]}-{pages[-1]}",
+                combined_text="\n\n".join(f"--- Page {p} ---\n{text_map.get(p, '')}" for p in pages),
+                notes=note or g.notes,
+            ))
+    return updated, updates
 
 
 def _title_vote_disagreements(pages: list, text_map: dict[int, str]) -> list[tuple[int, str, str, str]]:

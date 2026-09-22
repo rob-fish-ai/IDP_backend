@@ -80,6 +80,9 @@ class HouseholdDemographics(BaseModel):
 class CertificationInfo(BaseModel):
     certificationType: Optional[str] = None  # MI, AR, AR-SC, IR
     effectiveDate: Optional[str] = None
+    # The move-in date the form prints. Equal to the effective date, the
+    # document is a move-in certification whatever the caller said it was.
+    moveInDate: Optional[str] = None
     numberOfBedrooms: Optional[str] = None
     grossRent: Optional[str] = None
     tenantRent: Optional[str] = None

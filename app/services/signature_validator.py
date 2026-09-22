@@ -12,11 +12,13 @@ from app.schemas.extraction import (
     HouseholdDemographics,
 )
 from app.services.findings import (
+    ASSIGN_CLIENT,
     ASSIGN_INTERNAL,
     CATEGORY_FILE_REVIEW,
     RESOLVE_PRESENCE,
     make_finding,
 )
+from app.services.members import is_unborn
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +39,7 @@ def validate_signatures(
     """
     findings: list = []
     findings.extend(_check_signature_date_agreement(certification_info))
+    findings.extend(_check_signed_after_effective(certification_info))
     adult_count = _count_adults(household, certification_info)
     member_count = len(household.houseHold) if household else 0
 
@@ -96,8 +99,13 @@ def validate_signatures(
             )
 
     # --- 6. Race and Ethnic Data Form: one per member, signed, dated ---
+    # A HUD form (HUD-27061-H); a tax-credit packet owes none, and this
+    # rule fired on every LIHTC household until it was gated like the
+    # citizenship rule above it.
     race_docs = by_type.get("HUD Race and Ethnic Data Form", [])
-    if member_count > 0 and not race_docs:
+    if not is_hud_or_usda:
+        pass
+    elif member_count > 0 and not race_docs:
         findings.append(
             "Missing required compliance document: Race and Ethnic Data "
             "Form — one per household member (Section 11)"
@@ -236,6 +244,8 @@ def _count_adults(
 
     count = 0
     for member in household.houseHold:
+        if is_unborn(member):
+            continue
         dob = _parse_date(member.DOB)
         if dob:
             age = (effective - dob).days / 365.25
@@ -261,6 +271,46 @@ def _parse_date(value: str | None) -> date | None:
         return datetime.strptime(value.strip(), "%Y-%m-%d").date()
     except ValueError:
         return None
+
+
+# A certification is executed on or before its effective date; programs
+# allow a few days for signatures to be collected. Beyond this many days
+# the household certified figures for a period that was already running.
+SIGNATURE_LAG_DAYS = 14
+
+
+def _check_signed_after_effective(
+    certification_info: CertificationInfo | None,
+) -> list[Finding]:
+    """A certification signed well after its effective date.
+
+    Two move-in certifications effective 05/29 were signed on 09/10; the
+    household lived in the unit for three and a half months on figures no
+    one had certified. The date pair is read from the form, so the finding
+    states the gap and leaves the program's tolerance to the reviewer.
+    """
+    if certification_info is None:
+        return []
+    signed = _parse_date(certification_info.signatureDate)
+    effective = _parse_date(certification_info.effectiveDate)
+    if not signed or not effective:
+        return []
+    lag = (signed - effective).days
+    if lag <= SIGNATURE_LAG_DAYS:
+        return []
+    return [make_finding(
+        "CERT_SIGNED_AFTER_EFFECTIVE_DATE",
+        f"Certification effective {effective.isoformat()} was signed on {signed.isoformat()}, "
+        f"{lag} days later — the household certified its income after the certification "
+        f"period began; confirm the dates and whether the program permits the delay (Section 11)",
+        label="Certification signed after its effective date",
+        category=CATEGORY_FILE_REVIEW,
+        subject_type="certification",
+        subject_ref={"field": "signatureDate"},
+        assignment=ASSIGN_CLIENT,
+        correction_required="Confirm the signature and effective dates; obtain a timely-signed certification if the program requires one",
+        resolution_type=RESOLVE_PRESENCE,
+    )]
 
 
 def _check_signature_date_agreement(

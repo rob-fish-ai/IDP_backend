@@ -483,6 +483,7 @@ def validate_certification_info(data: dict) -> dict:
         return data
 
     ci["effectiveDate"] = normalize_date(ci.get("effectiveDate"))
+    ci["moveInDate"] = normalize_date(ci.get("moveInDate"))
     ci["signatureDate"] = normalize_date(ci.get("signatureDate"))
     ci["applicationSignDate"] = normalize_date(ci.get("applicationSignDate"))
     ci["grossRent"] = normalize_money(ci.get("grossRent"))

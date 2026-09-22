@@ -307,6 +307,30 @@ def run_extraction_pipeline(
             certification_info.certificationType = ctx.certification_type
     elif certification_info and certification_info.certificationType:
         ctx.certification_type = certification_info.certificationType
+    # The caller's type is the contract and stays on the record; the
+    # document-requirement rules follow what the document shows itself to
+    # be, and a contradiction is reported rather than acted on silently.
+    cert_type_findings: list = []
+    ctx.document_certification_type = ctx.certification_type
+    if certification_info:
+        shown = _document_certification_type(certification_info)
+        if shown:
+            ctx.document_certification_type = shown
+            if ctx.certification_type and not _same_cert_type(shown, ctx.certification_type):
+                cert_type_findings.append(make_finding(
+                    "CERT_TYPE_CONTRADICTS_DOCUMENT",
+                    f"The case was submitted as {ctx.certification_type} but the certification form "
+                    f"shows a move-in: its move-in date {certification_info.moveInDate} equals the "
+                    f"effective date — confirm the certification type; the document rules for a "
+                    f"move-in were applied (Section 12)",
+                    label="Submitted certification type contradicts the document",
+                    category=CATEGORY_FILE_REVIEW,
+                    subject_type="certification",
+                    subject_ref={"field": "certificationType"},
+                    assignment=ASSIGN_CLIENT,
+                    correction_required="Confirm the certification type against the form and resubmit if it was entered wrongly",
+                    resolution_type=RESOLVE_PRESENCE,
+                ))
 
     # Step 3b2: Inherit memberName/sourceName on orphan paystubs from VI entries
     if income:
@@ -486,6 +510,8 @@ def run_extraction_pipeline(
     findings.extend(name_findings)
     findings.extend(questionnaire_findings)
     findings.extend(required_field_findings)
+    findings.extend(cert_type_findings)
+    findings.extend(_rent_identity_findings(certification_info, document_groups))
     findings.extend(_reconciliation_findings(income, ctx))
     findings.extend(identity_findings)
     # Pages the classifier could only place approximately: reviewable, not
@@ -1111,9 +1137,10 @@ def _required_cert_field_finding(field: str, transcript: str, pages: list[int]):
     if blank:
         return make_finding(
             "REQUIRED_FIELD_BLANK_ON_FORM",
-            f"Certification form leaves '{title}' blank — the field is on the form "
-            f"but no value was entered; the certification is incomplete without it",
-            label=f"{title} left blank on the certification",
+            f"Certification form shows no value for '{title}' — the field is on the form and "
+            f"no entry was legible, even on the page image; if the form carries a faint "
+            f"handwritten entry, read it by hand, otherwise the certification is incomplete without it",
+            label=f"{title} shows no value on the certification",
             category=category,
             subject_ref={"field": field},
             result="non_compliant",
@@ -1712,7 +1739,9 @@ def _reconstruct_orphan_paystub_sources(income) -> None:
             # wage depends on the employer and the program, neither knowable
             # from a stub, so the broadest wage term the vocabulary carries.
             incomeType="Non-Federal Wage",
-            type_of_VOI="Employer Verification",
+            # The stubs are the verification; the scorer reads this and does
+            # not expect the fields an employer's verification form carries.
+            type_of_VOI="Pay Stubs",
             sourcePages=sorted({p for ps in source_ps for p in (ps.sourcePages or [])}),
             verificationStatus="verified",
             # selfDeclaredAmount and every verification field stay unset:
@@ -1996,6 +2025,65 @@ def _llm_fallback(label, func, groups, settings, *, default=None, **kwargs):
         ) from exc
 
 
+def _document_certification_type(certification_info) -> str | None:
+    """The type the certification form itself shows, or None.
+
+    A move-in date equal to the effective date is a move-in certification;
+    nothing else on a form decides the type without the checkbox the
+    extractor already reads (and which the caller's value overrides).
+    """
+    move_in = (certification_info.moveInDate or "").strip()
+    effective = (certification_info.effectiveDate or "").strip()
+    if move_in and effective and move_in == effective:
+        return "MI"
+    return None
+
+
+def _same_cert_type(a: str, b: str) -> bool:
+    """MI and IC are the same event under two names."""
+    initial = {"MI", "IC", "IN"}
+    a, b = a.upper(), b.upper()
+    return a == b or (a in initial and b in initial)
+
+
+def _rent_identity_findings(certification_info, document_groups) -> list:
+    """On a tax-credit certification, tenant rent + utility allowance is the
+    gross rent by the form's own definition. A read that breaks the identity
+    is a misread of one of the three, or an arithmetic error on the form —
+    either way one of the figures is not what it should be, and the finding
+    names all three so the score reflects it."""
+    from app.services.doc_taxonomy import canonical_label
+    if certification_info is None:
+        return []
+    if not any(
+        canonical_label(g.document_type)[0] == "Tenant Income Certification (TIC)"
+        and not is_previous_certification(g.document_type) and g.category != "ignore"
+        for g in document_groups
+    ):
+        return []
+    try:
+        tenant = float(str(certification_info.tenantRent).replace(",", ""))
+        allowance = float(str(certification_info.utilityAllowance).replace(",", ""))
+        gross = float(str(certification_info.grossRent).replace(",", ""))
+    except (TypeError, ValueError):
+        return []
+    if abs(tenant + allowance - gross) <= 1.0:
+        return []
+    return [make_finding(
+        "RENT_IDENTITY_MISMATCH",
+        f"Tenant rent ${tenant:,.2f} + utility allowance ${allowance:,.2f} = ${tenant + allowance:,.2f}, "
+        f"but the certification's gross rent reads ${gross:,.2f} — one of the three figures was misread "
+        f"(handwritten rent fields are the usual cause) or the form's arithmetic is wrong; confirm all three "
+        f"against the certification (Section 5)",
+        label="Rent fields do not add up on the certification",
+        category=CATEGORY_UNIT_RENT,
+        subject_type="certification",
+        assignment=ASSIGN_INTERNAL,
+        correction_required="Read tenant rent, utility allowance and gross rent from the form and correct the one that disagrees",
+        resolution_type=RESOLVE_PRESENCE,
+    )]
+
+
 def _deduplicate_household_members(household) -> list[str]:
     """Merge duplicate household members from multiple extraction sources.
 
@@ -2010,14 +2098,48 @@ def _deduplicate_household_members(household) -> list[str]:
     if len(members) < 2:
         return findings
 
-    # Group by normalized name key (first + last, lowered)
-    groups: dict[str, list[int]] = {}
+    # Group by normalized name key (first + last, lowered) — and, across
+    # different name keys, by date of birth plus SSN last four: "Aridia
+    # Perez Trinidad" on the certification and "Aridia Perez" on the
+    # application share both, and are one person however the surname was
+    # written. A name match alone or an identity match alone unites them.
+    parent = list(range(len(members)))
+
+    def _find(i: int) -> int:
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+
+    def _union(a: int, b: int) -> None:
+        parent[_find(a)] = _find(b)
+
+    by_name: dict[str, int] = {}
+    by_identity: dict[tuple[str, str], int] = {}
+    identity_merged: set[int] = set()
     for i, m in enumerate(members):
         first = (m.FirstName or "").lower().strip()
         last = (m.LastName or "").lower().strip()
         key = f"{first} {last}".strip()
         if key:
-            groups.setdefault(key, []).append(i)
+            if key in by_name:
+                _union(i, by_name[key])
+            else:
+                by_name[key] = i
+        dob = (m.DOB or "").strip()
+        last4 = (m.socialSecurityNumber or "").strip()[-4:]
+        if dob and len(last4) == 4 and last4.isdigit():
+            ident = (dob, last4)
+            if ident in by_identity:
+                if _find(i) != _find(by_identity[ident]):
+                    identity_merged.add(i)
+                    identity_merged.add(by_identity[ident])
+                _union(i, by_identity[ident])
+            else:
+                by_identity[ident] = i
+    groups: dict[str, list[int]] = {}
+    for i in range(len(members)):
+        groups.setdefault(str(_find(i)), []).append(i)
 
     # Merge duplicates
     to_remove: set[int] = set()
@@ -2035,8 +2157,14 @@ def _deduplicate_household_members(household) -> list[str]:
         def _field_count(m) -> int:
             return sum(1 for f in _MERGE_FIELDS if getattr(m, f, None) is not None)
 
-        # Sort by field count descending — richest record first
-        scored = sorted(indices, key=lambda i: _field_count(members[i]), reverse=True)
+        # Richest record first; between equals, the fuller name (the
+        # certification prints the whole surname, the application half of it)
+        scored = sorted(
+            indices,
+            key=lambda i: (_field_count(members[i]),
+                           len(f"{members[i].FirstName or ''} {members[i].LastName or ''}")),
+            reverse=True,
+        )
         primary_idx = scored[0]
         primary = members[primary_idx]
 
@@ -2069,10 +2197,12 @@ def _deduplicate_household_members(household) -> list[str]:
             to_remove.add(dup_idx)
             dup_name = f"{dup.FirstName or ''} {dup.LastName or ''}".strip()
             primary_name = f"{primary.FirstName or ''} {primary.LastName or ''}".strip()
+            basis = (" — same date of birth and SSN last four under a different spelling of the name"
+                     if dup_idx in identity_merged or primary_idx in identity_merged else "")
             findings.append(make_finding(
                 "MEMBER_MERGED",
                 f"Merged duplicate household member '{dup_name}' "
-                f"(member #{dup.householdMemberNumber or '?'} into #{primary.householdMemberNumber or '?'})",
+                f"(member #{dup.householdMemberNumber or '?'} into #{primary.householdMemberNumber or '?'}){basis}",
                 label="One member was extracted twice",
                 category=CATEGORY_MEMBER,
                 subject_type="household_member",
@@ -2545,9 +2675,10 @@ def _generate_findings(
     ))
 
     # --- 16. Certification type-specific requirements (Section 12) ---
-    cert_type = ctx.certification_type if ctx else None
+    cert_type = (ctx.document_certification_type or ctx.certification_type) if ctx else None
     findings.extend(validate_cert_type_requirements(
         cert_type, document_groups, inventory_hud, household,
+        funding_program=ctx.funding_program if ctx else None,
     ))
 
     # --- 17. Affirmative response cross-reference (Section 11) ---

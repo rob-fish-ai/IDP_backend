@@ -14,6 +14,7 @@ from app.schemas.extraction import (
 from app.services.doc_taxonomy import assert_known, is_current_certification_form
 from app.services.llm_service import call_llm_json
 from app.services import validation
+from app.services.members import is_unborn
 from app.services.text_sanitizer import (
     strip_html,
     drop_records_without_identity,
@@ -98,6 +99,11 @@ EXTRACTION RULES:
   TIC → "Relationship to Head of Household" column; HUD 50059 → field 36 "Relat" (codes: H=Head,
   S=Spouse, K=Co-Head, D=Dependent, F=Foster, L=Live-in Aide, O=Other Adult — expand the code);
   RD 3560 → relationship column. null only when no form states it.
+- A household composition row for an unborn child ("Unborn Child", "Unborn",
+  "Expected Child", "Baby (due …)") IS a member — the household size counts it
+  and the income limit depends on it. Return it as FirstName "Unborn", LastName
+  "Child", relationship "Unborn Child", with DOB, SSN, gender, student and
+  disabled null. Never drop the row for lacking a name or a date of birth.
 - disabled: "Y" if member is disabled, "N" if not disabled, null if unknown/not documented.
   HUD 50059 has MULTIPLE disability indicators:
   (a) Per-member: Section C column "Special Status" or "Disab" or "H/C" — check marks, "Y", "1", "X" = "Y"; blank = "N"
@@ -174,6 +180,10 @@ FIELDS TO EXTRACT:
   date is a year (or more) before the certification period, you likely
   grabbed the move-in date; re-read the header. Never use a previous
   year's certification form for this field when a current one is present.
+- moveInDate: the move-in date the form prints ("Move-in Date" on a TIC or
+  HUD 50059, "Date of Initial Occupancy"), YYYY-MM-DD. null when the form has
+  no such line. This is a separate field from effectiveDate even when the two
+  dates are equal.
 - numberOfBedrooms: Number of bedrooms. Numeric string.
 - grossRent: Total tenant payment or gross rent amount. Numeric string with 2 decimals, no $ or commas.
   CAUTION: values labeled "Current rent limit for this unit", "Maximum
@@ -642,6 +652,16 @@ def extract_certification_info(
                     field, value, form_pages,
                 )
                 cert_info_dict[field] = None
+        # The move-in date decides whether the form is a move-in
+        # certification; the model reads it on some runs and not others,
+        # and the label is printed, so the form text answers directly.
+        if not cert_info_dict.get("moveInDate"):
+            m = _MOVE_IN_DATE_RE.search(form_text)
+            if m:
+                recovered = validation.normalize_date(m.group(1))
+                if recovered:
+                    cert_info_dict["moveInDate"] = recovered
+                    logger.info("Cert info: moveInDate %s read from the form text", recovered)
 
     # Strip HTML/markup leakage from field values before schema validation.
     cert_info_dict = scrub_extracted_dict(cert_info_dict) or {}
@@ -654,7 +674,11 @@ def extract_certification_info(
 
 
 # Date fields that must be printed on the certification form's own pages.
-_FORM_DATE_FIELDS = ("signatureDate",)
+_FORM_DATE_FIELDS = ("signatureDate", "moveInDate")
+_MOVE_IN_DATE_RE = re.compile(
+    r"move[\s-]*in\s*date[:\s]*(\d{1,2}\s*[/.-]\s*\d{1,2}\s*[/.-]\s*\d{2,4}|\d{4}-\d{2}-\d{2})",
+    re.IGNORECASE,
+)
 _MONTH_NAMES = ("january", "february", "march", "april", "may", "june", "july", "august",
                 "september", "october", "november", "december")
 
@@ -838,6 +862,8 @@ def required_member_gaps(members: list[dict]) -> list[dict]:
     """[{name, missing: [field, ...]}] for members with a null required cell."""
     gaps = []
     for m in members:
+        if is_unborn(m):
+            continue   # no date of birth or SSN exists yet
         missing = [f for f in REQUIRED_MEMBER_FIELDS if not m.get(f)]
         name = _member_name_key(m)
         if missing and name:
@@ -865,6 +891,8 @@ Field rules:
   L=Live-in Aide, O=Other Adult — expand the code.
 - A cell that is blank on the form is null. Do not guess, and do not copy
   another member's value.
+- A row for an unborn child ("Unborn Child") is a member: FirstName "Unborn",
+  LastName "Child", relationship "Unborn Child", every other cell null.
 
 Return ONLY valid JSON:
 {"houseHold": [{"FirstName": "...", "LastName": "...", "DOB": ..., "socialSecurityNumber": ..., "relationship": ...}]}"""
@@ -1284,6 +1312,54 @@ def _value_forms(value: str) -> tuple[set[str], str]:
     return forms, re.sub(r"\D", "", raw)
 
 
+# A whole-form total ("Total Value of Non-Necessary Personal Property",
+# "Total of Net Assets", "Total Value all Assets", "Total Annual Household
+# Income"), not a per-type subtotal ("Total Checking (all)"), which for a
+# one-account household is the account.
+_GRAND_TOTAL_RE = re.compile(
+    r"\btotal\s+(?:[\w'\"/-]+\s+){0,3}?(?:value|assets|income)\b",
+    re.IGNORECASE,
+)
+_AMOUNT_TOKEN_RE = re.compile(r"\$?\s*(\d[\d,]*(?:\.\d+)?)")
+
+
+def _labelled_total(value, page_texts: dict[int, str], pages: list[int]) -> bool:
+    """Whether every printing of this amount on the page is the first figure
+    after a whole-form total label.
+
+    A sworn statement's "Total Value of Non-Necessary Personal Property:
+    $25.00" restated the one checking account declared two pages earlier
+    and became a second asset. The amount must be printed nowhere else on
+    the page: a certification's single income line is printed in its row
+    and again on the "Total Annual Household Income" line, and the row is
+    the declaration. A label owns only the first amount after it, within a
+    short reach, so a label above a table does not claim the table's rows.
+    """
+    forms, digits = _value_forms(value)
+    if not digits:
+        return False
+    for pn in pages:
+        plain = re.sub(r"\s+", " ", strip_html(page_texts.get(pn, "")))
+        printings = [
+            m for m in _AMOUNT_TOKEN_RE.finditer(plain)
+            if _value_forms(m.group(1))[0] & forms
+        ]
+        if not printings:
+            continue
+        owned = set()
+        for label in _GRAND_TOTAL_RE.finditer(plain):
+            after = plain[label.end():label.end() + 120]
+            first = _AMOUNT_TOKEN_RE.search(after)
+            # A nearer "total" between the label and the amount (a column
+            # header "Total Value" above rows headed "Total Checking") is
+            # the one that owns the amount, and it is not a whole-form total.
+            if first and not re.search(r"\btotal\b", after[:first.start()], re.IGNORECASE):
+                owned.add(label.end() + first.start())
+        if all(m.start() in owned for m in printings):
+            return True
+    return False
+
+
 def _amount_on_pages(value, page_texts: dict[int, str], pages: list[int]) -> bool:
     forms, digits = _value_forms(value)
     if not digits:
@@ -1356,21 +1432,47 @@ def _unify_paystub_sources(stubs: list[dict]) -> int:
     on one stub and not the next; OCR spells the agency two ways. Read one
     page at a time, the same job came out as three employers with one stub
     each, and with fewer than three stubs apiece nothing was annualised.
-    Within a member, stubs that share a printed employee ID or whose
-    employer names are near-identical are one source: they take the name
-    most of them carry (a null header yields to any read name), and each
-    renamed stub records what its page printed. Returns stubs renamed.
+    Stubs of one person (given names agree, one full name contains the
+    other) that share a printed employee ID, whose employer names are
+    near-identical, or whose year-to-date figures run on from one stub to
+    the next are one source: they take the name most of them carry (a null
+    header yields to any read name), and each renamed stub records what its
+    page printed. Returns stubs renamed.
     """
     from difflib import SequenceMatcher
+    from app.services.income_calculator import _given_names_conflict
 
-    by_member: dict[str, list[dict]] = {}
-    for ps in stubs:
-        by_member.setdefault((ps.get("memberName") or "").lower().strip(), []).append(ps)
+    def _same_person(a: dict, b: dict) -> bool:
+        # One stub prints the whole surname, the next half of it; the given
+        # name must agree and one full name must contain the other.
+        na, nb = (a.get("memberName") or "").lower().strip(), (b.get("memberName") or "").lower().strip()
+        if not na or not nb:
+            return True
+        if _given_names_conflict(na, nb):
+            return False
+        ka, kb = _name_key(na), _name_key(nb)
+        return ka.startswith(kb) or kb.startswith(ka)
 
+    def _f(v):
+        try:
+            return float(str(v).replace(",", "")) if v not in (None, "", "null") else None
+        except ValueError:
+            return None
+
+    def _ytd_continuous(a: dict, b: dict) -> bool:
+        # Year-to-date on the later stub equals year-to-date on the earlier
+        # one plus the later gross: the two are consecutive stubs of one job.
+        first, second = sorted((a, b), key=lambda ps: str(ps.get("payDate") or ""))
+        y1, y2, g2 = _f(first.get("ytdGross")), _f(second.get("ytdGross")), _f(second.get("grossPay"))
+        if y1 is None or y2 is None or g2 is None or not first.get("payDate") or not second.get("payDate"):
+            return False
+        return abs((y2 - y1) - g2) <= 0.02
+
+    # Cluster across the whole list: the member name itself varies between
+    # stubs, so grouping on it kept two stubs of one job apart.
+    clusters_of = [stubs] if len(stubs) >= 2 else []
     changed = 0
-    for group in by_member.values():
-        if len(group) < 2:
-            continue
+    for group in clusters_of:
         parent = list(range(len(group)))
 
         def _find(i):
@@ -1380,12 +1482,16 @@ def _unify_paystub_sources(stubs: list[dict]) -> int:
             return i
 
         def _same_source(a: dict, b: dict) -> str | None:
+            if not _same_person(a, b):
+                return None
             ida, idb = _name_key(a.get("employeeId")), _name_key(b.get("employeeId"))
             if ida and idb and ida == idb:
                 return "same employee ID"
             na, nb = _name_key(a.get("sourceName")), _name_key(b.get("sourceName"))
             if na and nb and (na == nb or SequenceMatcher(None, na, nb).ratio() >= 0.8):
                 return "near-identical employer name"
+            if _ytd_continuous(a, b):
+                return "continuous year-to-date"
             return None
 
         reasons: dict[tuple[int, int], str] = {}
@@ -1767,6 +1873,9 @@ def _extract_declared_income(groups: list[DocumentGroup], settings: Settings,
         pages = [page] if page in page_texts else list(page_texts)
         if amount is not None and float(amount) > 0 and not _amount_on_pages(amount, page_texts, pages):
             logger.warning("Declared income: %s on page %s is not printed there — dropped", amount, page)
+            continue
+        if amount is not None and float(amount) > 0 and _labelled_total(amount, page_texts, pages):
+            logger.info("Declared income: %s on page %s is printed on a total line — not a source", amount, page)
             continue
         out.append({
             "memberName": validation.to_title_case(r.get("memberName")) if r.get("memberName") else None,
@@ -2249,21 +2358,85 @@ def _extract_declared_assets(groups: list[DocumentGroup], settings: Settings,
     if household_names:
         prompt += _HOUSEHOLD_BLOCK.format(names="; ".join(household_names))
     prompt += _get_cert_context(certification_type)
-    try:
-        result = call_llm_json(DECLARED_ASSET_PROMPT, prompt, settings)
-    except Exception:
-        logger.exception("Declared assets: call failed — treating as no declarations")
-        return []
-    rows = result.get("declared") if isinstance(result, dict) else None
-    if not isinstance(rows, list):
-        return []
     page_texts: dict[int, str] = {}
     doc_of_page: dict[int, str] = {}
     for g in groups:
         page_texts.update(_group_page_texts(g))
         for pn in g.pages:
             doc_of_page[pn] = g.document_type
+    out, totals = _read_declared_assets(prompt, settings, page_texts, doc_of_page, groups)
+    # A read that returned only a form's total line saw a total the lines
+    # behind it make up; the same documents are asked once more for those
+    # lines. One run listed the application's three accounts, the next only
+    # its "Total cash value … $610" line.
+    if not out and totals:
+        logger.info("Declared assets: only total line(s) read (%s) — asking once more for the lines behind them",
+                    ", ".join(totals))
+        again = (
+            prompt
+            + "\n\nThe previous read returned only the total line(s) "
+            + ", ".join(f"${t}" for t in totals)
+            + ". Return the individual asset lines printed on these pages (each account or holding with "
+            "its own value), whether or not they add up to the total, and NOT the total lines themselves. "
+            "Return {\"declared\": []} only if no individual asset line is printed."
+        )
+        out, _ = _read_declared_assets(again, settings, page_texts, doc_of_page, groups)
+    # A read that returned nothing from pages that print balances beside
+    # asset labels missed them; the pages are read once more with the
+    # gap stated. One run of the same packet listed three accounts, the
+    # next returned an empty list.
+    elif not out and not totals:
+        printed = _asset_amounts_printed(page_texts)
+        if printed:
+            logger.info("Declared assets: no line read although the pages print asset amounts (%s) — reading once more",
+                        ", ".join(f"{v:.2f}" for v in sorted(printed)[:6]))
+            again = (
+                prompt
+                + "\n\nThe previous read returned no asset line, yet these pages print amounts beside asset "
+                "labels (" + ", ".join(f"${v:,.2f}" for v in sorted(printed)[:6]) + "). Read them again and "
+                "return every asset the household declares with its value. Return {\"declared\": []} only "
+                "if every such amount is a form threshold, a total, or $0."
+            )
+            out, _ = _read_declared_assets(again, settings, page_texts, doc_of_page, groups)
+    return out
+
+
+_ASSET_AMOUNT_RE = re.compile(
+    r"\b(checking|savings|cash|balance|account|asset|value|market|retirement|401k|ira|stock|bond|cd)\b"
+    r"[^$\n]{0,60}?\$\s*(\d[\d,]*(?:\.\d{2})?)",
+    re.IGNORECASE,
+)
+
+
+def _asset_amounts_printed(page_texts: dict[int, str]) -> set[float]:
+    """Dollar figures of at least $1 printed within reach of an asset label,
+    excluding the thresholds forms print as text."""
+    found: set[float] = set()
+    for text in page_texts.values():
+        plain = strip_html(text or "")
+        for m in _ASSET_AMOUNT_RE.finditer(plain):
+            try:
+                v = float(m.group(2).replace(",", ""))
+            except ValueError:
+                continue
+            if 1 <= v < 1_000_000 and v not in (5000.0, 50000.0, 52787.0):
+                found.add(v)
+    return found
+
+
+def _read_declared_assets(prompt: str, settings: Settings, page_texts: dict[int, str],
+                          doc_of_page: dict[int, str], groups: list[DocumentGroup]) -> tuple[list[dict], list[str]]:
+    """One declared-asset read: (lines kept, total-line amounts refused)."""
+    try:
+        result = call_llm_json(DECLARED_ASSET_PROMPT, prompt, settings)
+    except Exception:
+        logger.exception("Declared assets: call failed — treating as no declarations")
+        return [], []
+    rows = result.get("declared") if isinstance(result, dict) else None
+    if not isinstance(rows, list):
+        return [], []
     out: list[dict] = []
+    totals: list[str] = []
     for r in rows:
         if not isinstance(r, dict):
             continue
@@ -2276,6 +2449,11 @@ def _extract_declared_assets(groups: list[DocumentGroup], settings: Settings,
         pages = [page] if page in page_texts else list(page_texts)
         if amount is not None and float(amount) > 0 and not _amount_on_pages(amount, page_texts, pages):
             logger.warning("Declared asset: %s on page %s is not printed there — dropped", amount, page)
+            continue
+        if amount is not None and float(amount) > 0 and (r.get("kind") or "asset").lower() == "asset" \
+                and _labelled_total(amount, page_texts, pages):
+            logger.info("Declared asset: %s on page %s is printed on a total line — not an asset", amount, page)
+            totals.append(amount)
             continue
         out.append({
             "assetOwner": validation.to_title_case(r.get("assetOwner")) if r.get("assetOwner") else None,
@@ -2290,7 +2468,7 @@ def _extract_declared_assets(groups: list[DocumentGroup], settings: Settings,
             "documentType": doc_of_page.get(page) if page else (groups[0].document_type if len(groups) == 1 else None),
             "matched": False,
         })
-    return out
+    return out, totals
 
 
 _ASSET_FAMILIES = {

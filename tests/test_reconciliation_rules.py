@@ -419,3 +419,20 @@ def test_stubs_alone_verify_a_disclosed_job_and_a_self_certification_covers_a_ch
     bare = [DocumentGroup(document_type="Tenant Income Certification (TIC)", category="include", pages=[1], page_range="1", combined_text="x")]
     texts = validate_affirmative_responses(disclosures, bare)
     assert any("Employment disclosed" in t for t in texts) and any("Checking account disclosed" in t for t in texts)
+
+
+def test_stubs_of_one_person_spelled_two_ways_with_continuous_ytd_are_one_employer():
+    a = _ps(None, member="Aridia Perez Trinidad", emp_id=None, page=26)
+    a.update({"payDate": "2026-06-21", "grossPay": "432.00", "ytdGross": "6250.50"})
+    b = _ps("Staffink Investment LLC", member="Aridia Perez", emp_id=None, page=27)
+    b.update({"payDate": "2026-06-28", "grossPay": "688.50", "ytdGross": "6939.00"})
+    assert _unify_paystub_sources([a, b]) == 1
+    assert a["sourceName"] == "Staffink Investment LLC" and "year-to-date" in a["evidence"]["sourceName"]
+    # A different given name is a different person even with the same employee ID.
+    c = _ps("Kroger", member="Ana Perez", emp_id="9", page=30)
+    d = _ps("Kroger Co", member="Eva Perez", emp_id="9", page=31)
+    assert _unify_paystub_sources([c, d]) == 0
+    # Year-to-date that does not run on is not continuity.
+    e = _ps(None, member="A B", page=1); e.update({"payDate": "2026-06-21", "grossPay": "432.00", "ytdGross": "6250.50"})
+    f = _ps("Other Co", member="A B", page=2); f.update({"payDate": "2026-06-28", "grossPay": "688.50", "ytdGross": "9000.00"})
+    assert _unify_paystub_sources([e, f]) == 0

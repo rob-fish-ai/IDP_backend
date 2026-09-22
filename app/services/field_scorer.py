@@ -29,6 +29,7 @@ from app.schemas.scoring import (
     StageScore,
 )
 from app.services.doc_taxonomy import is_current_certification_form, is_previous_certification
+from app.services.members import is_unborn
 from app.services.findings import dispute_strength, slug
 # The scorer's bounds and the annualizer's arithmetic have to agree about
 # how long a pay period is, so both read the same multiplier table.
@@ -922,6 +923,20 @@ _FORM_MEMBER_FIELDS = {
     "HUD 3560 Form": {"disabled", "student"},
     "Tenant Income Certification (TIC)": {"student"},
     "HUD Model Lease": set(),
+    "Lease Agreement": set(),
+}
+
+# An unborn child is on the roster with none of these; they are not gaps.
+_UNBORN_NA_FIELDS = ("DOB", "socialSecurityNumber", "gender", "disabled", "student")
+
+# A record whose verification is the pay stubs themselves: rate, hours and
+# YTD are printed on the stubs and read from them, not from a verification
+# form that was never in the file.
+_PAYSTUB_BACKED_NA_FIELDS = {
+    "rateOfPay", "frequencyOfPay", "hoursPerPayPeriod",
+    "overtimeRate", "overtimeFrequency",
+    "ytdAmount", "ytdStartDate", "ytdEndDate",
+    "employmentStatus", "terminationDate", "hireDate", "dateReceived",
 }
 
 
@@ -1029,6 +1044,14 @@ def _score_income_rules(card: RecordScoreCard, cert_type: str | None) -> None:
         for fs in card.fields:
             if fs.field_name in _AR_SC_NA_FIELDS and fs.value is None:
                 fs.mark_na("Self-declared income — wage verification fields not applicable")
+
+    # Verified by pay stubs: the stubs carry the rate, hours and year-to-date
+    # figures, and the calculation reads them there. Thirteen fields went
+    # red on one record for lacking what an employer's form would print.
+    if (vals.get("type_of_VOI") or "").strip().lower() in ("pay stubs", "paystubs", "pay stub"):
+        for fs in card.fields:
+            if fs.field_name in _PAYSTUB_BACKED_NA_FIELDS and fs.value is None:
+                fs.mark_na("Verified by pay stubs — rate, hours and YTD are read from the stubs")
 
     income_type = (vals.get("incomeType") or "").lower()
 
@@ -1228,6 +1251,15 @@ def _score_asset_rules(card: RecordScoreCard) -> None:
 def _score_member_rules(card: RecordScoreCard, cert_form_type: str | None = None) -> None:
     vals = {f.field_name: f.value for f in card.fields}
     form_fields = _FORM_MEMBER_FIELDS.get(cert_form_type or "")
+
+    if is_unborn(vals):
+        for fs in card.fields:
+            if fs.field_name in _UNBORN_NA_FIELDS and fs.value is None:
+                fs.mark_na("Unborn child — no identity fields exist yet")
+            elif fs.field_name in ("FirstName", "LastName", "relationship") and fs.value:
+                update_field_score(card, fs.field_name, stage="business_rule", score=1.0,
+                                   reason="Unborn child row on the certification")
+        return
 
     # Name fields: basic validation (alphabetic, not garbage)
     for field_name in ("FirstName", "LastName"):

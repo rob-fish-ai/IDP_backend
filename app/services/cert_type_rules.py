@@ -24,6 +24,7 @@ def validate_cert_type_requirements(
     document_groups: list[DocumentGroup],
     inventory_hud: DocumentInventory | None,
     household: HouseholdDemographics | None,
+    funding_program: str | None = None,
 ) -> list[Finding]:
     """Check certification-type-specific document requirements per Section 12.
 
@@ -45,8 +46,17 @@ def validate_cert_type_requirements(
 
     ct = cert_type.upper()
 
+    # The move-in forms below the application are HUD's (citizenship,
+    # race/ethnic, 92006, the TRACS summaries); a tax-credit move-in owes
+    # none of them. HUD is shown by a current 50059 in the packet or by the
+    # caller's funding program.
+    funding = (funding_program or "").lower()
+    hud_property = any(p in funding for p in ("hud", "section", "usda", "rad", "public housing")) or any(
+        "HUD 50059" in dt and "(Previous)" not in dt for dt in (doc_types | hud_doc_types)
+    )
+
     if ct in ("MI", "IC"):
-        findings.extend(_check_mi_requirements(doc_types, hud_doc_types, member_count))
+        findings.extend(_check_mi_requirements(doc_types, hud_doc_types, member_count, hud_property))
     elif ct == "AR":
         findings.extend(_check_ar_requirements(doc_types, document_groups))
     elif ct == "AR-SC":
@@ -79,10 +89,13 @@ def _check_mi_requirements(
     doc_types: set[str],
     hud_doc_types: set[str],
     member_count: int,
+    hud_property: bool = True,
 ) -> list[Finding]:
     """Move-In / Initial Certification requires additional documents."""
     findings: list[Finding] = []
     all_types = doc_types | hud_doc_types
+    if not hud_property:
+        return _check_mi_application(all_types)
 
     # Citizenship Declaration (Section 214) — one per member
     has_citizenship = any("Citizenship" in dt or "Section 214" in dt for dt in all_types)
@@ -126,15 +139,7 @@ def _check_mi_requirements(
             "Obtain the Family Summary Sheet for the household",
         ))
 
-    # Application for Housing
-    has_application = any("Application" in dt or "Questionnaire" in dt for dt in doc_types)
-    if not has_application:
-        findings.append(_missing_document(
-            "MI_APPLICATION_MISSING",
-            "Move-in packet has no Application for Housing",
-            "MI/IC certification requires Application for Housing — not found (Section 12)",
-            "Obtain the signed Application for Housing / household questionnaire",
-        ))
+    findings.extend(_check_mi_application(all_types))
 
     # HUD 92006 (Emergency Contact)
     has_92006 = any("92006" in dt for dt in all_types)
@@ -215,3 +220,18 @@ def _check_ir_requirements() -> list[Finding]:
             result="na",
         )
     ]
+
+
+def _check_mi_application(all_types: set[str]) -> list[Finding]:
+    """The application is owed on every move-in, whatever the program."""
+    findings: list[Finding] = []
+    # Application for Housing
+    has_application = any("Application" in dt or "Questionnaire" in dt for dt in all_types)
+    if not has_application:
+        findings.append(_missing_document(
+            "MI_APPLICATION_MISSING",
+            "Move-in packet has no Application for Housing",
+            "MI/IC certification requires Application for Housing — not found (Section 12)",
+            "Obtain the signed Application for Housing / household questionnaire",
+        ))
+    return findings
