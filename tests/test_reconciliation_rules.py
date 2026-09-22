@@ -557,3 +557,24 @@ def test_the_only_job_on_the_application_is_the_only_wage_source_even_when_the_n
                                            employment=[QuestionnaireEmployment(employer="Stafmark", start_date="2026-04-13")])
     findings = _link_questionnaire_to_income(disclosures, income, [])
     assert vi.hireDate == "2026-04-13" and findings == []
+
+
+def test_a_surname_one_letter_off_on_the_same_given_name_is_the_same_member():
+    from app.services.extractor import _same_member
+    assert _same_member("Neftali Arredondo Mora", "Neftali Arredondo Mota")
+    assert _same_member("Aridia Perez Trinidad", "Aridia Perez Irinidad")
+    assert not _same_member("Juan Garcia", "Maria Garcia")
+    assert not _same_member("Ana Perez", "Ana Gomez")
+    # Short surnames are not tolerated: "Lee" and "Leo" are two families.
+    assert not _same_member("Kim Lee", "Kim Leo")
+    # The declared account now lands on the verified record across the spelling.
+    records = [{"assetOwner": "Neftali Arredondo Mota", "accountType": "Checking", "accountNumber": "325035661597",
+                "currentBalance": "640.36", "verificationStatus": "verified", "sourcePages": [23]},
+               {"assetOwner": "Neftali Arredondo Mota", "accountType": "Savings", "accountNumber": "325035661610",
+                "currentBalance": "47.54", "verificationStatus": "verified", "sourcePages": [23]}]
+    declared = [{"assetOwner": "Neftali Arredondo Mora", "accountType": "Checking", "amount": "1073.00", "kind": "asset",
+                 "page": 2, "documentType": "HUD 50059", "matched": False},
+                {"assetOwner": "Neftali Arredondo Mora", "accountType": "Savings", "amount": "152.00", "kind": "asset",
+                 "page": 2, "documentType": "HUD 50059", "matched": False}]
+    _reconcile_assets(records, declared)
+    assert len(records) == 2 and [r.get("selfDeclaredAmount") for r in records] == ["1073.00", "152.00"]

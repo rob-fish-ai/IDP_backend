@@ -24,7 +24,7 @@ from app.services.completeness import check_completeness
 from app.services.doc_taxonomy import (
     ROUTE_ASSET, ROUTE_CERT, ROUTE_DEMO, ROUTE_INCOME, assert_known,
     canonical_label, is_current_certification_form, is_previous_certification,
-    labels_for_route,
+    labels_for_route, category_of,
 )
 from app.services.findings import (
     ASSIGN_CLIENT, ASSIGN_INTERNAL, CATEGORY_FILE_REVIEW, CATEGORY_INCOME,
@@ -132,6 +132,12 @@ def run_extraction_pipeline(
     # Pass 2: LLM correct + group (one call, sees full file context)
     logger.info("Steps 1-2/6: Two-pass classification + grouping")
     classification, document_groups = classify_and_group(page_texts, settings)
+    # A recertification packet assembled before the new certification is
+    # executed holds only last year's form. Read as "previous" it reached
+    # no extractor, and the case went out with no household at all. The
+    # most recent certification in the file is then the form of record,
+    # and a finding says the current one is not in the packet.
+    ctx.certification_is_prior = _promote_prior_certification(document_groups, classification)
 
     # With all case PDFs merged newest-first, a stale resubmission's cert
     # form appears further down the page order than the current one —
@@ -1657,6 +1663,12 @@ def _deduplicate_assets(asset_records: list) -> list:
             return (str(value) if value else "").strip().lower()
 
     def _key(rec) -> str:
+        # Documents print an account number whole, masked, or as its last
+        # four ("3872-4603" on the statement, "4603" on the verification):
+        # the last four digits are the identity the forms share.
+        digits = re.sub(r"\D", "", rec.accountNumber or "")
+        if len(digits) >= 4:
+            return f"acct:{digits[-4:]}"
         if rec.accountNumber:
             return f"acct:{rec.accountNumber.strip()}"
         # No account number: the asset's identity is who owns it, what kind
@@ -2162,6 +2174,41 @@ def _llm_fallback(label, func, groups, settings, *, default=None, **kwargs):
         ) from exc
 
 
+_EFFECTIVE_DATE_RE = re.compile(r"effective\s*date[:\s]*(\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4}|\d{4}-\d{2}-\d{2})", re.IGNORECASE)
+
+
+def _promote_prior_certification(document_groups: list, classification) -> str | None:
+    """When no current certification form is in the packet, the most recent
+    prior certification becomes the form of record. Returns the note for the
+    finding, or None when nothing was promoted."""
+    from app.services.doc_taxonomy import _PREVIOUS_MARKER
+    from app.services.validation import normalize_date
+    if any(is_current_certification_form(g.document_type) and g.category != "ignore" for g in document_groups):
+        return None
+    priors = [g for g in document_groups if is_previous_certification(g.document_type)
+              and _PREVIOUS_MARKER.lower() in g.document_type.lower()]
+    if not priors:
+        return None
+
+    def _dated(g) -> str:
+        m = _EFFECTIVE_DATE_RE.search(g.combined_text or "")
+        return normalize_date(m.group(1)) or "" if m else ""
+
+    best = max(priors, key=lambda g: (_dated(g), len(g.pages)))
+    base = best.document_type[: best.document_type.lower().find(_PREVIOUS_MARKER.lower())].strip()
+    when = _dated(best)
+    best.document_type = base
+    best.category = category_of(base)
+    best.notes = (best.notes + "; " if best.notes else "") + "prior certification read as the form of record: no current certification in the packet"
+    for pc in classification.pages:
+        if pc.page in best.pages:
+            pc.document_type = base
+            pc.category = best.category
+    note = f"the prior {base} on page(s) {best.page_range}" + (f" (effective {when})" if when else "")
+    logger.warning("No current certification form in the packet — %s promoted to the form of record", note)
+    return note
+
+
 def _document_certification_type(certification_info) -> str | None:
     """The type the certification form itself shows, or None.
 
@@ -2650,7 +2697,20 @@ def _generate_findings(
         p for g in document_groups if g.document_type == "OCR Failed"
         for p in g.pages
     )
-    if not cert_form_present:
+    if ctx and ctx.certification_is_prior:
+        findings.append(make_finding(
+            "CERT_FORM_IS_PRIOR",
+            f"The packet holds no current certification form; {ctx.certification_is_prior} was read as "
+            f"the form of record — the household, declared income and rent come from it, and the current "
+            f"certification must be added to the file before the audit is final (Section 11)",
+            label="Only the prior certification is in the packet",
+            category=CATEGORY_FILE_REVIEW,
+            subject_type="document",
+            assignment=ASSIGN_CLIENT,
+            correction_required="Add the executed current certification form to the packet",
+            resolution_type=RESOLVE_PRESENCE,
+        ))
+    elif not cert_form_present:
         hidden_hint = (
             f" — it may be among the {len(ocr_failed_pages)} page(s) that "
             f"failed OCR" if ocr_failed_pages else ""

@@ -210,3 +210,38 @@ def test_certification_pages_without_a_readable_title_are_labelled_by_their_prin
     out, updates = _post_group_title_relabel([_group("HUD 3560 Form", [1, 2])], text)
     assert [(g.document_type, g.pages) for g in out] == [("Tenant Income Certification (TIC)", [1, 2])]
     assert {u[0] for u in updates} == {1, 2}
+
+
+def test_the_household_size_is_the_count_the_form_prints():
+    from app.services.extractor import _household_size_on_form
+    hud = ("52. Family has Visual Disability?: N 53. Number of Family Members: 1 54. Number of Non-Family Members: 0 "
+           "55. Total Annual Income")
+    assert _household_size_on_form(hud) == (1, "Number of Family Members: 1; Number of Non-Family Members: 0")
+    assert _household_size_on_form("53. Number of Family Members: 3 54. Number of Non-Family Members: 1")[0] == 4
+    tic = "Move-In Date: 5/29/26 Certification Date: 5/29/26 Current Household Size: 3 Project Name: MP3"
+    assert _household_size_on_form(tic) == (3, "Current Household Size: 3")
+    assert _household_size_on_form("Number of Family Members: [blank]")[0] is None
+    assert _household_size_on_form("no such field here")[0] is None
+
+
+def test_an_account_printed_whole_and_as_its_last_four_is_one_asset():
+    from app.schemas.extraction import AssetEntry
+    from app.services.pipeline import _deduplicate_assets
+    a = AssetEntry(assetOwner="Juan Garcia Ortega", accountType="Investment", sourceName="LPL Financial",
+                   accountNumber="3872-4603", currentBalance="106195.56", sourcePages=[19])
+    b = AssetEntry(assetOwner="Juan Garcia Ortega", accountType="Investment", sourceName="LPL Financial",
+                   accountNumber="4603", currentBalance="106195.56", sourcePages=[20, 21, 22])
+    c = AssetEntry(assetOwner="Juan Garcia Ortega", accountType="Checking", sourceName="Chase",
+                   accountNumber="9901", currentBalance="39.48", sourcePages=[25])
+    out = _deduplicate_assets([a, b, c])
+    assert len(out) == 2 and {r.accountType for r in out} == {"Investment", "Checking"}
+
+
+def test_compound_surnames_printed_whole_or_cut_are_one_member():
+    from app.services.extractor import _same_member
+    assert _same_member("Neftali Arredondo Mora", "Neftali Arredondo")
+    assert _same_member("Neftali Arredondo Mora", "Neftali Arredondo-Mota")
+    assert _same_member("Juan Garcia Ortega", "Juan Garcia")
+    assert _same_member("Arnold Lyons", "Arnold J Lyons")
+    assert not _same_member("Juan Garcia Ortega", "Maria Garcia")
+    assert not _same_member("Beatriz Ibarra Almanza", "Beatriz Elena Ibarra Morales")

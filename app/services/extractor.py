@@ -665,6 +665,16 @@ def extract_certification_info(
                     field, value, form_pages,
                 )
                 cert_info_dict[field] = None
+        # The household size is a printed count on every certification form
+        # (a 50059's "53. Number of Family Members" plus "54. Number of
+        # Non-Family Members", a TIC's "Current Household Size"). The model
+        # read 5 on a form printing 1 and the audit then reported four
+        # members missing; the printed count is the field.
+        printed_size, size_quote = _household_size_on_form(form_text)
+        if printed_size is not None and str(cert_info_dict.get("householdSize") or "").strip() != str(printed_size):
+            logger.info("Cert info: householdSize %s replaced by the form's printed count %d (%s)",
+                        cert_info_dict.get("householdSize"), printed_size, size_quote)
+            cert_info_dict["householdSize"] = str(printed_size)
         # The move-in date decides whether the form is a move-in
         # certification; the model reads it on some runs and not others,
         # and the label is printed, so the form text answers directly.
@@ -688,6 +698,28 @@ def extract_certification_info(
 
 # Date fields that must be printed on the certification form's own pages.
 _FORM_DATE_FIELDS = ("signatureDate", "moveInDate")
+_HUD_FAMILY_MEMBERS_RE = re.compile(r"number\s+of\s+family\s+members\s*[:\-]?\s*(\d{1,2})\b", re.IGNORECASE)
+_HUD_NON_FAMILY_RE = re.compile(r"number\s+of\s+non-?\s?family\s+members\s*[:\-]?\s*(\d{1,2})\b", re.IGNORECASE)
+_TIC_HOUSEHOLD_SIZE_RE = re.compile(r"(?:current\s+)?household\s+size\s*[:\-]?\s*(\d{1,2})\b", re.IGNORECASE)
+
+
+def _household_size_on_form(form_text: str) -> tuple[int | None, str]:
+    """The member count the certification form prints, and the line it is on.
+
+    A HUD 50059 states it twice (family and non-family members, summed);
+    a TIC states it once. A count of zero is a blank cell, not a household.
+    """
+    plain = re.sub(r"\s+", " ", form_text or "")
+    fam = _HUD_FAMILY_MEMBERS_RE.search(plain)
+    if fam:
+        non = _HUD_NON_FAMILY_RE.search(plain)
+        total = int(fam.group(1)) + (int(non.group(1)) if non else 0)
+        if total > 0:
+            return total, fam.group(0) + (f"; {non.group(0)}" if non else "")
+    tic = _TIC_HOUSEHOLD_SIZE_RE.search(plain)
+    if tic and int(tic.group(1)) > 0:
+        return int(tic.group(1)), tic.group(0)
+    return None, ""
 _MOVE_IN_DATE_RE = re.compile(
     r"move[\s-]*in\s*date[:\s]*(\d{1,2}\s*[/.-]\s*\d{1,2}\s*[/.-]\s*\d{2,4}|\d{4}-\d{2}-\d{2})",
     re.IGNORECASE,
@@ -1976,13 +2008,53 @@ def _name_last(name: str | None) -> str:
 
 
 def _same_member(a: str | None, b: str | None) -> bool:
+    """Two names for one household member.
+
+    The given names must agree (one may be a prefix of the other); the
+    surnames must agree or read as one surname the scan spelled two ways.
+    "Arredondo Mora" on the certification and "Arredondo Mota" on the bank's
+    verification kept one man's checking account as two records and his
+    wage as two sources; a surname one letter off, on the same given name,
+    is the same person. Two letters off is another family.
+    """
     if not a or not b:
         return False
-    la, lb = _name_last(a), _name_last(b)
-    if not la or la != lb:
+    ta = [t for t in re.split(r"[\s\-]+", a.strip().lower()) if t]
+    tb = [t for t in re.split(r"[\s\-]+", b.strip().lower()) if t]
+    if len(ta) < 2 or len(tb) < 2:
         return False
-    fa, fb = a.strip().lower().split()[0], b.strip().lower().split()[0]
-    return fa == fb or fa.startswith(fb) or fb.startswith(fa)
+    fa, fb = ta[0], tb[0]
+    if not (fa == fb or fa.startswith(fb) or fb.startswith(fa)):
+        return False
+    sa, sb = ta[1:], tb[1:]
+    if _surname_token_match(sa[-1], sb[-1]):
+        return True
+    # A compound surname printed whole on one document and cut to its
+    # first part on another ("Arredondo Mora" / "Arredondo"): the shorter
+    # is the start of the longer. Middle names sit before the surname, so
+    # the comparison runs from the end of the shorter sequence.
+    short, long_ = (sa, sb) if len(sa) <= len(sb) else (sb, sa)
+    if len(short) < len(long_) and short and all(
+        _surname_token_match(x, y) for x, y in zip(short, long_[:len(short)])
+    ):
+        return True
+    return False
+
+
+def _surname_token_match(x: str, y: str) -> bool:
+    if x == y:
+        return True
+    return len(x) >= 4 and len(y) >= 4 and _edit_distance(x, y) <= 1
+
+
+def _edit_distance(a: str, b: str) -> int:
+    prev = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        cur = [i]
+        for j, cb in enumerate(b, 1):
+            cur.append(min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (ca != cb)))
+        prev = cur
+    return prev[-1]
 
 
 _TYPE_SYNONYMS = {
