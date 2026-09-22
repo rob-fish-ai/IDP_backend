@@ -182,6 +182,8 @@ class RecordScoreCard(BaseModel):
     # verification checks a value against these pages first.
     source_pages: list[int] = []
     verification_status: Optional[str] = None
+    # What verified an income record (type_of_VOI); the rules read it here.
+    voi_type: Optional[str] = None
     # Set when a finding names this record: the contradiction is about this
     # record specifically, so it cannot read as green however its other
     # fields score.

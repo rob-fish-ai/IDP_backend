@@ -650,6 +650,22 @@ _CERT_FINGERPRINTS = {
         "the work number", "equifax", "verifier", "employment data report", "income data report",
         "permissible purpose",
     ),
+    # HUD's EIV printouts and the manager's coversheet for them: the report
+    # prints its sections, the summary its identifiers, the coversheet its
+    # instructions. All three used to share one compliance label.
+    "EIV Income Report": (
+        "wage and benefit report", "social security benefits", "verification data", "gross benefit",
+        "net monthly benefit", "eiv received no", "date received by eiv", "employment information",
+        "dual entitlement", "supplemental security income benefits",
+    ),
+    "EIV Summary Report": (
+        "summary report", "head of household identifiers", "identity verification status",
+        "tenant data from form 50059",
+    ),
+    "EIV Income Report Confirmation": (
+        "income report confirmation", "retain this coversheet", "tenant agrees", "agrees / disagrees",
+        "no other 3rd party verification", "compliance co-op", "one form per adult member",
+    ),
     "Tenant Income Certification (TIC)": (
         "tenant income certification", "hh meets income restriction", "income equates to", "amgi",
         "part ii - household composition", "part iii - income other than assets",
@@ -733,15 +749,16 @@ def _post_group_title_relabel(
         if all(label == g.document_type for _, label, _ in labels):
             updated.append(g)
             continue
-        # A certification form is one document over its pages: when the
-        # pages that carry a title all name one other form and no page
-        # names the assigned one, the form's second page follows the first.
-        if family_of(g.document_type) == "cert":
-            named = {label for _, label, t in labels if t}
-            if len(named) == 1:
-                target = next(iter(named))
-                title = next(t for _, label, t in labels if t)
-                labels = [(pn, target, t or title) for pn, _, t in labels]
+        # A multi-page document is one document over its pages: when the
+        # pages that carry a title all name one other form, no page names
+        # the assigned one, and at least half the pages carry that title,
+        # the untitled pages (a form's second page, a report's last) follow.
+        named = {label for _, label, t in labels if t}
+        titled = sum(1 for _, _, t in labels if t)
+        if len(named) == 1 and (family_of(g.document_type) == "cert" or titled * 2 >= len(labels)):
+            target = next(iter(named))
+            title = next(t for _, label, t in labels if t)
+            labels = [(pn, target, t or title) for pn, _, t in labels]
         runs: list[list[tuple[int, str, str | None]]] = []
         for item in labels:
             if runs and runs[-1][-1][1] == item[1]:

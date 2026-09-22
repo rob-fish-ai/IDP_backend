@@ -84,7 +84,11 @@ def _check_ssa_as_paystub_and_voi(income: IncomeExtraction) -> list[Finding]:
         member = (ps.memberName or "").lower()
         is_ssa_source = any(kw in source for kw in ("ssa", "social security", "ssi", "ssdi"))
 
-        if is_ssa_source or (member in ssa_vi_sources and member):
+        # Only a stub whose PAYER is the Social Security Administration is
+        # the benefit recorded twice. A member with a benefit and a job has
+        # both a benefit record and pay stubs, and an EIV report prints both
+        # on one page; neither is the bug this rule names.
+        if is_ssa_source:
             findings.append(make_finding(
                 "SSA_AS_PAYSTUB_AND_VOI",
                 f"Bug 1 (Section 17): SSA income for '{ps.memberName}' appears as both "

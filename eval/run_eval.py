@@ -203,6 +203,12 @@ def score(gold: dict, ex: dict, *, no_images: bool = False) -> tuple[list[Check]
         recs = _income_records_for(ex, gi)
         matched_ids |= {id(r) for r in recs}
         annual, how = _annual_for(ex, gi)
+        if gi.get("historical"):
+            # Wage history years before the certification: a record may exist
+            # with a [historical] row; a CURRENT annual figure from it is wrong.
+            checks.append(Check("income", f"{label} historical", None, annual, annual is None,
+                                "historical wages carry no current figure" if annual is None else "historical wages produced a current figure"))
+            continue
         if annual is None:
             if gi.get("optional"):
                 checks.append(Check("income", f"{label} annual", gi["annual"], None, True, "optional; absent"))

@@ -272,6 +272,27 @@ record for a letter that also states a positive amount.
   SAMMONS' record"), even when that person is a child and a parent receives the
   payment; the payee is not the member.
 
+EIV INCOME REPORT (HUD's Enterprise Income Verification printout, "Wage and
+Benefit Report for Household of …", one section per household member):
+  - "Social Security Benefits" with "Verification Data" and a Gross Benefit /
+    Net Monthly Benefit table → one verificationIncome entry per member:
+    incomeType "Social Security", sourceName "Social Security Administration",
+    type_of_VOI "EIV Report", rateOfPay = the most recent GROSS benefit (HUD counts
+    the benefit before the Medicare deduction), rateUnit "monthly", frequencyOfPay
+    "monthly", dateReceived = the "Report Date". Earlier years' rows are history,
+    not the rate.
+  - "Supplemental Security Income Benefits" with a payment amount → the same, with
+    incomeType "Supplemental Security Income".
+  - "Dual Entitlement" with an amount → a second Social Security entry noting it.
+  - A section reading "EIV received no benefit data" / "no Employment (W4) data"
+    is NOT income and gets no record.
+  - "Employment Information" quarterly wage rows ("Q2 of 2022 $840.00 EMPLOYER")
+    → one payStub entry per row: sourceName the employer, payDate the last day of
+    that quarter, grossPay the amount, payInterval "quarterly", ytdGross null. The
+    engine judges whether they are current.
+  - The "EIV Income Report Confirmation" coversheet (tenant agrees / disagrees,
+    handwritten amount) is the household's statement, not this report.
+
 OTHER AGENCY BENEFIT LETTERS (Department of Veterans Affairs, pension plan,
 unemployment agency, state assistance) — same treatment as the SSA letter:
   - rateOfPay: the current benefit as stated, rateUnit as the letter states it
@@ -357,7 +378,7 @@ VERIFICATION INCOME FIELDS:
 - ytdAmount: only if document explicitly states "year to date". MUST BE null for SSA/fixed income.
 - ytdStartDate, ytdEndDate: YYYY-MM-DD
 - incomeType: one of: Non-Federal Wage, Federal Wage, Social Security, Supplemental Security Income, Social Security Disability, Pension, Veterans Benefits, Temporary Assistance, Child Support, Self-Employment, Zero Income, Other Income
-- type_of_VOI: Employer Verification, SSA Benefit Letter, Agency Benefit Letter, Child Support Order, Pension Statement, Self-Declaration, Work Number, ScreeningWorks, Vault Verify
+- type_of_VOI: Employer Verification, SSA Benefit Letter, Agency Benefit Letter, EIV Report, Child Support Order, Pension Statement, Self-Declaration, Work Number, ScreeningWorks, Vault Verify
 - address: {street, city, state (2-letter), zip (5-digit)} or null
 - employmentStatus: "Active" if currently employed, "Terminated" if employment has ended, "On Leave" if on leave. Extract from "Presently Employed" checkbox or employment status field. This is CRITICAL for understanding the income picture.
 - terminationDate: YYYY-MM-DD. Extract if employment has ended (last day worked, termination date, or separation date).
@@ -1258,6 +1279,7 @@ _INCOME_DECLARATION_TYPES = frozenset({
     "Zero Income Certification",
     "Unemployment Affidavit",
     "Child Support / Alimony Affidavit",
+    "EIV Income Report Confirmation",
 })
 _ASSET_DECLARATION_TYPES = frozenset({
     "Application / Housing Questionnaire",
@@ -1889,8 +1911,11 @@ DECLARED_INCOME_PROMPT = """\
 You are reading the household's OWN statements of its income in a HUD /
 Affordable Housing certification packet: the certification form's income
 table (LIHTC TIC Part III, HUD 50059 income section fields 79-86, RD 3560-8
-income lines) and the application or recertification questionnaire. These
-are DECLARATIONS by the household or the manager, not third-party
+income lines), the application or recertification questionnaire, and the
+manager's EIV Income Report Confirmation coversheet (read ONLY its "Tenant
+reported income: Source / Amount / Frequency" line; the "reported by EIV"
+figure restates HUD's report and is not a declaration). These are
+DECLARATIONS by the household or the manager, not third-party
 verifications.
 
 Return every income line declared, one entry per row or disclosure:

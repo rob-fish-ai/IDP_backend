@@ -206,7 +206,7 @@ def validate_affirmative_responses(
     # SSA → a benefit letter, or HUD's own EIV income report, which is the
     # third-party verification of Social Security and SSI on a HUD file.
     if disclosures.has_ssa_benefits is True:
-        has_ssa = any("ssa" in dt or "ssi" in dt or "ssdi" in dt or "social security" in dt or "eiv" in dt
+        has_ssa = any("ssa" in dt or "ssi" in dt or "ssdi" in dt or "social security" in dt or dt == "eiv income report"
                       for dt in doc_types_lower)
         if not has_ssa:
             findings.append(

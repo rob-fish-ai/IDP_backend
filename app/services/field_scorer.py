@@ -174,6 +174,9 @@ def score_pydantic_records(
             card = scorer.build()
             card.source_pages = list(getattr(vi, "sourcePages", None) or [])
             card.verification_status = getattr(vi, "verificationStatus", None)
+            # What verified the record decides which fields it should carry;
+            # the rules read it off the card, not off a scored field.
+            card.voi_type = getattr(vi, "type_of_VOI", None)
             _mark_redacted(card, getattr(vi, "evidence", None))
             cards.append(card)
 
@@ -1048,7 +1051,8 @@ def _score_income_rules(card: RecordScoreCard, cert_type: str | None) -> None:
     # Verified by pay stubs: the stubs carry the rate, hours and year-to-date
     # figures, and the calculation reads them there. Thirteen fields went
     # red on one record for lacking what an employer's form would print.
-    if (vals.get("type_of_VOI") or "").strip().lower() in ("pay stubs", "paystubs", "pay stub"):
+    voi_type = (vals.get("type_of_VOI") or getattr(card, "voi_type", None) or "").strip().lower()
+    if voi_type in ("pay stubs", "paystubs", "pay stub"):
         for fs in card.fields:
             if fs.field_name in _PAYSTUB_BACKED_NA_FIELDS and fs.value is None:
                 fs.mark_na("Verified by pay stubs — rate, hours and YTD are read from the stubs")
@@ -1132,7 +1136,7 @@ def _score_income_rules(card: RecordScoreCard, cert_type: str | None) -> None:
 
     # frequencyOfPay: known picklist value
     freq = vals.get("frequencyOfPay")
-    valid_freqs = {"hourly", "weekly", "bi-weekly", "semi-monthly", "monthly", "annually"}
+    valid_freqs = {"hourly", "weekly", "bi-weekly", "semi-monthly", "monthly", "quarterly", "annually"}
     if freq:
         if freq.lower() in valid_freqs:
             update_field_score(card, "frequencyOfPay", stage="business_rule",

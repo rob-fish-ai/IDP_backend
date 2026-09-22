@@ -32,11 +32,24 @@
         "Social Security",
         "Soc. Sec.",
         "Soc Sec",
-        "SSA"
+        "SSA",
+        "Social Security Administration"
       ],
       "annual": 21720.0,
+      "note": "EIV Income Report pp8-10: Social Security gross monthly benefit $1,810.00 (12/2025), Payment Status C; 50059 p2 prints SS = 21,720 = 1,810 \u00d7 12. Verified by the EIV report since 2026-09-22."
+    },
+    {
+      "member_last": "Buck",
+      "member_first": "Randy",
+      "source_aliases": [
+        "Elbow Creek Ag Inc.",
+        "Elbow Creek Ag",
+        "Elbow Creek"
+      ],
+      "annual": null,
       "optional": true,
-      "note": "50059 p2 prints SS = 21,720; whether a readable third-party verification exists is unknown (EIV pages were never read). Absence is not scored as a miss; a value other than 21,720 is."
+      "historical": true,
+      "note": "EIV Employment Information: quarterly wages Q1/Q2 2022 ($720, $840) from Elbow Creek Ag Inc. \u2014 four years before the certification; a historical record with a stale-wage finding, never a current income figure."
     }
   ],
   "assets": [
