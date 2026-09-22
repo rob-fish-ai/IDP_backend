@@ -351,3 +351,40 @@ def test_payload_carries_annual_income_calculation_rate_unit_and_history():
     assert r0["vois"][0]["rate_unit"] == "monthly"
     assert r1["annual_income"] == "186.68" and r1["calculation"]["alternatives"][0]["status"] == "audit"
     assert r1["payment_history"] == [{"date": "2026-08-05", "amount": "3.59"}, {"date": None, "amount": "3.59"}]
+
+
+def test_a_scanners_own_text_layer_is_recognised_as_garbled():
+    from app.services.pdf_service import _text_layer_is_garbled
+    scanner = ("R.lphs Grocery Comp.ny (FEIN: 95-4356!30) 1100 Wesl A.resia Bo!levard Complon CA 90220 08/31t26 "
+               "PeBon Number:3682722 NE FTALI AR REOON OO HR Locallon:000?7 29 5500 USO cA s2201 Slraight 23 820 "
+               "S6ial S.ddry Emplome wirrh6E M6di€re Emkrye wlhherd Sol Employ.. withh6n (ca) 12 A1 20 5t 10 5S "
+               "1,S93.23 46733 336 75 0 250 ro 09,11 0 9l 5! 39 3A 43 13 2A 100 ,ta 2t 3500 15 23 505 03 0 170 "
+               "A HIGHLY SATISfI€O CUSTOMER MAOE IHISi PAYCHECK POSSISLE rl sr oo tu")
+    assert _text_layer_is_garbled(scanner)[0]
+    digital = ("Owner's Certification of Compliance with HUD's Tenant Eligibility and Rent Procedures. Section C. "
+               "Household Information 33. No. 34. Last Name 35. First Name 36. MI 37. Rel. 38. Sex 39. Race 40. Eth. "
+               "41. Birth Date 42. Special Status 43. Stdnt Stat. 44. ID Code (SSN) 1 Caldera Maria R H F W 1 9/26/1944 "
+               "53. Number of Family Members: 1 54. Number of Non-Family Members: 0 55. Total Annual Income: $7,608 "
+               "56. 2nd Adjusted Income 1st Floor 401k 10th of the month Effective Date: 1/1/2027 Unit 115")
+    assert not _text_layer_is_garbled(digital)[0]
+    assert not _text_layer_is_garbled("short layer")[0]
+
+
+def test_three_dated_stubs_decide_the_pay_frequency_over_a_stated_interval():
+    from app.services.income_calculator import calculate_paystub_based
+    monthly = [PayStubEntry(sourceName="Ralphs", memberName="N A", grossPay="2659.13", payDate=f"2026-0{m}-30", payInterval="weekly") for m in (4, 5, 6)]
+    annual, details = calculate_paystub_based(monthly)
+    assert annual == f"{2659.13 * 12:.2f}" and "pay dates are monthly" in details
+    weekly = [PayStubEntry(sourceName="R", memberName="N", grossPay="500.00", payDate=d, payInterval="weekly") for d in ("2026-08-07", "2026-08-14", "2026-08-21")]
+    assert calculate_paystub_based(weekly)[0] == "26000.00"
+    # Two stubs cannot infer a period: the stated interval stands.
+    assert calculate_paystub_based(monthly[:2])[0] == f"{2659.13 * 52:.2f}"
+
+
+def test_a_stub_labelled_as_a_work_number_report_is_relabelled_by_what_it_prints():
+    from app.services.two_pass_classifier import _label_by_printed_title
+    stub = ("Ralphs Grocery Company Pay Period 08/31/26-09/06/26 Pay Date 09/10/26 Gross Pay 509.17 YTD 16,529.10 "
+            "Net Pay 432.99 A HIGHLY SATISFIED CUSTOMER MADE THIS PAYCHECK POSSIBLE")
+    assert _label_by_printed_title("Work Number / Equifax Report", stub)[0] == "Paystub"
+    wn = "The Work Number Employment Data Report Verifier: Palo Verde Permissible purpose: housing Pay Period End 06/30/26 Gross Pay 2,659.13"
+    assert _label_by_printed_title("Work Number / Equifax Report", wn) is None

@@ -211,6 +211,47 @@ def _digit_tokens(text: str) -> set[str]:
     return set(re.findall(r"\d[\d,./-]*\d|\d", text or ""))
 
 
+# Words a born-digital text layer does not produce: a letter run broken by
+# a digit or punctuation ("R.lphs", "A.resia", "wirrh6E"), or a one- or
+# two-letter fragment that is not a word ("rl", "sr", "oo").
+_GARBLED_TOKEN_RE = re.compile(
+    r"^[A-Za-z]+[.!?_|@#*^~`]+[A-Za-z]+"      # R.lphs, A.resia
+    r"|[A-Za-z][0-9][A-Za-z]|[0-9][A-Za-z][0-9]"  # wirrh6E, 3e5
+    r"|^[A-Za-z]{2,}[0-9]+[A-Za-z]*$"          # Emprdy6, oO
+    r"|^[0-9]+[A-Za-z]{2,}$"                   # 1657tu, 9l5!
+)
+_ORDINAL_RE = re.compile(r"^\d+(st|nd|rd|th)$|^\d+(am|pm|hr|hrs|mo|yr|k|x)$", re.IGNORECASE)
+_FRAGMENT_OK = {"a", "i", "an", "at", "as", "be", "by", "do", "go", "he", "if", "in", "is", "it", "me", "my",
+                "no", "of", "on", "or", "so", "to", "up", "us", "we", "id", "mi", "ca", "ny", "tx", "fl",
+                "oh", "pa", "va", "wa", "co", "ok", "ma", "md", "nc", "sc", "ga", "il", "nj", "ne", "ky",
+                "la", "mo", "wi", "mn", "ia", "ks", "ar", "al", "ms", "tn", "ut", "az", "nm", "nv", "or",
+                "ct", "ri", "de", "vt", "nh", "hi", "ak", "wv", "sd", "nd", "mt", "wy", "ss", "ll", "rd",
+                "st", "dr", "jr", "sr", "po", "am", "pm", "yr", "hr", "mo", "wk", "ot", "no", "ee", "er"}
+_GARBLED_FRACTION = 0.12
+_GARBLED_MIN_TOKENS = 40
+
+
+def _text_layer_is_garbled(layer: str) -> tuple[bool, str]:
+    """Whether a PDF text layer reads like a scanner's own OCR rather than
+    the text a program wrote."""
+    tokens = (layer or "").split()
+    if len(tokens) < _GARBLED_MIN_TOKENS:
+        return False, ""
+    garbled = 0
+    for tok in tokens:
+        core = tok.strip(",.;:()[]{}$%\"'")
+        if not core:
+            continue
+        if _GARBLED_TOKEN_RE.search(core) and not _ORDINAL_RE.match(core):
+            garbled += 1
+        elif len(core) <= 2 and core.isalpha() and core.lower() not in _FRAGMENT_OK:
+            garbled += 1
+    frac = garbled / len(tokens)
+    if frac >= _GARBLED_FRACTION:
+        return True, f"{frac:.0%} of its words are broken"
+    return False, ""
+
+
 def _text_layer_disagrees(layer: str, ocr_text: str) -> bool:
     """True when the PDF's own text layer holds numbers the OCR lost.
 
@@ -737,8 +778,17 @@ def process_pdf(
 
     # Phase B1.9: pages queued for a second read that carry a PDF text
     # layer take it verbatim — exact, deterministic, free — and leave the
-    # vision queue. Scanned packets have no layer and fall through.
+    # vision queue. Scanned packets have no layer and fall through. A
+    # layer a scanner wrote from its own OCR ("R.lphs Grocery Comp.ny",
+    # "PeBon Number") is not that: it is garbled, it replaced the read on
+    # eight pay stubs at once, and every gross was lost. Such a layer is
+    # ignored and the page keeps its place in the vision queue.
     if low_quality_pages:
+        for page_num in [pn for pn in low_quality_pages if pn in text_layer_map]:
+            garbled, why = _text_layer_is_garbled(text_layer_map[page_num])
+            if garbled:
+                logger.warning("Page %d: PDF text layer is a scanner's own OCR (%s) — ignored", page_num, why)
+                del text_layer_map[page_num]
         layered = [pn for pn in low_quality_pages if pn in text_layer_map]
         for page_num in layered:
             layer = text_layer_map[page_num]

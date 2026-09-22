@@ -639,6 +639,17 @@ _CERT_FINGERPRINTS = {
         "apartment size desired", "income sources i have or receive", "sworn income and asset",
         "questionnaire",
     ),
+    # A pay stub and a Work Number report are told apart by what they print:
+    # a stub carries a pay period, a pay date, gross and year-to-date; a
+    # Work Number report names itself and its verifier.
+    "Paystub": (
+        "pay period", "pay date", "gross pay", "net pay", "ytd", "year to date", "earnings statement",
+        "paycheck", "check date", "hours worked", "regular earnings",
+    ),
+    "Work Number / Equifax Report": (
+        "the work number", "equifax", "verifier", "employment data report", "income data report",
+        "permissible purpose",
+    ),
     "Tenant Income Certification (TIC)": (
         "tenant income certification", "hh meets income restriction", "income equates to", "amgi",
         "part ii - household composition", "part iii - income other than assets",

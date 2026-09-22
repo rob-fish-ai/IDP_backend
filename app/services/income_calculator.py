@@ -401,16 +401,24 @@ def calculate_paystub_based(
 
     avg = sum(amounts) / len(amounts)
     multiplier = get_frequency_multiplier(freq)
+    dates = [d for d in (_parse_date(ps.payDate) for ps in paystubs) if d]
+    inferred = _infer_periodicity(dates) if len(dates) >= 3 else None
+    note = ""
     if multiplier is None:
         # The stubs' own dates say how often the person is paid.
-        inferred = _infer_periodicity([d for d in (_parse_date(ps.payDate) for ps in paystubs) if d])
         if inferred:
             freq, multiplier = inferred, FREQUENCY_MULTIPLIERS[inferred]
         else:
             return None, f"[rejected] pay interval '{freq or 'not stated'}' is not recognised and the stub dates do not show one"
+    elif inferred and inferred != normalize_frequency(freq):
+        # Three or more dated stubs spaced a month apart are monthly pay
+        # whatever interval the read attached; a Work Number row labelled
+        # weekly and multiplied by 52 projected a year's pay from a month's.
+        note = f" — pay dates are {inferred}, not {normalize_frequency(freq) or freq}; the dates decide"
+        freq, multiplier = inferred, FREQUENCY_MULTIPLIERS[inferred]
 
     annual = avg * multiplier
-    details = f"avg({len(amounts)} stubs) = {avg:.2f} × {multiplier} = {annual:.2f}"
+    details = f"avg({len(amounts)} stubs) = {avg:.2f} × {multiplier} = {annual:.2f}{note}"
     return f"{annual:.2f}", details
 
 
