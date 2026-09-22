@@ -2,10 +2,10 @@
 
 | | |
 |---|---|
-| Version | 1.2 |
-| Date | 21 September 2026 |
+| Version | 1.3 |
+| Date | 22 September 2026 |
 | Author | Maria Azevedo |
-| Status | Generated from delivered payloads; v1.1 added `findings`, `pages`, `verification_status`; v1.2 adds `confidence` |
+| Status | Generated from delivered payloads; v1.1 added `findings`, `pages`, `verification_status`; v1.2 added `confidence`; v1.3 adds the engine's annual figure and calculation, `rate_unit`, `payment_history`, relationship in Cartograph's vocabulary and `member_status` |
 
 Every field the audit engine sends today, what each one means, and what it needs on the Cartograph side.
 
@@ -39,7 +39,7 @@ Sent once at the top of every payload. These identify the case and the run that 
 
 | Field | Example | Meaning |
 |---|---|---|
-| `schema_version` | `1.2` | Payload contract version. Changes when the shape changes |
+| `schema_version` | `1.3` | Payload contract version. Changes when the shape changes |
 | `extraction_id` | `ext_0ca98dfd...` | Unique per run. A re-audit of the same case produces a new one, so it identifies the attempt rather than the case |
 | `engine_version` | `idp-1.0.0` | Which build produced the extraction. Worth storing: it is what makes a result reproducible when a mapping question comes up months later |
 | `extracted_at` | `2026-09-07T17:06:12Z` | UTC, ISO 8601. When extraction finished, not when the case was received |
@@ -84,7 +84,9 @@ All amounts are plain decimal strings: no currency symbol, no thousands separato
 | `last_name` | `Ackerman` | |
 | `date_of_birth` | `1987-05-19` | ISO. Null when the printed date could not be parsed, and reported in warnings |
 | `is_hoh` | `true` | Exactly one member carries true |
-| `relationship` | `Head of Household` | **Only sent for the head.** The engine does not extract relationships for other members; a warning names each one left unset |
+| `relationship` | `Minor Child` | In Cartograph's vocabulary: `Head of Household`, `Spouse`, `Co-Head`, `Minor Child`, `Other Adult`, `Live-in Aide`, `Foster Child`, `Unborn`. The form's word (`Dependent`, `Son`, a 50059 code) is mapped by word and by age at the effective date: a child relationship under eighteen is `Minor Child`, from eighteen `Other Adult`. A word with no equivalent is sent as printed with a warning |
+| `relationship_as_printed` | `Dependent` | The form's own word, unmapped |
+| `member_status` | `Active` | `Active`, or `Unborn` for an expected child listed on the certification: no name, date of birth or SSN, counted in household size |
 | `is_disabled` | `null` | true / false / **null**. See section 1 |
 | `full_time_student` | `false` | Same three-state rule |
 | `ssn_last4` | `4417` | Four digits. See section 1 |
@@ -103,7 +105,11 @@ One per income source. Paystubs arrive nested underneath rather than as a flat l
 | `member_ref` | `m01` | Null when the earner could not be matched to a member, with a warning. The record is still sent, the income is real even when its owner is uncertain |
 | `income_type` | `wages_and_salaries` | From the supplied picklist. `other` means no match; see section 1 |
 | `source_name` | `Redwood Facilities Group LLC` | Employer or payer as extracted |
-| `frequency_of_pay` | `bi-weekly` | As printed; not normalized |
+| `frequency_of_pay` | `bi-weekly` | How often the person is paid. As the record states it; when it does not, the rate's own unit (a monthly benefit is paid monthly). Null for an hourly rate with no stated pay period |
+| `rate_unit` | `hourly` | What `rate_of_pay` is per: `hourly`, `daily`, `weekly`, `bi-weekly`, `semi-monthly`, `monthly`, `quarterly`, `annually`, `per_period`. Null when the record has no rate |
+| `annual_income` | `29133.00` | **The engine's annual figure for this source.** Null when no method could produce one (a record with no amount, a declaration with no period) |
+| `calculation` | `{method, annual_income, details, alternatives[]}` | How the figure was reached. `method` is `paystub-based`, `history-based`, `voi-based` or `self-declared`; `details` is the arithmetic in words (`avg(2 stubs) = 560.25 × 52 = 29133.00 — only 2 pay stub(s) in the file`). `alternatives[]` are the other rows the engine computed for the source, each with `status` `audit` (a year-to-date projection run beside the primary), `rejected` (a method that produced an implausible figure, with why) or `historical` (income from a period before the certification). The methods-disagree findings are made from this comparison |
+| `payment_history` | `[{date, amount}]` | For child support, alimony and benefit payment records: every payment line the document prints, as printed. `date` is null when the line prints no date (a numbered worksheet). The engine annualises from these rows; it never sums them on the document's behalf |
 | `date_received` | `2026-08-04` | ISO. When the verification was received |
 | `employment_start_date` | `null` | ISO |
 | `employment_status` | `Active` | `Active`, `Terminated`, `On Leave`, or null. **Needs a column** |
@@ -114,8 +120,10 @@ One per income source. Paystubs arrive nested underneath rather than as a flat l
 | `pages` | `[20, 21]` | Packet pages this record was read from. Positions in the file Cartograph sent; a reviewer opens the same file and lands on the page |
 | `confidence` | `{score, flag, review[]}` | The engine's confidence in this record: `score` 0 to 1, `flag` green / yellow / red, and `review`, the fields a reviewer should look at with `field`, `flag` and `reason`. See section 8a |
 | `paystubs[]` | | `pay_date`, `gross_pay`, `ytd_amount`, `pay_frequency`, `pages` |
-| `vois[]` | | `voi_type`, `date_received`, `rate_of_pay`, `hours_per_pay_period`, `frequency_of_pay`, `ytd_amount`, `ytd_start_date`, `ytd_end_date` |
+| `vois[]` | | `voi_type`, `date_received`, `rate_of_pay`, `rate_unit`, `hours_per_pay_period`, `frequency_of_pay`, `ytd_amount`, `ytd_start_date`, `ytd_end_date`. `voi_type` `Pay Stubs` marks a source verified by its stubs alone |
 | `zero_income` | `null` | Object when a zero-income affidavit was filed |
+
+The `annual_income` on each record and the `annual_income` on `cert_review` answer different questions: the record's is what the engine computed from the documents, the review's is what the certification declares. When they differ the `CERT_SUMMARY_INCOME_MISMATCH` finding says by how much.
 
 A source can arrive with paystubs and no verification entry. That is not an error: when an employer verification comes back blank, the manager substitutes paystubs, and the engine reconstructs the source from them. Those records carry no `self_declared_amount` and no verification fields, because there is no third-party document behind them.
 

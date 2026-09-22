@@ -46,12 +46,13 @@ from datetime import datetime, timezone
 
 from app.core.config import Settings
 from app.schemas.extraction import ExtractionResult, HouseholdMember
-from app.services.income_calculator import match_paystubs_to_sources
+from app.services.income_calculator import match_paystubs_to_sources, normalize_rate_unit
+from app.services.members import is_unborn
 from app.services.name_reconciler import _name_similarity
 
 logger = logging.getLogger(__name__)
 
-SCHEMA_VERSION = "1.2"
+SCHEMA_VERSION = "1.3"
 
 # Below this, two names are different people rather than two spellings of
 # one. Deliberately strict: attaching an income record to the wrong member
@@ -186,6 +187,68 @@ def _member_ref(index: int) -> str:
     return f"m{index + 1:02d}"
 
 
+# Cartograph's relationship picklist, and how the forms' own words map onto
+# it. The HUD 50059 prints codes (D for dependent, K for co-head) and the
+# TIC prints whatever the manager wrote (Son, Daughter, Child, Grandchild);
+# Cartograph has one word for every child under eighteen. Age decides the
+# child/adult split when the form's word does not.
+_RELATIONSHIP_HEAD = "Head of Household"
+_RELATIONSHIP_OUT = {
+    "head": _RELATIONSHIP_HEAD, "head of household": _RELATIONSHIP_HEAD, "hoh": _RELATIONSHIP_HEAD,
+    "spouse": "Spouse", "wife": "Spouse", "husband": "Spouse",
+    "co-head": "Co-Head", "cohead": "Co-Head", "co head": "Co-Head", "k": "Co-Head",
+    "live-in aide": "Live-in Aide", "live in aide": "Live-in Aide", "aide": "Live-in Aide", "l": "Live-in Aide",
+    "foster child": "Foster Child", "foster": "Foster Child", "f": "Foster Child",
+    "foster adult": "Other Adult",
+    "unborn child": "Unborn", "unborn": "Unborn", "expected child": "Unborn",
+    "other adult": "Other Adult", "adult": "Other Adult", "o": "Other Adult",
+}
+_CHILD_WORDS = ("dependent", "child", "son", "daughter", "grandson", "granddaughter", "grandchild",
+                "minor", "stepson", "stepdaughter", "stepchild", "niece", "nephew", "d", "c")
+_ADULT_RELATIVE_WORDS = ("mother", "father", "parent", "brother", "sister", "sibling", "grandmother",
+                         "grandfather", "grandparent", "aunt", "uncle", "cousin", "partner", "friend",
+                         "roommate", "in-law", "relative", "other")
+
+
+def _age_at(dob: str | None, on: str | None) -> float | None:
+    from datetime import date
+    try:
+        y, m, d = (int(x) for x in (dob or "").split("-"))
+        born = date(y, m, d)
+    except (TypeError, ValueError):
+        return None
+    try:
+        y, m, d = (int(x) for x in (on or "").split("-"))
+        ref = date(y, m, d)
+    except (TypeError, ValueError):
+        ref = date.today()
+    return (ref - born).days / 365.25
+
+
+def relationship_out(printed: str | None, dob: str | None, effective_date: str | None) -> str | None:
+    """The Cartograph relationship for a member, from the form's word and age.
+
+    "Dependent", "Son", "Daughter" and "Child" are "Minor Child" under
+    eighteen and "Other Adult" from eighteen; a child relationship with no
+    date of birth is taken as a minor, which is what the word means on the
+    forms. Words Cartograph has no value for ("Mother", "Friend") are
+    adults. The form's own word travels beside it as relationship_as_printed.
+    """
+    key = (printed or "").strip().lower().rstrip(".")
+    if not key:
+        return None
+    if key in _RELATIONSHIP_OUT:
+        return _RELATIONSHIP_OUT[key]
+    age = _age_at(dob, effective_date)
+    if any(key == w or key.startswith(w + " ") or key.endswith(" " + w) for w in _CHILD_WORDS):
+        if age is not None and age >= 18:
+            return "Other Adult"
+        return "Minor Child"
+    if any(w in key for w in _ADULT_RELATIVE_WORDS):
+        return "Minor Child" if age is not None and age < 18 else "Other Adult"
+    return None
+
+
 def build_household_members(
     extraction: ExtractionResult,
     warnings: list[str],
@@ -233,10 +296,24 @@ def build_household_members(
         # from the roster position, which is authoritative for that one
         # value; everyone else carries what the form says, and the warning
         # is reserved for a member the form genuinely left blank.
+        effective = extraction.certification_info.effectiveDate if extraction.certification_info else None
+        unborn = is_unborn(member)
+        record["member_status"] = "Unborn" if unborn else "Active"
+        record["relationship_as_printed"] = member.relationship
         if is_hoh:
-            record["relationship"] = "Head of Household"
+            record["relationship"] = _RELATIONSHIP_HEAD
+        elif unborn:
+            record["relationship"] = "Unborn"
         elif member.relationship:
-            record["relationship"] = member.relationship
+            mapped = relationship_out(member.relationship, member.DOB, effective)
+            if mapped:
+                record["relationship"] = mapped
+            else:
+                record["relationship"] = member.relationship
+                warnings.append(
+                    f"household_members[{index}].relationship {member.relationship!r} has no "
+                    f"Cartograph equivalent; sent as printed"
+                )
         else:
             warnings.append(
                 f"household_members[{index}].relationship not extracted; left unset"
@@ -397,6 +474,21 @@ def _employment_status(
     return None
 
 
+_ENGINE_SYNONYMS = {
+    "supplemental_security_income": "ssi",
+    "social_security_disability": "social_security",
+    "direct_express": "prepaid_debit_card",
+    "prepaid_card": "prepaid_debit_card",
+    "debit_card": "prepaid_debit_card",
+    "certificate_of_deposit": "cd",
+    "certificates_of_deposit": "cd",
+    "cash": "cash_on_hand",
+    "life_insurance": "whole_life_insurance",
+    "temporary_assistance": "public_assistance",
+    "tanf": "public_assistance",
+}
+
+
 def _map_vocabulary(
     value: str | None,
     allowed: list[str],
@@ -425,6 +517,10 @@ def _map_vocabulary(
     if not value:
         warnings.append(f"{context}: no type extracted; sent as 'other'")
         return "other"
+    # The engine's own long names for terms the picklists abbreviate. These
+    # are facts about our vocabulary, not the consumer's decisions, so they
+    # live here; the configured aliases still override them.
+    value = _ENGINE_SYNONYMS.get(_normalize_term(value), value)
 
     if not allowed:
         warnings.append(
@@ -500,6 +596,61 @@ def build_cert_review(
     }
 
 
+def _calc_key(member: str | None, source: str | None) -> tuple[str, str]:
+    return ((member or "").strip().lower(), (source or "").strip().lower())
+
+
+_PAY_FREQUENCIES = ("weekly", "bi-weekly", "semi-monthly", "monthly", "quarterly")
+
+
+def _frequency_out(entry, stubs: list | None = None) -> str | None:
+    """How often the person is paid.
+
+    The stubs say it best when there are any; otherwise the record's stated
+    frequency, or the rate's own unit ($1,489.50 monthly is paid monthly).
+    "Annually" is the period of a declared figure, not a pay frequency, and
+    an hourly rate implies none.
+    """
+    from app.services.income_calculator import normalize_frequency
+    for stub in stubs or []:
+        freq = normalize_frequency(getattr(stub, "payInterval", None))
+        if freq in _PAY_FREQUENCIES:
+            return freq
+    freq = normalize_frequency(entry.frequencyOfPay)
+    if freq in _PAY_FREQUENCIES:
+        return freq
+    unit = normalize_rate_unit(getattr(entry, "rateUnit", None))
+    if unit in _PAY_FREQUENCIES:
+        return unit
+    return None
+
+
+def _calculations_by_source(extraction: ExtractionResult) -> dict[tuple[str, str], dict]:
+    """The engine's annual figure per source, with how it was reached.
+
+    One primary row per (member, source): the method that produced the
+    figure and its arithmetic in words. The audit rows (a year-to-date
+    projection beside a stub average) and rejected attempts travel as
+    alternatives, each stating why it did not stand, so a reviewer sees the
+    same comparison the findings were made from.
+    """
+    out: dict[tuple[str, str], dict] = {}
+    for calc in extraction.income_calculations or []:
+        key = _calc_key(calc.memberName, calc.sourceName)
+        details = calc.details or ""
+        status = ("audit" if details.startswith("[audit]") else
+                  "rejected" if details.startswith("[rejected]") else
+                  "historical" if details.startswith("[historical]") else "primary")
+        row = {"method": calc.method, "annual_income": _money(calc.annualIncome),
+               "status": status, "details": details}
+        slot = out.setdefault(key, {"method": None, "annual_income": None, "details": None, "alternatives": []})
+        if status == "primary" and slot["annual_income"] is None and row["annual_income"] is not None:
+            slot.update(method=calc.method, annual_income=row["annual_income"], details=details)
+        else:
+            slot["alternatives"].append(row)
+    return out
+
+
 def build_income_records(
     extraction: ExtractionResult,
     members: list[dict],
@@ -523,6 +674,7 @@ def build_income_records(
         return []
 
     grouped = match_paystubs_to_sources(source_income.payStub, entries)
+    calculations = _calculations_by_source(extraction)
 
     records: list[dict] = []
     for index, entry in enumerate(entries):
@@ -530,6 +682,7 @@ def build_income_records(
         member_ref = _resolve_member_ref(
             entry.memberName, members, warnings, context,
         )
+        calc = calculations.get(_calc_key(entry.memberName, entry.sourceName))
 
         paystubs = [
             {
@@ -548,6 +701,7 @@ def build_income_records(
                 "voi_type": entry.type_of_VOI,
                 "date_received": _iso_date(entry.dateReceived),
                 "rate_of_pay": _money(entry.rateOfPay),
+                "rate_unit": normalize_rate_unit(entry.rateUnit),
                 "hours_per_pay_period": entry.hoursPerPayPeriod,
                 "frequency_of_pay": entry.frequencyOfPay,
                 "ytd_amount": _money(entry.ytdAmount),
@@ -562,7 +716,8 @@ def build_income_records(
                 aliases=settings.cartograph_type_aliases,
             ),
             "source_name": entry.sourceName,
-            "frequency_of_pay": entry.frequencyOfPay,
+            "frequency_of_pay": _frequency_out(entry, grouped.get(index, [])),
+            "rate_unit": normalize_rate_unit(entry.rateUnit),
             "date_received": _iso_date(entry.dateReceived),
             "employment_start_date": _iso_date(entry.hireDate),
             "employment_status": _employment_status(
@@ -573,6 +728,13 @@ def build_income_records(
             "source_of_declaration": entry.selfDeclaredSource,
             "verification_status": entry.verificationStatus,
             "pages": _pages_of(entry),
+            "annual_income": calc["annual_income"] if calc else None,
+            "calculation": calc,
+            "payment_history": [
+                {"date": _iso_date(row.date) if row.date else None, "amount": _money(row.amount)}
+                for row in (entry.paymentHistory or [])
+                if row.amount
+            ],
             "paystubs": paystubs,
             "vois": vois,
             "zero_income": None,
@@ -603,6 +765,7 @@ def build_income_records(
                 f"{len(stubs)} paystub(s) but no verification entry; record "
                 f"reconstructed from the paystubs"
             )
+            calc = calculations.get(_calc_key(member_name, source_name))
             records.append({
                 "member_ref": _resolve_member_ref(
                     member_name, members, warnings, context,
@@ -629,6 +792,10 @@ def build_income_records(
                 "source_of_declaration": None,
                 "verification_status": "verified",
                 "pages": sorted({p for s in stubs for p in _pages_of(s)}),
+                "rate_unit": None,
+                "annual_income": calc["annual_income"] if calc else None,
+                "calculation": calc,
+                "payment_history": [],
                 "paystubs": [
                     {
                         "pay_date": _iso_date(s.payDate),

@@ -296,3 +296,58 @@ def test_a_signature_date_a_year_before_the_effective_date_is_doubted_not_assert
     out = _check_signed_after_effective(CertificationInfo(effectiveDate="2026-05-29", signatureDate="2024-08-28"))
     assert len(out) == 1 and out[0].code == "CERT_SIGNATURE_DATE_IMPLAUSIBLE" and out[0].result == "na"
     assert _check_signed_after_effective(CertificationInfo(effectiveDate="2026-05-29", signatureDate="2026-05-20")) == []
+
+
+# ---------------------------------------------------------------------------
+# Payload v1.3
+# ---------------------------------------------------------------------------
+
+def test_relationships_map_onto_cartographs_words_by_form_word_and_age():
+    from app.services.cartograph.adapter import relationship_out
+    assert relationship_out("Dependent", "2012-06-18", "2027-01-01") == "Minor Child"
+    assert relationship_out("Son", "2001-03-01", "2027-01-01") == "Other Adult"
+    assert relationship_out("Daughter", None, "2027-01-01") == "Minor Child"
+    assert relationship_out("Co-Head", "1990-01-01", None) == "Co-Head"
+    assert relationship_out("Live-in Aide", None, None) == "Live-in Aide"
+    assert relationship_out("Mother", "1950-05-05", "2027-01-01") == "Other Adult"
+    assert relationship_out("Unborn Child", None, None) == "Unborn"
+    assert relationship_out("Zzyzx", None, None) is None
+
+
+def test_payload_carries_annual_income_calculation_rate_unit_and_history():
+    from app.schemas.extraction import CertificationInfo, IncomeCalculationResult, IncomeExtraction, SourceIncome
+    from app.services.cartograph.adapter import build_household_members, build_income_records
+    from app.core.config import Settings
+    hh = HouseholdDemographics(houseHold=[
+        HouseholdMember(FirstName="Rebecca", LastName="Knott", DOB="1990-12-19", head="H", relationship="Head"),
+        HouseholdMember(FirstName="Kyzer", LastName="Sammons", DOB="2015-07-03", relationship="Dependent"),
+        HouseholdMember(FirstName="Unborn", LastName="Child", relationship="Unborn Child"),
+    ])
+    ssi = VerificationIncomeEntry(memberName="Kyzer Sammons", sourceName="Social Security Administration",
+                                  incomeType="Supplemental Security Income", type_of_VOI="SSA Benefit Letter",
+                                  rateOfPay="994.00", rateUnit="monthly", sourcePages=[27], verificationStatus="verified")
+    cs = VerificationIncomeEntry(memberName="Rebecca Knott", sourceName="Keith Amos", incomeType="Child Support",
+                                 sourcePages=[28], verificationStatus="verified",
+                                 paymentHistory=[PaymentHistoryRow(date="2026-08-05", amount="3.59"), PaymentHistoryRow(date=None, amount="3.59")])
+    ex = SimpleNamespace(
+        household_demographics=hh,
+        certification_info=CertificationInfo(effectiveDate="2026-05-29"),
+        income=IncomeExtraction(sourceIncome=SourceIncome(payStub=[], verificationIncome=[ssi, cs])),
+        income_calculations=[
+            IncomeCalculationResult(memberName="Kyzer Sammons", sourceName="Social Security Administration", method="voi-based", annualIncome="11928.00", details="994.00 monthly × 12 = 11928.00"),
+            IncomeCalculationResult(memberName="Rebecca Knott", sourceName="Keith Amos", method="history-based", annualIncome="186.68", details="fixed weekly payment of 3.59 × 52 = 186.68"),
+            IncomeCalculationResult(memberName="Rebecca Knott", sourceName="Keith Amos", method="ytd-based", annualIncome="180.00", details="[audit] projection"),
+        ],
+    )
+    warnings: list[str] = []
+    members = build_household_members(ex, warnings)
+    assert [m["relationship"] for m in members] == ["Head of Household", "Minor Child", "Unborn"]
+    assert [m["member_status"] for m in members] == ["Active", "Active", "Unborn"]
+    assert members[1]["relationship_as_printed"] == "Dependent"
+    records = build_income_records(ex, members, Settings(cartograph_income_types=["ssi", "child_support"]), warnings)
+    r0, r1 = records
+    assert r0["rate_unit"] == "monthly" and r0["frequency_of_pay"] == "monthly"
+    assert r0["annual_income"] == "11928.00" and r0["calculation"]["method"] == "voi-based"
+    assert r0["vois"][0]["rate_unit"] == "monthly"
+    assert r1["annual_income"] == "186.68" and r1["calculation"]["alternatives"][0]["status"] == "audit"
+    assert r1["payment_history"] == [{"date": "2026-08-05", "amount": "3.59"}, {"date": None, "amount": "3.59"}]
