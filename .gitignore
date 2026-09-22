@@ -9,3 +9,6 @@ __pycache__/
 
 # Evaluation harness output (large per-run JSON)
 eval/runs/
+
+# Real tenant packets (PII) — never committed
+eval/pdfs/
