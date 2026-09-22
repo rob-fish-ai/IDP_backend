@@ -695,18 +695,25 @@ def build_income_records(
             for stub in grouped.get(index, [])
         ]
 
+        # A VOI row states what a verification form stated: a rate, hours,
+        # a year-to-date figure or an overtime rate. A record whose only
+        # verification is its stubs, or a declaration, has no such row —
+        # an empty one arrived in Cartograph as a placeholder to delete.
         vois: list[dict] = []
-        if entry.rateOfPay or entry.ytdAmount or entry.type_of_VOI:
+        if entry.rateOfPay or entry.ytdAmount or entry.hoursPerPayPeriod or entry.overtimeRate:
             vois.append({
                 "voi_type": entry.type_of_VOI,
                 "date_received": _iso_date(entry.dateReceived),
                 "rate_of_pay": _money(entry.rateOfPay),
                 "rate_unit": normalize_rate_unit(entry.rateUnit),
                 "hours_per_pay_period": entry.hoursPerPayPeriod,
-                "frequency_of_pay": entry.frequencyOfPay,
+                "frequency_of_pay": _frequency_out(entry, grouped.get(index, [])),
                 "ytd_amount": _money(entry.ytdAmount),
                 "ytd_start_date": _iso_date(entry.ytdStartDate),
                 "ytd_end_date": _iso_date(entry.ytdEndDate),
+                "overtime_rate": _money(entry.overtimeRate),
+                "overtime_frequency": entry.overtimeFrequency,
+                "employment_start_date": _iso_date(entry.hireDate),
             })
 
         records.append({

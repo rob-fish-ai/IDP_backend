@@ -343,6 +343,24 @@ PAYSTUB FIELDS:
 
 SPECIAL PAYSTUB RULES:
 - Work Number/Equifax: take the 6 most current entries only
+
+THE WORK NUMBER (EQUIFAX) EMPLOYMENT AND INCOME VERIFICATION — BOTH HALVES:
+The report is a verification of employment AND a pay history on one document.
+For EACH employer record ("RECORD 1 OF 1", "Employer: …") return:
+  (a) ONE verificationIncome entry: sourceName = the employer as the record names
+      it; type_of_VOI "Work Number"; incomeType "Non-Federal Wage"; rateOfPay = the
+      "Pay Rate" ("$21.00 Hourly" → rateOfPay "21.00", rateUnit "hourly");
+      frequencyOfPay = the "Pay Period" / "Pay Frequency" (Biweekly → "bi-weekly");
+      hoursPerPayPeriod = the hours on the MOST RECENT pay period row; hireDate =
+      "Most Recent Start Date" (put "Original Hire Date" in evidence when it
+      differs); employmentStatus from "Employment Status"; ytdAmount = the current
+      year's "(YTD)" total in the Annual Income Summary, with ytdStartDate January 1
+      of that year and ytdEndDate = the "Current As Of" date; dateReceived = the
+      "Inquiry Date". Prior years' annual totals are history, not the rate.
+  (b) payStub entries for the 6 most recent rows of the pay period history, each
+      with payDate = the Pay Date, grossPay = Gross Earnings, payInterval = the pay
+      period, ytdGross null (the rows print none).
+Both halves name the same employer so they attach to one income source.
 - Child support and other benefit payments are NEVER pay stubs — they belong in the
   verificationIncome entry's paymentHistory
 - Do NOT create pay stubs for SSA, pension, or TANF (these go to verificationIncome)

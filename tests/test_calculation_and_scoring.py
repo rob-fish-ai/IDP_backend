@@ -388,3 +388,30 @@ def test_a_stub_labelled_as_a_work_number_report_is_relabelled_by_what_it_prints
     assert _label_by_printed_title("Work Number / Equifax Report", stub)[0] == "Paystub"
     wn = "The Work Number Employment Data Report Verifier: Palo Verde Permissible purpose: housing Pay Period End 06/30/26 Gross Pay 2,659.13"
     assert _label_by_printed_title("Work Number / Equifax Report", wn) is None
+
+
+def test_a_voi_row_is_sent_only_when_a_verification_stated_something():
+    from app.schemas.extraction import CertificationInfo, IncomeExtraction, SourceIncome
+    from app.services.cartograph.adapter import build_household_members, build_income_records
+    from app.core.config import Settings
+    hh = HouseholdDemographics(houseHold=[HouseholdMember(FirstName="Bianca", LastName="Avila", DOB="2000-12-21", head="H", relationship="Head")])
+    stubs = [PayStubEntry(sourceName="Desert VIP", memberName="Bianca Avila", grossPay=g, payDate=d, payInterval="bi-weekly")
+             for g, d in (("773.43", "2026-08-28"), ("711.47", "2026-09-11"))]
+    declared_only = VerificationIncomeEntry(memberName="Bianca Avila", sourceName="Desert VIP", incomeType="Non-Federal Wage",
+                                            type_of_VOI="Self-Declaration", selfDeclaredAmount="21252.00", frequencyOfPay="annually",
+                                            verificationStatus="verified", sourcePages=[9])
+    work_number = VerificationIncomeEntry(memberName="Bianca Avila", sourceName="Desert VIP", incomeType="Non-Federal Wage",
+                                          type_of_VOI="Work Number", rateOfPay="21.00", rateUnit="hourly", hoursPerPayPeriod="36.83",
+                                          frequencyOfPay="bi-weekly", ytdAmount="9701.07", ytdStartDate="2026-01-01", ytdEndDate="2026-08-28",
+                                          hireDate="2026-03-13", dateReceived="2026-09-10", verificationStatus="verified", sourcePages=[10])
+    ex = SimpleNamespace(household_demographics=hh, certification_info=CertificationInfo(effectiveDate="2027-01-01"),
+                         income=IncomeExtraction(sourceIncome=SourceIncome(payStub=stubs, verificationIncome=[declared_only, work_number])),
+                         income_calculations=[])
+    warnings: list[str] = []
+    members = build_household_members(ex, warnings)
+    records = build_income_records(ex, members, Settings(cartograph_income_types=["wages_and_salaries"]), warnings)
+    assert records[0]["vois"] == []
+    assert records[0]["frequency_of_pay"] == "bi-weekly"
+    voi = records[1]["vois"][0]
+    assert voi["voi_type"] == "Work Number" and voi["rate_of_pay"] == "21.00" and voi["rate_unit"] == "hourly"
+    assert voi["frequency_of_pay"] == "bi-weekly" and voi["ytd_amount"] == "9701.07" and voi["employment_start_date"] == "2026-03-13"
