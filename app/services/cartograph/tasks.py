@@ -15,6 +15,7 @@ URL and ends at an HTTP POST, and it is what survives the migration.
 """
 
 import logging
+from pathlib import Path
 import shutil
 from datetime import datetime
 
@@ -29,8 +30,67 @@ from app.services.cartograph.client import (
 )
 from app.services.cartograph.documents import DocumentUnavailable, fetch_packet
 from app.services.pdf_service import process_pdf_full
+from app.services.audit.jobs import is_retryable_error
 
 logger = logging.getLogger(__name__)
+
+
+def run_with_retry(fn, *, attempts: int, delay: float, is_retryable, on_retry=None):
+    """Call fn; on a transient failure wait and call it again, up to
+    `attempts` calls in all. A permanent failure, or the last transient
+    one, is raised as it came."""
+    import time
+    attempts = max(1, int(attempts or 1))
+    for n in range(1, attempts + 1):
+        try:
+            return fn()
+        except Exception as exc:
+            if n >= attempts or not is_retryable(exc):
+                raise
+            if on_retry:
+                on_retry(n, exc)
+            if delay > 0:
+                time.sleep(delay)
+
+
+def keep_packet(pdf_bytes: bytes, case_ref: str, settings) -> Path | None:
+    """Write the packet under output_dir/pdfs and prune the folder.
+
+    Kept for `pdf_retention_days` days and at most `pdf_retention_max_mb`
+    in total, oldest first. Returns the path written, or None when keeping
+    is disabled."""
+    if not settings.pdf_retention_days or settings.pdf_retention_days <= 0:
+        return None
+    folder = Path(settings.output_dir) / "pdfs"
+    folder.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    path = folder / f"{case_ref}_{stamp}.pdf"
+    path.write_bytes(pdf_bytes)
+    prune_packets(folder, settings.pdf_retention_days, settings.pdf_retention_max_mb)
+    return path
+
+
+def prune_packets(folder: Path, days: int, max_mb: int) -> int:
+    """Delete packets older than `days`, then the oldest until the folder
+    is within `max_mb`. Returns the number deleted."""
+    import time
+    files = sorted(folder.glob("*.pdf"), key=lambda p: p.stat().st_mtime)
+    cutoff = time.time() - days * 86400
+    deleted = 0
+    for f in list(files):
+        if f.stat().st_mtime < cutoff:
+            f.unlink(missing_ok=True)
+            files.remove(f)
+            deleted += 1
+    total = sum(f.stat().st_size for f in files)
+    while files and total > max_mb * 1024 * 1024:
+        f = files.pop(0)
+        total -= f.stat().st_size
+        f.unlink(missing_ok=True)
+        deleted += 1
+    if deleted:
+        logger.info("Packet retention: removed %d packet(s) from %s", deleted, folder)
+    return deleted
 
 
 def audit_case(
@@ -82,22 +142,40 @@ def audit_case(
                      error_code="document_unavailable")
         return
 
+    # The packet itself is kept for a while: every contested finding so
+    # far has needed the rendered page, and the client had to be asked for
+    # the file each time.
+    try:
+        keep_packet(pdf_bytes, case_ref, settings)
+    except Exception:
+        logger.exception("Could not keep the packet for case_ref=%s", case_ref)
+
     # Per-job work dir: page images and texts are named by page number only,
     # so concurrent extractions must not share one.
     work_dir = settings.output_dir / f"cartograph_{case_ref}"
     try:
-        result = process_pdf_full(
-            pdf_bytes,
-            settings,
-            funding_program=program,
-            certification_type=engine_cert_type,
-            work_dir=work_dir,
-            # Proves the case is alive while it runs. A packet scanned
-            # sideways takes tens of minutes legitimately, and without this
-            # the watchdog cannot tell that from a dead worker — it would
-            # fail a running case, which releases the dedupe and lets a
-            # re-notification audit the same case twice.
-            heartbeat=lambda: store.touch(case_ref),
+        result = run_with_retry(
+            lambda: process_pdf_full(
+                pdf_bytes,
+                settings,
+                funding_program=program,
+                certification_type=engine_cert_type,
+                work_dir=work_dir,
+                # Proves the case is alive while it runs. A packet scanned
+                # sideways takes tens of minutes legitimately, and without this
+                # the watchdog cannot tell that from a dead worker — it would
+                # fail a running case, which releases the dedupe and lets a
+                # re-notification audit the same case twice.
+                heartbeat=lambda: store.touch(case_ref),
+            ),
+            attempts=settings.cartograph_extract_attempts,
+            delay=settings.cartograph_retry_delay_seconds,
+            is_retryable=is_retryable_error,
+            on_retry=lambda n, exc: (
+                logger.warning("Extraction attempt %d for case_ref=%s failed for a transient reason (%s) — retrying",
+                               n, case_ref, exc),
+                store.touch(case_ref),
+            ),
         )
     except Exception as exc:
         logger.exception("Extraction failed for case_ref=%s", case_ref)

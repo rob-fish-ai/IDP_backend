@@ -48,6 +48,17 @@ class Settings(BaseSettings):
     ocr_timeout: int = 600
     ocr_raw: bool = False
     ocr_retry: bool = True
+    # The source PDF of every Cartograph case is kept under output_dir/pdfs
+    # so a contested finding can be checked against the rendered page
+    # without asking the client for the file again. Pruned by age and by
+    # total size, oldest first; 0 days disables keeping them.
+    pdf_retention_days: int = 14
+    pdf_retention_max_mb: int = 1500
+    # A Cartograph extraction that fails for a transient reason (the model
+    # unavailable, a truncated response, a rate limit) is tried again this
+    # many times in all, with this pause, before the failure is reported.
+    cartograph_extract_attempts: int = 2
+    cartograph_retry_delay_seconds: float = 30.0
     # OCR service can handle 4 concurrent requests. Parallelizing OCR
     # reduces whole-pipeline latency dramatically (~5x on 50+ page files).
     ocr_concurrency: int = 4

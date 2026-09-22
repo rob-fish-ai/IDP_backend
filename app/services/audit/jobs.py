@@ -57,6 +57,11 @@ def _format_failure_marker(case_number: str, stage: str, error: str) -> str:
     )
 
 
+def is_retryable_error(exc: BaseException) -> bool:
+    """Public name for the transient-failure test; the Cartograph path retries on it."""
+    return _is_retryable_error(exc)
+
+
 def _is_retryable_error(exc: BaseException) -> bool:
     """Return True if the exception looks transient — auto-retry on next cycle.
 
