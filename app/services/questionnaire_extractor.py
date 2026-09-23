@@ -3,7 +3,16 @@
 import logging
 
 from app.core.config import Settings
-from app.schemas.extraction import DocumentGroup, QuestionnaireDisclosures
+from app.schemas.extraction import DocumentGroup, Finding, QuestionnaireDisclosures
+from app.services.findings import (
+    ASSIGN_CLIENT,
+    CATEGORY_ASSET,
+    CATEGORY_FILE_REVIEW,
+    CATEGORY_INCOME,
+    RESOLVE_PRESENCE,
+    RESOLVE_RECALC,
+    make_finding,
+)
 from app.services.llm_service import call_llm_json
 
 logger = logging.getLogger(__name__)
@@ -157,22 +166,55 @@ def extract_questionnaire_disclosures(
     return _coerce_to_disclosures(result)
 
 
+def _unverified(
+    code: str,
+    text: str,
+    *,
+    label: str,
+    category: str,
+    subject_type: str | None,
+    correction: str,
+    resolution: str,
+) -> Finding:
+    """A questionnaire disclosure with nothing in the file to back it.
+
+    The category and subject are what the reviewer's next step keys on: a
+    disclosed asset with no record becomes an `asset` finding whose subject
+    is an `asset_record`, so the consumer can offer "add an asset record"
+    rather than a note to read. The subject has no ref because there is no
+    record yet — that absence is the finding — so the key is per case.
+    """
+    return make_finding(
+        code,
+        text,
+        label=label,
+        category=category,
+        subject_type=subject_type,
+        assignment=ASSIGN_CLIENT,
+        correction_required=correction,
+        resolution_type=resolution,
+    )
+
+
 def validate_affirmative_responses(
     disclosures: QuestionnaireDisclosures | None,
     document_groups: list[DocumentGroup],
     income_doc_types: set[str] | None = None,
     asset_doc_types: set[str] | None = None,
-) -> list[str]:
+) -> list[Finding]:
     """Cross-reference disclosures against documents present (Affirmative Response Rule).
 
     Per Section 11: any affirmative response requires independent verification.
 
-    Returns list of compliance finding strings.
+    Each finding is structured with the category of the thing disclosed and
+    the kind of record that is missing, so the consumer can turn it into an
+    action (add an asset record, add an income record) rather than a note.
+    The wording is unchanged from the plain-string form these replaced.
     """
     if not disclosures:
         return []
 
-    findings: list[str] = []
+    findings: list[Finding] = []
 
     # Build sets of document types present (non-ignore)
     doc_types = {g.document_type for g in document_groups if g.category != "ignore"}
@@ -188,19 +230,34 @@ def validate_affirmative_responses(
         has_paystub = any("paystub" in dt or "pay stub" in dt or "pay-slip" in dt for dt in doc_types_lower)
         has_work_number = any("work number" in dt or "equifax" in dt for dt in doc_types_lower)
         if not (has_voi or has_paystub or has_work_number):
-            findings.append(
+            findings.append(_unverified(
+                "QUESTIONNAIRE_EMPLOYMENT_UNVERIFIED",
                 "Employment disclosed on questionnaire but no Verification of Income (VOI), "
-                "pay stubs or Work Number report found — independent verification required (Section 11)"
-            )
+                "pay stubs or Work Number report found — independent verification required (Section 11)",
+                label="Employment disclosed with no income verification in the file",
+                category=CATEGORY_INCOME,
+                subject_type="income_record",
+                correction="Add an income record for the disclosed employment: obtain a VOI, "
+                           "a Work Number report or pay stubs",
+                resolution=RESOLVE_RECALC,
+            ))
 
-    # Student status → Student Status Certification required
+    # Student status → Student Status Certification required. A file
+    # review item, not a record to add: the certification is a document
+    # about the household, and its absence changes no figure.
     if disclosures.has_student_status is True:
         has_student_cert = any("student" in dt for dt in doc_types_lower)
         if not has_student_cert:
-            findings.append(
+            findings.append(_unverified(
+                "QUESTIONNAIRE_STUDENT_UNVERIFIED",
                 "Student status disclosed on questionnaire but no Student Status Certification "
-                "found — verification required (Section 11)"
-            )
+                "found — verification required (Section 11)",
+                label="Student status disclosed with no Student Status Certification",
+                category=CATEGORY_FILE_REVIEW,
+                subject_type=None,
+                correction="Obtain a Student Status Certification for each member disclosed as a student",
+                resolution=RESOLVE_PRESENCE,
+            ))
 
     # SSA benefits → SSA Benefit Letter required
     # SSA → a benefit letter, or HUD's own EIV income report, which is the
@@ -209,10 +266,17 @@ def validate_affirmative_responses(
         has_ssa = any("ssa" in dt or "ssi" in dt or "ssdi" in dt or "social security" in dt or dt == "eiv income report"
                       for dt in doc_types_lower)
         if not has_ssa:
-            findings.append(
+            findings.append(_unverified(
+                "QUESTIONNAIRE_SSA_UNVERIFIED",
                 "SSA/SSI/SSDI benefits disclosed on questionnaire but no benefit letter "
-                "or EIV report found — independent verification required (Section 11)"
-            )
+                "or EIV report found — independent verification required (Section 11)",
+                label="Social Security benefits disclosed with no benefit letter or EIV report",
+                category=CATEGORY_INCOME,
+                subject_type="income_record",
+                correction="Add an income record for the disclosed Social Security benefit: "
+                           "obtain the benefit letter or the EIV income report",
+                resolution=RESOLVE_RECALC,
+            ))
 
     # Checking / savings account → a bank statement or VOA, or the household's
     # asset self-certification, which HOTMA lets stand for net assets under
@@ -220,50 +284,92 @@ def validate_affirmative_responses(
     has_bank = any("bank statement" in dt or "voa" in dt or "verification of asset" in dt
                    or "asset self-certification" in dt for dt in doc_types_lower)
     if disclosures.has_checking_account is True and not has_bank:
-        findings.append(
+        findings.append(_unverified(
+            "QUESTIONNAIRE_CHECKING_UNVERIFIED",
             "Checking account disclosed on questionnaire but no bank statement, VOA or asset "
-            "self-certification found — bank verification required (Section 11)"
-        )
+            "self-certification found — bank verification required (Section 11)",
+            label="Checking account disclosed with no bank verification",
+            category=CATEGORY_ASSET,
+            subject_type="asset_record",
+            correction="Add an asset record for the disclosed checking account: obtain a bank "
+                       "statement, a VOA or the asset self-certification",
+            resolution=RESOLVE_RECALC,
+        ))
     if disclosures.has_savings_account is True and not has_bank:
-        findings.append(
+        findings.append(_unverified(
+            "QUESTIONNAIRE_SAVINGS_UNVERIFIED",
             "Savings account disclosed on questionnaire but no bank statement, VOA or asset "
-            "self-certification found — bank verification required (Section 11)"
-        )
+            "self-certification found — bank verification required (Section 11)",
+            label="Savings account disclosed with no bank verification",
+            category=CATEGORY_ASSET,
+            subject_type="asset_record",
+            correction="Add an asset record for the disclosed savings account: obtain a bank "
+                       "statement, a VOA or the asset self-certification",
+            resolution=RESOLVE_RECALC,
+        ))
 
     # Child support → verification required
     if disclosures.has_child_support is True:
         has_cs = any("child support" in dt for dt in doc_types_lower)
         if not has_cs:
-            findings.append(
+            findings.append(_unverified(
+                "QUESTIONNAIRE_CHILD_SUPPORT_UNVERIFIED",
                 "Child support disclosed on questionnaire but no child support verification "
-                "found — independent verification required (Section 11)"
-            )
+                "found — independent verification required (Section 11)",
+                label="Child support disclosed with no verification",
+                category=CATEGORY_INCOME,
+                subject_type="income_record",
+                correction="Add an income record for the disclosed child support: obtain the "
+                           "court order, agency printout or payment history",
+                resolution=RESOLVE_RECALC,
+            ))
 
     # Pension → pension statement required
     if disclosures.has_pension is True:
         has_pension = any("pension" in dt for dt in doc_types_lower)
         if not has_pension:
-            findings.append(
+            findings.append(_unverified(
+                "QUESTIONNAIRE_PENSION_UNVERIFIED",
                 "Pension income disclosed on questionnaire but no pension statement "
-                "found — independent verification required (Section 11)"
-            )
+                "found — independent verification required (Section 11)",
+                label="Pension disclosed with no pension statement",
+                category=CATEGORY_INCOME,
+                subject_type="income_record",
+                correction="Add an income record for the disclosed pension: obtain the pension "
+                           "or annuity statement",
+                resolution=RESOLVE_RECALC,
+            ))
 
     # Real estate → documentation required
     if disclosures.has_real_estate is True:
         has_real_estate = any("real estate" in dt for dt in doc_types_lower)
         if not has_real_estate:
-            findings.append(
+            findings.append(_unverified(
+                "QUESTIONNAIRE_REAL_ESTATE_UNVERIFIED",
                 "Real estate ownership disclosed on questionnaire but no real estate "
-                "documentation found — verification required (Section 11)"
-            )
+                "documentation found — verification required (Section 11)",
+                label="Real estate disclosed with no documentation",
+                category=CATEGORY_ASSET,
+                subject_type="asset_record",
+                correction="Add an asset record for the disclosed real estate: obtain the deed, "
+                           "tax assessment or appraisal and any mortgage statement",
+                resolution=RESOLVE_RECALC,
+            ))
 
     # Life insurance → verification required
     if disclosures.has_life_insurance is True:
         has_life = any("life insurance" in dt for dt in doc_types_lower)
         if not has_life:
-            findings.append(
+            findings.append(_unverified(
+                "QUESTIONNAIRE_LIFE_INSURANCE_UNVERIFIED",
                 "Life insurance disclosed on questionnaire but no life insurance "
-                "documentation found — verification required (Section 11)"
-            )
+                "documentation found — verification required (Section 11)",
+                label="Life insurance disclosed with no documentation",
+                category=CATEGORY_ASSET,
+                subject_type="asset_record",
+                correction="Add an asset record for the disclosed life insurance: obtain the "
+                           "policy statement showing its cash value",
+                resolution=RESOLVE_RECALC,
+            ))
 
     return findings

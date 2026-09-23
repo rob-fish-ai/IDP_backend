@@ -412,13 +412,14 @@ def test_the_only_employer_on_the_application_dates_the_only_wage_source():
 
 def test_stubs_alone_verify_a_disclosed_job_and_a_self_certification_covers_a_checking_account():
     from app.services.questionnaire_extractor import validate_affirmative_responses
+    from app.services.findings import text_of
     groups = [DocumentGroup(document_type="Pay Stub", category="include", pages=[26], page_range="26", combined_text="x"),
               DocumentGroup(document_type="Asset Self-Certification", category="include", pages=[23], page_range="23", combined_text="x")]
     disclosures = QuestionnaireDisclosures(has_employment=True, has_checking_account=True)
     assert validate_affirmative_responses(disclosures, groups) == []
     bare = [DocumentGroup(document_type="Tenant Income Certification (TIC)", category="include", pages=[1], page_range="1", combined_text="x")]
     texts = validate_affirmative_responses(disclosures, bare)
-    assert any("Employment disclosed" in t for t in texts) and any("Checking account disclosed" in t for t in texts)
+    assert any("Employment disclosed" in text_of(t) for t in texts) and any("Checking account disclosed" in text_of(t) for t in texts)
 
 
 def test_stubs_of_one_person_spelled_two_ways_with_continuous_ytd_are_one_employer():

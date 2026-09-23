@@ -287,7 +287,39 @@ def test_eiv_documents_are_three_labels_and_the_report_is_income_evidence():
 
 def test_a_disclosed_ssa_benefit_is_verified_by_the_eiv_report_not_its_coversheet():
     from app.services.questionnaire_extractor import validate_affirmative_responses
+    from app.services.findings import text_of
     d = QuestionnaireDisclosures(has_ssa_benefits=True)
     assert validate_affirmative_responses(d, [_group("EIV Income Report", [8])]) == []
     texts = validate_affirmative_responses(d, [_group("EIV Income Report Confirmation", [8])])
-    assert any("SSA/SSI/SSDI" in t for t in texts)
+    assert any("SSA/SSI/SSDI" in text_of(t) for t in texts)
+
+
+def test_a_disclosed_asset_with_nothing_in_the_file_is_an_asset_finding_that_asks_for_a_record():
+    """The consumer keys "move to action" on category and subject: a
+    disclosed asset with no record arrives as `asset` / `asset_record` with
+    the correction naming the record to add, while student status stays a
+    file review item. The wording is what the plain-string findings said."""
+    from app.services.questionnaire_extractor import validate_affirmative_responses
+    from app.services.cartograph.adapter import build_findings
+    d = QuestionnaireDisclosures(has_life_insurance=True, has_real_estate=True, has_student_status=True,
+                                 has_ssa_benefits=True)
+    out = validate_affirmative_responses(d, [_group("Tenant Income Certification (TIC)", [1])])
+    by_code = {f.code: f for f in out}
+    assert set(by_code) == {"QUESTIONNAIRE_LIFE_INSURANCE_UNVERIFIED", "QUESTIONNAIRE_REAL_ESTATE_UNVERIFIED",
+                            "QUESTIONNAIRE_STUDENT_UNVERIFIED", "QUESTIONNAIRE_SSA_UNVERIFIED"}
+    life = by_code["QUESTIONNAIRE_LIFE_INSURANCE_UNVERIFIED"]
+    assert (life.category, life.subject_type) == ("asset", "asset_record")
+    assert life.correction_required.startswith("Add an asset record")
+    assert life.text.startswith("Life insurance disclosed on questionnaire")
+    assert by_code["QUESTIONNAIRE_REAL_ESTATE_UNVERIFIED"].subject_type == "asset_record"
+    assert (by_code["QUESTIONNAIRE_SSA_UNVERIFIED"].category, by_code["QUESTIONNAIRE_SSA_UNVERIFIED"].subject_type) == ("income", "income_record")
+    student = by_code["QUESTIONNAIRE_STUDENT_UNVERIFIED"]
+    assert (student.category, student.subject_type) == ("file_review", None)
+    # Same finding, same key on a re-scan, and the row Cartograph stores is no longer a NOTE.
+    assert life.finding_key == "QUESTIONNAIRE_LIFE_INSURANCE_UNVERIFIED:case"
+    extraction = SimpleNamespace(finding_records=out, findings=[f.text for f in out])
+    rows = {r["code"]: r for r in build_findings(extraction, [])}
+    assert "NOTE" not in rows
+    assert rows["QUESTIONNAIRE_LIFE_INSURANCE_UNVERIFIED"]["category"] == "asset"
+    assert rows["QUESTIONNAIRE_LIFE_INSURANCE_UNVERIFIED"]["subject_type"] == "asset_record"
+    assert rows["QUESTIONNAIRE_LIFE_INSURANCE_UNVERIFIED"]["assignment"] == "client"
