@@ -2,10 +2,10 @@
 
 | | |
 |---|---|
-| Version | 1.3 |
-| Date | 22 September 2026 |
+| Version | 1.4 |
+| Date | 23 September 2026 |
 | Author | Maria Azevedo |
-| Status | Generated from delivered payloads; v1.1 added `findings`, `pages`, `verification_status`; v1.2 added `confidence`; v1.3 adds the engine's annual figure and calculation, `rate_unit`, `payment_history`, relationship in Cartograph's vocabulary and `member_status` |
+| Status | Generated from delivered payloads; v1.1 added `findings`, `pages`, `verification_status`; v1.2 added `confidence`; v1.3 adds the engine's annual figure and calculation, `rate_unit`, `payment_history`, relationship in Cartograph's vocabulary and `member_status`; v1.4 adds the Work Number header to `vois[]` (`overtime_rate`, `overtime_frequency`, `employment_start_date`), drops the empty VOI row, and gives the questionnaire disclosure findings a category and subject |
 
 Every field the audit engine sends today, what each one means, and what it needs on the Cartograph side.
 
@@ -120,7 +120,7 @@ One per income source. Paystubs arrive nested underneath rather than as a flat l
 | `pages` | `[20, 21]` | Packet pages this record was read from. Positions in the file Cartograph sent; a reviewer opens the same file and lands on the page |
 | `confidence` | `{score, flag, review[]}` | The engine's confidence in this record: `score` 0 to 1, `flag` green / yellow / red, and `review`, the fields a reviewer should look at with `field`, `flag` and `reason`. See section 8a |
 | `paystubs[]` | | `pay_date`, `gross_pay`, `ytd_amount`, `pay_frequency`, `pages` |
-| `vois[]` | | `voi_type`, `date_received`, `rate_of_pay`, `rate_unit`, `hours_per_pay_period`, `frequency_of_pay`, `ytd_amount`, `ytd_start_date`, `ytd_end_date`. `voi_type` `Pay Stubs` marks a source verified by its stubs alone |
+| `vois[]` | | `voi_type`, `date_received`, `rate_of_pay`, `rate_unit`, `hours_per_pay_period`, `frequency_of_pay`, `ytd_amount`, `ytd_start_date`, `ytd_end_date`, `overtime_rate`, `overtime_frequency`, `employment_start_date`. Sent only when the verification stated something (a rate, hours, a YTD figure or an overtime rate); a source verified by its stubs alone has no VOI row, so nothing arrives as a placeholder. `frequency_of_pay` here is the pay frequency, read from the stubs first. A Work Number report fills both: its pay period rows are the `paystubs[]`, its header (rate, hours, start date, YTD as of a date, status) is the VOI row |
 | `zero_income` | `null` | Object when a zero-income affidavit was filed |
 
 The `annual_income` on each record and the `annual_income` on `cert_review` answer different questions: the record's is what the engine computed from the documents, the review's is what the certification declares. When they differ the `CERT_SUMMARY_INCOME_MISMATCH` finding says by how much.
@@ -193,6 +193,8 @@ One object per finding of the audit, in the shape of the Scan Findings thread. F
 | `disputes_extraction` | `true` | The finding says the extraction contradicts the packet; these lower the engine's own confidence |
 
 Every scan sends the complete set. A key present in an earlier scan and absent from the latest one is cleared, not still open.
+
+**Category and `subject_type` are the key for the next action.** A finding whose category is `asset` and whose subject is `asset_record` with no `subject_label` is a record that should exist and does not; its `correction_required` says so ("Add an asset record for the disclosed life insurance …"). The questionnaire disclosure findings arrive this way as of 23 September: `QUESTIONNAIRE_LIFE_INSURANCE_UNVERIFIED`, `_REAL_ESTATE_`, `_CHECKING_` and `_SAVINGS_` as `asset` / `asset_record`; `_EMPLOYMENT_`, `_SSA_`, `_CHILD_SUPPORT_` and `_PENSION_` as `income` / `income_record`; `QUESTIONNAIRE_STUDENT_UNVERIFIED` as `file_review` with no subject, since the missing item is a certification and not a record. Each is assigned to the client and keyed per case, so a re-scan updates the row.
 
 Verdicts come back on a separate `findings_feedback` event, nightly, one per case: `case_ref`, `scan_id`, then `verdicts[]` of `finding_key`, `verdict` (`valid` / `invalid`), `verdict_reason`, and `manual_findings[]` of `description`, `page`, `subject_label`, `source: "manual"`, `matched_checklist_item` (key and name). The import-result callback is not the place for them: it arrives once at import time and a later call on it would overwrite the import outcome.
 
