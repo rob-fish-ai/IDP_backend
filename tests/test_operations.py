@@ -55,3 +55,26 @@ def test_packets_are_kept_and_pruned_by_age_and_size(tmp_path):
     class Off(S):
         pdf_retention_days = 0
     assert keep_packet(b"x", "J-TEST-2", Off) is None
+
+
+def test_a_rejected_findings_feedback_body_is_logged_with_its_shape(caplog):
+    """Cartograph's nightly feedback push was answered 400 on every night
+    and the engine kept nothing about what arrived. A rejection now logs
+    the top-level shape and the body, cut to a fixed length."""
+    import logging
+    import pytest
+    from fastapi import HTTPException
+    from app.routers.integration import _store_findings_feedback, _describe_rejected_body
+    with caplog.at_level(logging.WARNING, logger="app.routers.integration"):
+        with pytest.raises(HTTPException) as e:
+            _store_findings_feedback({"event_type": "findings_feedback", "cases": [{"case_ref": "J-1"}]},
+                                     b'{"event_type": "findings_feedback", "cases": [{"case_ref": "J-1"}]}')
+        assert e.value.status_code == 400
+        with pytest.raises(HTTPException) as e:
+            _store_findings_feedback([{"case_ref": "J-1"}], b'[{"case_ref": "J-1"}]')
+        assert e.value.status_code == 400
+    msgs = [r.getMessage() for r in caplog.records]
+    assert any("no case_ref" in m and "keys ['cases', 'event_type']" in m and "J-1" in m for m in msgs)
+    assert any("not an object" in m and "list of 1 of objects with keys ['case_ref']" in m for m in msgs)
+    long = _describe_rejected_body(b"x" * 5000)
+    assert "shape=unparseable" in long and "[5000 bytes]" in long and len(long) < 2200

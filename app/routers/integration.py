@@ -164,8 +164,9 @@ async def cartograph_import_result(request: Request) -> dict:
     pulled out defensively so an added key never turns into a 422 they
     cannot see.
     """
+    raw = await request.body()
     try:
-        payload = json.loads(await request.body())
+        payload = json.loads(raw)
     except ValueError:
         raise HTTPException(status_code=400, detail="invalid JSON body")
 
@@ -176,7 +177,7 @@ async def cartograph_import_result(request: Request) -> dict:
     # field. It must not be stored as an import result: that would replace
     # the record of how the import went with a list of verdicts.
     if (payload.get("event_type") or payload.get("event") or "").strip().lower() == "findings_feedback":
-        return _store_findings_feedback(payload)
+        return _store_findings_feedback(payload, raw)
 
     # Store it against the job before logging. A case that was delivered and
     # then rejected during their import is otherwise indistinguishable here
@@ -214,9 +215,45 @@ async def cartograph_import_result(request: Request) -> dict:
     return {"ok": True, "received": case_ref}
 
 
-def _store_findings_feedback(payload: dict) -> dict:
+_REJECTED_BODY_CHARS = 2000
+
+
+def _describe_rejected_body(raw: bytes, payload=None) -> str:
+    """What to log about a body the feedback endpoint could not accept.
+
+    The nightly push was rejected on every night so far and the engine kept
+    no record of what arrived, so nobody could say whether the case
+    reference sits under another name or the event is a batch. The shape
+    is what matters: the top-level keys when it parsed, the first bytes
+    when it did not. Verdict text is reviewer commentary and not secret,
+    but the whole body is not needed, so it is cut at a fixed length.
+    """
+    shape: str
+    if isinstance(payload, dict):
+        shape = f"object with keys {sorted(payload)}"
+    elif isinstance(payload, list):
+        first = payload[0] if payload else None
+        inner = f" of objects with keys {sorted(first)}" if isinstance(first, dict) else ""
+        shape = f"list of {len(payload)}{inner}"
+    elif payload is not None:
+        shape = type(payload).__name__
+    else:
+        shape = "unparseable"
+    text = raw.decode("utf-8", errors="replace")
+    if len(text) > _REJECTED_BODY_CHARS:
+        text = text[:_REJECTED_BODY_CHARS] + f"... [{len(raw)} bytes]"
+    return f"shape={shape} body={text!r}"
+
+
+def _store_findings_feedback(payload, raw: bytes = b"") -> dict:
+    if not isinstance(payload, dict):
+        logger.warning("Findings feedback rejected, body is not an object: %s",
+                       _describe_rejected_body(raw, payload))
+        raise HTTPException(status_code=400, detail="body must be a JSON object")
     case_ref = payload.get("case_ref") or payload.get("job_id")
     if not case_ref:
+        logger.warning("Findings feedback rejected, no case_ref: %s",
+                       _describe_rejected_body(raw, payload))
         raise HTTPException(status_code=400, detail="case_ref is required")
     try:
         counts = get_job_store(get_settings().audit_job_db).record_findings_feedback(
@@ -249,8 +286,10 @@ async def cartograph_findings_feedback(request: Request) -> dict:
     The same body on /import_result, carrying the event_type, is accepted
     identically. A later event for the same case replaces earlier verdicts.
     """
+    raw = await request.body()
     try:
-        payload = json.loads(await request.body())
+        payload = json.loads(raw)
     except ValueError:
+        logger.warning("Findings feedback rejected, invalid JSON: %s", _describe_rejected_body(raw))
         raise HTTPException(status_code=400, detail="invalid JSON body")
-    return _store_findings_feedback(payload)
+    return _store_findings_feedback(payload, raw)
