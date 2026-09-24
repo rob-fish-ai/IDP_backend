@@ -370,6 +370,42 @@ def test_a_scanners_own_text_layer_is_recognised_as_garbled():
     assert not _text_layer_is_garbled("short layer")[0]
 
 
+def test_a_scanners_layer_is_judged_over_the_file_and_a_symbol_in_a_word_counts():
+    """The Work Number header page of a scanned packet read 10% broken,
+    under the per-page line, and its layer replaced a good OCR read with
+    "44t2412026" for a pay date. Half the packet's pages were over the
+    line. A file with that many broken pages has a scanner's layer on
+    every page. A born-digital file has none over the line and keeps
+    its layer even when a page or two read a few percent broken."""
+    from app.services.pdf_service import _garble_fraction, _scanner_layer_file
+    # A page mostly clean but for the scanner's reads of "e" and a date:
+    # each on its own is well under the line.
+    cleaner = ("Employer: Desert VIP Urgent Care Young EMGY PHY MED GR INC GEN Current As Of 08/28/2026 "
+               "Headquarters Address 72630 Fred Waring Dr Ste 101 Palm Desert CA 92260 Federal Employer "
+               "Identification No (FEIN) 330992342 Original Hire Date 08/25/2021 Total Time With Employer "
+               "0 Yrs 6 Months Employment Status Active Most Recent Start Date 03/13/2026 Name Bianca Avila "
+               "Payroll and Salary Details Income and Deductions Pay Rai€ $21 00 Hourly Pay Period Details "
+               "Total Gross Earnings $773 43 Pay Date 44t2412026 0atml2026 Typ€ Historical Pay Period Summary")
+    frac = _garble_fraction(cleaner)
+    assert frac is not None and 0.03 < frac < 0.12
+    scanner = ("R.lphs Grocery Comp.ny (FEIN: 95-4356!30) 1100 Wesl A.resia Bo!levard Complon CA 90220 08/31t26 "
+               "PeBon Number:3682722 NE FTALI AR REOON OO HR Locallon:000?7 29 5500 USO cA s2201 Slraight 23 820 "
+               "S6ial S.ddry Emplome wirrh6E M6di€re Emkrye wlhherd Sol Employ.. withh6n (ca) 12 A1 20 5t 10 5S "
+               "1,S93.23 46733 336 75 0 250 ro 09,11 0 9l 5! 39 3A 43 13 2A 100 ,ta 2t 3500 15 23 505 03 0 170 "
+               "A HIGHLY SATISfI€O CUSTOMER MAOE IHISi PAYCHECK POSSISLE rl sr oo tu")
+    digital = ("Owner's Certification of Compliance with HUD's Tenant Eligibility and Rent Procedures. Section C. "
+               "Household Information 33. No. 34. Last Name 35. First Name 36. MI 37. Rel. 38. Sex 39. Race 40. Eth. "
+               "41. Birth Date 42. Special Status 43. Stdnt Stat. 44. ID Code (SSN) 1 Caldera Maria R H F W 1 9/26/1944 "
+               "53. Number of Family Members: 1 54. Number of Non-Family Members: 0 55. Total Annual Income: $7,608 "
+               "56. 2nd Adjusted Income 1st Floor 401k 10th of the month Effective Date: 1/1/2027 Unit 115")
+    # Two broken pages out of four: the file is a scanner's, the cleaner page included.
+    assert _scanner_layer_file({1: scanner, 2: cleaner, 3: scanner, 4: digital})[0]
+    # One broken page among eight is a bad scan stapled into a digital file, not a scanner's layer.
+    assert not _scanner_layer_file({1: scanner, **{n: digital for n in range(2, 9)}})[0]
+    assert not _scanner_layer_file({1: digital, 2: cleaner})[0]
+    assert not _scanner_layer_file({})[0]
+
+
 def test_three_dated_stubs_decide_the_pay_frequency_over_a_stated_interval():
     from app.services.income_calculator import calculate_paystub_based
     monthly = [PayStubEntry(sourceName="Ralphs", memberName="N A", grossPay="2659.13", payDate=f"2026-0{m}-30", payInterval="weekly") for m in (4, 5, 6)]

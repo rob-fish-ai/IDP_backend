@@ -227,16 +227,33 @@ _FRAGMENT_OK = {"a", "i", "an", "at", "as", "be", "by", "do", "go", "he", "if", 
                 "la", "mo", "wi", "mn", "ia", "ks", "ar", "al", "ms", "tn", "ut", "az", "nm", "nv", "or",
                 "ct", "ri", "de", "vt", "nh", "hi", "ak", "wv", "sd", "nd", "mt", "wy", "ss", "ll", "rd",
                 "st", "dr", "jr", "sr", "po", "am", "pm", "yr", "hr", "mo", "wk", "ot", "no", "ee", "er"}
+# Two more shapes a program never writes: a currency or mark symbol
+# inside or ending a word ("Rai€", "Typ€", "M6di€re" — the scanner's
+# read of a lowercase e), and a run of lowercase letters between digits
+# ("0atml2026" for 08/09/2026). Uppercase between digits is left alone:
+# contract numbers ("CA16M000401") are real.
+_SYMBOL_IN_WORD_RE = re.compile(r"[A-Za-z][€£¥§¢°©®™]|[€£¥§¢][A-Za-z]")
+_LETTERS_IN_DIGITS_RE = re.compile(r"[0-9][a-z]{2,3}[0-9]")
 _GARBLED_FRACTION = 0.12
 _GARBLED_MIN_TOKENS = 40
 
+# A scanner writes one text layer for the whole file. When a quarter of
+# the layered pages read as its OCR, the rest of them are too: the pages
+# under the per-page line are the same layer on cleaner pages, and one of
+# them carried "44t2412026" for a pay date and "Pay Rai€" for the rate
+# into an extraction, doubling two stubs and losing the hours. A
+# born-digital file has no page over the line.
+_SCANNER_FILE_FRACTION = 0.25
+_SCANNER_FILE_MIN_PAGES = 2
 
-def _text_layer_is_garbled(layer: str) -> tuple[bool, str]:
-    """Whether a PDF text layer reads like a scanner's own OCR rather than
-    the text a program wrote."""
+
+def _garble_fraction(layer: str) -> float | None:
+    """Share of a text layer's words that a program would not have written.
+
+    None when the layer is too short to judge."""
     tokens = (layer or "").split()
     if len(tokens) < _GARBLED_MIN_TOKENS:
-        return False, ""
+        return None
     garbled = 0
     for tok in tokens:
         core = tok.strip(",.;:()[]{}$%\"'")
@@ -246,9 +263,36 @@ def _text_layer_is_garbled(layer: str) -> tuple[bool, str]:
             garbled += 1
         elif len(core) <= 2 and core.isalpha() and core.lower() not in _FRAGMENT_OK:
             garbled += 1
-    frac = garbled / len(tokens)
-    if frac >= _GARBLED_FRACTION:
+        elif _SYMBOL_IN_WORD_RE.search(core) or _LETTERS_IN_DIGITS_RE.search(core):
+            garbled += 1
+    return garbled / len(tokens)
+
+
+def _text_layer_is_garbled(layer: str) -> tuple[bool, str]:
+    """Whether a PDF text layer reads like a scanner's own OCR rather than
+    the text a program wrote."""
+    frac = _garble_fraction(layer)
+    if frac is not None and frac >= _GARBLED_FRACTION:
         return True, f"{frac:.0%} of its words are broken"
+    return False, ""
+
+
+def _scanner_layer_file(text_layer_map: dict[int, str]) -> tuple[bool, str]:
+    """Whether a file's text layer, taken as a whole, is a scanner's OCR.
+
+    Judged over the pages long enough to judge. True when at least
+    _SCANNER_FILE_MIN_PAGES of them are garbled and they are at least
+    _SCANNER_FILE_FRACTION of those pages. A merged packet with one
+    born-digital document among scanned ones loses that document's layer
+    too; it is still read by OCR, and that costs less than a scanner's
+    layer replacing a good read."""
+    fractions = {pn: f for pn, f in ((pn, _garble_fraction(layer)) for pn, layer in text_layer_map.items())
+                 if f is not None}
+    if not fractions:
+        return False, ""
+    garbled = sorted(pn for pn, f in fractions.items() if f >= _GARBLED_FRACTION)
+    if len(garbled) >= _SCANNER_FILE_MIN_PAGES and len(garbled) / len(fractions) >= _SCANNER_FILE_FRACTION:
+        return True, f"{len(garbled)} of {len(fractions)} judged page(s) are broken (e.g. page {garbled[0]})"
     return False, ""
 
 
@@ -556,6 +600,14 @@ def process_pdf(
             processed_map[page_num] = path
 
     doc.close()
+    if text_layer_map:
+        scanner, why = _scanner_layer_file(text_layer_map)
+        if scanner:
+            logger.warning(
+                "The PDF text layer is a scanner's own OCR on %s — ignored on "
+                "all %d page(s); every page is read by OCR", why, len(text_layer_map),
+            )
+            text_layer_map = {}
     processed_paths: list[tuple[int, Path]] = [
         (pn, processed_map[pn]) for pn in sorted(processed_map)
     ]
