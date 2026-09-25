@@ -15,7 +15,8 @@ Two endpoints, one per direction:
   POST /integration/import_result  Cartograph reports how the import went.
                                    HMAC auth, JSON.
   POST /integration/findings_feedback  Reviewer verdicts on our findings and
-                                   the findings added by hand. HMAC auth, JSON.
+                                   the findings added by hand. HMAC auth, JSON,
+                                   one case or a nightly batch of cases.
                                    Also accepted on /import_result when the
                                    body says event_type: findings_feedback.
 
@@ -245,28 +246,100 @@ def _describe_rejected_body(raw: bytes, payload=None) -> str:
     return f"shape={shape} body={text!r}"
 
 
-def _store_findings_feedback(payload, raw: bytes = b"") -> dict:
-    if not isinstance(payload, dict):
-        logger.warning("Findings feedback rejected, body is not an object: %s",
-                       _describe_rejected_body(raw, payload))
-        raise HTTPException(status_code=400, detail="body must be a JSON object")
-    case_ref = payload.get("case_ref") or payload.get("job_id")
-    if not case_ref:
-        logger.warning("Findings feedback rejected, no case_ref: %s",
-                       _describe_rejected_body(raw, payload))
-        raise HTTPException(status_code=400, detail="case_ref is required")
+def _normalise_feedback_case(case: dict) -> dict:
+    """Map the names Cartograph's nightly export uses onto the documented
+    per-case event shape, so the job store reads one vocabulary.
+
+    The export says `finding_verdicts` / `reason` / `missed_findings` /
+    `checklist_item_key` + `checklist_item_name`; the documented event says
+    `verdicts` / `verdict_reason` / `manual_findings` /
+    `matched_checklist_item`. A body already in the documented shape passes
+    through untouched. The originals are kept beside the mapped names so
+    the raw JSON stored per row still shows what arrived.
+    """
+    out = dict(case)
+    if out.get("verdicts") is None and isinstance(out.get("finding_verdicts"), list):
+        verdicts = []
+        for v in out["finding_verdicts"]:
+            if not isinstance(v, dict):
+                continue
+            v = dict(v)
+            if v.get("verdict_reason") is None and "reason" in v:
+                v["verdict_reason"] = v["reason"]
+            verdicts.append(v)
+        out["verdicts"] = verdicts
+    if out.get("manual_findings") is None and isinstance(out.get("missed_findings"), list):
+        manual = []
+        for m in out["missed_findings"]:
+            if not isinstance(m, dict):
+                continue
+            m = dict(m)
+            key, name = m.get("checklist_item_key"), m.get("checklist_item_name")
+            if m.get("matched_checklist_item") is None and (key or name):
+                m["matched_checklist_item"] = {"key": key, "name": name}
+            manual.append(m)
+        out["manual_findings"] = manual
+    if out.get("scan_id") is None and out.get("cert_review_id") is not None:
+        # The export carries no scan id; the cert review id is the closest
+        # thing to one and is what the reviewer would quote back to us.
+        out["scan_id"] = out["cert_review_id"]
+    return out
+
+
+def _store_one_feedback_case(case: dict) -> tuple[str, dict]:
+    case_ref = case.get("case_ref") or case.get("job_id")
+    case = _normalise_feedback_case(case)
     try:
         counts = get_job_store(get_settings().audit_job_db).record_findings_feedback(
-            str(case_ref), payload,
+            str(case_ref), case,
         )
     except Exception:
         logger.exception("Could not store findings feedback for case_ref=%s", case_ref)
         raise HTTPException(status_code=500, detail="could not store feedback")
     logger.info(
         "Findings feedback case_ref=%s scan_id=%s verdicts=%d manual=%d",
-        case_ref, payload.get("scan_id"), counts["verdicts"], counts["manual_findings"],
+        case_ref, case.get("scan_id"), counts["verdicts"], counts["manual_findings"],
     )
-    return {"ok": True, "received": case_ref, "stored": counts}
+    return str(case_ref), counts
+
+
+def _store_findings_feedback(payload, raw: bytes = b"") -> dict:
+    """Store a findings_feedback body, which is either one case with a
+    top-level case_ref or a batch envelope with a `cases` list.
+
+    Cartograph's nightly push is the batch form: every case reviewed that
+    day under one `generated_at`, re-sent each night until accepted. A
+    batch is stored case by case; the ones without a case reference are
+    skipped and named in the response, and the whole batch is only
+    rejected when none of its cases can be stored.
+    """
+    if not isinstance(payload, dict):
+        logger.warning("Findings feedback rejected, body is not an object: %s",
+                       _describe_rejected_body(raw, payload))
+        raise HTTPException(status_code=400, detail="body must be a JSON object")
+
+    if payload.get("case_ref") or payload.get("job_id"):
+        case_ref, counts = _store_one_feedback_case(payload)
+        return {"ok": True, "received": case_ref, "stored": counts}
+
+    cases = payload.get("cases")
+    if isinstance(cases, list):
+        stored: dict[str, dict] = {}
+        skipped = 0
+        for case in cases:
+            if isinstance(case, dict) and (case.get("case_ref") or case.get("job_id")):
+                case_ref, counts = _store_one_feedback_case(case)
+                stored[case_ref] = counts
+            else:
+                skipped += 1
+        if stored:
+            if skipped:
+                logger.warning("Findings feedback batch: %d case(s) skipped, no case_ref", skipped)
+            return {"ok": True, "received": sorted(stored), "stored": stored, "skipped": skipped}
+
+    logger.warning("Findings feedback rejected, no case_ref: %s",
+                   _describe_rejected_body(raw, payload))
+    raise HTTPException(status_code=400, detail="case_ref is required")
 
 
 @router.post(
@@ -278,13 +351,21 @@ async def cartograph_findings_feedback(request: Request) -> dict:
     """Receive a reviewer's verdicts on our findings, and the findings the
     reviewer added by hand, for one case.
 
-    Sent nightly, one event per reviewed case:
+    Sent nightly. The documented form is one event per reviewed case:
       {"event_type": "findings_feedback", "case_ref": ..., "scan_id": ...,
        "verdicts": [{"finding_key", "verdict": "valid"|"invalid", "verdict_reason"}],
        "manual_findings": [{"description", "page", "subject_label",
                             "source": "manual", "matched_checklist_item": {"key", "name"}}]}
-    The same body on /import_result, carrying the event_type, is accepted
-    identically. A later event for the same case replaces earlier verdicts.
+    What Cartograph actually sends is a batch of that day's reviews:
+      {"event": "findings_feedback", "generated_at": ...,
+       "cases": [{"case_ref", "cert_review_id",
+                  "finding_verdicts": [{"finding_key", "scan_id", "verdict", "reason"}],
+                  "missed_findings": [{"source", "description", "page", "subject_label",
+                                       "checklist_item_key", "checklist_item_name"}]}]}
+    Both are accepted; the batch is stored case by case with its field
+    names mapped onto the documented ones. The same body on /import_result,
+    carrying the event_type, is accepted identically. A later event for the
+    same case replaces earlier verdicts.
     """
     raw = await request.body()
     try:
