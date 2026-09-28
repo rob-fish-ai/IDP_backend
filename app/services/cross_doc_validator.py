@@ -521,6 +521,41 @@ def validate_asset_worksheet_rules(
                 resolution_type=RESOLVE_PRESENCE,
             ))
 
+    # An overdrawn account. A credit union statement prints it in
+    # accounting notation ("93.30-") and the extractor reads it as the
+    # negative it is. On the asset worksheet an overdrawn account is worth
+    # $0: HUD 4350.3 counts the cash value of what the household holds, and
+    # a debt to the bank is not netted against other accounts. The
+    # negative figure itself is a finding to act on, not a value to send.
+    for asset in assets.assetInformation:
+        balance = _parse_money(asset.currentBalance)
+        if balance is None or balance >= 0:
+            continue
+        voa = asset.verificationOfAsset
+        as_of = f" on the {voa.dateReceived} verification" if voa and voa.dateReceived else ""
+        findings.append(make_finding(
+            "ASSET_OVERDRAWN",
+            f"{asset.accountType or 'Account'} at '{asset.sourceName or 'Unknown'}' is overdrawn: "
+            f"balance -${abs(balance):,.2f}{as_of} — an overdrawn account has a cash value of $0 "
+            f"on the asset worksheet, and the overdraft is not netted against other assets "
+            f"(Section 7)",
+            label="Account balance is negative (overdrawn)",
+            category=CATEGORY_ASSET,
+            subject_type="asset_record",
+            subject_ref={
+                "member_name": asset.assetOwner,
+                "source_name": asset.sourceName,
+                "account_type": asset.accountType,
+            },
+            assignment=ASSIGN_INTERNAL,
+            correction_required=(
+                "Enter $0 for this account on the asset worksheet and confirm "
+                "no income is imputed from it"
+            ),
+            resolution_type=RESOLVE_RECALC,
+            pages=list(asset.sourcePages or []),
+        ))
+
     # Check for joint/shared accounts without percentage of ownership
     for asset in assets.assetInformation:
         if asset.percentageOfOwnership:

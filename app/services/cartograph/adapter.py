@@ -405,6 +405,26 @@ def _money(value: str | None) -> str | None:
         return None
 
 
+def _balance(value: str | None, warnings: list[str], context: str) -> str | None:
+    """A balance for Cartograph: money, floored at zero.
+
+    Cartograph validates every asset value as >= 0 and rejects the whole
+    import otherwise, which lost case J-VIV-06642 to one overdrawn checking
+    account (a credit union VOA printing "93.30-"). The extractor is right
+    to read that as negative, and the audit reports it as an ASSET_OVERDRAWN
+    finding; the record itself carries what the asset worksheet would show,
+    a cash value of $0.
+    """
+    money = _money(value)
+    if money is not None and money.startswith("-"):
+        warnings.append(
+            f"{context}: balance {money} is negative (overdrawn); sent as 0.00, "
+            f"the account's cash value on the asset worksheet"
+        )
+        return "0.00"
+    return money
+
+
 def _resolve_member_ref(
     name: str | None,
     members: list[dict],
@@ -843,7 +863,7 @@ def build_asset_records(
             entry for entry in (
                 {
                     "statement_date": _iso_date(s.statementDate),
-                    "balance": _money(s.balance),
+                    "balance": _balance(s.balance, warnings, f"{context}.bank_statements"),
                 }
                 for s in asset.bankStatment
             )
@@ -855,7 +875,7 @@ def build_asset_records(
             v = asset.verificationOfAsset
             voa = {
                 "voa_date": _iso_date(v.dateReceived),
-                "reported_value": _money(v.currentBalance),
+                "reported_value": _balance(v.currentBalance, warnings, f"{context}.voa"),
                 "source": asset.sourceName,
             }
 
@@ -872,7 +892,7 @@ def build_asset_records(
         # company and by form revision, so a title test passes or fails on
         # spelling rather than on whether anyone actually verified anything.
         verified = bool(asset.bankStatment or asset.verificationOfAsset)
-        current_value = _money(asset.currentBalance) if verified else None
+        current_value = _balance(asset.currentBalance, warnings, context) if verified else None
         if asset.currentBalance and not verified:
             warnings.append(
                 f"{context}: balance arrived with no statement or "
@@ -888,11 +908,13 @@ def build_asset_records(
             ),
             "institution_name": asset.sourceName,
             "current_value": current_value,
-            "manual_balance": _money(
-                asset.selfDeclaredAmount or asset.currentBalance
+            "manual_balance": _balance(
+                asset.selfDeclaredAmount or asset.currentBalance, warnings, f"{context}.manual_balance"
             ),
             "source_of_declaration": asset.selfDeclaredSource,
-            "bank_stmt_avg_balance": _money(asset.averageSixMonthBalance),
+            "bank_stmt_avg_balance": _balance(
+                asset.averageSixMonthBalance, warnings, f"{context}.bank_stmt_avg_balance"
+            ),
             "annual_income_from_assets": _money(asset.incomeAmount),
             "interest_type": asset.interestType,
             "percentage_of_ownership": asset.percentageOfOwnership,

@@ -599,3 +599,65 @@ def test_two_benefit_lines_on_one_certification_are_two_incomes():
                                     frequencyOfPay="monthly", verificationStatus="declared_only", sourcePages=[18])
     out, findings = _collapse_declared_duplicates([tic, sworn])
     assert len(out) == 1
+
+
+def test_an_overdrawn_account_is_a_finding_and_is_delivered_as_zero():
+    """Case J-VIV-06642: a credit union VOA printed the checking balance as
+    "93.30-", the extractor read it as -93.30, and Cartograph rejected the
+    whole import ("Reported value must be greater than or equal to 0").
+    The overdraft is now an ASSET_OVERDRAWN finding, and every balance on
+    the delivered record is floored at $0, the account's cash value on the
+    asset worksheet."""
+    from types import SimpleNamespace
+    from app.core.config import Settings
+    from app.schemas.extraction import AssetEntry, AssetExtraction, BankStatementEntry, VerificationOfAsset
+    from app.services.cartograph.adapter import build_asset_records
+    from app.services.cross_doc_validator import validate_asset_worksheet_rules
+
+    overdrawn = AssetEntry(
+        assetOwner="Maryle Mendoza", accountType="Checking", sourceName="Altura Credit Union",
+        selfDeclaredAmount="331.00", selfDeclaredSource="HUD 50059", currentBalance="-93.30",
+        averageSixMonthBalance="330.83", incomeAmount="0.00", sourcePages=[19, 20],
+        verificationStatus="verified",
+        verificationOfAsset=VerificationOfAsset(currentBalance="-93.30", averageSixMonthBalance="330.83",
+                                                dateReceived="2026-09-09"),
+        bankStatment=[BankStatementEntry(statementDate="2026-08-31", balance="-12.00")],
+    )
+    fine = AssetEntry(
+        assetOwner="Maryle Mendoza", accountType="Savings", sourceName="Altura Credit Union",
+        currentBalance="0.01", averageSixMonthBalance="1025.13", sourcePages=[19, 20],
+        verificationStatus="verified",
+        verificationOfAsset=VerificationOfAsset(currentBalance="0.01", dateReceived="2026-09-09"),
+    )
+    assets = AssetExtraction(assetInformation=[overdrawn, fine])
+
+    found = [f for f in validate_asset_worksheet_rules(assets, []) if f.code == "ASSET_OVERDRAWN"]
+    assert len(found) == 1
+    f = found[0]
+    assert "-$93.30" in f.text and "2026-09-09" in f.text and "$0" in f.text
+    assert f.subject_type == "asset_record" and f.subject_ref["source_name"] == "Altura Credit Union"
+    assert f.pages == [19, 20]
+
+    ex = SimpleNamespace(assets=assets)
+    members = [{"ref": "m01", "first_name": "Maryle", "last_name": "Mendoza"}]
+    warnings: list[str] = []
+    records = build_asset_records(ex, members, Settings(cartograph_asset_types=["checking", "savings"]), warnings)
+
+    def walk(o):
+        if isinstance(o, dict):
+            for v in o.values(): yield from walk(v)
+        elif isinstance(o, list):
+            for v in o: yield from walk(v)
+        else:
+            yield o
+    assert not [v for v in walk(records) if isinstance(v, str) and v.startswith("-")]
+
+    r = records[0]
+    assert r["current_value"] == "0.00"
+    assert r["voa"]["reported_value"] == "0.00"
+    assert r["bank_statements"][0]["balance"] == "0.00"
+    assert r["manual_balance"] == "331.00"          # the resident's own figure is untouched
+    assert r["bank_stmt_avg_balance"] == "330.83"   # a positive average stays as printed
+    assert records[1]["current_value"] == "0.01"
+    assert [w for w in warnings if "overdrawn" in w] and all("-93.30" in w or "-12.00" in w
+                                                             for w in warnings if "overdrawn" in w)
