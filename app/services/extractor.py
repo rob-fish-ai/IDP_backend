@@ -457,10 +457,12 @@ NESTED OBJECTS:
 - bankStatment: array of bank statement entries. Each entry has:
   {statementDate, balance, accountNumber, currentMortgageBalance, income, incomeFixedValue, incomeFromAsset, interestRate, netValueRealEstate, percentageOfOwnership, realEstateCurrentMarketValue, totalClosingCosts}
   All monetary fields are numeric strings with 2 decimals. Empty [] if no statements.
-- verificationOfAsset: {accountNumber, currentBalance, averageSixMonthBalance, dateReceived, incomeAmount, interestType, interestRate, percentageOfOwnership}. null if no VOA.
+- verificationOfAsset: {accountNumber, currentBalance, averageSixMonthBalance, monthlyBalances, dateReceived, incomeAmount, interestType, interestRate, percentageOfOwnership}. null if no VOA.
+  monthlyBalances: array of {month, balance}, one per month the VOA lists, in the order printed. Empty [] when the VOA gives only an average.
 
 SPECIAL RULES:
 - Life insurance: ALWAYS use cash/surrender value, NEVER use face value. If only face value is shown, set currentBalance to null and add note "Only face value available — cash value not provided"
+- VOA with individual monthly balances (Chase and some others list the balance at the end of each of the last six months instead of an average): put each month in verificationOfAsset.monthlyBalances as {month, balance} exactly as printed. Leave averageSixMonthBalance null unless the form prints an average — never compute one.
 - Thomson Reuters / WestlawNext VOA forms: treat as Verification of Assets. Extract per account: account number, account type (checking/savings), account balance, average balance, date received
 - Joint/shared accounts: capture percentageOfOwnership. If ownership is split (e.g., 50% with non-household member), record the percentage
 - Each distinct account = separate array entry

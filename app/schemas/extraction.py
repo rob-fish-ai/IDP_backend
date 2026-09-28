@@ -264,10 +264,22 @@ class BankStatementEntry(BaseModel):
     totalClosingCosts: Optional[str] = None
 
 
+class MonthlyBalance(BaseModel):
+    """One month's balance as a verification of assets lists it.
+
+    Some banks (Chase among them) answer a VOA with the balance at the end
+    of each of the last six months instead of a six-month average. The
+    average is then computed at delivery, oldest month first, from these.
+    """
+    month: Optional[str] = None    # as printed: "2026-03", "03/2026", "March 2026"
+    balance: Optional[str] = None  # numeric string, 2 decimals
+
+
 class VerificationOfAsset(BaseModel):
     accountNumber: Optional[str] = None
     currentBalance: Optional[str] = None
     averageSixMonthBalance: Optional[str] = None
+    monthlyBalances: list[MonthlyBalance] = []
     dateReceived: Optional[str] = None
     incomeAmount: Optional[str] = None
     interestType: Optional[str] = None

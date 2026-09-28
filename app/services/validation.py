@@ -665,5 +665,8 @@ def validate_assets(data: dict) -> dict:
             voa["averageSixMonthBalance"] = normalize_money(voa.get("averageSixMonthBalance"))
             voa["incomeAmount"] = normalize_money(voa.get("incomeAmount"))
             voa["dateReceived"] = normalize_date(voa.get("dateReceived"))
+            for mb in voa.get("monthlyBalances") or []:
+                if isinstance(mb, dict):
+                    mb["balance"] = normalize_money(mb.get("balance"))
 
     return data

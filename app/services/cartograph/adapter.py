@@ -425,6 +425,51 @@ def _balance(value: str | None, warnings: list[str], context: str) -> str | None
     return money
 
 
+_MONTH_FORMATS = ("%Y-%m", "%Y-%m-%d", "%m/%Y", "%m/%d/%Y", "%m/%d/%y", "%B %Y", "%b %Y",
+                  "%B %d, %Y", "%b %d, %Y", "%m/%y")
+
+
+def _month_key(value: str | None) -> tuple[int, int] | None:
+    """(year, month) of a month label as a VOA prints it, or None."""
+    text = (value or "").strip()
+    if not text:
+        return None
+    for fmt in _MONTH_FORMATS:
+        try:
+            d = datetime.strptime(text, fmt)
+            return (d.year, d.month)
+        except ValueError:
+            continue
+    return None
+
+
+def _monthly_balances(entries, warnings: list[str], context: str) -> list[str]:
+    """The VOA's monthly balances, oldest month first, at most six.
+
+    Sorted by month when every label parses; kept in printed order
+    otherwise, since a VOA lists them chronologically and a guess at the
+    unparsed ones would be worse than the form's own order. More than six
+    months keeps the most recent six, which is the window the average is
+    defined over. Months without a balance are dropped.
+    """
+    rows = []
+    for e in entries or []:
+        amount = _balance(getattr(e, "balance", None), warnings, f"{context}.monthly_balances")
+        if amount is not None:
+            rows.append((getattr(e, "month", None), amount))
+    if not rows:
+        return []
+    keys = [_month_key(m) for m, _ in rows]
+    if all(k is not None for k in keys):
+        rows = [r for _, r in sorted(zip(keys, rows), key=lambda kr: kr[0])]
+    elif any(k is not None for k in keys):
+        warnings.append(f"{context}: some month labels could not be read; monthly balances sent in printed order")
+    if len(rows) > 6:
+        warnings.append(f"{context}: {len(rows)} monthly balances on the VOA; the most recent six were sent")
+        rows = rows[-6:]
+    return [amount for _, amount in rows]
+
+
 def _resolve_member_ref(
     name: str | None,
     members: list[dict],
@@ -871,6 +916,7 @@ def build_asset_records(
         ]
 
         voa = None
+        computed_average = None
         if asset.verificationOfAsset is not None:
             v = asset.verificationOfAsset
             voa = {
@@ -878,6 +924,13 @@ def build_asset_records(
                 "reported_value": _balance(v.currentBalance, warnings, f"{context}.voa"),
                 "source": asset.sourceName,
             }
+            months = _monthly_balances(v.monthlyBalances, warnings, f"{context}.voa")
+            if months:
+                # Cartograph's VOA record has month_1_balance..month_6_balance,
+                # month 1 the oldest, and averages whichever are filled.
+                for i, amount in enumerate(months, start=1):
+                    voa[f"month_{i}_balance"] = amount
+                computed_average = f"{sum(float(m) for m in months) / len(months):.2f}"
 
         # current_value asserts a third-party verified balance; manual_balance
         # asserts the resident's own figure. The extractor sometimes copies a
@@ -912,9 +965,11 @@ def build_asset_records(
                 asset.selfDeclaredAmount or asset.currentBalance, warnings, f"{context}.manual_balance"
             ),
             "source_of_declaration": asset.selfDeclaredSource,
+            # The six-month average as the form printed it, or, when the VOA
+            # listed monthly balances instead, the mean of those.
             "bank_stmt_avg_balance": _balance(
                 asset.averageSixMonthBalance, warnings, f"{context}.bank_stmt_avg_balance"
-            ),
+            ) or computed_average,
             "annual_income_from_assets": _money(asset.incomeAmount),
             "interest_type": asset.interestType,
             "percentage_of_ownership": asset.percentageOfOwnership,

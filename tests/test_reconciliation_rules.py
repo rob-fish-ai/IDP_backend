@@ -661,3 +661,61 @@ def test_an_overdrawn_account_is_a_finding_and_is_delivered_as_zero():
     assert records[1]["current_value"] == "0.01"
     assert [w for w in warnings if "overdrawn" in w] and all("-93.30" in w or "-12.00" in w
                                                              for w in warnings if "overdrawn" in w)
+
+
+def test_a_voa_listing_monthly_balances_is_delivered_oldest_first_with_the_average():
+    """Chase and some other banks answer a VOA with the balance at the end
+    of each of the last six months and no average. Those go to Cartograph's
+    month_1..month_6 fields, month 1 the oldest, and the average Cartograph
+    would compute is sent as bank_stmt_avg_balance. A VOA that prints its
+    own average keeps it and sends no month fields."""
+    from types import SimpleNamespace
+    from app.core.config import Settings
+    from app.schemas.extraction import AssetEntry, AssetExtraction, MonthlyBalance, VerificationOfAsset
+    from app.services.cartograph.adapter import build_asset_records, _monthly_balances
+
+    chase = AssetEntry(
+        assetOwner="Dana Reyes", accountType="Checking", sourceName="Chase", currentBalance="1210.55",
+        sourcePages=[22], verificationStatus="verified",
+        verificationOfAsset=VerificationOfAsset(
+            currentBalance="1210.55", dateReceived="2026-09-03",
+            monthlyBalances=[  # printed most recent first, as Chase does
+                MonthlyBalance(month="08/2026", balance="1210.55"),
+                MonthlyBalance(month="07/2026", balance="980.10"),
+                MonthlyBalance(month="06/2026", balance="1,402.00"),
+                MonthlyBalance(month="05/2026", balance="-40.00"),   # overdrawn that month
+                MonthlyBalance(month="04/2026", balance="760.00"),
+                MonthlyBalance(month="03/2026", balance="900.00"),
+            ],
+        ),
+    )
+    td = AssetEntry(
+        assetOwner="Dana Reyes", accountType="Savings", sourceName="TD Bank", currentBalance="500.00",
+        averageSixMonthBalance="480.00", sourcePages=[23], verificationStatus="verified",
+        verificationOfAsset=VerificationOfAsset(currentBalance="500.00", averageSixMonthBalance="480.00",
+                                                dateReceived="2026-09-03"),
+    )
+    ex = SimpleNamespace(assets=AssetExtraction(assetInformation=[chase, td]))
+    members = [{"ref": "m01", "first_name": "Dana", "last_name": "Reyes"}]
+    warnings: list[str] = []
+    records = build_asset_records(ex, members, Settings(cartograph_asset_types=["checking", "savings"]), warnings)
+
+    voa = records[0]["voa"]
+    assert [voa[f"month_{i}_balance"] for i in range(1, 7)] == \
+        ["900.00", "760.00", "0.00", "1402.00", "980.10", "1210.55"]
+    assert voa["reported_value"] == "1210.55" and voa["voa_date"] == "2026-09-03"
+    # (900 + 760 + 0 + 1402 + 980.10 + 1210.55) / 6
+    assert records[0]["bank_stmt_avg_balance"] == "875.44"
+    assert any("overdrawn" in w for w in warnings)
+
+    assert records[1]["bank_stmt_avg_balance"] == "480.00"
+    assert not any(k.startswith("month_") for k in records[1]["voa"])
+
+    # Unparseable labels keep the printed order; more than six keeps the newest six.
+    w: list[str] = []
+    rows = [MonthlyBalance(month=m, balance=b) for m, b in
+            [("Mar", "1.00"), ("Apr", "2.00"), ("May", "3.00"), ("Jun", "4.00"),
+             ("Jul", "5.00"), ("Aug", "6.00"), ("Sep", "7.00")]]
+    assert _monthly_balances(rows, w, "t") == ["2.00", "3.00", "4.00", "5.00", "6.00", "7.00"]
+    assert any("most recent six" in x for x in w)
+    assert _monthly_balances([MonthlyBalance(month="March 2026", balance=None)], [], "t") == []

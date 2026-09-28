@@ -162,9 +162,14 @@ One object per **(member, source)** pair. The engine's flat per-paystub output i
       "source_label": "May statement" }
   ],
   "voa": { "voa_date": "2026-06-11", "reported_value": "3234.11",
-           "source": "Cascade Credit Union" }
+           "source": "Cascade Credit Union",
+           "month_1_balance": "2910.00", "month_2_balance": "3050.40",   // only when the VOA
+           "month_3_balance": "2875.12", "month_4_balance": "3104.02",   // lists monthly balances
+           "month_5_balance": "2990.00", "month_6_balance": "3234.11" }  // month 1 = oldest
 }
 ```
+
+`month_1_balance` … `month_6_balance` are sent only when the verification of assets lists individual monthly balances instead of a six-month average (Chase and some others). Month 1 is the oldest; fewer than six months fills from month 1; more than six sends the most recent six. When they are sent, `bank_stmt_avg_balance` carries the mean of the months sent, so it agrees with the average Cartograph computes from them.
 
 Never send `self_declared_balance`. It appears in the controller's permitted parameters but has **no backing column**. It is a seeded calculation-method code. Because records are built by mass assignment, including it raises `ActiveModel::UnknownAttributeError` and returns a 500. Use `manual_balance` for a declared balance and `self_declared_income` for declared asset income.
 

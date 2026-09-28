@@ -138,7 +138,7 @@ A source can arrive with paystubs and no verification entry. That is not an erro
 | `institution_name` | `Meridian Savings Bank` | Bank or source |
 | `current_value` | `4830.00` | **Verified** balance. Present only with a statement or a VOA behind it. See section 1 |
 | `manual_balance` | `915.00` | **Self-declared** balance |
-| `bank_stmt_avg_balance` | `null` | Six-month average where stated |
+| `bank_stmt_avg_balance` | `null` | Six-month average where stated, or the mean of the VOA's monthly balances when those were sent instead |
 | `annual_income_from_assets` | `0.00` | |
 | `interest_type` | `Percentage` | **Needs a column** |
 | `percentage_of_ownership` | `100` | Joint ownership share |
@@ -147,7 +147,7 @@ A source can arrive with paystubs and no verification entry. That is not an erro
 | `pages` | `[13]` | Packet pages this record was read from |
 | `confidence` | `{score, flag, review[]}` | As on income records |
 | `bank_statements[]` | | `statement_date`, `balance`. Only statements carrying at least one of the two are sent |
-| `voa` | `null` | `voa_date`, `reported_value`, `source` |
+| `voa` | `null` | `voa_date`, `reported_value`, `source`, and `month_1_balance`…`month_6_balance` (oldest first) when the VOA lists monthly balances instead of an average |
 
 ---
 
