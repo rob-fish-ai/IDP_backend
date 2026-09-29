@@ -310,6 +310,27 @@ def _text_layer_disagrees(layer: str, ocr_text: str) -> bool:
     return len(want & have) / len(want) < _TEXT_LAYER_DIGIT_RECALL
 
 
+# Numbers OCR broke: a digit run split by a slash or pipe that is not a
+# date ("12/708" for 12,708), or a letter O / l inside a digit run ("1O59").
+# The shape of the text, not the document type, is the trigger: an amount
+# page that prints these has lost figures the extractor will otherwise
+# read wrong, and the OCR score does not see it.
+_BROKEN_NUMBER_RE = re.compile(
+    r"(?<![\d/])\d{1,3}[/|]\d{3}(?:\.\d{2})?(?![\d/])"      # 12/708, 3|359.04 — not a date (d/d/d)
+    r"|(?<![A-Za-z\d])\d+[Ol]\d+(?![A-Za-z\d])"                # 1O59, 2l0
+)
+_AMOUNT_CONTEXT_RE = re.compile(r"\$|\b(?:amount|income|balance|rent|gross|net|wage|benefit|total)\b", re.I)
+
+
+def _broken_number_tokens(text: str) -> list[str]:
+    """Number-like tokens OCR appears to have broken, on a page that talks
+    about amounts. Empty when the page has no amount context."""
+    plain = _plain_text(text or "")
+    if not _AMOUNT_CONTEXT_RE.search(plain):
+        return []
+    return [m.group(0) for m in _BROKEN_NUMBER_RE.finditer(plain)]
+
+
 def _add_flag(result: dict, code: str) -> None:
     flags = result.setdefault("flag_details", [])
     if isinstance(flags, list) and code not in flag_codes(flags):
@@ -826,6 +847,15 @@ def process_pdf(
                 "the answers were not read; queueing vision fallback", page_num,
             )
             _add_flag(ocr_result, "unread_marks")
+            low_quality_pages.append(page_num)
+            continue
+        broken = _broken_number_tokens(ocr_result.get("text") or "")
+        if broken:
+            logger.warning(
+                "Page %d: OCR broke %d number(s) on an amount page (%s) — "
+                "queueing vision fallback", page_num, len(broken), ", ".join(broken[:4]),
+            )
+            _add_flag(ocr_result, "broken_numbers")
             low_quality_pages.append(page_num)
 
     # Phase B1.9: pages queued for a second read that carry a PDF text

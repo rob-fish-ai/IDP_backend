@@ -719,3 +719,73 @@ def test_a_voa_listing_monthly_balances_is_delivered_oldest_first_with_the_avera
     assert _monthly_balances(rows, w, "t") == ["2.00", "3.00", "4.00", "5.00", "6.00", "7.00"]
     assert any("most recent six" in x for x in w)
     assert _monthly_balances([MonthlyBalance(month="March 2026", balance=None)], [], "t") == []
+
+
+def test_a_declaration_matching_any_figure_the_verification_states_is_consistent():
+    """HUD's worksheet takes a checking account's six-month average; a
+    declaration equal to the VOA's average is not a discrepancy with its
+    current balance."""
+    from app.schemas.extraction import AssetEntry, AssetExtraction, VerificationOfAsset
+    from app.services.cross_doc_validator import validate_asset_consistency
+    avg = AssetEntry(assetOwner="Y", accountType="Checking", sourceName="Bank of America",
+                     selfDeclaredAmount="1919.00", currentBalance="1224.98", averageSixMonthBalance="1919.50",
+                     verificationOfAsset=VerificationOfAsset(currentBalance="1224.98", averageSixMonthBalance="1919.50"))
+    assert validate_asset_consistency(AssetExtraction(assetInformation=[avg])) == []
+    off = AssetEntry(assetOwner="Y", accountType="Checking", sourceName="Bank of America",
+                     selfDeclaredAmount="5000.00", currentBalance="1224.98", averageSixMonthBalance="1919.50")
+    out = validate_asset_consistency(AssetExtraction(assetInformation=[off]))
+    assert [f.code for f in out] == ["ASSET_SELF_DECLARED_VS_VERIFIED"]
+    assert "six-month average $1,919.50" in out[0].text
+
+
+def test_a_page_whose_numbers_ocr_broke_is_queued_for_vision():
+    from app.services.pdf_service import _broken_number_tokens
+    garbled = "Income Source Reported by EIV SS Income Reported: 12/708 3,359.04 Source/Amount: 1859 Frequency: Monthly"
+    assert _broken_number_tokens(garbled) == ["12/708"]
+    assert _broken_number_tokens("Gross Benefit 1O59.00 Net 884.10") == ["1O59"]
+    assert _broken_number_tokens("Effective 1/1/2027 Rent $520.00 Unit 1 14") == []          # dates and clean amounts
+    assert _broken_number_tokens("Schedule 12/708 attached") == []                          # no amount context
+
+
+def test_a_figure_scored_as_not_on_the_page_is_not_delivered():
+    """Every delivered figure carries provenance: the adapter drops a
+    certification amount whose source check found nothing on the pages."""
+    from types import SimpleNamespace
+    from app.schemas.extraction import CertificationInfo
+    from app.schemas.scoring import ExtractionScoreSummary, FieldScore, RecordScoreCard, StageScore
+    from app.services.cartograph.adapter import build_cert_review
+    scores = ExtractionScoreSummary(records=[RecordScoreCard(record_type="certification", record_label="CertificationInfo", fields=[
+        FieldScore(field_name="householdIncome", value="16481.00", composite=0.5, flag="yellow",
+                   stages=[StageScore(stage="source_verification", score=0.5, reason="Not found in source text — verify manually")]),
+        FieldScore(field_name="tenantRent", value="304.00", composite=1.0, flag="green",
+                   stages=[StageScore(stage="source_verification", score=1.0, reason="Verified in source document")]),
+    ])])
+    ex = SimpleNamespace(certification_info=CertificationInfo(certificationType="AR", householdIncome="16481.00", tenantRent="304.00"),
+                         field_scores=scores)
+    warnings: list[str] = []
+    out = build_cert_review(ex, [], [], warnings)
+    assert out["annual_income"] is None and out["tenant_rent"] == "304.00"
+    assert any("householdIncome" in w and "not sent" in w for w in warnings)
+
+
+def test_a_declared_line_with_no_amount_reconciles_within_one_digit_or_is_not_a_record():
+    """A questionnaire's account line with no figure is a disclosure. It
+    joins the verified account whose number is one OCR slip away; when
+    nothing matches it is never delivered as an empty record."""
+    from app.services.extractor import _reconcile_assets, _account_numbers_one_edit_apart
+    assert _account_numbers_one_edit_apart("32520843094", "325208430254") is False   # two slips: two accounts
+    assert _account_numbers_one_edit_apart("3252084309", "32520843094") is True       # one dropped digit
+    assert _account_numbers_one_edit_apart("9173086991", "9778086991") is False
+    assert _account_numbers_one_edit_apart("1234", "1235") is False                   # too short to judge
+    records = [{"assetOwner": "Jasmine Bribiesca", "accountType": "Savings", "sourceName": "Bank of America",
+                "accountNumber": "325208430254", "currentBalance": "3000.00", "verificationStatus": "verified"}]
+    declared = [{"kind": "asset", "assetOwner": "Yolanda Bribiesca", "accountType": "Savings", "sourceName": "BANK OF AMERICA",
+                 "accountNumber": "32520843094", "amount": None, "page": 7, "documentType": "Application / Housing Questionnaire"}]
+    _reconcile_assets(records, declared)
+    assert len(records) == 1 and declared[0]["matched"] is True
+    joined = [{"assetOwner": "Dana", "accountType": "Checking", "sourceName": "Chase", "accountNumber": "44001234567",
+               "currentBalance": "10.00", "verificationStatus": "verified"}]
+    declared = [{"kind": "asset", "assetOwner": "Dana", "accountType": "Checking", "sourceName": "Chase",
+                 "accountNumber": "4400123456", "amount": None, "page": 7, "documentType": "Application / Housing Questionnaire"}]
+    _reconcile_assets(joined, declared)
+    assert len(joined) == 1 and declared[0]["matched"] is True

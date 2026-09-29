@@ -2,6 +2,8 @@
 
 import logging
 
+from app.services.doc_taxonomy import canonical_label, confirmed_report_of
+
 from app.schemas.extraction import (
     AssetExtraction,
     CertificationInfo,
@@ -354,21 +356,30 @@ def validate_asset_consistency(
 
     for asset in assets.assetInformation:
         self_declared = _parse_money(asset.selfDeclaredAmount)
-        verified = _parse_money(asset.currentBalance)
+        # Every figure the verification states. A VOA prints a current
+        # balance and a six-month average, and HUD's worksheet takes the
+        # average for a checking account; a declaration matching any stated
+        # figure is consistent. The current balance is named when none match.
+        stated = _verified_figures(asset)
+        verified = stated[0][1] if stated else None
 
         if self_declared is not None and verified is not None:
-            if verified == 0 and self_declared == 0:
+            if self_declared == 0 and all(v == 0 for _, v in stated):
+                continue
+            if any(_within_tolerance(self_declared, v) for _, v in stated):
                 continue
             max_val = max(abs(self_declared), abs(verified))
             if max_val > 0:
                 diff_pct = abs(self_declared - verified) / max_val
                 if diff_pct > _DISCREPANCY_THRESHOLD:
+                    others = ", ".join(f"{label} ${v:,.2f}" for label, v in stated[1:])
                     findings.append(make_finding(
                         "ASSET_SELF_DECLARED_VS_VERIFIED",
                         f"Asset discrepancy for '{asset.sourceName or 'Unknown'}' "
                         f"({asset.accountType or 'Unknown'}): self-declared = ${self_declared:,.2f} vs "
-                        f"verified = ${verified:,.2f} ({diff_pct:.0%} difference) — "
-                        f"review asset worksheet (Section 7)",
+                        f"verified = ${verified:,.2f} ({diff_pct:.0%} difference)"
+                        + (f"; the verification also states {others}" if others else "")
+                        + " — review asset worksheet (Section 7)",
                         label="Self-declared asset balance differs from the verified balance",
                         category=CATEGORY_ASSET,
                         subject_type="asset_record",
@@ -385,6 +396,60 @@ def validate_asset_consistency(
                         resolution_type=RESOLVE_RECALC,
                     ))
 
+    return findings
+
+
+def _within_tolerance(declared: float, verified: float) -> bool:
+    max_val = max(abs(declared), abs(verified))
+    return max_val == 0 or abs(declared - verified) / max_val <= _DISCREPANCY_THRESHOLD
+
+
+def _verified_figures(asset) -> list[tuple[str, float]]:
+    """(label, amount) for every figure the asset's verification states,
+    current balance first, without duplicates."""
+    out: list[tuple[str, float]] = []
+    voa = asset.verificationOfAsset
+    candidates = [
+        ("current balance", asset.currentBalance),
+        ("six-month average", asset.averageSixMonthBalance),
+        ("VOA current balance", getattr(voa, "currentBalance", None)),
+        ("VOA six-month average", getattr(voa, "averageSixMonthBalance", None)),
+    ] + [("statement balance", s.balance) for s in (asset.bankStatment or [])]
+    seen: set[float] = set()
+    for label, raw in candidates:
+        v = _parse_money(raw)
+        if v is None or v in seen:
+            continue
+        seen.add(v); out.append((label, v))
+    return out
+
+
+def validate_confirmation_reports(document_groups: list[DocumentGroup]) -> list[Finding]:
+    """A countersigned confirmation sheet restates a report; the packet
+    should carry the report too. One finding per report type missing,
+    instead of every figure on the sheet reading as unverified."""
+    findings: list[Finding] = []
+    present = {canonical_label(g.document_type)[0] for g in document_groups if g.category != "ignore"}
+    wanted: dict[str, list[int]] = {}
+    for g in document_groups:
+        if g.category == "ignore":
+            continue
+        report = confirmed_report_of(g.document_type)
+        if report and report not in present:
+            wanted.setdefault(report, []).extend(g.pages or [])
+    for report, pages in wanted.items():
+        findings.append(make_finding(
+            "CONFIRMATION_WITHOUT_REPORT",
+            f"A countersigned confirmation sheet (pages {sorted(set(pages))}) restates the "
+            f"{report} but the {report} itself is not in the packet — file the report "
+            f"behind its confirmation (Section 9)",
+            label=f"{report} confirmed but not on file",
+            category=CATEGORY_INCOME,
+            assignment=ASSIGN_CLIENT,
+            correction_required=f"Add the {report} printout the confirmation sheet refers to",
+            resolution_type=RESOLVE_PRESENCE,
+            pages=sorted(set(pages)),
+        ))
     return findings
 
 

@@ -40,6 +40,7 @@ from app.services.cross_doc_validator import (
     validate_asset_consistency,
     validate_asset_worksheet_rules,
     validate_cert_summary_vs_income,
+    validate_confirmation_reports,
     validate_duplicate_income,
     validate_household_consistency,
     validate_income_consistency,
@@ -2890,6 +2891,7 @@ def _generate_findings(
     findings.extend(validate_affirmative_responses(
         questionnaire_disclosures, document_groups,
     ))
+    findings.extend(validate_confirmation_reports(document_groups))
 
     # --- 18. Cross-document validation (Sections 7, 8) ---
     findings.extend(validate_income_consistency(income, income_calculations or []))

@@ -11,7 +11,7 @@ from app.schemas.extraction import (
     HouseholdDemographics,
     IncomeExtraction,
 )
-from app.services.doc_taxonomy import assert_known, is_current_certification_form
+from app.services.doc_taxonomy import assert_known, is_countersigned_confirmation, is_current_certification_form
 from app.services.llm_service import call_llm_json
 from app.services import validation
 from app.services.members import is_unborn
@@ -290,8 +290,23 @@ Benefit Report for Household of …", one section per household member):
     → one payStub entry per row: sourceName the employer, payDate the last day of
     that quarter, grossPay the amount, payInterval "quarterly", ytdGross null. The
     engine judges whether they are current.
-  - The "EIV Income Report Confirmation" coversheet (tenant agrees / disagrees,
-    handwritten amount) is the household's statement, not this report.
+  - The "EIV Income Report Confirmation" coversheet is not this report; see
+    COUNTERSIGNED CONFIRMATION SHEET below.
+
+COUNTERSIGNED CONFIRMATION SHEET (a manager's sheet that restates a third-party
+report's figures and that the resident signs as agreeing — an "EIV Income Report
+Confirmation" coversheet is one):
+  - When the sheet records the resident as AGREEING with the report and carries a
+    resident signature, the figures "reported by EIV" (or by the agency named) are
+    third-party verified: one verificationIncome entry per amount, type_of_VOI
+    "EIV Confirmation", sourceName "Social Security Administration" for SSA / SSI,
+    incomeType from the label beside the amount (SSA → "Social Security", SSI →
+    "Supplemental Security Income"), rateOfPay the amount as printed and rateUnit
+    the period the sheet states for it ("=Annually" → "annually"; when the only
+    period printed is the "Tenant reported income" Frequency, use that with the
+    tenant-reported amount).
+  - A sheet marked DISAGREES, or with no resident signature, verifies nothing —
+    return no record for it.
 
 OTHER AGENCY BENEFIT LETTERS (Department of Veterans Affairs, pension plan,
 unemployment agency, state assistance) — same treatment as the SSA letter:
@@ -364,6 +379,18 @@ Both halves name the same employer so they attach to one income source.
 - Child support and other benefit payments are NEVER pay stubs — they belong in the
   verificationIncome entry's paymentHistory
 - Do NOT create pay stubs for SSA, pension, or TANF (these go to verificationIncome)
+- THE PAYEE IS THE EARNER: when a document names a household member as the payee,
+  provider, or recipient of payments (a county child care certificate reading
+  "Payee Name: <member>" beside a child who is not in the household, a foster care
+  or caregiver agreement, an in-home support authorization), the income belongs to
+  that member — memberName the household member, sourceName the paying agency,
+  incomeType "Self-Employment" or "Non-Federal Wage" as the document states,
+  rateOfPay the rate or benefit amount with its unit — even though the page is
+  headed by someone else's name. A page about a non-member never means no record.
+- A LINE WITH SEVERAL AMOUNTS IS SEVERAL RECORDS: amounts separated by "/", commas
+  or columns on one line ("SSA / SSI ... 6,000 / 3,359.04", "Gross 1,059 Net 884")
+  pair in order with the types or labels on that line; each pair is its own
+  entry. Never keep only the first amount.
 
 VERIFICATION INCOME FIELDS:
 - sourceName, memberName, socialSecurityNumber (same rules as payStub)
@@ -396,7 +423,7 @@ VERIFICATION INCOME FIELDS:
 - ytdAmount: only if document explicitly states "year to date". MUST BE null for SSA/fixed income.
 - ytdStartDate, ytdEndDate: YYYY-MM-DD
 - incomeType: one of: Non-Federal Wage, Federal Wage, Social Security, Supplemental Security Income, Social Security Disability, Pension, Veterans Benefits, Temporary Assistance, Child Support, Self-Employment, Zero Income, Other Income
-- type_of_VOI: Employer Verification, SSA Benefit Letter, Agency Benefit Letter, EIV Report, Child Support Order, Pension Statement, Self-Declaration, Work Number, ScreeningWorks, Vault Verify
+- type_of_VOI: Employer Verification, SSA Benefit Letter, Agency Benefit Letter, EIV Report, EIV Confirmation, Child Support Order, Pension Statement, Self-Declaration, Work Number, ScreeningWorks, Vault Verify
 - address: {street, city, state (2-letter), zip (5-digit)} or null
 - employmentStatus: "Active" if currently employed, "Terminated" if employment has ended, "On Leave" if on leave. Extract from "Presently Employed" checkbox or employment status field. This is CRITICAL for understanding the income picture.
 - terminationDate: YYYY-MM-DD. Extract if employment has ended (last day worked, termination date, or separation date).
@@ -461,6 +488,8 @@ NESTED OBJECTS:
   monthlyBalances: array of {month, balance}, one per month the VOA lists, in the order printed. Empty [] when the VOA gives only an average.
 
 SPECIAL RULES:
+- A line with several amounts is several records: balances separated by "/", commas
+  or columns beside several accounts or account types pair in order, one entry each.
 - Life insurance: ALWAYS use cash/surrender value, NEVER use face value. If only face value is shown, set currentBalance to null and add note "Only face value available — cash value not provided"
 - VOA with individual monthly balances (Chase and some others list the balance at the end of each of the last six months instead of an average): put each month in verificationOfAsset.monthlyBalances as {month, balance} exactly as printed. Leave averageSixMonthBalance null unless the form prints an average — never compute one.
 - Thomson Reuters / WestlawNext VOA forms: treat as Verification of Assets. Extract per account: account number, account type (checking/savings), account balance, average balance, date received
@@ -706,6 +735,23 @@ def extract_certification_info(
                     field, value, form_pages,
                 )
                 cert_info_dict[field] = None
+        # Every delivered figure carries provenance. Income and asset amounts
+        # are already dropped when their pages do not print them; the
+        # certification's own amounts get the same rule. A household income
+        # of 16,481 was delivered from a form printing 19,441 and 18,481 —
+        # a figure on no page — and drove a false income-mismatch finding.
+        # A dropped field is a gap the required-field recovery re-reads from
+        # the page image.
+        for field in _CERT_MONEY_FIELDS:
+            value = cert_info_dict.get(field)
+            if value in (None, "", "null"):
+                continue
+            if not _amount_on_pages(value, {0: form_text}, [0]):
+                logger.warning(
+                    "Cert info: %s=%s is not printed on the certification form pages %s — dropped (no provenance)",
+                    field, value, form_pages,
+                )
+                cert_info_dict[field] = None
         # The household size is a printed count on every certification form
         # (a 50059's "53. Number of Family Members" plus "54. Number of
         # Non-Family Members", a TIC's "Current Household Size"). The model
@@ -739,9 +785,18 @@ def extract_certification_info(
 
 # Date fields that must be printed on the certification form's own pages.
 _FORM_DATE_FIELDS = ("signatureDate", "moveInDate")
-_HUD_FAMILY_MEMBERS_RE = re.compile(r"number\s+of\s+family\s+members\s*[:\-]?\s*(\d{1,2})\b", re.IGNORECASE)
-_HUD_NON_FAMILY_RE = re.compile(r"number\s+of\s+non-?\s?family\s+members\s*[:\-]?\s*(\d{1,2})\b", re.IGNORECASE)
-_TIC_HOUSEHOLD_SIZE_RE = re.compile(r"(?:current\s+)?household\s+size\s*[:\-]?\s*(\d{1,2})\b", re.IGNORECASE)
+_CERT_MONEY_FIELDS = ("householdIncome", "grossRent", "tenantRent", "utilityAllowance", "rentLimit",
+                      "federalRentAssistance", "nonFederalRentAssistance")
+# A labelled count on a form: the value after the label, which must not be
+# the next item's number. On a 50059 read column-wise, "Number of Family
+# Members" was followed by "57." (the next field's number) and the household
+# size came out as 115. A value followed by a period and another item, or
+# above any plausible household, is not the count.
+_COUNT_VALUE = r"(\d{1,2})(?!\d)(?!\s*\.\s*[A-Za-z])"
+_HUD_FAMILY_MEMBERS_RE = re.compile(r"number\s+of\s+family\s+members\s*[:\-]?\s*" + _COUNT_VALUE, re.IGNORECASE)
+_HUD_NON_FAMILY_RE = re.compile(r"number\s+of\s+non-?\s?family\s+members\s*[:\-]?\s*" + _COUNT_VALUE, re.IGNORECASE)
+_TIC_HOUSEHOLD_SIZE_RE = re.compile(r"(?:current\s+)?household\s+size\s*[:\-]?\s*" + _COUNT_VALUE, re.IGNORECASE)
+_MAX_PLAUSIBLE_HOUSEHOLD = 20
 
 
 def _household_size_on_form(form_text: str) -> tuple[int | None, str]:
@@ -755,10 +810,10 @@ def _household_size_on_form(form_text: str) -> tuple[int | None, str]:
     if fam:
         non = _HUD_NON_FAMILY_RE.search(plain)
         total = int(fam.group(1)) + (int(non.group(1)) if non else 0)
-        if total > 0:
+        if 0 < total <= _MAX_PLAUSIBLE_HOUSEHOLD:
             return total, fam.group(0) + (f"; {non.group(0)}" if non else "")
     tic = _TIC_HOUSEHOLD_SIZE_RE.search(plain)
-    if tic and int(tic.group(1)) > 0:
+    if tic and 0 < int(tic.group(1)) <= _MAX_PLAUSIBLE_HOUSEHOLD:
         return int(tic.group(1)), tic.group(0)
     return None, ""
 _MOVE_IN_DATE_RE = re.compile(
@@ -1964,6 +2019,9 @@ Rules:
   verbatim text from that row containing the amount.
 - NEVER return total rows, subtotals, income limits, or historical figures
   ("at move-in", "prior", "previous certification").
+- A line with several amounts is several entries: amounts separated by "/",
+  commas or columns ("Source/Amount: 500 / 279.92") pair in order with the
+  types or sources on the same line, one entry each. Never keep only the first.
 - A declaration of no income ("no income", "$0", zero-income certification)
   is one entry with incomeType "Zero Income" and amount "0.00".
 - Do not invent a row the form does not print. Return {"declared": []} when
@@ -2835,6 +2893,23 @@ def _asset_family(account_type: str | None) -> str:
     return t or "other"
 
 
+def _account_numbers_one_edit_apart(a: str | None, b: str | None) -> bool:
+    """Two account numbers of at least eight digits that differ by one OCR
+    slip — a substituted, dropped or added digit — are one account. Two
+    numbers that differ in more than one place are two accounts, whatever
+    the last four say."""
+    da, db = re.sub(r"\D", "", a or ""), re.sub(r"\D", "", b or "")
+    if len(da) < 8 or len(db) < 8 or abs(len(da) - len(db)) > 1:
+        return False
+    if len(da) == len(db):
+        return sum(x != y for x, y in zip(da, db)) == 1
+    short, long_ = (da, db) if len(da) < len(db) else (db, da)
+    i = 0
+    while i < len(short) and short[i] == long_[i]:
+        i += 1
+    return short[i:] == long_[i + 1:]
+
+
 def _digits_last4(value: str | None) -> str | None:
     d = re.sub(r"\D", "", value or "")
     return d[-4:] if len(d) >= 4 else None
@@ -2926,7 +3001,7 @@ def _reconcile_assets(records: list[dict], declared: list[dict]) -> None:
                 continue
             r_last4 = _digits_last4(rec.get("accountNumber"))
             if d_last4 and r_last4:
-                if d_last4 == r_last4:
+                if d_last4 == r_last4 or _account_numbers_one_edit_apart(d.get("accountNumber"), rec.get("accountNumber")):
                     best = rec
                     break
                 continue
@@ -2971,6 +3046,21 @@ def _reconcile_assets(records: list[dict], declared: list[dict]) -> None:
                     d.get("assetOwner"), rec.get("assetOwner"), rec.get("accountType") or "asset",
                 )
                 best = rec
+        if best is None and d_amount is None:
+            # A declared line carrying an account number but no figure — a
+            # questionnaire's "Bank of America, Savings, 3252…" — is a
+            # disclosure, not a balance. Matched above when a verified
+            # account is the same number within one OCR slip; otherwise it
+            # is never delivered as an empty record. The questionnaire
+            # rules already ask for a record when a disclosed asset has
+            # nothing behind it.
+            logger.info(
+                "Declared assets: %s at %s (acct …%s) under %s states no amount and matches no "
+                "verified account — a disclosure, not a record",
+                d.get("accountType") or "untyped", d.get("sourceName"), d_last4, d.get("assetOwner"),
+            )
+            d["matched"] = True
+            continue
         if best is None and d.get("amount") is not None:
             # The certification lists the household's accounts one line per
             # kind. When the owner has exactly one verified account of that
@@ -3064,7 +3154,11 @@ def extract_income(
     from this document alone; if the document prints dollar figures and
     produced no record at all, read it once more with neutral wording.
     """
-    source_groups = [g for g in groups if g.category != "ignore" and not _is_income_declaration(g)]
+    # A countersigned confirmation sheet is read twice: for the household's
+    # declaration line and, when the resident agrees and signs, for the
+    # third-party figures it restates.
+    source_groups = [g for g in groups if g.category != "ignore"
+                     and (not _is_income_declaration(g) or is_countersigned_confirmation(g.document_type))]
     decl_groups = [g for g in groups if g.category != "ignore" and _is_income_declaration(g)]
     if not source_groups and not decl_groups:
         logger.info("No income documents found")

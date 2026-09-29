@@ -285,13 +285,24 @@ def test_eiv_documents_are_three_labels_and_the_report_is_income_evidence():
     assert [(g.document_type, g.pages) for g in out] == [("EIV Income Report", [8, 9, 10])]
 
 
-def test_a_disclosed_ssa_benefit_is_verified_by_the_eiv_report_not_its_coversheet():
+def test_a_disclosed_ssa_benefit_is_verified_by_the_eiv_report_or_its_countersigned_confirmation():
+    """A countersigned confirmation sheet stands in for the report it
+    restates, so SSA disclosed on the questionnaire is not "unverified"
+    when only the coversheet is filed. What is missing is the printout,
+    and that is one narrow finding, not one per figure."""
     from app.services.questionnaire_extractor import validate_affirmative_responses
+    from app.services.cross_doc_validator import validate_confirmation_reports
     from app.services.findings import text_of
     d = QuestionnaireDisclosures(has_ssa_benefits=True)
     assert validate_affirmative_responses(d, [_group("EIV Income Report", [8])]) == []
-    texts = validate_affirmative_responses(d, [_group("EIV Income Report Confirmation", [8])])
+    assert validate_affirmative_responses(d, [_group("EIV Income Report Confirmation", [8])]) == []
+    texts = validate_affirmative_responses(d, [_group("Bank Statement", [8])])
     assert any("SSA/SSI/SSDI" in text_of(t) for t in texts)
+
+    only_sheets = [_group("EIV Income Report Confirmation", [8]), _group("EIV Income Report Confirmation", [9])]
+    out = validate_confirmation_reports(only_sheets)
+    assert [f.code for f in out] == ["CONFIRMATION_WITHOUT_REPORT"] and out[0].pages == [8, 9]
+    assert validate_confirmation_reports(only_sheets + [_group("EIV Income Report", [10])]) == []
 
 
 def test_a_disclosed_asset_with_nothing_in_the_file_is_an_asset_finding_that_asks_for_a_record():
@@ -323,3 +334,77 @@ def test_a_disclosed_asset_with_nothing_in_the_file_is_an_asset_finding_that_ask
     assert rows["QUESTIONNAIRE_LIFE_INSURANCE_UNVERIFIED"]["category"] == "asset"
     assert rows["QUESTIONNAIRE_LIFE_INSURANCE_UNVERIFIED"]["subject_type"] == "asset_record"
     assert rows["QUESTIONNAIRE_LIFE_INSURANCE_UNVERIFIED"]["assignment"] == "client"
+
+
+def test_the_hud_consent_forms_keep_their_label_when_headed_by_their_printed_title():
+    """The 9887's title contains "Release of Information", an alias of the
+    generic release type; the matcher takes the longest alias found, so the
+    form resolves to itself and is not then reported missing."""
+    from app.services.two_pass_classifier import _post_group_title_relabel
+    text = {21: "Notice and Consent for the Release of Information to the U.S. Department of Housing "
+                "and Urban Development (HUD) and to an Owner and Management Agent (O/A) ...",
+            22: "Agencies To Provide Information. State Wage Information Collection Agencies ..."}
+    out, _ = _post_group_title_relabel([_group("HUD 9887", [21, 22], category="compliance")], text)
+    assert [(g.document_type, g.pages) for g in out] == [("HUD 9887", [21, 22])]
+    text = {23: "Applicant's/Tenant's Consent to the Release of Information Verification by Owners ..."}
+    out, _ = _post_group_title_relabel([_group("HUD 9887-A", [23], category="compliance")], text)
+    assert [g.document_type for g in out] == ["HUD 9887-A"]
+
+
+def test_a_certification_is_flagged_unsigned_once():
+    """One finding per form per defect: the pipeline reports an unsigned
+    certification outright, so the signature validator does not add a
+    "could not verify a signature" note for the same form."""
+    from app.schemas.extraction import CertificationInfo, DocumentInventory, DocumentInventoryEntry, HouseholdDemographics
+    from app.services.signature_validator import validate_signatures
+    from app.services.findings import text_of
+    from types import SimpleNamespace
+    hud = DocumentInventory(documents=[DocumentInventoryEntry(documentType="HUD 50059", isSigned="No")])
+    fin = DocumentInventory(documents=[])
+    hh = HouseholdDemographics(houseHold=[])
+    ctx = SimpleNamespace(funding_program="HUD")
+    unsigned = validate_signatures(hud, fin, hh, CertificationInfo(isSigned="No"), [], ctx)
+    assert not any("HUD 50059 must be signed" in text_of(f) for f in unsigned)
+    unknown = validate_signatures(hud, fin, hh, CertificationInfo(isSigned=None), [], ctx)
+    assert any("HUD 50059 must be signed" in text_of(f) for f in unknown)
+
+
+def test_a_multi_member_table_is_read_by_row_and_a_neighbours_ssn_is_no_conflict():
+    """An interview checklist lists every member with their own SSN under
+    one NAME column. Each row's SSN belongs to the member named in it, and
+    a value attributed elsewhere to the wrong member is recognised as
+    another member's SSN, not a conflict."""
+    from app.schemas.extraction import HouseholdDemographics, HouseholdMember
+    from app.services.identity import resolve_identities, collect_identity_claims
+    hh = HouseholdDemographics(houseHold=[
+        HouseholdMember(FirstName="Yolanda", LastName="Bribiesca", socialSecurityNumber="***-**-3484", relationship="Head"),
+        HouseholdMember(FirstName="Jasmine", LastName="Bribiesca", socialSecurityNumber="***-**-8733"),
+        HouseholdMember(FirstName="Sofia", LastName="Bribiesca-Soto", socialSecurityNumber="***-**-2006"),
+    ])
+    cert = ("<table><tr><th>Last Name</th><th>First Name</th><th>ID Code (SSN)</th></tr>"
+            "<tr><td>Bribiesca</td><td>Yolanda</td><td>617103484</td></tr>"
+            "<tr><td>Bribiesca</td><td>Jasmine</td><td>611618733</td></tr>"
+            "<tr><td>Bribiesca-Soto</td><td>Sofia</td><td>609752006</td></tr></table>")
+    checklist = ("NAME: Yolanda Bribiesca <table><tr><th>FAMILY MBR NO.</th><th>NAME</th><th>RELATIONSHIP TO</th>"
+                 "<th>SOCIAL SECURITY NO.</th><th>BIRTHDATE</th></tr>"
+                 "<tr><td>1</td><td>Yolanda Bribiesca</td><td>HEAD</td><td>617-10-3484</td><td>02/18/69</td></tr>"
+                 "<tr><td>2</td><td>Jasmine Bribiesca</td><td>Other Adult</td><td>611-61-8733</td><td>12/22/06</td></tr>"
+                 "<tr><td>3</td><td>Sofia Bribiesca</td><td>Child</td><td>609-75-2006</td><td>02/26/09</td></tr></table>")
+    groups = [_group("HUD 50059", [2]), DocumentGroup(document_type="Application / Housing Questionnaire", category="include", pages=[6], page_range="6", combined_text="x", person_name="Yolanda Bribiesca")]
+    claims = collect_identity_claims(hh.houseHold, groups, {2: cert, 6: checklist})
+    by_member = {k: sorted({x["value"][-4:] for x in v["ssn"]}) for k, v in claims.items()}
+    assert all(len(v) == 1 for v in by_member.values()), by_member
+    assert [f.code for f in resolve_identities(hh, groups, {2: cert, 6: checklist})] == []
+
+
+def test_a_surname_one_edit_from_the_certifications_spelling_takes_the_forms_spelling():
+    from app.schemas.extraction import HouseholdDemographics, HouseholdMember
+    from app.services.identity import resolve_identities
+    hh = HouseholdDemographics(houseHold=[HouseholdMember(FirstName="Sofia", LastName="Bribiesca-Solo")])
+    cert = "<tr><td>Bribiesca-Soto</td><td>Sofia</td><td>M</td><td>D</td></tr>"
+    resolve_identities(hh, [_group("HUD 50059", [2])], {2: cert})
+    assert hh.houseHold[0].LastName == "Bribiesca-Soto"
+    # No snap when the form prints the name as extracted, or when two candidates are one edit away.
+    hh = HouseholdDemographics(houseHold=[HouseholdMember(FirstName="Ana", LastName="Soto")])
+    resolve_identities(hh, [_group("HUD 50059", [2])], {2: "Soto Ana; Sota Luis; Soro Eva"})
+    assert hh.houseHold[0].LastName == "Soto"

@@ -57,13 +57,16 @@ def validate_signatures(
     # Also check doc_groups for doc types present
     group_types = {g.document_type for g in document_groups}
 
-    # --- 1. TIC: signed and dated ---
-    _check_signed_dated(by_type, "Tenant Income Certification (TIC)",
-                        findings, "TIC must be signed and dated on both pages (Section 11)")
-
-    # --- 2. HUD 50059: signed and dated ---
-    _check_signed_dated(by_type, "HUD 50059",
-                        findings, "HUD 50059 must be signed and dated (Section 11)")
+    # --- 1-2. Certification form: signed and dated ---
+    # One finding per form per defect. When the certification is already
+    # known to be unsigned the pipeline reports that outright; a second
+    # "could not verify a signature" note for the same form would
+    # contradict it.
+    if not (certification_info and certification_info.isSigned == "No"):
+        _check_signed_dated(by_type, "Tenant Income Certification (TIC)",
+                            findings, "TIC must be signed and dated on both pages (Section 11)")
+        _check_signed_dated(by_type, "HUD 50059",
+                            findings, "HUD 50059 must be signed and dated (Section 11)")
 
     # --- 3. Tenant Release and Consent: signed by all adults ---
     _check_all_adults_signed(by_type, "Tenant Release and Consent Form",

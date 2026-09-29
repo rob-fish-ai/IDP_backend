@@ -2,6 +2,8 @@
 
 import logging
 
+from app.services.doc_taxonomy import confirmed_report_of
+
 from app.core.config import Settings
 from app.schemas.extraction import DocumentGroup, Finding, QuestionnaireDisclosures
 from app.services.findings import (
@@ -263,8 +265,14 @@ def validate_affirmative_responses(
     # SSA → a benefit letter, or HUD's own EIV income report, which is the
     # third-party verification of Social Security and SSI on a HUD file.
     if disclosures.has_ssa_benefits is True:
-        has_ssa = any("ssa" in dt or "ssi" in dt or "ssdi" in dt or "social security" in dt or dt == "eiv income report"
-                      for dt in doc_types_lower)
+        # A benefit letter, HUD's EIV report, or a countersigned sheet that
+        # stands in for that report (its `confirms` in the taxonomy).
+        has_ssa = any(
+            "ssa" in dt.lower() or "ssi" in dt.lower() or "ssdi" in dt.lower()
+            or "social security" in dt.lower() or dt.lower() == "eiv income report"
+            or (confirmed_report_of(dt) or "").lower() == "eiv income report"
+            for dt in doc_types
+        )
         if not has_ssa:
             findings.append(_unverified(
                 "QUESTIONNAIRE_SSA_UNVERIFIED",

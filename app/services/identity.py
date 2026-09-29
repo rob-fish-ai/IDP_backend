@@ -83,6 +83,21 @@ def _member_key(m) -> str:
     return f"{first} {last}".strip()
 
 
+_SURNAME_PARTICLES = frozenset({"de", "la", "del", "las", "los", "da", "do", "dos", "van", "von", "der", "y", "e"})
+
+
+def _surname_tokens(last: str) -> list[str]:
+    """The name-bearing parts of a surname: "garcia de nava" → garcia, nava;
+    "bribiesca-soto" → bribiesca, soto. A shorter form prints any one."""
+    return [t for t in re.split(r"[-\s]+", (last or "").strip()) if t and t not in _SURNAME_PARTICLES]
+
+
+def _base_surname(last: str) -> str:
+    """The first name-bearing part of a compound surname."""
+    parts = _surname_tokens(last)
+    return parts[0] if parts else (last or "")
+
+
 def _member_tokens(m) -> tuple[str, str]:
     first = ((getattr(m, "FirstName", None) or "").strip().lower().split(" ") or [""])[0]
     last = (getattr(m, "LastName", None) or "").strip().lower()
@@ -168,6 +183,9 @@ _SSN_HEADER_RE = re.compile(r"social security|\bssn\b|\bss ?#|ss no", re.IGNOREC
 _DOB_HEADER_RE = re.compile(r"birth", re.IGNORECASE)
 _LAST_HEADER_RE = re.compile(r"last name", re.IGNORECASE)
 _FIRST_HEADER_RE = re.compile(r"first name", re.IGNORECASE)
+# A single name column ("NAME", "Member Name", "Full Name") holding the
+# whole name; matched by last name plus first name when the last is shared.
+_NAME_HEADER_RE = re.compile(r"^(?:full |member |household member |applicant )?name(?:s)?$", re.IGNORECASE)
 
 
 def _ssn_from_cell(cell: str) -> str | None:
@@ -188,10 +206,14 @@ def _ssn_from_cell(cell: str) -> str | None:
     return None
 
 
-def _table_claims(text: str, members, claims, pn: int, authority: int, document_type: str) -> None:
+def _table_claims(text: str, members, claims, pn: int, authority: int, document_type: str) -> set[str]:
     """Claims from the household-composition table: a header row names the
-    SSN and date-of-birth columns, each member row is read by column."""
-    ssn_col = dob_col = last_col = first_col = None
+    SSN and date-of-birth columns, each member row is read by column.
+    Returns the SSN values claimed by row, so the free-text pass does not
+    attribute them again to whichever name happens to precede them."""
+    ssn_col = dob_col = last_col = first_col = name_col = None
+    claimed: set[str] = set()
+    claimed_dobs: set[str] = set()
     for row in _ROW_RE.finditer(text):
         cells = [re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", c)).strip() for c in _CELL_RE.findall(row.group(0))]
         if not cells:
@@ -202,6 +224,7 @@ def _table_claims(text: str, members, claims, pn: int, authority: int, document_
             dob_col = next((i for i, c in enumerate(cells) if _DOB_HEADER_RE.search(c)), None)
             last_col = next((i for i, c in enumerate(cells) if _LAST_HEADER_RE.search(c)), None)
             first_col = next((i for i, c in enumerate(cells) if _FIRST_HEADER_RE.search(c)), None)
+            name_col = next((i for i, c in enumerate(cells) if _NAME_HEADER_RE.search(c.strip())), None) if last_col is None else None
             continue
         if ssn_col is None and dob_col is None:
             continue
@@ -210,6 +233,19 @@ def _table_claims(text: str, members, claims, pn: int, authority: int, document_
         for m in members:
             first, last = _member_tokens(m)
             if not last:
+                continue
+            if name_col is not None and name_col < len(low):
+                # The row's name cell must carry the last name; the first
+                # name too when several members share the last name.
+                cell = low[name_col]
+                if last in cell or any(re.search(rf"\b{re.escape(t)}\b", cell) for t in _surname_tokens(last)):
+                    # Any part of the surname in the cell; the first name too
+                    # when another member shares a part of it.
+                    shared = any(o is not m and set(_surname_tokens(_member_tokens(o)[1])) & set(_surname_tokens(last))
+                                 for o in members)
+                    if not shared or not first or first in cell:
+                        who = m
+                        break
                 continue
             if last_col is not None and last_col < len(low) and low[last_col] == last:
                 if first_col is not None and first_col < len(low) and first and not low[first_col].startswith(first):
@@ -226,6 +262,7 @@ def _table_claims(text: str, members, claims, pn: int, authority: int, document_
             value = _ssn_from_cell(cells[ssn_col])
             if value:
                 claims[key]["ssn"].append({"value": value, "page": pn, "authority": authority, "document_type": document_type})
+                claimed.add(value)
         if dob_col is not None:
             # The mapped cell first; when a merged header cell ("Rel. Sex")
             # has shifted the columns, any birth-year date in the row.
@@ -235,9 +272,9 @@ def _table_claims(text: str, members, claims, pn: int, authority: int, document_
             for d in candidates:
                 if 1900 < int(d[:4]) < 2031:
                     claims[key]["dob"].append({"value": d, "page": pn, "authority": authority, "document_type": document_type})
+                    claimed_dobs.add(d)
                     break
-
-
+    return claimed, claimed_dobs
 def collect_identity_claims(members, document_groups, page_text: dict[int, str]) -> dict[str, dict[str, list[dict]]]:
     """Every SSN and date-of-birth the packet states, attributed to a member.
 
@@ -257,14 +294,16 @@ def collect_identity_claims(members, document_groups, page_text: dict[int, str])
             text = page_text.get(pn) or ""
             if not text:
                 continue
-            _table_claims(text, members, claims, pn, authority, g.document_type)
+            by_row, by_row_dobs = _table_claims(text, members, claims, pn, authority, g.document_type)
             # Free text: SSNs anywhere, dates of birth beside their label.
             for m in _SSN_RE.finditer(text):
+                value = f"{m.group(1)}-{m.group(2)}-{m.group(3)}"
+                value = re.sub(r"[Xx]{3}-[Xx]{2}", "***-**", value)
+                if value in by_row:
+                    continue
                 who = _nearest_member(text[max(0, m.start() - _NAME_WINDOW):m.start()], members, g.person_name)
                 if who is None:
                     continue
-                value = f"{m.group(1)}-{m.group(2)}-{m.group(3)}"
-                value = re.sub(r"[Xx]{3}-[Xx]{2}", "***-**", value)
                 claims[_member_key(who)]["ssn"].append({
                     "value": value, "page": pn, "authority": authority, "document_type": g.document_type,
                 })
@@ -277,6 +316,8 @@ def collect_identity_claims(members, document_groups, page_text: dict[int, str])
                     window = window[:cut.start()]
                 dates = _dates_in(window)
                 if not dates or not (1900 < int(dates[0][:4]) < 2031):
+                    continue
+                if dates[0] in by_row_dobs:
                     continue
                 who = _nearest_member(text[max(0, m.start() - _NAME_WINDOW):m.start()], members, g.person_name)
                 if who is None:
@@ -297,6 +338,50 @@ def collect_identity_claims(members, document_groups, page_text: dict[int, str])
     return claims
 
 
+_NAME_TOKEN_RE = re.compile(r"[A-Za-z][A-Za-z'\-]{2,}")
+
+
+def _one_edit_apart(a: str, b: str) -> bool:
+    """Levenshtein distance of exactly one (substitution, insertion, deletion)."""
+    if a == b:
+        return False
+    if abs(len(a) - len(b)) > 1:
+        return False
+    if len(a) == len(b):
+        return sum(x != y for x, y in zip(a, b)) == 1
+    short, long_ = (a, b) if len(a) < len(b) else (b, a)
+    i = 0
+    while i < len(short) and short[i] == long_[i]:
+        i += 1
+    return short[i:] == long_[i + 1:]
+
+
+def _snap_names_to_certification(members, document_groups, page_text: dict[int, str]) -> None:
+    """A member surname not printed on the certification, when the form
+    prints a name one edit away, takes the form's spelling — the same way
+    a date of birth takes the certification's value. "Bribiesca-Solo" read
+    from a form printing "Bribiesca-Soto" would otherwise reach the
+    consumer as a new person."""
+    cert_pages = [pn for g in document_groups if g.category != "ignore"
+                  and document_authority(g.document_type, g.category) == AUTHORITY_CERT for pn in g.pages]
+    if not cert_pages:
+        return
+    text = " ".join(page_text.get(pn) or "" for pn in cert_pages)
+    text = re.sub(r"<[^>]+>", " ", text)
+    tokens = {t for t in _NAME_TOKEN_RE.findall(text)}
+    low = {t.lower(): t for t in tokens}
+    for m in members:
+        last = (getattr(m, "LastName", None) or "").strip()
+        if not last or last.lower() in low:
+            continue
+        near = sorted({low[t] for t in low if _one_edit_apart(t, last.lower())})
+        if len(near) != 1:
+            continue
+        logger.info("Identity: %s %s surname '%s' is not on the certification, which prints '%s' one edit away — using the form's spelling",
+                    getattr(m, "FirstName", "") or "", last, last, near[0])
+        m.LastName = near[0]
+
+
 def resolve_identities(household, document_groups, page_text: dict[int, str]) -> list[Finding]:
     """Set each member's SSN and DOB from the most authoritative document that
     states them, and report every disagreement between documents.
@@ -309,7 +394,22 @@ def resolve_identities(household, document_groups, page_text: dict[int, str]) ->
     members = list(getattr(household, "houseHold", None) or [])
     if not members or not document_groups:
         return findings
+    _snap_names_to_certification(members, document_groups, page_text)
     claims = collect_identity_claims(members, document_groups, page_text)
+
+    # Each member's authoritative last four, so a value attributed to the
+    # wrong member on a page listing the whole household is recognised as
+    # another member's SSN rather than reported as a conflict.
+    authoritative: dict[str, str] = {}
+    authoritative_dob: dict[str, str] = {}
+    for m in members:
+        c = claims.get(_member_key(m)) or {"ssn": [], "dob": []}
+        top = sorted((x for x in c["ssn"] if _last4(x["value"])), key=lambda x: (x["authority"], x["page"]))
+        if top:
+            authoritative[_member_key(m)] = _last4(top[0]["value"])
+        top_dob = sorted((x for x in c.get("dob", []) if x["value"]), key=lambda x: (x["authority"], x["page"]))
+        if top_dob:
+            authoritative_dob[_member_key(m)] = top_dob[0]["value"]
 
     for m in members:
         key = _member_key(m)
@@ -322,8 +422,9 @@ def resolve_identities(household, document_groups, page_text: dict[int, str]) ->
             ssn_claims.sort(key=lambda x: (x["authority"], x["page"]))
             top = ssn_claims[0]
             auth_last4 = _last4(top["value"])
+            others = {v for k, v in authoritative.items() if k != key}
             agreeing = [x for x in ssn_claims if _last4(x["value"]) == auth_last4]
-            disagreeing = [x for x in ssn_claims if _last4(x["value"]) != auth_last4]
+            disagreeing = [x for x in ssn_claims if _last4(x["value"]) != auth_last4 and _last4(x["value"]) not in others]
             full = next((x["value"] for x in agreeing if _is_full_ssn(x["value"])), None)
             chosen = full or top["value"]
             current = m.socialSecurityNumber
@@ -368,6 +469,9 @@ def resolve_identities(household, document_groups, page_text: dict[int, str]) ->
             # Two-digit-year readings that agree on month and day are the
             # same date; do not report a scanner's century as a conflict.
             others = {v for v in others if v[5:] != auth[5:]}
+            # Another member's date, attributed here by a name that happened
+            # to precede it, is not this member's conflict.
+            others = {v for v in others if v not in {d for k, d in authoritative_dob.items() if k != key}}
             if m.DOB != auth:
                 if m.DOB:
                     logger.info(

@@ -47,9 +47,14 @@ FAMILY_IGNORE = "ignore"
 ROUTE_DEMO, ROUTE_CERT, ROUTE_INCOME, ROUTE_ASSET = "demo", "cert", "income", "asset"
 
 
-def _t(category, family, routes=(), aliases=(), hint=None):
+def _t(category, family, routes=(), aliases=(), hint=None, confirms=None):
+    """`confirms` names the third-party report a countersigned confirmation
+    sheet restates: a manager's sheet carrying that report's figures which
+    the household signs as agreeing. Such a sheet is read both as the
+    household's declaration and, when agreed and signed, as verification;
+    it also stands in for the report when a rule asks whether one exists."""
     return {"category": category, "family": family, "routes": tuple(routes),
-            "aliases": tuple(aliases), "hint": hint}
+            "aliases": tuple(aliases), "hint": hint, "confirms": confirms}
 
 
 # Order matters: it is the order the prompt lists the types in.
@@ -106,7 +111,7 @@ TAXONOMY: dict[str, dict] = {
     "TANF Verification": _t(INCLUDE, FAMILY_INCOME, (ROUTE_INCOME,)),
     "TANF / Public Assistance Verification": _t(INCLUDE, FAMILY_INCOME, (ROUTE_INCOME,),
                                                 aliases=("Verification of Benefits",),
-                                                hint="county benefit printouts: CalWORKs, GA/GR, cash aid; use THIS name for forms headed \"Verification of Benefits\""),
+                                                hint="county benefit printouts: CalWORKs, GA/GR, cash aid; use THIS name for forms headed \"Verification of Benefits\". A certificate naming a household member as the payee or provider for someone outside the household is that member's earned income, not a benefit to the household"),
     "Child Support Statement": _t(INCLUDE, FAMILY_INCOME, (ROUTE_INCOME,),
                                   aliases=("Child Support Order", "Child Support Verification", "Record of Payments")),
     "Child Support / Alimony Affidavit": _t(INCLUDE, FAMILY_DECLARATION, (ROUTE_INCOME,),
@@ -135,8 +140,14 @@ TAXONOMY: dict[str, dict] = {
     "Notice of Rent Change": _t(COMPLIANCE, FAMILY_COMPLIANCE, (ROUTE_CERT,),
                                 aliases=("Lease Amendment", "Rent Change Notice")),
     # --- compliance: required forms, not data-extracted ---
-    "HUD 9887": _t(COMPLIANCE, FAMILY_COMPLIANCE, aliases=("HUD-9887",)),
-    "HUD 9887-A": _t(COMPLIANCE, FAMILY_COMPLIANCE, aliases=("HUD-9887-A",)),
+    # The printed titles are aliases so the title matcher, which takes the
+    # longest alias found in a heading, resolves the consent forms to
+    # themselves and not to a generic release whose alias is a substring.
+    "HUD 9887": _t(COMPLIANCE, FAMILY_COMPLIANCE,
+                   aliases=("HUD-9887", "Notice and Consent for the Release of Information")),
+    "HUD 9887-A": _t(COMPLIANCE, FAMILY_COMPLIANCE,
+                     aliases=("HUD-9887-A", "Applicant's/Tenant's Consent to the Release of Information",
+                              "Applicant's / Tenant's Consent to the Release of Information")),
     "HUD 9887 Consent Package Cover": _t(COMPLIANCE, FAMILY_COMPLIANCE,
                                          hint="the \"Document Package for Applicant's/Tenant's Consent to the Release Of Information\" sheet that introduces the package — not a consent form itself"),
     "HUD 9887/A Fact Sheet": _t(COMPLIANCE, FAMILY_COMPLIANCE,
@@ -170,6 +181,7 @@ TAXONOMY: dict[str, dict] = {
                             hint="HUD's EIV printout per household member: Employment Information (quarterly wages by employer), Unemployment Benefits, Social Security Benefits Verification Data (gross and net monthly benefit), Supplemental Security Income, Dual Entitlement, Medicare — the third-party verification of SSA benefits on a HUD file"),
     "EIV Income Report Confirmation": _t(INCLUDE, FAMILY_DECLARATION, (ROUTE_INCOME,),
                                          aliases=("EIV Confirmation", "Income Report Confirmation", "EIV Income Report Confirmation Sheet"),
+                                         confirms="EIV Income Report",
                                          hint="the manager's coversheet filed with the EIV report: tenant agrees / disagrees with the income report, handwritten source, amount and frequency, resident and management signatures — a declaration, not the report"),
     "Expense / Allowance Declaration": _t(COMPLIANCE, FAMILY_COMPLIANCE,
                                           aliases=("Medical Expense Worksheet", "Medical Expense Declaration",
@@ -236,6 +248,19 @@ def canonical_label(document_type: str | None) -> tuple[str, str]:
     if key in _ALIAS_INDEX:
         return _ALIAS_INDEX[key] + suffix, "alias"
     return "Unknown", "none"
+
+
+def is_countersigned_confirmation(document_type: str | None) -> bool:
+    """Whether the type is a manager's sheet restating a third-party report
+    that the household countersigns (see `_t`)."""
+    spec = spec_of(document_type)
+    return bool(spec and spec.get("confirms"))
+
+
+def confirmed_report_of(document_type: str | None) -> str | None:
+    """The report type a countersigned confirmation sheet stands in for."""
+    spec = spec_of(document_type)
+    return spec.get("confirms") if spec else None
 
 
 def spec_of(document_type: str | None) -> dict | None:

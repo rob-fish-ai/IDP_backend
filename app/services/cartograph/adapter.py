@@ -627,6 +627,14 @@ def build_cert_review(
         return {}
 
     cert_type = _cert_type_out(info.certificationType, warnings)
+    unfound = _fields_not_found_in_source(extraction, "CertificationInfo")
+    for field in unfound:
+        if getattr(info, field, None) not in (None, ""):
+            warnings.append(
+                f"cert_review.{field}: {getattr(info, field)} was not found on the "
+                f"certification pages — not sent"
+            )
+            setattr(info, field, None)
 
     hoh = next(
         (m for m in members if m.get("is_hoh")),
@@ -961,9 +969,10 @@ def build_asset_records(
             ),
             "institution_name": asset.sourceName,
             "current_value": current_value,
-            "manual_balance": _balance(
-                asset.selfDeclaredAmount or asset.currentBalance, warnings, f"{context}.manual_balance"
-            ),
+            # The resident's own figure, from a self-certification or the
+            # certification's asset table. Never a copy of the verified
+            # balance: a field on the wire does not borrow another's value.
+            "manual_balance": _balance(asset.selfDeclaredAmount, warnings, f"{context}.manual_balance"),
             "source_of_declaration": asset.selfDeclaredSource,
             # The six-month average as the form printed it, or, when the VOA
             # listed monthly balances instead, the mean of those.
@@ -980,6 +989,27 @@ def build_asset_records(
         })
 
     return records
+
+
+_NOT_FOUND_MESSAGE = "not found in source text"
+
+
+def _fields_not_found_in_source(extraction, record_label: str) -> set[str]:
+    """Field names on a score card whose source check found no trace of the
+    value on the pages. Such a value is never delivered: a figure on no page
+    is not a figure."""
+    summary = getattr(extraction, "field_scores", None)
+    records = getattr(summary, "records", None) or []
+    out: set[str] = set()
+    for card in records:
+        if (getattr(card, "record_label", "") or "") != record_label:
+            continue
+        for f in getattr(card, "fields", None) or []:
+            for stage in getattr(f, "stages", None) or []:
+                if getattr(stage, "stage", "") == "source_verification" and \
+                        _NOT_FOUND_MESSAGE in (getattr(stage, "reason", "") or "").lower():
+                    out.add(f.field_name)
+    return out
 
 
 def _pages_of(record) -> list[int]:
