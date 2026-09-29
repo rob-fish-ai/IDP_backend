@@ -69,43 +69,117 @@ def fetch_document(url: str, timeout: float = 120.0) -> bytes:
     return body
 
 
-def merge_pdfs(documents: list[bytes]) -> bytes:
-    """Combine several PDFs into one, in the order given."""
-    if len(documents) == 1:
-        return documents[0]
+# What an attachment is, from its first bytes — never from its filename or
+# the content type the link claims. A reviewer's "VOI scan" screenshot is a
+# page of evidence and is read like one; a text file or a spreadsheet is
+# not a page and is left out with a warning rather than failing the case.
+_MAGIC = (
+    (b"%PDF", "pdf"),
+    (b"\x89PNG\r\n\x1a\n", "png"),
+    (b"\xff\xd8\xff", "jpeg"),
+    (b"GIF87a", "gif"),
+    (b"GIF89a", "gif"),
+    (b"II*\x00", "tiff"),
+    (b"MM\x00*", "tiff"),
+    (b"BM", "bmp"),
+)
+_IMAGE_KINDS = {"png", "jpeg", "gif", "tiff", "bmp", "webp"}
 
+
+def sniff_kind(body: bytes) -> str | None:
+    """'pdf', an image kind, or None for anything the engine cannot page."""
+    head = body[:16]
+    if head[:4] == b"RIFF" and body[8:12] == b"WEBP":
+        return "webp"
+    for magic, kind in _MAGIC:
+        if head.startswith(magic):
+            return kind
+    # A PDF with junk before its header still opens; look a little further.
+    if b"%PDF" in body[:1024]:
+        return "pdf"
+    return None
+
+
+def _image_as_pdf(body: bytes, kind: str) -> bytes:
+    with fitz.open(stream=body, filetype=kind) as image:
+        return image.convert_to_pdf()
+
+
+def assemble_packet(parts: list[tuple[str, bytes]]) -> tuple[bytes, list[str]]:
+    """One PDF from the attachments of a case, in the order given, and a
+    warning for each attachment that could not become pages.
+
+    A PDF contributes its pages; an image becomes one page; anything else
+    is skipped and named in the warnings. Raises DocumentUnavailable when
+    nothing at all could be paged, which is the same situation as no
+    document arriving.
+    """
+    warnings: list[str] = []
+    pdfs: list[bytes] = []
+    for name, body in parts:
+        kind = sniff_kind(body)
+        if kind == "pdf":
+            pdfs.append(body)
+        elif kind in _IMAGE_KINDS:
+            try:
+                pdfs.append(_image_as_pdf(body, kind))
+                logger.info("Attachment %s is a %s image; added as one page", name, kind)
+            except Exception as exc:  # a corrupt image is skipped, not fatal
+                warnings.append(f"attachment {name} ({kind} image) could not be rendered as a page: {exc}")
+                logger.warning("Attachment %s (%s) could not be rendered: %s", name, kind, exc)
+        else:
+            warnings.append(f"attachment {name} is not a PDF or an image and was left out of the audit")
+            logger.warning("Attachment %s is not a PDF or an image (starts %r); left out", name, body[:8])
+    if not pdfs:
+        raise DocumentUnavailable(
+            "no attachment could be read as pages: " + "; ".join(warnings) if warnings else
+            "no attachment could be read as pages"
+        )
+    if len(pdfs) == 1:
+        return pdfs[0], warnings
     merged = fitz.open()
     try:
-        for body in documents:
+        for body in pdfs:
             with fitz.open(stream=body, filetype="pdf") as part:
                 merged.insert_pdf(part)
-        return merged.tobytes()
+        return merged.tobytes(), warnings
     finally:
         merged.close()
 
 
-def fetch_packet(documents: list[dict]) -> bytes:
-    """Download every document for a case and return one PDF.
+def merge_pdfs(documents: list[bytes]) -> bytes:
+    """Combine several PDFs into one, in the order given."""
+    merged_bytes, _ = assemble_packet([(f"document {i}", b) for i, b in enumerate(documents)])
+    return merged_bytes
+
+
+def fetch_packet(documents: list[dict]) -> tuple[bytes, list[str]]:
+    """Download every document for a case and return one PDF plus the
+    warnings for attachments that could not be paged.
 
     `documents` is the array from the audit notification; each entry needs a
     `url`. Entries without one are skipped with a warning rather than failing
     the case, since a packet with three of four files is still worth auditing
     and the gap shows up as a finding.
     """
-    bodies: list[bytes] = []
+    parts: list[tuple[str, bytes]] = []
+    warnings: list[str] = []
     for index, doc in enumerate(documents):
         url = doc.get("url")
+        name = doc.get("filename") or f"documents[{index}]"
         if not url:
             logger.warning("documents[%d] has no url; skipped", index)
+            warnings.append(f"attachment {name} had no download link and was left out")
             continue
         body = fetch_document(url)
         logger.info(
             "Fetched documents[%d] %s (%d bytes)",
             index, doc.get("filename") or "unnamed", len(body),
         )
-        bodies.append(body)
+        parts.append((name, body))
 
-    if not bodies:
+    if not parts:
         raise DocumentUnavailable("no documents could be fetched for this case")
 
-    return merge_pdfs(bodies)
+    merged_bytes, skipped = assemble_packet(parts)
+    return merged_bytes, warnings + skipped

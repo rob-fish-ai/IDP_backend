@@ -353,6 +353,13 @@ def watchdog_sweep(settings: Settings) -> int:
                 store.mark_extraction_failed(case_id, err)
             else:
                 store.mark_comparison_failed(case_id, err)
+            # Cartograph is still waiting on this case; tell it so it can
+            # re-notify. Best effort — the row is already released.
+            try:
+                from app.services.cartograph.client import post_failure
+                post_failure(case_number, err, settings, error_code="engine_error")
+            except Exception:
+                logger.exception("Watchdog: could not report wedged case_ref=%s to Cartograph", case_number)
             continue
 
         if retries < cap:

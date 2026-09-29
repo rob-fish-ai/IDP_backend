@@ -109,10 +109,47 @@ def audit_case(
     Every failure is recorded on the job row and reported to Cartograph
     rather than only logged. A case that fails silently here is a case
     Cartograph is still waiting on, and nobody discovers it until a reviewer
-    opens a blank checklist.
+    opens a blank checklist. The inner function handles the failures it
+    expects; this wrapper catches whatever it did not, because an
+    exception that escapes a background task leaves the job row in
+    "extracting" and every re-notification is then ignored as a duplicate
+    (a PNG attachment did exactly that on J-CCAC-06750).
     """
     settings = get_settings()
     store = get_job_store(settings.audit_job_db)
+    try:
+        _audit_case(
+            store, settings, case_ref=case_ref, documents=documents, cert_type=cert_type,
+            program=program, job_id=job_id, community_id=community_id,
+            unit_number=unit_number, effective_date=effective_date,
+        )
+    except Exception as exc:
+        logger.exception("Unhandled failure auditing case_ref=%s", case_ref)
+        row = store.get(case_ref) or {}
+        reason = f"unexpected error: {exc}"
+        if row.get("state") in (None, "pending", "queued", "extracting"):
+            store.mark_extraction_failed(case_ref, reason)
+        else:
+            store.mark_comparison_failed(case_ref, reason)
+        try:
+            post_failure(case_ref, reason, settings, error_code="engine_error")
+        except Exception:
+            logger.exception("Could not report the failure of case_ref=%s to Cartograph", case_ref)
+
+
+def _audit_case(
+    store,
+    settings,
+    *,
+    case_ref: str,
+    documents: list[dict],
+    cert_type: str | None,
+    program: str | None,
+    job_id: int | None,
+    community_id: int | None,
+    unit_number: str | None,
+    effective_date: str | None,
+) -> None:
 
     # Their vocabulary, translated before it reaches anything that keys on
     # ours. An untranslated "annual" disables every cert-type rule, and
@@ -133,7 +170,7 @@ def audit_case(
     # window between the notification and the download is kept as small as
     # the queue allows.
     try:
-        pdf_bytes = fetch_packet(documents)
+        pdf_bytes, packet_warnings = fetch_packet(documents)
     except DocumentUnavailable as exc:
         logger.error("case_ref=%s document unavailable: %s", case_ref, exc)
         store.mark_extraction_failed(case_ref, f"document unavailable: {exc}")
@@ -141,6 +178,8 @@ def audit_case(
         post_failure(case_ref, str(exc), settings,
                      error_code="document_unavailable")
         return
+    for warning in packet_warnings:
+        logger.warning("case_ref=%s packet warning: %s", case_ref, warning)
 
     # The packet itself is kept for a while: every contested finding so
     # far has needed the rendered page, and the client had to be asked for
@@ -213,6 +252,9 @@ def audit_case(
         unit_number=unit_number,
     )
 
+    # An attachment left out of the packet is something the reviewer must
+    # know about: the audit covered less than was sent.
+    adapted.warnings.extend(packet_warnings)
     logger.info(
         "Extraction complete case_ref=%s members=%d warnings=%d",
         case_ref, adapted.member_count, len(adapted.warnings),

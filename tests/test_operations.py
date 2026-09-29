@@ -135,3 +135,41 @@ def test_cartograph_nightly_feedback_batch_is_stored_case_by_case(tmp_path, monk
         {"event_type": "findings_feedback", "case_ref": "J-VRC-06406", "scan_id": 42,
          "verdicts": [{"finding_key": "AR_PREVIOUS_CERT_MISSING:case", "verdict": "valid"}]}, b"{}")
     assert out == {"ok": True, "received": "J-VRC-06406", "stored": {"verdicts": 1, "manual_findings": 0}}
+
+
+def test_attachments_are_assembled_by_what_they_are_not_what_they_are_called():
+    """A PNG "VOI scan" becomes a page; a text file is left out with a
+    warning; a case with nothing pageable is a document-unavailable
+    failure, not an exception that leaves the job wedged."""
+    import fitz
+    import pytest
+    from app.services.cartograph.documents import DocumentUnavailable, assemble_packet, sniff_kind
+    pdf = fitz.open(); pdf.new_page().insert_text((72, 72), "certification"); pdf_bytes = pdf.tobytes(); pdf.close()
+    pix = fitz.Pixmap(fitz.csRGB, fitz.IRect(0, 0, 40, 30), False); pix.clear_with(200); png = pix.tobytes("png")
+    assert sniff_kind(pdf_bytes) == "pdf" and sniff_kind(png) == "png" and sniff_kind(b"hello world") is None
+
+    merged, warnings = assemble_packet([("file-review-upload.pdf", pdf_bytes), ("VOI scan.png", png), ("force-delete-test.txt", b"hello")])
+    with fitz.open(stream=merged, filetype="pdf") as out:
+        assert out.page_count == 2
+    assert warnings == ["attachment force-delete-test.txt is not a PDF or an image and was left out of the audit"]
+
+    with pytest.raises(DocumentUnavailable):
+        assemble_packet([("notes.txt", b"hello"), ("data.csv", b"a,b\n1,2")])
+
+
+def test_an_unexpected_failure_in_the_audit_task_is_recorded_and_reported(monkeypatch, tmp_path):
+    """Whatever escapes the inner task marks the job failed and tells
+    Cartograph, so a re-notification is accepted instead of ignored."""
+    from app.services.cartograph import tasks
+    from app.services.audit.job_store import JobStore
+    store = JobStore(tmp_path / "jobs.db")
+    store.upsert_pending("J-X", "J-X", "annual", "LIHTC", None, source="cartograph")
+    store.mark_extracting("J-X")
+    posted: list = []
+    monkeypatch.setattr(tasks, "get_job_store", lambda _p: store)
+    monkeypatch.setattr(tasks, "post_failure", lambda case_ref, reason, settings, **kw: posted.append((case_ref, reason, kw.get("error_code"))))
+    def boom(*a, **k): raise RuntimeError("source or target not a PDF")
+    monkeypatch.setattr(tasks, "_audit_case", boom)
+    tasks.audit_case(case_ref="J-X", documents=[{"url": "https://example.invalid/x"}])
+    assert store.get("J-X")["state"] == "extraction_failed"
+    assert posted == [("J-X", "unexpected error: source or target not a PDF", "engine_error")]
