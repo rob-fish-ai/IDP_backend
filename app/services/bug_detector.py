@@ -168,12 +168,12 @@ def _check_duplicate_employers(income: IncomeExtraction) -> list[Finding]:
     findings: list[Finding] = []
 
     # Group VI entries by member
-    by_member: dict[str, list[tuple[int, str]]] = {}
+    by_member: dict[str, list[tuple[int, str, str]]] = {}
     for i, vi in enumerate(income.sourceIncome.verificationIncome):
         member = (vi.memberName or "Unknown").lower()
         source = (vi.sourceName or "").strip()
         if source:
-            by_member.setdefault(member, []).append((i, source))
+            by_member.setdefault(member, []).append((i, source, (vi.incomeType or "").strip().lower()))
 
     for member, sources in by_member.items():
         if len(sources) < 2:
@@ -182,8 +182,13 @@ def _check_duplicate_employers(income: IncomeExtraction) -> list[Finding]:
         # Check for similar source names
         for i in range(len(sources)):
             for j in range(i + 1, len(sources)):
-                idx_a, name_a = sources[i]
-                idx_b, name_b = sources[j]
+                idx_a, name_a, type_a = sources[i]
+                idx_b, name_b, type_b = sources[j]
+                # One payer, two programs (Social Security and SSI, or a
+                # retirement benefit and a dual entitlement) is two incomes,
+                # not one employer spelled twice.
+                if type_a and type_b and type_a != type_b:
+                    continue
                 if _is_similar_employer(name_a, name_b):
                     findings.append(make_finding(
                         "DUPLICATE_EMPLOYER",
@@ -391,6 +396,13 @@ def _check_arsc_source_of_truth(certification_info, income) -> list[Finding]:
     return findings
 
 
+_GENERIC_SOURCE_WORDS = frozenset({
+    "(declared)", "declared", "income", "security", "social", "supplemental", "benefit", "benefits",
+    "administration", "department", "office", "of", "the", "and", "inc", "inc.", "llc", "co", "corp",
+    "company", "services", "program", "verification",
+})
+
+
 def _is_similar_employer(a: str, b: str) -> bool:
     """Check if two employer names are likely the same (OCR/spelling variation)."""
     a_lower = a.lower().strip()
@@ -403,9 +415,12 @@ def _is_similar_employer(a: str, b: str) -> bool:
     if a_lower in b_lower or b_lower in a_lower:
         return True
 
-    # Token overlap >= 60%
-    tokens_a = set(a_lower.split())
-    tokens_b = set(b_lower.split())
+    # Token overlap >= 60%, counted on the words that identify a payer.
+    # Words every benefit or declaration line carries ("income",
+    # "security", "(declared)") say nothing about whether two names are
+    # one employer.
+    tokens_a = set(a_lower.split()) - _GENERIC_SOURCE_WORDS
+    tokens_b = set(b_lower.split()) - _GENERIC_SOURCE_WORDS
     if not tokens_a or not tokens_b:
         return False
 

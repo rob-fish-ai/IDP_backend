@@ -789,3 +789,95 @@ def test_a_declared_line_with_no_amount_reconciles_within_one_digit_or_is_not_a_
                  "accountNumber": "4400123456", "amount": None, "page": 7, "documentType": "Application / Housing Questionnaire"}]
     _reconcile_assets(joined, declared)
     assert len(joined) == 1 and declared[0]["matched"] is True
+
+
+def test_reviewer_verdicts_on_06676_each_map_to_a_rule():
+    """Four findings a reviewer marked invalid on one case, each fixed as a
+    general rule rather than a special case."""
+    from types import SimpleNamespace
+    from app.schemas.extraction import (AssetEntry, AssetExtraction, CertificationInfo, DocumentInventory,
+                                        DocumentInventoryEntry, HouseholdDemographics, IncomeExtraction,
+                                        MonthlyBalance, SourceIncome, VerificationIncomeEntry, VerificationOfAsset)
+    from app.services.bug_detector import _check_duplicate_employers, _is_similar_employer
+    from app.services.cross_doc_validator import validate_asset_consistency
+    from app.services.signature_validator import validate_signatures
+    from app.services.findings import text_of
+
+    # "Wells Fargo lists monthly amounts individually": the manager averaged them.
+    voa = VerificationOfAsset(currentBalance="320.83", monthlyBalances=[
+        MonthlyBalance(month=str(i), balance=b) for i, b in enumerate(["342.72", "467.21", "522.77", "599.42", "404.96", "432.06"], 1)])
+    a = AssetEntry(assetOwner="Concepcion Guerra", accountType="Checking", sourceName="Wells Fargo Bank, N.A.",
+                   selfDeclaredAmount="462.00", currentBalance="320.83", verificationOfAsset=voa)
+    assert validate_asset_consistency(AssetExtraction(assetInformation=[a])) == []
+
+    # "Dual entitlement from SSA, normal": two programs from one payer are two incomes.
+    inc = IncomeExtraction(sourceIncome=SourceIncome(verificationIncome=[
+        VerificationIncomeEntry(memberName="Concepcion Guerra", sourceName="Social Security (declared)", incomeType="Social Security"),
+        VerificationIncomeEntry(memberName="Concepcion Guerra", sourceName="Supplemental Security Income (declared)", incomeType="Supplemental Security Income"),
+    ]))
+    assert _check_duplicate_employers(inc) == []
+    assert _is_similar_employer("Social Security (declared)", "Supplemental Security Income (declared)") is False
+    assert _is_similar_employer("Desert VIP Urgent Care", "Desert Vip Urgent Care Young EMGY") is True
+
+    # "Initial Notice is a letter": no signature requirement.
+    hud = DocumentInventory(documents=[DocumentInventoryEntry(documentType="Initial Notice of Recertification", isSigned="No")])
+    out = validate_signatures(hud, DocumentInventory(documents=[]), HouseholdDemographics(houseHold=[]),
+                              CertificationInfo(isSigned="Yes"), [], SimpleNamespace(funding_program="HUD"))
+    assert not any("Initial Notice" in text_of(f) for f in out)
+
+
+def test_a_synonym_shared_by_two_income_types_does_not_make_them_the_same():
+    """"Retirement" is Social Security on one form and a pension on another;
+    a pension declared on the 50059 must not be matched to the SSA record."""
+    from app.services.extractor import _same_income_type
+    assert _same_income_type("Pension", "Social Security") is False
+    assert _same_income_type("Retirement", "Pension") is True
+    assert _same_income_type("SSA", "Social Security") is True
+    assert _same_income_type("SSI", "Social Security") is False
+
+
+def test_quarterly_wage_history_and_stale_stubs_are_not_delivered_as_pay_stubs():
+    from types import SimpleNamespace
+    from app.core.config import Settings
+    from app.schemas.extraction import CertificationInfo, IncomeExtraction, PayStubEntry, SourceIncome, VerificationIncomeEntry
+    from app.services.cartograph.adapter import build_household_members, build_income_records
+    from app.schemas.extraction import HouseholdDemographics, HouseholdMember
+    hh = HouseholdDemographics(houseHold=[HouseholdMember(FirstName="Andre", LastName="Toles", relationship="Head", head="H")])
+    stubs = [
+        PayStubEntry(memberName="Andre Toles", sourceName="Total Facility Maintenance Inc.", payDate="2023-09-30", grossPay="1949.00", payInterval="quarterly"),
+        PayStubEntry(memberName="Andre Toles", sourceName="Total Facility Maintenance Inc.", payDate="2024-01-15", grossPay="900.00", payInterval="bi-weekly"),
+        PayStubEntry(memberName="Andre Toles", sourceName="Total Facility Maintenance Inc.", payDate="2026-10-15", grossPay="950.00", payInterval="bi-weekly"),
+    ]
+    voi = VerificationIncomeEntry(memberName="Andre Toles", sourceName="Total Facility Maintenance Inc.", incomeType="Non-Federal Wage",
+                                  rateOfPay="15.00", rateUnit="hourly", verificationStatus="verified", sourcePages=[20])
+    ex = SimpleNamespace(household_demographics=hh, certification_info=CertificationInfo(effectiveDate="2026-12-01"),
+                         income=IncomeExtraction(sourceIncome=SourceIncome(payStub=stubs, verificationIncome=[voi])), income_calculations=[])
+    warnings: list[str] = []
+    members = build_household_members(ex, warnings)
+    records = build_income_records(ex, members, Settings(cartograph_income_types=["wages_and_salaries"]), warnings)
+    assert [p["pay_date"] for p in records[0]["paystubs"]] == ["2026-10-15"]
+    assert any("quarterly" in w for w in warnings) and any("18 months" in w for w in warnings)
+
+
+def test_one_asset_read_from_several_documents_is_one_record():
+    """A policy statement names the insurer; the verification form names its
+    requester. Same owner, same kind, same balance to the cent: one record."""
+    from app.services.extractor import _dedupe_asset_records
+    recs = [
+        {"assetOwner": "Lela Anderson", "accountType": "Life Insurance", "sourceName": "Federal Life Insurance Company",
+         "currentBalance": "2561.29", "accountNumber": "P-100", "sourcePages": [52]},
+        {"assetOwner": "Lela Anderson", "accountType": "Life Insurance", "sourceName": "Roseland Manor",
+         "currentBalance": "2561.29", "sourcePages": [56]},
+        {"assetOwner": "Lela Anderson", "accountType": "Life Insurance", "sourceName": "Columbian Life Insurance Company",
+         "currentBalance": "1737.16", "sourcePages": [51]},
+    ]
+    out = _dedupe_asset_records(recs)
+    assert [(r["sourceName"], r["currentBalance"]) for r in out] == [
+        ("Federal Life Insurance Company", "2561.29"), ("Columbian Life Insurance Company", "1737.16")]
+    assert out[0]["sourcePages"] == [52]
+
+
+def test_a_program_reference_is_not_a_broken_number():
+    from app.services.pdf_service import _broken_number_tokens
+    assert _broken_number_tokens("Section 202; Sections 202 and 811 PRAC; Section 202/162 PAC. Assistance Payments amount $0") == []
+    assert _broken_number_tokens("Income Reported: 12/708 3,359.04") == ["12/708"]

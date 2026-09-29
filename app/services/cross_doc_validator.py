@@ -415,6 +415,12 @@ def _verified_figures(asset) -> list[tuple[str, float]]:
         ("VOA current balance", getattr(voa, "currentBalance", None)),
         ("VOA six-month average", getattr(voa, "averageSixMonthBalance", None)),
     ] + [("statement balance", s.balance) for s in (asset.bankStatment or [])]
+    # A VOA that lists monthly balances instead of an average states the
+    # average implicitly; the worksheet takes that mean.
+    months = [_parse_money(m.balance) for m in (getattr(voa, "monthlyBalances", None) or [])]
+    months = [m for m in months if m is not None]
+    if months:
+        candidates.append(("mean of the listed monthly balances", f"{sum(months) / len(months):.2f}"))
     seen: set[float] = set()
     for label, raw in candidates:
         v = _parse_money(raw)

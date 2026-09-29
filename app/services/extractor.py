@@ -491,6 +491,8 @@ SPECIAL RULES:
 - A line with several amounts is several records: balances separated by "/", commas
   or columns beside several accounts or account types pair in order, one entry each.
 - Life insurance: ALWAYS use cash/surrender value, NEVER use face value. If only face value is shown, set currentBalance to null and add note "Only face value available — cash value not provided"
+- Life insurance OWNERSHIP: assetOwner is the policy OWNER (the person who holds and pays the policy) — never the insured, a beneficiary, or the person a policy is "on". A household member who owns policies on relatives owns every one of them; the relatives' names go in notes, not in assetOwner. sourceName is the INSURER; a property, management company or requester named on a verification form is never the source.
+- ONE POLICY, ONE RECORD: a policy statement, the insurer's verification reply and the request form for the same policy (same policy number, or the same cash value to the cent) are one record; do not return the request form as a second record with no balance.
 - VOA with individual monthly balances (Chase and some others list the balance at the end of each of the last six months instead of an average): put each month in verificationOfAsset.monthlyBalances as {month, balance} exactly as printed. Leave averageSixMonthBalance null unless the form prints an average — never compute one.
 - Thomson Reuters / WestlawNext VOA forms: treat as Verification of Assets. Extract per account: account number, account type (checking/savings), account balance, average balance, date received
 - Joint/shared accounts: capture percentageOfOwnership. If ownership is split (e.g., 50% with non-household member), record the percentage
@@ -1317,7 +1319,32 @@ def _dedupe_asset_records(records: list[dict]) -> list[dict]:
         if new_score > existing_score:
             seen[key] = rec
 
-    return list(seen.values())
+    # One asset read from several documents: the same owner, the same kind
+    # and the same balance to the cent are one record whatever each
+    # document called the source (a policy statement names the insurer,
+    # the verification form names its requester). The richer record stays.
+    out: list[dict] = []
+    for rec in seen.values():
+        balance = _amt_or_none(rec.get("currentBalance"))
+        twin = next(
+            (o for o in out
+             if balance is not None and _amt_or_none(o.get("currentBalance")) == balance
+             and _asset_kind(o.get("accountType")) == _asset_kind(rec.get("accountType"))
+             and (not o.get("assetOwner") or not rec.get("assetOwner") or _same_member(o.get("assetOwner"), rec.get("assetOwner")))),
+            None,
+        )
+        if twin is None:
+            out.append(rec)
+            continue
+        richer, other = (rec, twin) if sum(1 for v in rec.values() if v not in (None, "", [])) > \
+            sum(1 for v in twin.values() if v not in (None, "", [])) else (twin, rec)
+        for k, v in other.items():
+            if richer.get(k) in (None, "", []) and v not in (None, "", []):
+                richer[k] = v
+        logger.info("Asset dedup: %s %s at %s read twice (same owner, kind and balance) — one record",
+                    rec.get("assetOwner"), rec.get("accountType"), rec.get("sourceName"))
+        out[out.index(twin)] = richer
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -2178,13 +2205,27 @@ def _type_key(income_type: str | None) -> str:
     return (income_type or "").strip().lower()
 
 
+# Words that belong to more than one type ("retirement" is Social Security
+# to one form and a pension to another) cannot tell two types apart, so
+# they never make a match on their own.
+_AMBIGUOUS_TYPE_WORDS = {
+    w for w in {x for ws in _TYPE_SYNONYMS.values() for x in ws}
+    if sum(1 for ws in _TYPE_SYNONYMS.values() if w in ws) > 1
+}
+
+
 def _same_income_type(a: str | None, b: str | None) -> bool:
     ka, kb = _type_key(a), _type_key(b)
     if ka and ka == kb:
         return True
     sa = _TYPE_SYNONYMS.get(ka, {ka} if ka else set())
     sb = _TYPE_SYNONYMS.get(kb, {kb} if kb else set())
-    return bool(sa & sb)
+    # A type given as the ambiguous word itself ("Retirement") matches any
+    # type that word can mean; two canonical types do not become the same
+    # because they share it.
+    if ka in _AMBIGUOUS_TYPE_WORDS or kb in _AMBIGUOUS_TYPE_WORDS:
+        return bool(sa & sb)
+    return bool((sa & sb) - _AMBIGUOUS_TYPE_WORDS)
 
 
 def _source_words(name: str | None) -> set[str]:

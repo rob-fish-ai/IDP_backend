@@ -316,7 +316,7 @@ def _text_layer_disagrees(layer: str, ocr_text: str) -> bool:
 # page that prints these has lost figures the extractor will otherwise
 # read wrong, and the OCR score does not see it.
 _BROKEN_NUMBER_RE = re.compile(
-    r"(?<![\d/])\d{1,3}[/|]\d{3}(?:\.\d{2})?(?![\d/])"      # 12/708, 3|359.04 — not a date (d/d/d)
+    r"(?<![\d/])(?<!ection )(?<!ec\. )(?<!ec )\d{1,3}[/|]\d{3}(?:\.\d{2})?(?![\d/])"      # 12/708, 3|359.04 — not a date (d/d/d) nor "Section 202/162"
     r"|(?<![A-Za-z\d])\d+[Ol]\d+(?![A-Za-z\d])"                # 1O59, 2l0
 )
 _AMOUNT_CONTEXT_RE = re.compile(r"\$|\b(?:amount|income|balance|rent|gross|net|wage|benefit|total)\b", re.I)

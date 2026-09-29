@@ -2774,13 +2774,10 @@ def _generate_findings(
             for g in document_groups if g.category == "include"
         )
         if cert_doc_exists:
-            null_disabled = all(m.disabled is None for m in household.houseHold)
+            # Disability is not asked: the 50059's special-status column is
+            # blank unless a code applies, so an all-null read is the normal
+            # state, not a gap (reviewer verdict on J-VIV-06676).
             null_student = all(m.student is None for m in household.houseHold)
-            if null_disabled:
-                findings.append(
-                    "Disability status is null for all household members — "
-                    "verify against HUD 50059 Section 4 or TIC household composition"
-                )
             if null_student:
                 findings.append(
                     "Student status is null for all household members — "

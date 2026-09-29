@@ -724,6 +724,53 @@ def _calculations_by_source(extraction: ExtractionResult) -> dict[tuple[str, str
     return out
 
 
+# How far before the certification a pay stub is still current. HUD 4350.3
+# takes the most recent consecutive stubs; a wage quarter years earlier is
+# history the calculator already declines to annualize, and Cartograph's
+# paystub table is for current pay evidence.
+_STUB_MAX_AGE_DAYS = 548  # eighteen months
+
+
+def _date_of(value: str | None):
+    iso = _iso_date(value)
+    if not iso:
+        return None
+    try:
+        return datetime.strptime(iso, "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
+
+def _deliverable_stubs(stubs: list, reference, warnings: list[str], context: str) -> list:
+    """The stubs that are pay-period evidence of current income.
+
+    A quarterly aggregate (an EIV or Work Number wage-history row) is not
+    a pay stub: it is a quarter's total the engine uses for its own
+    calculation, and Cartograph's stub table has no such frequency. A stub
+    dated more than eighteen months before the certification's effective
+    date is history. Both are kept out of the delivered stubs, with a
+    warning naming what was withheld.
+    """
+    kept = []
+    dropped_quarterly = 0
+    dropped_old = 0
+    for stub in stubs:
+        if (stub.payInterval or "").strip().lower() == "quarterly":
+            dropped_quarterly += 1
+            continue
+        when = _date_of(stub.payDate)
+        if reference and when and (reference - when).days > _STUB_MAX_AGE_DAYS:
+            dropped_old += 1
+            continue
+        kept.append(stub)
+    if dropped_quarterly:
+        warnings.append(f"{context}: {dropped_quarterly} quarterly wage-history row(s) not sent as pay stubs")
+    if dropped_old:
+        warnings.append(f"{context}: {dropped_old} pay stub(s) dated more than 18 months before the "
+                        f"certification not sent (history, not current pay)")
+    return kept
+
+
 def build_income_records(
     extraction: ExtractionResult,
     members: list[dict],
@@ -747,6 +794,8 @@ def build_income_records(
         return []
 
     grouped = match_paystubs_to_sources(source_income.payStub, entries)
+    reference = _date_of(getattr(extraction.certification_info, "effectiveDate", None)
+                         if extraction.certification_info else None)
     calculations = _calculations_by_source(extraction)
 
     records: list[dict] = []
@@ -765,7 +814,7 @@ def build_income_records(
                 "pay_frequency": stub.payInterval,
                 "pages": _pages_of(stub),
             }
-            for stub in grouped.get(index, [])
+            for stub in _deliverable_stubs(grouped.get(index, []), reference, warnings, context)
         ]
 
         # A VOI row states what a verification form stated: a rate, hours,
@@ -831,7 +880,9 @@ def build_income_records(
     # engine demonstrably knows about must not vanish because it is recorded
     # in one of the three income structures rather than another.
     matched = {id(stub) for group in grouped.values() for stub in group}
-    orphans = [s for s in source_income.payStub if id(s) not in matched]
+    orphans = _deliverable_stubs(
+        [s for s in source_income.payStub if id(s) not in matched], reference, warnings, "income_records[orphans]",
+    )
     if orphans:
         by_source: dict[tuple, list] = {}
         for stub in orphans:

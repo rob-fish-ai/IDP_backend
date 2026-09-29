@@ -166,15 +166,9 @@ def validate_signatures(
                              adult_count, findings,
                              "Acknowledgement of Receipt of HUD Forms must be signed by all adult members (Section 11)")
 
-    # --- 11. Initial Notice of Recertification: signed, dated, witnessed ---
-    initial_docs = by_type.get("Initial Notice of Recertification", [])
-    for doc in initial_docs:
-        if doc.isSigned == "No":
-            findings.append(_unverified(
-                "Initial Notice of Recertification must be signed, dated, and witnessed "
-                "by all adult members (Section 11)"
-            ))
-            break
+    # (The Initial Notice of Recertification is a letter from management,
+    # not a form the household signs; it carries no signature requirement.
+    # Reviewer verdict on J-VIV-06676.)
 
     # --- 12. HUD Model Lease ---
     _check_signed_dated(by_type, "HUD Model Lease",
