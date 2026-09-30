@@ -957,3 +957,33 @@ def test_an_agencys_empty_report_is_not_a_zero_income_declaration():
     assert "not a declaration of zero income" in DECLARED_INCOME_PROMPT
     assert is_countersigned_confirmation("EIV Income Report Confirmation") is True
     assert is_countersigned_confirmation("Zero Income Certification") is False
+
+
+def test_a_verification_that_verifies_nothing_is_the_request_form_not_a_second_account():
+    from app.services.extractor import _merge_empty_verifications
+    recs = [
+        {"assetOwner": "Yolanda Bribiesca", "sourceName": "Bank of America", "accountType": "Checking", "accountNumber": "325161933814",
+         "currentBalance": "1224.98", "averageSixMonthBalance": "1919.50", "verificationStatus": "verified", "sourcePages": [21, 22]},
+        {"assetOwner": "Yolanda Bribiesca", "sourceName": "Bank of America", "accountType": "Checking", "accountNumber": "X3256/933819",
+         "currentBalance": None, "averageSixMonthBalance": None, "verificationStatus": "verified", "sourcePages": [19, 20]},
+        {"assetOwner": "Dana Reyes", "sourceName": "Chase", "accountType": "Savings", "currentBalance": None,
+         "verificationStatus": "verified", "sourcePages": [30]},   # a request with no reply anywhere: kept
+    ]
+    out = _merge_empty_verifications(recs)
+    assert [(r["assetOwner"], r["accountType"], r.get("sourcePages")) for r in out] == [
+        ("Yolanda Bribiesca", "Checking", [19, 20, 21, 22]), ("Dana Reyes", "Savings", [30])]
+
+
+def test_a_declared_amount_with_the_decimal_read_as_a_separator_is_repaired_when_a_verified_figure_corroborates():
+    """"994.00" handwritten on a questionnaire came through as 994,000 with
+    no period printed; the household's certified total is 11,928 and EIV
+    verifies 994 a month."""
+    from app.services.extractor import _repair_declared_magnitudes
+    d = [{"memberName": "Elise Dodd", "incomeType": "Social Security", "amount": "994000.00", "amountPeriod": "unknown",
+          "documentType": "Application / Housing Questionnaire", "page": 41, "quote": "Social Security payments? X 994,000"}]
+    _repair_declared_magnitudes(d, "11928.00", corroborating=[11928.0])
+    assert d[0]["amount"] == "994.00" and d[0]["amountPeriod"] == "monthly" and "read as 994.00" in d[0]["quote"]
+    # Uncorroborated, the line is dropped as before.
+    d = [{"memberName": "Elise Dodd", "incomeType": "Social Security", "amount": "994000.00", "amountPeriod": "unknown", "page": 41}]
+    _repair_declared_magnitudes(d, "11928.00", corroborating=[])
+    assert d[0]["amount"] is None

@@ -385,8 +385,12 @@ Both halves name the same employer so they attach to one income source.
   or caregiver agreement, an in-home support authorization), the income belongs to
   that member — memberName the household member, sourceName the paying agency,
   incomeType "Self-Employment" or "Non-Federal Wage" as the document states,
-  rateOfPay the rate or benefit amount with its unit — even though the page is
-  headed by someone else's name. A page about a non-member never means no record.
+  type_of_VOI "Agency Benefit Letter" — even though the page is headed by
+  someone else's name. A page about a non-member never means no record.
+  rateOfPay ONLY when the document states what the member is PAID per period;
+  a rate schedule, benefit ceiling or reimbursement rate table (hourly or daily
+  rates by child, "maximum benefit level") is not pay — leave rateOfPay and
+  rateUnit null and let the certification's declared figure stand.
 - A LINE WITH SEVERAL AMOUNTS IS SEVERAL RECORDS: amounts separated by "/", commas
   or columns on one line ("SSA / SSI ... 6,000 / 3,359.04", "Gross 1,059 Net 884")
   pair in order with the types or labels on that line; each pair is its own
@@ -1289,6 +1293,45 @@ def _asset_record_key(rec: dict) -> tuple:
     acct_type = (rec.get("accountType") or "").lower().strip()
     acct_num = (rec.get("accountNumber") or "").lower().strip()
     return (src, acct_type, acct_num)
+
+
+def _asset_has_figures(rec: dict) -> bool:
+    voa = rec.get("verificationOfAsset") or {}
+    return any(_amt_or_none(v) is not None for v in (
+        rec.get("currentBalance"), rec.get("averageSixMonthBalance"),
+        voa.get("currentBalance") if isinstance(voa, dict) else None,
+        voa.get("averageSixMonthBalance") if isinstance(voa, dict) else None,
+    )) or bool(rec.get("bankStatment")) or bool((voa.get("monthlyBalances") if isinstance(voa, dict) else None))
+
+
+def _merge_empty_verifications(records: list[dict]) -> list[dict]:
+    """A verification record that verifies nothing is the request form.
+
+    A VOA sent to the bank is filed beside the bank's reply; read on its own
+    it names the owner, the bank and an account and carries no figure. It is
+    the same account as the reply, not a second one: its pages join the
+    owner's record at that institution of that kind. With no such record it
+    is kept, since a request with no reply is itself worth a finding.
+    """
+    out: list[dict] = []
+    for rec in records:
+        if _asset_has_figures(rec) or rec.get("verificationStatus") == "declared_only":
+            out.append(rec)
+            continue
+        sibling = next(
+            (o for o in out if _asset_has_figures(o)
+             and _asset_kind(o.get("accountType")) == _asset_kind(rec.get("accountType"))
+             and (not rec.get("assetOwner") or not o.get("assetOwner") or _same_member(o.get("assetOwner"), rec.get("assetOwner")))
+             and bool(_source_words(o.get("sourceName")) & _source_words(rec.get("sourceName")))),
+            None,
+        )
+        if sibling is None:
+            out.append(rec)
+            continue
+        sibling["sourcePages"] = sorted({*(sibling.get("sourcePages") or []), *(rec.get("sourcePages") or [])})
+        logger.info("Assets: %s %s at %s (pages %s) verifies nothing — the request form for the account verified on pages %s; joined",
+                    rec.get("assetOwner"), rec.get("accountType"), rec.get("sourceName"), rec.get("sourcePages"), sibling.get("sourcePages"))
+    return out
 
 
 def _dedupe_asset_records(records: list[dict]) -> list[dict]:
@@ -2558,26 +2601,51 @@ def _repair_declared_magnitudes(declared: list[dict], reference_total, corrobora
     ceiling = max(_PLAUSIBLE_ANNUAL_MAX.values())
     for d in declared:
         annual = _annual_of(d.get("amount"), d.get("amountPeriod"))
+        if annual is None and (d.get("amountPeriod") or "unknown") == "unknown":
+            # No period printed: the smallest reading is the amount as an
+            # annual figure. A line impossible even read that way is
+            # impossible under any period.
+            annual = _annual_of(d.get("amount"), "annual")
         # The total can be the misread ("$4,000.00" beside a $47,000
         # household): a line that is plausible on its own is left to the
         # total-mismatch finding, and only an impossible one is repaired.
         if annual is None or annual <= total * 1.02 or annual <= ceiling:
             continue
         raw = str(d.get("amount")).replace(",", "")
-        repaired = raw[1:] if len(raw) > 1 and raw[0].isdigit() else ""
-        try:
-            fixed = float(repaired) if repaired else None
-        except ValueError:
-            fixed = None
-        fixed_annual = _annual_of(f"{fixed:.2f}", d.get("amountPeriod")) if fixed else None
-        corroborated = fixed_annual is not None and any(
-            abs(fixed_annual - c) / max(c, fixed_annual) <= 0.20 for c in corroborating if c and c > 0
-        )
-        if fixed and fixed_annual is not None and fixed_annual <= total * 1.02 and corroborated:
-            logger.info("Declared income: %s exceeds the certification total %.2f — a leading digit is the "
-                        "dollar sign; read as %.2f (corroborated by a verified figure)", d.get("amount"), total, fixed)
+        # Two misreads make a line impossible: the dollar sign read as a
+        # leading digit ("$42,997.50" → 642997.50), and the decimal point
+        # read as a thousands separator ("994.00" → 994,000). Each candidate
+        # must fit under the total and match a figure the packet verifies
+        # independently; a line whose period is not printed is tried as
+        # monthly and as annual, and takes the period that corroborates.
+        candidates: list[tuple[float, str]] = []
+        if len(raw) > 1 and raw[0].isdigit():
+            try:
+                candidates.append((float(raw[1:]), "leading digit is the dollar sign"))
+            except ValueError:
+                pass
+        whole = raw.split(".")[0]
+        if whole.endswith("000") and len(whole) > 3:
+            candidates.append((float(whole[:-3]), "thousands separator is the decimal point"))
+        periods = [d.get("amountPeriod")] if (d.get("amountPeriod") or "unknown") != "unknown" else ["monthly", "annual"]
+        fixed = fixed_annual = None; why = period_used = None
+        for cand, reason in candidates:
+            for period in periods:
+                cand_annual = _annual_of(f"{cand:.2f}", period)
+                if cand_annual is None or cand_annual > total * 1.02:
+                    continue
+                if any(abs(cand_annual - c) / max(c, cand_annual) <= 0.20 for c in corroborating if c and c > 0):
+                    fixed, fixed_annual, why, period_used = cand, cand_annual, reason, period
+                    break
+            if fixed is not None:
+                break
+        if fixed is not None:
+            logger.info("Declared income: %s exceeds the certification total %.2f — %s; read as %.2f %s "
+                        "(corroborated by a verified figure)", d.get("amount"), total, why, fixed, period_used)
             d["quote"] = f"{d.get('quote') or ''} [printed {d.get('amount')}; read as {fixed:.2f}]".strip()
             d["amount"] = f"{fixed:.2f}"
+            if (d.get("amountPeriod") or "unknown") == "unknown":
+                d["amountPeriod"] = period_used
         else:
             logger.warning("Declared income: %s exceeds the certification total %.2f and fits no repair — line dropped",
                            d.get("amount"), total)
@@ -3512,6 +3580,7 @@ def extract_assets(
     for recs in _run_per_group(source_groups, _one, settings, "Assets"):
         records.extend(recs)
     records = _dedupe_asset_records(records)
+    records = _merge_empty_verifications(records)
     logger.info("Extracted %d asset records from %d source document(s)", len(records), len(source_groups))
 
     declared = _extract_declared_assets(decl_groups, settings, certification_type, household_names)

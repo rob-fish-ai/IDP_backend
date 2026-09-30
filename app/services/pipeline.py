@@ -543,155 +543,12 @@ def run_extraction_pipeline(
             "document') — signed final version required; resubmission "
             "required per Section 11"
         )
-    for calc in income_calculations:
-        details = calc.details or ""
-        if details.startswith("[historical]"):
-            note = details[len("[historical] "):].split(";")[0]
-            findings.append(
-                f"Income source '{calc.sourceName}': {note} — excluded "
-                f"from current-income comparison; verify employment "
-                f"status (Section 9)"
-            )
-        elif details.startswith("[rejected]"):
-            note = details[len("[rejected] "):]
-            who = f" ({calc.memberName})" if calc.memberName else ""
-            findings.append(
-                f"Income source '{calc.sourceName}'{who}: {calc.method} calculation "
-                f"rejected — {note} (Section 9)"
-            )
-        elif calc.method == "paystub-based" and calc.annualIncome:
-            m = re.search(r"avg\((\d+) stubs?\)", details)
-            if m and int(m.group(1)) < PAYSTUB_GUIDANCE_COUNT:
-                n = int(m.group(1))
-                findings.append(make_finding(
-                    "PAYSTUB_COUNT_BELOW_GUIDANCE",
-                    f"{calc.memberName or 'Member'}: income from {calc.sourceName or 'employer'} is "
-                    f"calculated from {n} pay stub(s) (${float(calc.annualIncome):,.2f}/year); verification "
-                    f"guidance expects at least {PAYSTUB_GUIDANCE_COUNT} consecutive stubs or an employer "
-                    f"verification — obtain the missing stubs or a VOI (Section 9)",
-                    label="Fewer pay stubs than verification guidance expects",
-                    category=CATEGORY_INCOME,
-                    subject_type="income_record",
-                    subject_ref={"member_name": calc.memberName, "source_name": calc.sourceName},
-                    assignment=ASSIGN_CLIENT,
-                    correction_required=f"Obtain at least {PAYSTUB_GUIDANCE_COUNT} consecutive pay stubs or an employer verification",
-                    resolution_type=RESOLVE_PRESENCE,
-                ))
-    from app.services.income_calculator import ytd_divergence_findings
-    findings.extend(ytd_divergence_findings(income_calculations))
+    _calculation_and_compliance_findings(findings, income_calculations, certification_info, document_groups)
 
-    # Step 5b: Populate compliance tracking on certification_info
-    if certification_info:
-        forms_present = list({
-            g.document_type for g in document_groups
-            if g.category != "ignore" and g.document_type != "Unknown"
-        })
-        # Only relocate the section-6 compliance-form findings this dedup
-        # was built for. A substring match ("missing required"/"not found")
-        # silently swallowed the "Missing required certification form"
-        # headline into a field the findings text never renders — the one
-        # finding that explains every derivative RED on a no-cert packet.
-        missing_forms = [
-            text_of(f) for f in findings
-            if text_of(f).startswith("Missing required compliance document")
-        ]
-        certification_info.formsPresent = sorted(forms_present)
-        certification_info.missingForms = missing_forms
-        # Compliance status must consider BOTH missingForms (moved out of
-        # findings by the dedup step below) AND the remaining findings.
-        has_issues = (
-            bool(missing_forms)
-            or any(
-                "missing" in text_of(f).lower()
-                or "not signed" in text_of(f).lower()
-                or "resubmission" in text_of(f).lower()
-                for f in findings
-            )
-        )
-        certification_info.complianceStatus = "Incomplete" if has_issues else "Complete"
-
-        # Remove the findings that were moved into missingForms — each fact
-        # should appear exactly once in the output.
-        missing_set = set(missing_forms)
-        findings[:] = [f for f in findings if text_of(f) not in missing_set]
-
-    # Step 6: Multi-stage field-level scoring
-    # Score from FINAL data objects after all merging/validation.
-    logger.info("Step 6/6: Running field-level scoring pipeline")
-    from app.services.field_scorer import score_pydantic_records, score_source_verification
-
-    # Stage 1: Extraction presence (populated vs null)
-    score_cards = score_pydantic_records(
-        household=household,
-        certification_info=certification_info,
-        income=income,
-        assets=assets,
+    score_summary = _score_and_note(
+        findings, household=household, certification_info=certification_info, income=income, assets=assets,
+        document_groups=document_groups, ocr_quality=ocr_quality, cert_groups=cert_groups, ctx=ctx,
     )
-
-    # Stage 1b: Source verification (OCR quality + value-in-text check)
-    score_source_verification(score_cards, document_groups, ocr_quality)
-
-    # Stage 2: Cross-document consistency (compare same fields across records)
-    score_cross_doc_consistency(score_cards)
-
-    # Stage 3: Business rule validation (range, format, logic checks)
-    cert_form_type = next(
-        (g.document_type for g in cert_groups if is_current_certification_form(g.document_type)),
-        None,
-    )
-    score_business_rules(
-        score_cards, certification_type=ctx.certification_type, cert_form_type=cert_form_type,
-    )
-
-    # Stage 4: the audit's own findings. Every stage above asks a question of
-    # one value in isolation, so none of them can see that the extracted
-    # sources sum to something the certification contradicts — that is a
-    # relationship between values, not a property of one. Runs last so a
-    # dispute has the final word over a field that passed its format check.
-    # Dedupe first: a finding raised once per source document would otherwise
-    # be counted once per copy against the same field.
-    score_findings(score_cards, dedupe_findings(findings))
-
-    # Build summary and surface red/yellow fields as findings.
-    # Suppress field-level duplicates of facts the business rules already
-    # reported in plain language. Each fact should appear exactly once in
-    # the findings list, not once per source path.
-    _BUSINESS_RULE_COVERED = {
-        # Household null-field checks — aggregate business rule covers
-        # all members in one finding, so per-field REDs are redundant.
-        ("household_member", "disabled"),
-        ("household_member", "student"),
-        # Certification fields that already have plain-language business
-        # rules from the cross-doc / signature / cert-type validators.
-        ("certification", "householdIncome"),  # cross_doc_validator
-        ("certification", "isSigned"),         # signature_validator
-    }
-    score_summary = build_score_summary(score_cards)
-    findings.extend(_unverifiable_income_amounts(score_cards))
-    for card in score_cards:
-        for fs in card.flagged_fields:
-            if (card.record_type, fs.field_name) in _BUSINESS_RULE_COVERED:
-                continue
-            if _flagged_only_by_dispute(fs):
-                # The dispute that dragged this field down is already in the
-                # findings list, stated once and in plain language. Repeating
-                # it per field turns one finding into six identical lines —
-                # "Disputed by TIC_TOTAL_NO_CALCULATIONS" against every
-                # certification field — which is the per-field noise this
-                # suppression list exists to prevent.
-                continue
-            findings.append(
-                f"[{fs.flag.value.upper()}] {card.record_label or card.record_type}"
-                f" → {fs.field_name}: {fs.flag_message}"
-            )
-
-    logger.info(
-        "Scoring complete: %d fields — %d green, %d yellow, %d red (overall %.0f%%)",
-        score_summary.total_fields, score_summary.green_fields,
-        score_summary.yellow_fields, score_summary.red_fields,
-        score_summary.overall_composite * 100,
-    )
-
     elapsed = time.perf_counter() - start
     logger.info("Extraction pipeline complete in %.2fs", elapsed)
 
@@ -2951,3 +2808,167 @@ def _generate_findings(
     ))
 
     return findings
+
+
+def _calculation_and_compliance_findings(findings: list, income_calculations: list, certification_info, document_groups) -> None:
+    """Findings the income calculations imply, then the certification's
+    compliance summary from the findings so far. Moved out of the run
+    function unchanged so the replay harness runs the same code.
+    """
+    for calc in income_calculations:
+        details = calc.details or ""
+        if details.startswith("[historical]"):
+            note = details[len("[historical] "):].split(";")[0]
+            findings.append(
+                f"Income source '{calc.sourceName}': {note} — excluded "
+                f"from current-income comparison; verify employment "
+                f"status (Section 9)"
+            )
+        elif details.startswith("[rejected]"):
+            note = details[len("[rejected] "):]
+            who = f" ({calc.memberName})" if calc.memberName else ""
+            findings.append(
+                f"Income source '{calc.sourceName}'{who}: {calc.method} calculation "
+                f"rejected — {note} (Section 9)"
+            )
+        elif calc.method == "paystub-based" and calc.annualIncome:
+            m = re.search(r"avg\((\d+) stubs?\)", details)
+            if m and int(m.group(1)) < PAYSTUB_GUIDANCE_COUNT:
+                n = int(m.group(1))
+                findings.append(make_finding(
+                    "PAYSTUB_COUNT_BELOW_GUIDANCE",
+                    f"{calc.memberName or 'Member'}: income from {calc.sourceName or 'employer'} is "
+                    f"calculated from {n} pay stub(s) (${float(calc.annualIncome):,.2f}/year); verification "
+                    f"guidance expects at least {PAYSTUB_GUIDANCE_COUNT} consecutive stubs or an employer "
+                    f"verification — obtain the missing stubs or a VOI (Section 9)",
+                    label="Fewer pay stubs than verification guidance expects",
+                    category=CATEGORY_INCOME,
+                    subject_type="income_record",
+                    subject_ref={"member_name": calc.memberName, "source_name": calc.sourceName},
+                    assignment=ASSIGN_CLIENT,
+                    correction_required=f"Obtain at least {PAYSTUB_GUIDANCE_COUNT} consecutive pay stubs or an employer verification",
+                    resolution_type=RESOLVE_PRESENCE,
+                ))
+    from app.services.income_calculator import ytd_divergence_findings
+    findings.extend(ytd_divergence_findings(income_calculations))
+
+    # Step 5b: Populate compliance tracking on certification_info
+    if certification_info:
+        forms_present = list({
+            g.document_type for g in document_groups
+            if g.category != "ignore" and g.document_type != "Unknown"
+        })
+        # Only relocate the section-6 compliance-form findings this dedup
+        # was built for. A substring match ("missing required"/"not found")
+        # silently swallowed the "Missing required certification form"
+        # headline into a field the findings text never renders — the one
+        # finding that explains every derivative RED on a no-cert packet.
+        missing_forms = [
+            text_of(f) for f in findings
+            if text_of(f).startswith("Missing required compliance document")
+        ]
+        certification_info.formsPresent = sorted(forms_present)
+        certification_info.missingForms = missing_forms
+        # Compliance status must consider BOTH missingForms (moved out of
+        # findings by the dedup step below) AND the remaining findings.
+        has_issues = (
+            bool(missing_forms)
+            or any(
+                "missing" in text_of(f).lower()
+                or "not signed" in text_of(f).lower()
+                or "resubmission" in text_of(f).lower()
+                for f in findings
+            )
+        )
+        certification_info.complianceStatus = "Incomplete" if has_issues else "Complete"
+
+        # Remove the findings that were moved into missingForms — each fact
+        # should appear exactly once in the output.
+        missing_set = set(missing_forms)
+        findings[:] = [f for f in findings if text_of(f) not in missing_set]
+
+
+
+def _score_and_note(findings: list, *, household, certification_info, income, assets, document_groups, ocr_quality, cert_groups, ctx):
+    """Field-level scoring and the per-field review notes. Moved out of
+    the run function unchanged so the replay harness runs the same code.
+    Returns the score summary; appends the notes to `findings`.
+    """
+    # Step 6: Multi-stage field-level scoring
+    # Score from FINAL data objects after all merging/validation.
+    logger.info("Step 6/6: Running field-level scoring pipeline")
+    from app.services.field_scorer import score_pydantic_records, score_source_verification
+
+    # Stage 1: Extraction presence (populated vs null)
+    score_cards = score_pydantic_records(
+        household=household,
+        certification_info=certification_info,
+        income=income,
+        assets=assets,
+    )
+
+    # Stage 1b: Source verification (OCR quality + value-in-text check)
+    score_source_verification(score_cards, document_groups, ocr_quality)
+
+    # Stage 2: Cross-document consistency (compare same fields across records)
+    score_cross_doc_consistency(score_cards)
+
+    # Stage 3: Business rule validation (range, format, logic checks)
+    cert_form_type = next(
+        (g.document_type for g in cert_groups if is_current_certification_form(g.document_type)),
+        None,
+    )
+    score_business_rules(
+        score_cards, certification_type=ctx.certification_type, cert_form_type=cert_form_type,
+    )
+
+    # Stage 4: the audit's own findings. Every stage above asks a question of
+    # one value in isolation, so none of them can see that the extracted
+    # sources sum to something the certification contradicts — that is a
+    # relationship between values, not a property of one. Runs last so a
+    # dispute has the final word over a field that passed its format check.
+    # Dedupe first: a finding raised once per source document would otherwise
+    # be counted once per copy against the same field.
+    score_findings(score_cards, dedupe_findings(findings))
+
+    # Build summary and surface red/yellow fields as findings.
+    # Suppress field-level duplicates of facts the business rules already
+    # reported in plain language. Each fact should appear exactly once in
+    # the findings list, not once per source path.
+    _BUSINESS_RULE_COVERED = {
+        # Household null-field checks — aggregate business rule covers
+        # all members in one finding, so per-field REDs are redundant.
+        ("household_member", "disabled"),
+        ("household_member", "student"),
+        # Certification fields that already have plain-language business
+        # rules from the cross-doc / signature / cert-type validators.
+        ("certification", "householdIncome"),  # cross_doc_validator
+        ("certification", "isSigned"),         # signature_validator
+    }
+    score_summary = build_score_summary(score_cards)
+    findings.extend(_unverifiable_income_amounts(score_cards))
+    for card in score_cards:
+        for fs in card.flagged_fields:
+            if (card.record_type, fs.field_name) in _BUSINESS_RULE_COVERED:
+                continue
+            if _flagged_only_by_dispute(fs):
+                # The dispute that dragged this field down is already in the
+                # findings list, stated once and in plain language. Repeating
+                # it per field turns one finding into six identical lines —
+                # "Disputed by TIC_TOTAL_NO_CALCULATIONS" against every
+                # certification field — which is the per-field noise this
+                # suppression list exists to prevent.
+                continue
+            findings.append(
+                f"[{fs.flag.value.upper()}] {card.record_label or card.record_type}"
+                f" → {fs.field_name}: {fs.flag_message}"
+            )
+
+    logger.info(
+        "Scoring complete: %d fields — %d green, %d yellow, %d red (overall %.0f%%)",
+        score_summary.total_fields, score_summary.green_fields,
+        score_summary.yellow_fields, score_summary.red_fields,
+        score_summary.overall_composite * 100,
+    )
+
+    return score_summary

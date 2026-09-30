@@ -1,0 +1,5120 @@
+{
+ "CAS-TEST-001": {
+  "assets": [],
+  "cert_review": {
+   "annual_assets": null,
+   "annual_income": null,
+   "cert_type": "annual",
+   "effective_date": null,
+   "gross_rent": null,
+   "hh_size": 0,
+   "tenant_rent": null,
+   "utility_allowance": null
+  },
+  "codes": {
+   "AR_PREVIOUS_CERT_MISSING": 1,
+   "NO_ASSET_CERT_MISSING": 1
+  },
+  "income": [],
+  "members": [],
+  "notes": [
+   "Missing required certification form: no current TIC / HUD 50059 / RD 3"
+  ],
+  "score": 0.1,
+  "warnings": [
+   "no household members extracted from this packet"
+  ]
+ },
+ "CAS-TEST-1": {
+  "assets": [],
+  "cert_review": {
+   "annual_assets": null,
+   "annual_income": null,
+   "cert_type": "annual",
+   "effective_date": null,
+   "gross_rent": null,
+   "hh_size": 0,
+   "tenant_rent": null,
+   "utility_allowance": null
+  },
+  "codes": {
+   "AR_PREVIOUS_CERT_MISSING": 1,
+   "NO_ASSET_CERT_MISSING": 1
+  },
+  "income": [],
+  "members": [],
+  "notes": [
+   "Missing required certification form: no current TIC / HUD 50059 / RD 3"
+  ],
+  "score": 0.1,
+  "warnings": [
+   "no household members extracted from this packet"
+  ]
+ },
+ "CAS570103": {
+  "assets": [
+   [
+    "checking",
+    "Bank Of America",
+    null,
+    "2095.43",
+    null,
+    null
+   ],
+   [
+    "savings",
+    "Bank Of America",
+    null,
+    "700.76",
+    null,
+    null
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "2796.19",
+   "annual_income": "50040.00",
+   "cert_type": "annual",
+   "effective_date": "2026-03-01",
+   "gross_rent": "1904.00",
+   "hh_size": 3,
+   "tenant_rent": "1857.00",
+   "utility_allowance": "47.00"
+  },
+  "codes": {
+   "AR_PREVIOUS_CERT_MISSING": 1,
+   "CERT_AMOUNT_UNACCOUNTED": 3,
+   "INCOME_METHODS_DISAGREE": 1,
+   "TIC_TOTAL_MINOR_DIFF": 1
+  },
+  "income": [
+   [
+    "other",
+    null,
+    null,
+    "Heela Jindhupal"
+   ],
+   [
+    "other",
+    "verified",
+    null,
+    "Safeguard On Demand"
+   ],
+   [
+    "public_assistance",
+    null,
+    null,
+    "Public Assistance"
+   ]
+  ],
+  "members": [
+   [
+    "Rahmatullah",
+    "Samsoor",
+    "Head of Household"
+   ],
+   [
+    "Malala",
+    "Wolusmal",
+    null
+   ],
+   [
+    "Rahmanullah",
+    "Samsoor",
+    null
+   ]
+  ],
+  "notes": [
+   "Pages 12: 'Income Calculation Worksheet' detected \u2014 excluded from data"
+  ],
+  "score": 0.87,
+  "warnings": [
+   "asset_records[0]: balance arrived with no statement or verification of",
+   "asset_records[1]: balance arrived with no statement or verification of",
+   "household_members[1].relationship not extracted; left unset",
+   "household_members[2].relationship not extracted; left unset",
+   "income_records[0]: type 'Other Income' is not in the configured pickli",
+   "income_records[2]: 'Safeguard On Demand' has 12 paystub(s) but no veri",
+   "income_records[2]: no type extracted; sent as 'other'"
+  ]
+ },
+ "J-CCAC-06733": {
+  "assets": [
+   [
+    "prepaid_debit_card",
+    "Direct Express",
+    null,
+    "0.20",
+    null,
+    "verified"
+   ],
+   [
+    "whole_life_insurance",
+    "Insurance Company",
+    null,
+    "774.00",
+    null,
+    "verified"
+   ],
+   [
+    "whole_life_insurance",
+    "Life Insurance Company",
+    null,
+    "1614.00",
+    null,
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "2388.20",
+   "annual_income": "12168.00",
+   "cert_type": "annual",
+   "effective_date": "2026-12-01",
+   "gross_rent": "2375.00",
+   "hh_size": 1,
+   "tenant_rent": "250.00",
+   "utility_allowance": "44.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "HUD_9887A_INCOMPLETE": 1,
+   "MEMBER_IDENTITY_CONFLICT": 1,
+   "NAME_VARIANT": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "verified",
+    null,
+    "Social Security Administration"
+   ],
+   [
+    "ssi",
+    "verified",
+    null,
+    "Social Security Administration"
+   ]
+  ],
+  "members": [
+   [
+    "Leo",
+    "Marvel",
+    "Head of Household"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 18: 'Income Calculation Worksheet' detected \u2014 excluded from data",
+   "Pages 19: 'Notice of Rent Change (Previous)' detected \u2014 excluded from ",
+   "Pages 20-21: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr",
+   "Self-declared income amounts not extracted from questionnaire/applicat"
+  ],
+  "score": 0.89,
+  "warnings": [
+   "asset_records[0]: balance arrived with no statement or verification of",
+   "asset_records[1]: balance arrived with no statement or verification of",
+   "asset_records[2]: balance arrived with no statement or verification of"
+  ]
+ },
+ "J-CCAC-06734": {
+  "assets": [
+   [
+    "checking",
+    "Huntington Bank",
+    null,
+    "19.00",
+    "19.00",
+    "verified"
+   ],
+   [
+    "savings",
+    "Huntington Bank",
+    null,
+    null,
+    null,
+    "declared_only"
+   ],
+   [
+    "whole_life_insurance",
+    "American Home Life Insura",
+    "1502.87",
+    "1503.00",
+    null,
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "1521.87",
+   "annual_income": "12588.00",
+   "cert_type": "annual",
+   "effective_date": "2027-01-01",
+   "gross_rent": "2375.00",
+   "hh_size": 1,
+   "tenant_rent": "261.00",
+   "utility_allowance": "44.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 2
+  },
+  "income": [
+   [
+    "social_security",
+    "verified",
+    null,
+    "Social Security Administration"
+   ]
+  ],
+  "members": [
+   [
+    "Frederick",
+    "Barney",
+    "Head of Household"
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 15: 'Income Calculation Worksheet' detected \u2014 excluded from data",
+   "Pages 16: 'Notice of Rent Change (Previous)' detected \u2014 excluded from ",
+   "Pages 17-18: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr",
+   "Pages 27: Unrecognized document type \u2014 manual review required",
+   "Self-declared income amounts not extracted from questionnaire/applicat"
+  ],
+  "score": 0.83,
+  "warnings": []
+ },
+ "J-CCAC-06735": {
+  "assets": [
+   [
+    "prepaid_debit_card",
+    "Direct Express",
+    null,
+    "3.00",
+    null,
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "3.00",
+   "annual_income": "12204.00",
+   "cert_type": "annual",
+   "effective_date": "2026-12-01",
+   "gross_rent": "2026.00",
+   "hh_size": 1,
+   "tenant_rent": "247.00",
+   "utility_allowance": "48.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 1,
+   "CERT_SUMMARY_INCOME_MISMATCH": 1,
+   "NAME_VARIANT": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "verified",
+    null,
+    "Social Security Administration"
+   ],
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Total Facility Maintenance Inc"
+   ]
+  ],
+  "members": [
+   [
+    "Andre",
+    "Toles",
+    "Head of Household"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Income source 'Total Facility Maintenance Inc.': latest pay date 2023-",
+   "Pages 16: 'Income Calculation Worksheet' detected \u2014 excluded from data",
+   "Pages 17: Unrecognized document type \u2014 manual review required",
+   "Pages 19-20: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr",
+   "Pages 29: Unrecognized document type \u2014 manual review required",
+   "Pages 7: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti"
+  ],
+  "score": 0.83,
+  "warnings": [
+   "asset_records[0]: balance arrived with no statement or verification of",
+   "income_records[1]: 6 quarterly wage-history row(s) not sent as pay stu"
+  ]
+ },
+ "J-CCAC-06736": {
+  "assets": [
+   [
+    "prepaid_debit_card",
+    "Direct Express",
+    null,
+    "387.00",
+    null,
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "387.00",
+   "annual_income": "11928.00",
+   "cert_type": "annual",
+   "effective_date": "2026-12-01",
+   "gross_rent": "2375.00",
+   "hh_size": 1,
+   "tenant_rent": "244.00",
+   "utility_allowance": "44.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 1,
+   "INCOME_DECLARED_NOT_VERIFIED": 1,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "declared_only",
+    null,
+    "Social Security (declared)"
+   ],
+   [
+    "ssi",
+    "verified",
+    null,
+    "Social Security Administration"
+   ]
+  ],
+  "members": [
+   [
+    "Joyce",
+    "Perkins",
+    "Head of Household"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 16: 'Income Calculation Worksheet' detected \u2014 excluded from data",
+   "Pages 17: 'Notice of Rent Change (Previous)' detected \u2014 excluded from ",
+   "Pages 18-19: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr",
+   "Pages 28: Unrecognized document type \u2014 manual review required",
+   "Student status is null for all household members \u2014 verify against HUD "
+  ],
+  "score": 0.83,
+  "warnings": [
+   "asset_records[0]: balance arrived with no statement or verification of"
+  ]
+ },
+ "J-CCAC-06737": {
+  "assets": [
+   [
+    "checking",
+    "",
+    null,
+    "7.00",
+    null,
+    "declared_only"
+   ],
+   [
+    "checking",
+    "U.S. Bank",
+    "0.00",
+    null,
+    "7.02",
+    "verified"
+   ],
+   [
+    "checking",
+    "U.S. Bank",
+    "0.00",
+    "0.05",
+    "5.01",
+    "verified"
+   ],
+   [
+    "savings",
+    "U.S. Bank",
+    "0.05",
+    null,
+    "15.96",
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "7.05",
+   "annual_income": "15264.00",
+   "cert_type": "annual",
+   "effective_date": "2026-12-01",
+   "gross_rent": "2026.00",
+   "hh_size": 1,
+   "tenant_rent": "324.00",
+   "utility_allowance": "48.00"
+  },
+  "codes": {
+   "ASSET_OVERDRAWN": 1,
+   "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
+   "CERT_AMOUNT_UNACCOUNTED": 1,
+   "NAME_VARIANT": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "verified",
+    null,
+    "Social Security Administration"
+   ]
+  ],
+  "members": [
+   [
+    "Charles",
+    "Butler",
+    "Head of Household"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 17: 'Income Calculation Worksheet' detected \u2014 excluded from data",
+   "Pages 19-20: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr",
+   "Self-declared income amounts not extracted from questionnaire/applicat"
+  ],
+  "score": 0.89,
+  "warnings": [
+   "asset_records[2].voa: balance -263.25 is negative (overdrawn); sent as",
+   "asset_records[2]: balance -263.25 is negative (overdrawn); sent as 0.0"
+  ]
+ },
+ "J-CCAC-06738": {
+  "assets": [
+   [
+    "checking",
+    "Hungtington Bank",
+    null,
+    "296.00",
+    "296.00",
+    "verified"
+   ],
+   [
+    "checking",
+    "Huntington Bank",
+    null,
+    null,
+    null,
+    "declared_only"
+   ],
+   [
+    "savings",
+    "Hungtington Bank",
+    "10.95",
+    "10.95",
+    null,
+    "verified"
+   ],
+   [
+    "savings",
+    "Huntington Bank",
+    null,
+    null,
+    null,
+    "declared_only"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "306.95",
+   "annual_income": "13176.00",
+   "cert_type": "annual",
+   "effective_date": "2026-12-01",
+   "gross_rent": "2375.00",
+   "hh_size": 1,
+   "tenant_rent": "275.00",
+   "utility_allowance": "44.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "HH_SIZE_MISMATCH": 1
+  },
+  "income": [
+   [
+    "public_assistance",
+    "verified",
+    null,
+    "Illinois Department of Human S"
+   ],
+   [
+    "social_security",
+    "verified",
+    null,
+    "Social Security Administration"
+   ],
+   [
+    "ssi",
+    "verified",
+    null,
+    "Social Security Administration"
+   ]
+  ],
+  "members": [
+   [
+    "Lavenia",
+    "McGowan",
+    "Head of Household"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 17-18: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr"
+  ],
+  "score": 0.78,
+  "warnings": []
+ },
+ "J-CCAC-06739": {
+  "assets": [
+   [
+    "prepaid_debit_card",
+    "Direct Express",
+    null,
+    null,
+    null,
+    "declared_only"
+   ],
+   [
+    "prepaid_debit_card",
+    "Direct Express",
+    null,
+    null,
+    null,
+    "verified"
+   ],
+   [
+    "savings",
+    "111Th Super Save",
+    "267.88",
+    "268.00",
+    null,
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "267.88",
+   "annual_income": "12168.00",
+   "cert_type": "annual",
+   "effective_date": "2026-12-01",
+   "gross_rent": "2375.00",
+   "hh_size": 1,
+   "tenant_rent": "250.00",
+   "utility_allowance": "44.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "verified",
+    null,
+    "Social Security Administration"
+   ],
+   [
+    "ssi",
+    "verified",
+    null,
+    "Social Security Administration"
+   ]
+  ],
+  "members": [
+   [
+    "Patric",
+    "O Connor",
+    "Head of Household"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 1-2: 'HUD 50059 (Previous)' detected \u2014 excluded from data extrac",
+   "Pages 15: 'Income Calculation Worksheet' detected \u2014 excluded from data",
+   "Pages 17-18: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr",
+   "Pages 28: Unrecognized document type \u2014 manual review required",
+   "Pages 8: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti",
+   "Self-declared income amounts not extracted from questionnaire/applicat",
+   "Student status is null for all household members \u2014 verify against HUD "
+  ],
+  "score": 0.68,
+  "warnings": []
+ },
+ "J-CCAC-06740": {
+  "assets": [
+   [
+    "checking",
+    "",
+    null,
+    "8298.00",
+    null,
+    "declared_only"
+   ],
+   [
+    "checking",
+    "Bank of America - USA",
+    "5242.13",
+    null,
+    "8297.83",
+    "verified"
+   ],
+   [
+    "checking",
+    "Navy Federal Credit Union",
+    "7231.57",
+    null,
+    "11083.35",
+    "verified"
+   ],
+   [
+    "savings",
+    "Navy Federal Credit Union",
+    "1131.62",
+    "1132.00",
+    null,
+    "verified"
+   ],
+   [
+    "whole_life_insurance",
+    "Americo Financial Life & ",
+    null,
+    "3426.00",
+    null,
+    "verified"
+   ],
+   [
+    "whole_life_insurance",
+    "United of Omaha Life Insu",
+    null,
+    "1123.00",
+    null,
+    "verified"
+   ],
+   [
+    "whole_life_insurance",
+    "United of Omaha Life Insu",
+    null,
+    "891.00",
+    null,
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "27343.32",
+   "annual_income": "29953.00",
+   "cert_type": "annual",
+   "effective_date": "2026-08-01",
+   "gross_rent": "2375.00",
+   "hh_size": 1,
+   "tenant_rent": "695.00",
+   "utility_allowance": "44.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "CERT_SUMMARY_INCOME_MISMATCH": 1,
+   "NAME_VARIANT": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "verified",
+    null,
+    "Social Security Administration"
+   ]
+  ],
+  "members": [
+   [
+    "Sayeed",
+    "Mumin",
+    "Head of Household"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 17: 'Income Calculation Worksheet' detected \u2014 excluded from data",
+   "Pages 19-20: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr",
+   "Pages 33: Unrecognized document type \u2014 manual review required",
+   "Self-declared income amounts not extracted from questionnaire/applicat"
+  ],
+  "score": 0.9,
+  "warnings": [
+   "asset_records[0]: balance arrived with no statement or verification of",
+   "asset_records[1]: balance arrived with no statement or verification of",
+   "asset_records[2]: balance arrived with no statement or verification of"
+  ]
+ },
+ "J-CCAC-06741": {
+  "assets": [
+   [
+    "checking",
+    "Chase",
+    null,
+    "117.00",
+    null,
+    "declared_only"
+   ],
+   [
+    "checking",
+    "JPMorgan Chase Bank",
+    "189.24",
+    null,
+    "117.00",
+    "verified"
+   ],
+   [
+    "checking",
+    "Navy Federal Credit Union",
+    "61.54",
+    "62.00",
+    "0.00",
+    "verified"
+   ],
+   [
+    "savings",
+    "Navy Federal Credit Union",
+    "0.00",
+    null,
+    null,
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "367.78",
+   "annual_income": "19124.00",
+   "cert_type": "annual",
+   "effective_date": "2026-10-01",
+   "gross_rent": "2375.00",
+   "hh_size": 1,
+   "tenant_rent": "424.00",
+   "utility_allowance": "44.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "HUD_9887A_INCOMPLETE": 1,
+   "SIGNATURE_DATE_MISSING": 1,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "pension",
+    "verified",
+    null,
+    "Retirement Systems Division, N"
+   ],
+   [
+    "social_security",
+    "verified",
+    null,
+    "Social Security Administration"
+   ],
+   [
+    "ssi",
+    "verified",
+    null,
+    "Social Security"
+   ],
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Global Food Services LLC"
+   ]
+  ],
+  "members": [
+   [
+    "Linda",
+    "Akil",
+    "Head of Household"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "HUD 50059 must be signed and dated; a signature could not be verified ",
+   "Income source 'Global Food Services LLC': latest pay date 2020-03-31 i",
+   "Pages 16: 'Income Calculation Worksheet' detected \u2014 excluded from data",
+   "Pages 17: 'Notice of Rent Change (Previous)' detected \u2014 excluded from ",
+   "Pages 18: 'HUD 50059 (Previous)' detected \u2014 excluded from data extract",
+   "Pages 32: Unrecognized document type \u2014 manual review required",
+   "Pages 7: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti",
+   "Student status is null for all household members \u2014 verify against HUD "
+  ],
+  "score": 0.88,
+  "warnings": [
+   "income_records[3]: 2 quarterly wage-history row(s) not sent as pay stu"
+  ]
+ },
+ "J-CCAC-06742": {
+  "assets": [
+   [
+    "checking",
+    "",
+    null,
+    "190.00",
+    null,
+    "declared_only"
+   ],
+   [
+    "checking",
+    "JPMorgan Chase Bank",
+    "163.95",
+    null,
+    "190.00",
+    "verified"
+   ],
+   [
+    "checking",
+    "Pnc Bank",
+    "7.60",
+    null,
+    "7.60",
+    "verified"
+   ],
+   [
+    "savings",
+    "",
+    null,
+    "19000000.00",
+    null,
+    "declared_only"
+   ],
+   [
+    "savings",
+    "Chase Bank",
+    null,
+    null,
+    null,
+    "declared_only"
+   ],
+   [
+    "whole_life_insurance",
+    "",
+    null,
+    "1000000.00",
+    null,
+    "declared_only"
+   ],
+   [
+    "whole_life_insurance",
+    "New York Life Insurance C",
+    null,
+    "661.00",
+    null,
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "20001022.55",
+   "annual_income": "12372.00",
+   "cert_type": "annual",
+   "effective_date": "2026-11-01",
+   "gross_rent": "2375.00",
+   "hh_size": 1,
+   "tenant_rent": "255.00",
+   "utility_allowance": "44.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "verified",
+    null,
+    "Social Security Administration"
+   ]
+  ],
+  "members": [
+   [
+    "Gladys",
+    "Bellamy",
+    "Head of Household"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 16: 'Income Calculation Worksheet' detected \u2014 excluded from data",
+   "Pages 18-19: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr",
+   "Pages 28: Unrecognized document type \u2014 manual review required"
+  ],
+  "score": 0.85,
+  "warnings": [
+   "asset_records[0]: balance arrived with no statement or verification of"
+  ]
+ },
+ "J-CCAC-06743": {
+  "assets": [
+   [
+    "checking",
+    "JPMorgan Chase Bank",
+    "41.14",
+    "504.00",
+    "504.00",
+    "verified"
+   ],
+   [
+    "savings",
+    "Chase Bank",
+    null,
+    null,
+    null,
+    "declared_only"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "41.14",
+   "annual_income": "12168.00",
+   "cert_type": "annual",
+   "effective_date": "2026-11-01",
+   "gross_rent": "2375.00",
+   "hh_size": 1,
+   "tenant_rent": "250.00",
+   "utility_allowance": "44.00"
+  },
+  "codes": {
+   "JOINT_ACCOUNT_OWNERSHIP_PCT": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "verified",
+    null,
+    "Social Security Administration"
+   ],
+   [
+    "ssi",
+    "verified",
+    null,
+    "Social Security Administration"
+   ]
+  ],
+  "members": [
+   [
+    "Curry",
+    "Tracy",
+    "Head of Household"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 19: 'Notice of Rent Change (Previous)' detected \u2014 excluded from ",
+   "Pages 20-21: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr"
+  ],
+  "score": 0.82,
+  "warnings": []
+ },
+ "J-CCAC-06744": {
+  "assets": [
+   [
+    "checking",
+    "",
+    null,
+    "117.00",
+    null,
+    "declared_only"
+   ],
+   [
+    "checking",
+    "Jpmorgan Chase Bank, N.a.",
+    "189.24",
+    null,
+    "117.00",
+    "verified"
+   ],
+   [
+    "checking",
+    "Navy Federal Credit Union",
+    "61.54",
+    "62.00",
+    "0.00",
+    "verified"
+   ],
+   [
+    "savings",
+    "Navy Federal Credit Union",
+    "0.00",
+    null,
+    null,
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "367.78",
+   "annual_income": "19124.00",
+   "cert_type": "annual",
+   "effective_date": "2026-10-01",
+   "gross_rent": "2375.00",
+   "hh_size": 1,
+   "tenant_rent": "424.00",
+   "utility_allowance": "44.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "CERT_SUMMARY_INCOME_MISMATCH": 1,
+   "HH_SIZE_MISMATCH": 1
+  },
+  "income": [
+   [
+    "pension",
+    "verified",
+    null,
+    "Retirement Systems Division, N"
+   ],
+   [
+    "social_security",
+    "verified",
+    null,
+    "Social Security Administration"
+   ],
+   [
+    "ssi",
+    "verified",
+    null,
+    "Social Security"
+   ]
+  ],
+  "members": [
+   [
+    "Linda",
+    "Akil",
+    "Head of Household"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 17-19: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr",
+   "Student status is null for all household members \u2014 verify against HUD "
+  ],
+  "score": 0.86,
+  "warnings": []
+ },
+ "J-CCAC-06745": {
+  "assets": [
+   [
+    "prepaid_debit_card",
+    "Direct Express",
+    null,
+    null,
+    null,
+    "declared_only"
+   ],
+   [
+    "prepaid_debit_card",
+    "Direct Express",
+    null,
+    null,
+    null,
+    "verified"
+   ],
+   [
+    "savings",
+    "",
+    "125000.00",
+    "126.00",
+    null,
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "125000.00",
+   "annual_income": "11928.00",
+   "cert_type": "annual",
+   "effective_date": "2026-09-02",
+   "gross_rent": "2375.00",
+   "hh_size": 1,
+   "tenant_rent": "244.00",
+   "utility_allowance": "44.00"
+  },
+  "codes": {
+   "AR_PREVIOUS_CERT_MISSING": 1,
+   "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
+   "HOMELESS_APPLICANT_INDICATED": 1,
+   "INCOME_DECLARED_NOT_VERIFIED": 1,
+   "MEMBER_IDENTITY_CONFLICT": 2
+  },
+  "income": [
+   [
+    "other",
+    "declared_only",
+    null,
+    "Other Income (declared)"
+   ],
+   [
+    "ssi",
+    "verified",
+    null,
+    "Social Security Administration"
+   ]
+  ],
+  "members": [
+   [
+    "David",
+    "Alston",
+    "Head of Household"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 10: 'Income Calculation Worksheet' detected \u2014 excluded from data",
+   "Race and Ethnic Data Form present but signatures could not be verified"
+  ],
+  "score": 0.75,
+  "warnings": [
+   "income_records[1]: type 'Other Income' is not in the configured pickli"
+  ]
+ },
+ "J-CCAC-06746": {
+  "assets": [
+   [
+    "checking",
+    "",
+    null,
+    "787.36",
+    null,
+    "declared_only"
+   ],
+   [
+    "checking",
+    "Bmo Bank N.A.",
+    "6787.38",
+    null,
+    null,
+    "verified"
+   ],
+   [
+    "other",
+    "",
+    null,
+    "337.32",
+    null,
+    "declared_only"
+   ],
+   [
+    "savings",
+    "Bmo",
+    "33013.20",
+    null,
+    null,
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "40925.26",
+   "annual_income": null,
+   "cert_type": "annual",
+   "effective_date": "2026-09-01",
+   "gross_rent": null,
+   "hh_size": 1,
+   "tenant_rent": "176.00",
+   "utility_allowance": "44.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 1,
+   "TIC_TOTAL_NOT_EXTRACTED": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "verified",
+    null,
+    "Social Security Administration"
+   ]
+  ],
+  "members": [
+   [
+    "Diana",
+    "Smith",
+    "Head of Household"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 14: 'HUD 50059 (Previous)' detected \u2014 excluded from data extract",
+   "Pages 16: 'Income Calculation Worksheet' detected \u2014 excluded from data",
+   "Pages 17: 'Notice of Rent Change (Previous)' detected \u2014 excluded from ",
+   "Pages 18-19: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr",
+   "Self-declared income amounts not extracted from questionnaire/applicat",
+   "Student status is null for all household members \u2014 verify against HUD "
+  ],
+  "score": 0.81,
+  "warnings": [
+   "cert_review.grossRent: 2375.00 was not found on the certification page"
+  ]
+ },
+ "J-CCAC-06747": {
+  "assets": [
+   [
+    "checking",
+    "Hungtington Bank",
+    null,
+    "21.00",
+    "21.00",
+    "verified"
+   ],
+   [
+    "checking",
+    "Huntington",
+    null,
+    null,
+    null,
+    "declared_only"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "21.00",
+   "annual_income": "12612.00",
+   "cert_type": "annual",
+   "effective_date": "2026-09-01",
+   "gross_rent": "2026.00",
+   "hh_size": 1,
+   "tenant_rent": "257.00",
+   "utility_allowance": "48.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "verified",
+    null,
+    "Social Security Administration"
+   ]
+  ],
+  "members": [
+   [
+    "Larry",
+    "Eddings",
+    "Head of Household"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 16: 'Income Calculation Worksheet' detected \u2014 excluded from data",
+   "Pages 17: 'Notice of Rent Change (Previous)' detected \u2014 excluded from ",
+   "Pages 18-19: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr",
+   "Pages 28: Unrecognized document type \u2014 manual review required",
+   "Self-declared income amounts not extracted from questionnaire/applicat"
+  ],
+  "score": 0.81,
+  "warnings": []
+ },
+ "J-CCAC-06748": {
+  "assets": [
+   [
+    "checking",
+    "Beverly Bank",
+    null,
+    null,
+    null,
+    "declared_only"
+   ],
+   [
+    "checking",
+    "Wintrust Bank",
+    null,
+    "2640.00",
+    "2639.57",
+    "verified"
+   ],
+   [
+    "savings",
+    "",
+    null,
+    "1439.57",
+    null,
+    "declared_only"
+   ],
+   [
+    "whole_life_insurance",
+    "",
+    null,
+    null,
+    null,
+    "verified"
+   ],
+   [
+    "whole_life_insurance",
+    "Americo Financial Life & ",
+    null,
+    "1351.00",
+    null,
+    "verified"
+   ],
+   [
+    "whole_life_insurance",
+    "Americo Financial Life & ",
+    null,
+    "1662.00",
+    null,
+    "verified"
+   ],
+   [
+    "whole_life_insurance",
+    "Columbian Life Insurance ",
+    null,
+    "1737.00",
+    null,
+    "verified"
+   ],
+   [
+    "whole_life_insurance",
+    "Federal Life Insurance Co",
+    "2580.39",
+    "2561.00",
+    null,
+    "verified"
+   ],
+   [
+    "whole_life_insurance",
+    "National Life Group",
+    null,
+    "231.00",
+    null,
+    "declared_only"
+   ],
+   [
+    "whole_life_insurance",
+    "National Life Insurance C",
+    null,
+    null,
+    null,
+    "verified"
+   ],
+   [
+    "whole_life_insurance",
+    "National Life Insurance C",
+    null,
+    null,
+    null,
+    "verified"
+   ],
+   [
+    "whole_life_insurance",
+    "Roseland Manor",
+    null,
+    null,
+    null,
+    "verified"
+   ],
+   [
+    "whole_life_insurance",
+    "Roseland Manor",
+    null,
+    "1564.00",
+    null,
+    "verified"
+   ],
+   [
+    "whole_life_insurance",
+    "Roseland Manor",
+    null,
+    "2035.00",
+    null,
+    "verified"
+   ],
+   [
+    "whole_life_insurance",
+    "Roseland Manor",
+    null,
+    "2305.00",
+    null,
+    "verified"
+   ],
+   [
+    "whole_life_insurance",
+    "Roseland Manor",
+    null,
+    "2661.00",
+    null,
+    "verified"
+   ],
+   [
+    "whole_life_insurance",
+    "Senior Market Sales LLC",
+    null,
+    "1336.00",
+    null,
+    "verified"
+   ],
+   [
+    "whole_life_insurance",
+    "The Chesapeake Life Insur",
+    null,
+    "849.00",
+    null,
+    "verified"
+   ],
+   [
+    "whole_life_insurance",
+    "TransAmerica",
+    null,
+    "1847.00",
+    null,
+    "declared_only"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "24237.96",
+   "annual_income": "15209.00",
+   "cert_type": "annual",
+   "effective_date": "2026-08-01",
+   "gross_rent": "2375.00",
+   "hh_size": 1,
+   "tenant_rent": "326.00",
+   "utility_allowance": "44.00"
+  },
+  "codes": {
+   "ASSET_OWNER_NOT_IN_ROSTER": 2,
+   "CERT_AMOUNT_UNACCOUNTED": 1,
+   "MEMBER_IDENTITY_CONFLICT": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "verified",
+    null,
+    "Social Security Administration"
+   ]
+  ],
+  "members": [
+   [
+    "Lela",
+    "Anderson",
+    "Head of Household"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 18: 'Income Calculation Worksheet' detected \u2014 excluded from data",
+   "Pages 20-21: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr",
+   "Pages 8: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti"
+  ],
+  "score": 0.84,
+  "warnings": [
+   "asset_records[0]: balance arrived with no statement or verification of",
+   "asset_records[10]: balance arrived with no statement or verification o",
+   "asset_records[11]: balance arrived with no statement or verification o",
+   "asset_records[12]: 'Devonte L Davis' did not match any household membe",
+   "asset_records[12]: balance arrived with no statement or verification o",
+   "asset_records[13]: balance arrived with no statement or verification o",
+   "asset_records[2]: balance arrived with no statement or verification of",
+   "asset_records[3]: balance arrived with no statement or verification of",
+   "asset_records[4]: balance arrived with no statement or verification of",
+   "asset_records[5]: balance arrived with no statement or verification of",
+   "asset_records[7]: 'Sharelle S Davis' did not match any household membe",
+   "asset_records[7]: balance arrived with no statement or verification of",
+   "asset_records[8]: balance arrived with no statement or verification of",
+   "asset_records[9]: balance arrived with no statement or verification of"
+  ]
+ },
+ "J-CCAC-06749": {
+  "assets": [
+   [
+    "prepaid_debit_card",
+    "Direct Express",
+    "72.13",
+    "72.00",
+    "72.15",
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "72.13",
+   "annual_income": "11928.00",
+   "cert_type": "annual",
+   "effective_date": "2026-09-01",
+   "gross_rent": "2375.00",
+   "hh_size": 1,
+   "tenant_rent": "244.00",
+   "utility_allowance": "44.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 1
+  },
+  "income": [
+   [
+    "ssi",
+    "verified",
+    null,
+    "Social Security Administration"
+   ]
+  ],
+  "members": [
+   [
+    "Elise",
+    "Dodd",
+    "Head of Household"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 18-19: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr",
+   "Self-declared income amounts not extracted from questionnaire/applicat"
+  ],
+  "score": 0.9,
+  "warnings": []
+ },
+ "J-CCAC-06751": {
+  "assets": [],
+  "cert_review": {
+   "annual_assets": null,
+   "annual_income": "11604.00",
+   "cert_type": "annual",
+   "effective_date": "2025-12-01",
+   "gross_rent": "2302.00",
+   "hh_size": 1,
+   "tenant_rent": "230.00",
+   "utility_allowance": "50.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 1,
+   "HUD_9887A_INCOMPLETE": 1,
+   "HUD_9887_INCOMPLETE": 1,
+   "INCOME_AMOUNT_NOT_IN_SOURCE": 1,
+   "INCOME_DECLARED_NOT_VERIFIED": 1,
+   "NO_ASSET_CERT_MISSING": 1,
+   "TIC_TOTAL_MINOR_DIFF": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "declared_only",
+    null,
+    "Social Security (declared)"
+   ],
+   [
+    "ssi",
+    "verified",
+    null,
+    "Social Security Administration"
+   ]
+  ],
+  "members": [
+   [
+    "Joyce",
+    "Perkins",
+    "Head of Household"
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 14: Unrecognized document type \u2014 manual review required",
+   "Pages 5-7: 'HUD 50059 (Previous)' detected \u2014 excluded from data extrac",
+   "Student status is null for all household members \u2014 verify against HUD "
+  ],
+  "score": 0.83,
+  "warnings": []
+ },
+ "J-CCAC-06752": {
+  "assets": [
+   [
+    "prepaid_debit_card",
+    "Direct Express",
+    "72.13",
+    "72.00",
+    "72.15",
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "72.13",
+   "annual_income": "11928.00",
+   "cert_type": "annual",
+   "effective_date": "2026-09-01",
+   "gross_rent": "2375.00",
+   "hh_size": 1,
+   "tenant_rent": "244.00",
+   "utility_allowance": "44.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 1,
+   "HUD_9887A_INCOMPLETE": 1,
+   "HUD_9887_INCOMPLETE": 1,
+   "INCOME_DECLARED_NOT_VERIFIED": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "declared_only",
+    null,
+    "Social Security (declared)"
+   ],
+   [
+    "ssi",
+    "verified",
+    null,
+    "Social Security Administration"
+   ]
+  ],
+  "members": [
+   [
+    "Elise",
+    "Dodd",
+    "Head of Household"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Income source 'Social Security (declared)' (Elise Dodd): self-declared",
+   "Pages 16: 'Income Calculation Worksheet' detected \u2014 excluded from data",
+   "Pages 18-19: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr",
+   "Student status is null for all household members \u2014 verify against HUD "
+  ],
+  "score": 0.86,
+  "warnings": []
+ },
+ "J-CCAC-06753": {
+  "assets": [
+   [
+    "checking",
+    "Huntington",
+    null,
+    "416.00",
+    "416.00",
+    "verified"
+   ],
+   [
+    "retirement",
+    "Huntington",
+    "0.00",
+    null,
+    null,
+    "verified"
+   ],
+   [
+    "savings",
+    "Huntington",
+    "50.01",
+    "50.00",
+    null,
+    "verified"
+   ],
+   [
+    "whole_life_insurance",
+    "Lincoln Heritage Life Ins",
+    null,
+    "5149.00",
+    null,
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "5615.01",
+   "annual_income": "11931.00",
+   "cert_type": "annual",
+   "effective_date": "2026-06-01",
+   "gross_rent": "2375.00",
+   "hh_size": 1,
+   "tenant_rent": "244.00",
+   "utility_allowance": "44.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "HUD_9887A_INCOMPLETE": 1,
+   "HUD_9887_INCOMPLETE": 1,
+   "INCOME_VERIFIED_NOT_DECLARED": 1,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "verified",
+    null,
+    "Social Security Administration"
+   ],
+   [
+    "ssi",
+    "verified_not_declared",
+    null,
+    "Social Security Administration"
+   ],
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Catholic Charities of the Arch"
+   ]
+  ],
+  "members": [
+   [
+    "Willie",
+    "Brooks",
+    "Head of Household"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "HUD 9887 signature date 2024-02-11 is more than 18 months from effecti",
+   "Income source 'Catholic Charities of the Archdioce': latest pay date 2",
+   "Income source 'Social Security Administration' (Willie Brooks): histor",
+   "Pages 24: Unrecognized document type \u2014 manual review required",
+   "Pages 4-5: 'HUD 50059 (Previous)' detected \u2014 excluded from data extrac",
+   "Self-declared income amounts not extracted from questionnaire/applicat"
+  ],
+  "score": 0.88,
+  "warnings": [
+   "asset_records[0]: balance arrived with no statement or verification of",
+   "income_records[2]: 1 quarterly wage-history row(s) not sent as pay stu"
+  ]
+ },
+ "J-CCAC-06832": {
+  "assets": [
+   [
+    "prepaid_debit_card",
+    "Direct Express",
+    "72.13",
+    "72.00",
+    "72.15",
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "72.13",
+   "annual_income": "11928.00",
+   "cert_type": "annual",
+   "effective_date": "2026-09-01",
+   "gross_rent": "2375.00",
+   "hh_size": 1,
+   "tenant_rent": "244.00",
+   "utility_allowance": "44.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 1,
+   "HUD_9887_INCOMPLETE": 1,
+   "INCOME_DECLARED_NOT_VERIFIED": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "declared_only",
+    null,
+    "Social Security (declared)"
+   ],
+   [
+    "ssi",
+    "verified",
+    null,
+    "Social Security Administration"
+   ]
+  ],
+  "members": [
+   [
+    "Elise",
+    "Dodd",
+    "Head of Household"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "HUD 9887 must be signed by all adult household members; a signature co",
+   "Income source 'Social Security (declared)' (Elise Dodd): self-declared",
+   "Pages 17: 'Notice of Rent Change (Previous)' detected \u2014 excluded from ",
+   "Pages 18-19: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr"
+  ],
+  "score": 0.89,
+  "warnings": []
+ },
+ "J-PORT-05318": {
+  "assets": [
+   [
+    "checking",
+    "Child Support Fund",
+    "82.05",
+    "82.05",
+    null,
+    "verified"
+   ],
+   [
+    "checking",
+    "SSI Bond Fund",
+    "0.00",
+    "0.00",
+    null,
+    "verified"
+   ],
+   [
+    "real_estate",
+    "Ada, OK",
+    "6294.74",
+    "6294.14",
+    null,
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "6376.79",
+   "annual_income": "39819.16",
+   "cert_type": "annual",
+   "effective_date": "2026-09-01",
+   "gross_rent": "1069.00",
+   "hh_size": 4,
+   "tenant_rent": "953.00",
+   "utility_allowance": "953.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 1,
+   "CERT_SUMMARY_INCOME_MISMATCH": 1,
+   "INCOME_DECLARED_NOT_VERIFIED": 1,
+   "MEMBER_IDENTITY_CONFLICT": 1,
+   "NAME_VARIANT": 3,
+   "QUESTIONNAIRE_EMPLOYMENT_UNVERIFIED": 1,
+   "QUESTIONNAIRE_PENSION_UNVERIFIED": 1,
+   "RENT_IDENTITY_MISMATCH": 1,
+   "SIGNATURE_DATE_MISSING": 1,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "child_support",
+    "verified",
+    null,
+    "Oklahoma Child Support Service"
+   ],
+   [
+    "other",
+    "declared_only",
+    null,
+    "Other Income (declared)"
+   ],
+   [
+    "social_security",
+    "verified",
+    null,
+    "Social Security Administration"
+   ],
+   [
+    "social_security",
+    "verified",
+    null,
+    "Social Security Administration"
+   ],
+   [
+    "social_security",
+    "verified",
+    null,
+    "Social Security Administration"
+   ]
+  ],
+  "members": [
+   [
+    "Arnold",
+    "Lyons",
+    "Head of Household"
+   ],
+   [
+    "Kyla",
+    "Hamilton",
+    "Minor Child"
+   ],
+   [
+    "Kameryn",
+    "Meely",
+    "Minor Child"
+   ],
+   [
+    "Traevon",
+    "Lyons",
+    "Minor Child"
+   ]
+  ],
+  "notes": [
+   "Pages 4: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
+   "Pages 5-6: 'Tenant Income Certification (TIC) (Previous)' detected \u2014 e"
+  ],
+  "score": 0.91,
+  "warnings": [
+   "income_records[4]: type 'Other Income' is not in the configured pickli"
+  ]
+ },
+ "J-PORT-05319": {
+  "assets": [
+   [
+    "checking",
+    "",
+    null,
+    "556.00",
+    null,
+    "declared_only"
+   ],
+   [
+    "savings",
+    "",
+    null,
+    "886.00",
+    null,
+    "declared_only"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "1442.00",
+   "annual_income": "21723.00",
+   "cert_type": "annual",
+   "effective_date": "2026-10-01",
+   "gross_rent": "691.00",
+   "hh_size": 1,
+   "tenant_rent": "421.00",
+   "utility_allowance": "58.00"
+  },
+  "codes": {
+   "AR_PREVIOUS_CERT_MISSING": 1,
+   "INCOME_DECLARED_NOT_VERIFIED": 1,
+   "SIGNATURE_DATE_MISSING": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "declared_only",
+    null,
+    "Soc. Sec."
+   ]
+  ],
+  "members": [
+   [
+    "Randy",
+    "Buck",
+    "Head of Household"
+   ]
+  ],
+  "notes": [
+   "HUD 50059 must be signed and dated; a signature could not be verified ",
+   "Pages 14: 'Income Calculation Worksheet' detected \u2014 excluded from data"
+  ],
+  "score": 0.87,
+  "warnings": []
+ },
+ "J-PORT-05320": {
+  "assets": [
+   [
+    "checking",
+    "",
+    null,
+    "556.00",
+    null,
+    "declared_only"
+   ],
+   [
+    "checking",
+    "Midstates Bank",
+    null,
+    null,
+    "185.12",
+    "verified"
+   ],
+   [
+    "savings",
+    "",
+    null,
+    "886.00",
+    null,
+    "declared_only"
+   ],
+   [
+    "savings",
+    "Midstates Bank",
+    "1123.81",
+    null,
+    null,
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "2565.81",
+   "annual_income": "21723.00",
+   "cert_type": "annual",
+   "effective_date": "2026-10-01",
+   "gross_rent": "691.00",
+   "hh_size": 1,
+   "tenant_rent": "421.00",
+   "utility_allowance": "58.00"
+  },
+  "codes": {
+   "AR_PREVIOUS_CERT_MISSING": 1,
+   "INCOME_DECLARED_NOT_VERIFIED": 1,
+   "INCOME_SECOND_DECLARATION": 1,
+   "SIGNATURE_DATE_MISSING": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "declared_only",
+    null,
+    "Soc. Sec."
+   ]
+  ],
+  "members": [
+   [
+    "Randy",
+    "Buck",
+    "Head of Household"
+   ]
+  ],
+  "notes": [
+   "HUD 50059 must be signed and dated; a signature could not be verified "
+  ],
+  "score": 0.81,
+  "warnings": []
+ },
+ "J-PORT-05754": {
+  "assets": [
+   [
+    "cash_on_hand",
+    "",
+    null,
+    "20.00",
+    null,
+    null
+   ],
+   [
+    "checking",
+    "Tbk",
+    null,
+    "50.00",
+    null,
+    null
+   ],
+   [
+    "savings",
+    "Tbk",
+    null,
+    "600.00",
+    null,
+    null
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "670.00",
+   "annual_income": "31470.00",
+   "cert_type": "annual",
+   "effective_date": "2026-09-25",
+   "gross_rent": "1101.00",
+   "hh_size": 1,
+   "tenant_rent": "1059.00",
+   "utility_allowance": "42.00"
+  },
+  "codes": {
+   "AR_PREVIOUS_CERT_MISSING": 1,
+   "MEMBER_IDENTITY_CONFLICT": 1,
+   "NAME_VARIANT": 1,
+   "PAYSTUB_COUNT_BELOW_GUIDANCE": 1,
+   "SIGNATURE_VERDICT_CONFLICTS_WITH_DATE": 1
+  },
+  "income": [
+   [
+    "other",
+    "verified",
+    null,
+    "Selwyn Hospitality Durango, Ll"
+   ],
+   [
+    "wages_and_salaries",
+    null,
+    null,
+    "Durango Lodge"
+   ]
+  ],
+  "members": [
+   [
+    "Samantha",
+    "Smith",
+    "Head of Household"
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Income source 'Durango Lodge' (Samantha Smith): self-declared calculat",
+   "Income source 'Durango Lodge' (Samantha Smith): voi-based calculation ",
+   "Pages 15: 'Income Calculation Worksheet' detected \u2014 excluded from data",
+   "Pages 18: 'Income Calculation Worksheet' detected \u2014 excluded from data"
+  ],
+  "score": 0.84,
+  "warnings": [
+   "asset_records[0]: balance arrived with no statement or verification of",
+   "asset_records[1]: balance arrived with no statement or verification of",
+   "asset_records[2]: balance arrived with no statement or verification of",
+   "income_records[1]: 'Selwyn Hospitality Durango, Llc' has 2 paystub(s) ",
+   "income_records[1]: no type extracted; sent as 'other'"
+  ]
+ },
+ "J-PORT-06173": {
+  "assets": [
+   [
+    "savings",
+    "Chase",
+    null,
+    "100.00",
+    null,
+    "declared_only"
+   ],
+   [
+    "savings",
+    "Wells Fargo",
+    null,
+    "100.00",
+    null,
+    "declared_only"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "200.00",
+   "annual_income": "45481.62",
+   "cert_type": "annual",
+   "effective_date": "2026-10-25",
+   "gross_rent": "1707.00",
+   "hh_size": 5,
+   "tenant_rent": "1643.00",
+   "utility_allowance": "64.00"
+  },
+  "codes": {
+   "AR_PREVIOUS_CERT_MISSING": 1,
+   "INCOME_DECLARED_NOT_VERIFIED": 2,
+   "INCOME_VERIFIED_NOT_DECLARED": 1,
+   "MEMBER_SSN_PLACEHOLDER": 4,
+   "NAME_VARIANT": 3,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "child_support",
+    "verified",
+    null,
+    "Oscar Alfredo Rangel Vela"
+   ],
+   [
+    "self_employment",
+    "verified_not_declared",
+    null,
+    ""
+   ],
+   [
+    "wages_and_salaries",
+    "declared_only",
+    null,
+    "Cno Hawaii Awa Rbq"
+   ],
+   [
+    "wages_and_salaries",
+    "declared_only",
+    null,
+    "Guardians Tire"
+   ],
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Tft Design LLC"
+   ]
+  ],
+  "members": [
+   [
+    "Carlos",
+    "Najarro Lemus",
+    "Head of Household"
+   ],
+   [
+    "Luz",
+    "De la Torre Gonzalez",
+    "Adult Co-Tenant"
+   ],
+   [
+    "Diego",
+    "Rangel de la Torre",
+    "Minor Child"
+   ],
+   [
+    "Andrea",
+    "Rangel de la Torre",
+    "Minor Child"
+   ],
+   [
+    "Liam",
+    "Najarro de la Torre",
+    "Minor Child"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 6: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
+   "Tenant Release and Consent Form must be signed by all adult members; a"
+  ],
+  "score": 0.73,
+  "warnings": [
+   "household_members[1].relationship 'Adult Co-Tenant' has no Cartograph "
+  ]
+ },
+ "J-PORT-06184": {
+  "assets": [
+   [
+    "savings",
+    "Chase",
+    null,
+    "100.00",
+    null,
+    "declared_only"
+   ],
+   [
+    "savings",
+    "Wells Fargo",
+    null,
+    "100.00",
+    null,
+    "declared_only"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "200.00",
+   "annual_income": "45481.62",
+   "cert_type": "annual",
+   "effective_date": "2026-10-25",
+   "gross_rent": "1707.00",
+   "hh_size": 5,
+   "tenant_rent": "1643.00",
+   "utility_allowance": "64.00"
+  },
+  "codes": {
+   "AR_PREVIOUS_CERT_MISSING": 1,
+   "INCOME_DECLARED_NOT_VERIFIED": 5,
+   "MEMBER_SSN_PLACEHOLDER": 4,
+   "NAME_VARIANT": 3,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "child_support",
+    "declared_only",
+    null,
+    "Oscar A. Rangel Vela"
+   ],
+   [
+    "child_support",
+    "declared_only",
+    null,
+    "Oscar Alfredo Rangel Vela"
+   ],
+   [
+    "other",
+    "declared_only",
+    null,
+    "Other Income (declared)"
+   ],
+   [
+    "self_employment",
+    "verified",
+    null,
+    "Self-Employment"
+   ],
+   [
+    "self_employment",
+    "verified",
+    null,
+    "Tft Design LLC"
+   ],
+   [
+    "wages_and_salaries",
+    "declared_only",
+    null,
+    "C No Hawaii Awa Bq"
+   ],
+   [
+    "wages_and_salaries",
+    "declared_only",
+    null,
+    "Guardaips Tire"
+   ],
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Tft Design LLC"
+   ]
+  ],
+  "members": [
+   [
+    "Carlos",
+    "Najarro Lemus",
+    "Head of Household"
+   ],
+   [
+    "Luz",
+    "De la Torre Gonzalez",
+    "Adult Co-Tenant"
+   ],
+   [
+    "Diego",
+    "Rangel de la Torre",
+    "Minor Child"
+   ],
+   [
+    "Andrea",
+    "Rangel de la Torre",
+    "Minor Child"
+   ],
+   [
+    "Liam",
+    "Najarro de la Torre",
+    "Minor Child"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 6: 'Income Calculation Worksheet' detected \u2014 excluded from data "
+  ],
+  "score": 0.73,
+  "warnings": [
+   "household_members[1].relationship 'Adult Co-Tenant' has no Cartograph ",
+   "income_records[3]: type 'Other Income' is not in the configured pickli"
+  ]
+ },
+ "J-PORT-06205": {
+  "assets": [
+   [
+    "checking",
+    "",
+    null,
+    "0.94",
+    null,
+    "declared_only"
+   ],
+   [
+    "checking",
+    "Citibank, N.A.",
+    "0.94",
+    "0.00",
+    null,
+    "verified"
+   ],
+   [
+    "checking",
+    "Sound Federal Credit Unio",
+    "11.35",
+    "11.35",
+    null,
+    "verified"
+   ],
+   [
+    "savings",
+    "",
+    null,
+    "0.00",
+    null,
+    "declared_only"
+   ],
+   [
+    "savings",
+    "Sound Federal Credit Unio",
+    "307.09",
+    "307.09",
+    null,
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "320.32",
+   "annual_income": "58971.05",
+   "cert_type": "annual",
+   "effective_date": "2026-03-01",
+   "gross_rent": "1183.00",
+   "hh_size": 2,
+   "tenant_rent": "961.00",
+   "utility_allowance": "222.00"
+  },
+  "codes": {
+   "AR_PREVIOUS_CERT_MISSING": 1,
+   "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
+   "CERT_AMOUNT_UNACCOUNTED": 1,
+   "INCOME_METHODS_DISAGREE": 1,
+   "INCOME_VERIFIED_NOT_DECLARED": 1,
+   "NAME_VARIANT": 2,
+   "PAYSTUB_AMOUNT_SUSPECT": 1,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "self_employment",
+    "verified_not_declared",
+    null,
+    "City of Stamford Police Depart"
+   ],
+   [
+    "social_security",
+    "verified",
+    null,
+    "Social Security Administration"
+   ],
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Abilis"
+   ],
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Beacon Communities Llc/ Southw"
+   ]
+  ],
+  "members": [
+   [
+    "Juanita",
+    "Manning",
+    "Head of Household"
+   ],
+   [
+    "Ashley",
+    "Perry",
+    "Other Adult"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Income source 'City of Stamford Police Department' (Juanita Manning): ",
+   "Pages 11: 'Income Calculation Worksheet' detected \u2014 excluded from data",
+   "Pages 15: 'Income Calculation Worksheet' detected \u2014 excluded from data",
+   "Pages 19: 'Income Calculation Worksheet' detected \u2014 excluded from data",
+   "Pages 3: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
+   "Pages 8-10: 'Income Calculation Worksheet' detected \u2014 excluded from da"
+  ],
+  "score": 0.9,
+  "warnings": []
+ },
+ "J-PORT-06238": {
+  "assets": [
+   [
+    "cash_on_hand",
+    "Green Dot Bank",
+    "0.00",
+    "0.00",
+    null,
+    "verified"
+   ],
+   [
+    "checking",
+    "",
+    null,
+    "2.20",
+    null,
+    "declared_only"
+   ],
+   [
+    "checking",
+    "Cash App",
+    null,
+    null,
+    "2507.85",
+    "verified"
+   ],
+   [
+    "checking",
+    "Chase",
+    null,
+    "64.51",
+    null,
+    "declared_only"
+   ],
+   [
+    "checking",
+    "Chase",
+    "0.14",
+    null,
+    null,
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "66.85",
+   "annual_income": "92828.19",
+   "cert_type": "annual",
+   "effective_date": "2027-01-01",
+   "gross_rent": "1179.00",
+   "hh_size": 2,
+   "tenant_rent": "1179.00",
+   "utility_allowance": "0.00"
+  },
+  "codes": {
+   "TIC_TOTAL_MINOR_DIFF": 1
+  },
+  "income": [
+   [
+    "child_support",
+    "verified",
+    null,
+    "Colorado Division of Child Sup"
+   ],
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Waste Connections US, Inc."
+   ]
+  ],
+  "members": [
+   [
+    "Juan",
+    "Grijalva",
+    "Head of Household"
+   ],
+   [
+    "Christian",
+    "Grijalva",
+    "Minor Child"
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 4-5: 'Tenant Income Certification (TIC) (Previous)' detected \u2014 e"
+  ],
+  "score": 0.83,
+  "warnings": []
+ },
+ "J-TBRE-06337": {
+  "assets": [
+   [
+    "checking",
+    "",
+    null,
+    "0.00",
+    null,
+    "declared_only"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "0.00",
+   "annual_income": "29021.72",
+   "cert_type": "annual",
+   "effective_date": "2026-10-31",
+   "gross_rent": null,
+   "hh_size": 1,
+   "tenant_rent": "975.00",
+   "utility_allowance": "221.00"
+  },
+  "codes": {
+   "AR_PREVIOUS_CERT_MISSING": 1,
+   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "CERT_SUMMARY_INCOME_MISMATCH": 1,
+   "INCOME_MEMBER_NOT_IN_ROSTER": 1,
+   "NAME_VARIANT": 1,
+   "QUESTIONNAIRE_PENSION_UNVERIFIED": 1
+  },
+  "income": [
+   [
+    "pension",
+    "verified",
+    null,
+    "Principal Pension Benefits"
+   ],
+   [
+    "self_employment",
+    "verified",
+    null,
+    "Field Inspector"
+   ],
+   [
+    "self_employment",
+    "verified",
+    null,
+    "Self-Employment"
+   ],
+   [
+    "social_security",
+    "verified",
+    null,
+    "Social Security Administration"
+   ]
+  ],
+  "members": [
+   [
+    "Jackie",
+    "Wilson",
+    "Head of Household"
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 4: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
+   "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data "
+  ],
+  "score": 0.86,
+  "warnings": [
+   "cert_review.grossRent: 1196.00 was not found on the certification page",
+   "income_records[1]: 'Timothy Lee Tinsdale' did not match any household "
+  ]
+ },
+ "J-TBRE-06339": {
+  "assets": [
+   [
+    "checking",
+    "",
+    null,
+    "0.00",
+    null,
+    "declared_only"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "0.00",
+   "annual_income": "37272.30",
+   "cert_type": "annual",
+   "effective_date": "2026-10-02",
+   "gross_rent": null,
+   "hh_size": 1,
+   "tenant_rent": "975.00",
+   "utility_allowance": "221.00"
+  },
+  "codes": {
+   "AR_PREVIOUS_CERT_MISSING": 1,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Williams Maid Service"
+   ]
+  ],
+  "members": [
+   [
+    "Sunder",
+    "Varala",
+    "Head of Household"
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 4: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
+   "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
+   "Self-declared income amounts not extracted from questionnaire/applicat"
+  ],
+  "score": 0.86,
+  "warnings": [
+   "cert_review.grossRent: 1196.00 was not found on the certification page"
+  ]
+ },
+ "J-TBRE-06340": {
+  "assets": [
+   [
+    "checking",
+    "",
+    null,
+    "200.00",
+    null,
+    "declared_only"
+   ],
+   [
+    "savings",
+    "",
+    null,
+    "50.00",
+    null,
+    "declared_only"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "250.00",
+   "annual_income": "25455.38",
+   "cert_type": "annual",
+   "effective_date": "2026-10-01",
+   "gross_rent": "1200.00",
+   "hh_size": 2,
+   "tenant_rent": null,
+   "utility_allowance": "222.00"
+  },
+  "codes": {
+   "AR_PREVIOUS_CERT_MISSING": 1,
+   "CERT_AMOUNT_UNACCOUNTED": 1,
+   "MEMBER_IDENTITY_CONFLICT": 1,
+   "NAME_VARIANT": 1
+  },
+  "income": [
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Stevens Home Health Care"
+   ]
+  ],
+  "members": [
+   [
+    "Aaliyah",
+    "Jones",
+    "Head of Household"
+   ],
+   [
+    "Kaleigh",
+    "Smith",
+    "Minor Child"
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 22: Unrecognized document type \u2014 manual review required",
+   "Pages 4: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
+   "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
+   "Pages 6: Unrecognized document type \u2014 manual review required",
+   "Self-declared income amounts not extracted from questionnaire/applicat"
+  ],
+  "score": 0.88,
+  "warnings": []
+ },
+ "J-TBRE-06341": {
+  "assets": [
+   [
+    "checking",
+    "",
+    null,
+    "0.00",
+    null,
+    "declared_only"
+   ],
+   [
+    "other",
+    "",
+    null,
+    "0.00",
+    null,
+    "declared_only"
+   ],
+   [
+    "other",
+    "",
+    null,
+    "0.00",
+    null,
+    "declared_only"
+   ],
+   [
+    "real_estate",
+    "",
+    null,
+    "0.00",
+    null,
+    "declared_only"
+   ],
+   [
+    "whole_life_insurance",
+    "",
+    null,
+    "0.00",
+    null,
+    "declared_only"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "0.00",
+   "annual_income": "17220.24",
+   "cert_type": "annual",
+   "effective_date": "2026-10-01",
+   "gross_rent": "1200.00",
+   "hh_size": 1,
+   "tenant_rent": "978.00",
+   "utility_allowance": "222.00"
+  },
+  "codes": {
+   "AR_PREVIOUS_CERT_MISSING": 1
+  },
+  "income": [
+   [
+    "other",
+    "verified",
+    null,
+    "Department of Veterans Affairs"
+   ]
+  ],
+  "members": [
+   [
+    "Kobe",
+    "Kuykendall",
+    "Head of Household"
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 4: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
+   "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data "
+  ],
+  "score": 0.88,
+  "warnings": [
+   "asset_records[4]: type 'Investment' is not in the configured picklist;",
+   "income_records[0]: type 'Other Income' is not in the configured pickli"
+  ]
+ },
+ "J-VIV-06412": {
+  "assets": [
+   [
+    "checking",
+    "",
+    null,
+    "2266.00",
+    null,
+    "declared_only"
+   ],
+   [
+    "checking",
+    "Bank of America",
+    "39.48",
+    null,
+    null,
+    "verified"
+   ],
+   [
+    "checking",
+    "Wells Fargo Bank",
+    null,
+    "455.00",
+    "98.65",
+    "verified"
+   ],
+   [
+    "other",
+    "LPL Financial",
+    null,
+    null,
+    null,
+    "verified"
+   ],
+   [
+    "savings",
+    "Wells Fargo Bank",
+    "70.67",
+    "22.00",
+    null,
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "2831.15",
+   "annual_income": null,
+   "cert_type": "annual",
+   "effective_date": "2027-01-01",
+   "gross_rent": null,
+   "hh_size": 2,
+   "tenant_rent": "269.00",
+   "utility_allowance": null
+  },
+  "codes": {
+   "ASSET_SELF_DECLARED_VS_VERIFIED": 2,
+   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "HUD_9887_INCOMPLETE": 1,
+   "INCOME_DECLARED_NOT_VERIFIED": 1,
+   "NAME_VARIANT": 2,
+   "QUESTIONNAIRE_CHILD_SUPPORT_UNVERIFIED": 1,
+   "QUESTIONNAIRE_EMPLOYMENT_UNVERIFIED": 1,
+   "QUESTIONNAIRE_LIFE_INSURANCE_UNVERIFIED": 1,
+   "QUESTIONNAIRE_PENSION_UNVERIFIED": 1,
+   "QUESTIONNAIRE_REAL_ESTATE_UNVERIFIED": 1,
+   "QUESTIONNAIRE_SSA_UNVERIFIED": 1,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "declared_only",
+    null,
+    "SSA"
+   ]
+  ],
+  "members": [
+   [
+    "Juan",
+    "Garcia Ortega",
+    "Head of Household"
+   ],
+   [
+    "Maria",
+    "Garcia",
+    "Other Adult"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "HUD 9887 must be signed by all adult household members; a signature co",
+   "Pages 2: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti",
+   "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data "
+  ],
+  "score": 0.87,
+  "warnings": [
+   "asset_records[0]: balance arrived with no statement or verification of",
+   "asset_records[0]: type 'Investment' is not in the configured picklist;",
+   "cert_review.grossRent: 2119.00 was not found on the certification page",
+   "cert_review.householdIncome: 111983.00 was not found on the certificat",
+   "cert_review.utilityAllowance: 2013.00 was not found on the certificati"
+  ]
+ },
+ "J-VIV-06413": {
+  "assets": [
+   [
+    "checking",
+    "Bank of America - USA",
+    "640.36",
+    "1073.00",
+    "1521.33",
+    "verified"
+   ],
+   [
+    "savings",
+    "Bank of America - USA",
+    "87.58",
+    "152.00",
+    "172.17",
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "727.94",
+   "annual_income": "55689.00",
+   "cert_type": "annual",
+   "effective_date": "2027-01-01",
+   "gross_rent": "2119.00",
+   "hh_size": 4,
+   "tenant_rent": "1250.00",
+   "utility_allowance": "106.00"
+  },
+  "codes": {
+   "ASSET_SELF_DECLARED_VS_VERIFIED": 2,
+   "CERT_AMOUNT_UNACCOUNTED": 3,
+   "CONFIRMATION_WITHOUT_REPORT": 1,
+   "HH_SIZE_MISMATCH": 1,
+   "INCOME_DECLARED_NOT_VERIFIED": 2,
+   "NAME_VARIANT": 2
+  },
+  "income": [
+   [
+    "ssi",
+    "declared_only",
+    null,
+    "Supplemental Security Income ("
+   ],
+   [
+    "ssi",
+    "declared_only",
+    null,
+    "Supplemental Security Income ("
+   ],
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Ralphs Grocery Company"
+   ]
+  ],
+  "members": [
+   [
+    "Neftali",
+    "Arredondo Mora",
+    "Head of Household"
+   ],
+   [
+    "Kendra",
+    "Martinez",
+    "Minor Child"
+   ],
+   [
+    "Keilanie",
+    "Martinez",
+    "Minor Child"
+   ],
+   [
+    "Fernando",
+    "Vildros",
+    "Minor Child"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 4: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti",
+   "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data "
+  ],
+  "score": 0.9,
+  "warnings": []
+ },
+ "J-VIV-06414": {
+  "assets": [
+   [
+    "checking",
+    "Paypal",
+    "172.31",
+    "282.00",
+    null,
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "172.31",
+   "annual_income": "15496.00",
+   "cert_type": "annual",
+   "effective_date": "2026-01-01",
+   "gross_rent": "2042.00",
+   "hh_size": 2,
+   "tenant_rent": null,
+   "utility_allowance": "106.00"
+  },
+  "codes": {
+   "INCOME_DECLARED_NOT_VERIFIED": 1,
+   "QUESTIONNAIRE_CHILD_SUPPORT_UNVERIFIED": 1,
+   "QUESTIONNAIRE_LIFE_INSURANCE_UNVERIFIED": 1,
+   "QUESTIONNAIRE_PENSION_UNVERIFIED": 1,
+   "QUESTIONNAIRE_REAL_ESTATE_UNVERIFIED": 1,
+   "QUESTIONNAIRE_SSA_UNVERIFIED": 1
+  },
+  "income": [
+   [
+    "ssi",
+    "declared_only",
+    null,
+    "Supplemental Security Income ("
+   ]
+  ],
+  "members": [
+   [
+    "Enrique",
+    "Lomeli",
+    "Head of Household"
+   ],
+   [
+    "Eli",
+    "Lomeli",
+    "Minor Child"
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 2-3: 'HUD 50059 (Previous)' detected \u2014 excluded from data extrac",
+   "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data "
+  ],
+  "score": 0.85,
+  "warnings": [
+   "cert_review.tenantRent: 306.00 was not found on the certification page"
+  ]
+ },
+ "J-VIV-06415": {
+  "assets": [
+   [
+    "checking",
+    "Mechanics Bank",
+    "65.54",
+    "241.00",
+    "240.98",
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "65.54",
+   "annual_income": null,
+   "cert_type": "annual",
+   "effective_date": "2027-01-01",
+   "gross_rent": "2119.00",
+   "hh_size": 2,
+   "tenant_rent": "520.00",
+   "utility_allowance": "106.00"
+  },
+  "codes": {
+   "AR_PREVIOUS_CERT_MISSING": 1,
+   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "INCOME_DECLARED_NOT_VERIFIED": 3,
+   "NAME_VARIANT": 1,
+   "QUESTIONNAIRE_CHILD_SUPPORT_UNVERIFIED": 1,
+   "QUESTIONNAIRE_EMPLOYMENT_UNVERIFIED": 1,
+   "QUESTIONNAIRE_LIFE_INSURANCE_UNVERIFIED": 1,
+   "QUESTIONNAIRE_PENSION_UNVERIFIED": 1,
+   "QUESTIONNAIRE_SSA_UNVERIFIED": 1,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "declared_only",
+    null,
+    "Social Security (declared)"
+   ],
+   [
+    "ssi",
+    "declared_only",
+    null,
+    "Supplemental Security Income ("
+   ],
+   [
+    "ssi",
+    "declared_only",
+    null,
+    "Supplemental Security Income ("
+   ]
+  ],
+  "members": [
+   [
+    "Eduardo",
+    "Nava Lucero",
+    "Head of Household"
+   ],
+   [
+    "Jovita",
+    "Nava",
+    "Spouse"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data "
+  ],
+  "score": 0.87,
+  "warnings": [
+   "cert_review.householdIncome: 425126.00 was not found on the certificat"
+  ]
+ },
+ "J-VIV-06416": {
+  "assets": [
+   [
+    "checking",
+    "",
+    null,
+    "1555.00",
+    null,
+    "declared_only"
+   ],
+   [
+    "checking",
+    "Mechanics Bank",
+    "716.87",
+    "987.00",
+    null,
+    "verified"
+   ],
+   [
+    "checking",
+    "Palo Verde Apartments",
+    "336.71",
+    null,
+    null,
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "2608.58",
+   "annual_income": null,
+   "cert_type": "annual",
+   "effective_date": "2027-01-01",
+   "gross_rent": "2572.00",
+   "hh_size": 4,
+   "tenant_rent": "54.00",
+   "utility_allowance": "158.00"
+  },
+  "codes": {
+   "AR_PREVIOUS_CERT_MISSING": 1,
+   "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
+   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "HH_SIZE_MISMATCH": 1,
+   "INCOME_METHODS_DISAGREE": 1,
+   "MEMBER_MERGED": 2,
+   "NAME_VARIANT": 2,
+   "QUESTIONNAIRE_CHILD_SUPPORT_UNVERIFIED": 1,
+   "QUESTIONNAIRE_LIFE_INSURANCE_UNVERIFIED": 1,
+   "QUESTIONNAIRE_PENSION_UNVERIFIED": 1,
+   "QUESTIONNAIRE_REAL_ESTATE_UNVERIFIED": 1,
+   "QUESTIONNAIRE_SSA_UNVERIFIED": 1,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Paloma Air Conditioning Corp."
+   ]
+  ],
+  "members": [
+   [
+    "Beatriz",
+    "Ibarra Alfianza",
+    "Head of Household"
+   ],
+   [
+    "Doug",
+    "Ibarra Alfianza",
+    "Co-Head"
+   ],
+   [
+    "Alma",
+    "Morales",
+    "Other Adult"
+   ],
+   [
+    "Pedro",
+    "Morales",
+    "Other Adult"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Income source 'Paloma Air Conditioning Corp.' (Beatriz Ibarra Alfianza",
+   "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data "
+  ],
+  "score": 0.85,
+  "warnings": [
+   "cert_review.householdIncome: 58494.00 was not found on the certificati"
+  ]
+ },
+ "J-VIV-06417": {
+  "assets": [
+   [
+    "checking",
+    "JPMorgan Chase Bank",
+    "991.35",
+    "1225.00",
+    "1225.00",
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "991.35",
+   "annual_income": null,
+   "cert_type": "annual",
+   "effective_date": "2027-01-01",
+   "gross_rent": "2119.00",
+   "hh_size": 1,
+   "tenant_rent": "260.00",
+   "utility_allowance": "106.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 1,
+   "HH_SIZE_MISMATCH": 1,
+   "HUD_9887_INCOMPLETE": 1,
+   "INCOME_DECLARED_NOT_VERIFIED": 2,
+   "JOINT_ACCOUNT_OWNERSHIP_PCT": 1,
+   "NAME_VARIANT": 1,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "declared_only",
+    null,
+    "Social Security (declared)"
+   ],
+   [
+    "ssi",
+    "declared_only",
+    null,
+    "Supplemental Security Income ("
+   ]
+  ],
+  "members": [
+   [
+    "Maria",
+    "Caldera",
+    "Head of Household"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "HUD 9887 must be signed by all adult household members; a signature co",
+   "Pages 4: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti",
+   "Pages 5-7: 'Income Calculation Worksheet' detected \u2014 excluded from dat"
+  ],
+  "score": 0.85,
+  "warnings": [
+   "cert_review.householdIncome: 115035.00 was not found on the certificat"
+  ]
+ },
+ "J-VIV-06418": {
+  "assets": [
+   [
+    "checking",
+    "",
+    null,
+    "9.00",
+    null,
+    "declared_only"
+   ],
+   [
+    "checking",
+    "Chase",
+    "7.70",
+    null,
+    null,
+    "verified"
+   ],
+   [
+    "checking",
+    "Chase Bank",
+    "52.49",
+    null,
+    "9.00",
+    "verified"
+   ],
+   [
+    "other",
+    "",
+    null,
+    "8.00",
+    null,
+    "declared_only"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "77.19",
+   "annual_income": null,
+   "cert_type": "annual",
+   "effective_date": "2027-01-01",
+   "gross_rent": "2013.00",
+   "hh_size": 2,
+   "tenant_rent": "177.00",
+   "utility_allowance": "106.00"
+  },
+  "codes": {
+   "AR_PREVIOUS_CERT_MISSING": 1,
+   "CERT_AMOUNT_UNACCOUNTED": 3,
+   "CERT_SUMMARY_INCOME_MISMATCH": 1,
+   "HUD_9887_INCOMPLETE": 1,
+   "NAME_VARIANT": 1,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "child_support",
+    "verified",
+    null,
+    "Child Support"
+   ],
+   [
+    "public_assistance",
+    "verified",
+    null,
+    "Public Assistance"
+   ]
+  ],
+  "members": [
+   [
+    "Jennifer",
+    "Luna",
+    "Head of Household"
+   ],
+   [
+    "Olivia",
+    "Valencia",
+    "Minor Child"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir"
+  ],
+  "score": 0.81,
+  "warnings": [
+   "cert_review.householdIncome: 111328.00 was not found on the certificat"
+  ]
+ },
+ "J-VIV-06419": {
+  "assets": [
+   [
+    "checking",
+    "JPMorgan Chase Bank",
+    "933.91",
+    "419.00",
+    "419.00",
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "933.91",
+   "annual_income": null,
+   "cert_type": "annual",
+   "effective_date": "2027-01-01",
+   "gross_rent": "2572.00",
+   "hh_size": 2,
+   "tenant_rent": "170.00",
+   "utility_allowance": "2414.00"
+  },
+  "codes": {
+   "AR_PREVIOUS_CERT_MISSING": 1,
+   "HH_SIZE_MISMATCH": 1,
+   "INCOME_AMOUNT_NOT_IN_SOURCE": 1,
+   "NAME_VARIANT": 2,
+   "QUESTIONNAIRE_CHILD_SUPPORT_UNVERIFIED": 1,
+   "QUESTIONNAIRE_EMPLOYMENT_UNVERIFIED": 1,
+   "QUESTIONNAIRE_PENSION_UNVERIFIED": 1,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "verified",
+    null,
+    "Social Security Administration"
+   ]
+  ],
+  "members": [
+   [
+    "Rene",
+    "Herrera",
+    "Head of Household"
+   ],
+   [
+    "Mary",
+    "Puz",
+    "Spouse"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
+   "Self-declared income amounts not extracted from questionnaire/applicat"
+  ],
+  "score": 0.86,
+  "warnings": [
+   "cert_review.householdIncome: 113500.00 was not found on the certificat"
+  ]
+ },
+ "J-VIV-06420": {
+  "assets": [
+   [
+    "checking",
+    "Altura Credit Union",
+    "1025.13",
+    "247.00",
+    null,
+    "verified"
+   ],
+   [
+    "other",
+    "",
+    null,
+    "81.00",
+    null,
+    "declared_only"
+   ],
+   [
+    "savings",
+    "",
+    null,
+    "60.00",
+    null,
+    "declared_only"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "1166.13",
+   "annual_income": null,
+   "cert_type": "annual",
+   "effective_date": "2027-01-01",
+   "gross_rent": "2572.00",
+   "hh_size": 1,
+   "tenant_rent": "634.00",
+   "utility_allowance": "158.00"
+  },
+  "codes": {
+   "AR_PREVIOUS_CERT_MISSING": 1,
+   "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
+   "CERT_AMOUNT_UNACCOUNTED": 3,
+   "HUD_9887_INCOMPLETE": 1,
+   "NAME_VARIANT": 1,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "child_support",
+    "verified",
+    null,
+    "Child Support"
+   ],
+   [
+    "public_assistance",
+    "verified",
+    null,
+    "Social Security Administration"
+   ],
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Oscar Arias DDS Inc."
+   ]
+  ],
+  "members": [
+   [
+    "Maryle",
+    "Mendoza",
+    "Head of Household"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Income source 'Child Support' (Maryle Mendoza): history-based calculat",
+   "Pages 5-6: 'Income Calculation Worksheet' detected \u2014 excluded from dat",
+   "Student status is null for all household members \u2014 verify against HUD "
+  ],
+  "score": 0.82,
+  "warnings": [
+   "cert_review.householdIncome: 133140.00 was not found on the certificat"
+  ]
+ },
+ "J-VIV-06421": {
+  "assets": [
+   [
+    "checking",
+    "Navy Federal Credit Union",
+    "89.24",
+    "222.00",
+    "221.52",
+    "verified"
+   ],
+   [
+    "savings",
+    "Navy Federal Credit Union",
+    "5.00",
+    "5.00",
+    "5.00",
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "94.24",
+   "annual_income": null,
+   "cert_type": "annual",
+   "effective_date": "2027-01-01",
+   "gross_rent": "2572.00",
+   "hh_size": 1,
+   "tenant_rent": "55.00",
+   "utility_allowance": "158.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 1,
+   "HH_SIZE_MISMATCH": 1,
+   "INCOME_DECLARED_NOT_VERIFIED": 1,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "declared_only",
+    null,
+    "Social Security (declared)"
+   ]
+  ],
+  "members": [
+   [
+    "Maria",
+    "Lara",
+    "Head of Household"
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 4: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti",
+   "Pages 5-6: 'Income Calculation Worksheet' detected \u2014 excluded from dat"
+  ],
+  "score": 0.84,
+  "warnings": [
+   "cert_review.householdIncome: 32359.00 was not found on the certificati"
+  ]
+ },
+ "J-VIV-06422": {
+  "assets": [
+   [
+    "checking",
+    "",
+    null,
+    "4681.00",
+    null,
+    "declared_only"
+   ],
+   [
+    "checking",
+    "Natura Credit Union",
+    "4521.32",
+    null,
+    "4687.29",
+    "verified"
+   ],
+   [
+    "checking",
+    "Palo Verde Apartments",
+    "6103.67",
+    null,
+    null,
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "15305.99",
+   "annual_income": null,
+   "cert_type": "annual",
+   "effective_date": "2027-01-01",
+   "gross_rent": "2119.00",
+   "hh_size": 2,
+   "tenant_rent": "0.00",
+   "utility_allowance": "2013.00"
+  },
+  "codes": {
+   "AR_PREVIOUS_CERT_MISSING": 1,
+   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "INCOME_AMOUNT_NOT_IN_SOURCE": 1,
+   "NAME_VARIANT": 1,
+   "QUESTIONNAIRE_LIFE_INSURANCE_UNVERIFIED": 1,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "pension",
+    "verified",
+    null,
+    "Merrill Lynch As Cus"
+   ],
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Wal-Mart Associates Inc."
+   ]
+  ],
+  "members": [
+   [
+    "Aaron",
+    "Isham",
+    "Head of Household"
+   ],
+   [
+    "Myah",
+    "Isham",
+    "Minor Child"
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 15: Blank verification form detected \u2014 excluded per Section 14 (",
+   "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
+   "Self-declared income amounts not extracted from questionnaire/applicat"
+  ],
+  "score": 0.75,
+  "warnings": [
+   "cert_review.householdIncome: 171750.00 was not found on the certificat"
+  ]
+ },
+ "J-VIV-06423": {
+  "assets": [
+   [
+    "checking",
+    "",
+    null,
+    "441.00",
+    null,
+    "declared_only"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "441.00",
+   "annual_income": null,
+   "cert_type": "annual",
+   "effective_date": "2026-10-01",
+   "gross_rent": "2119.00",
+   "hh_size": 3,
+   "tenant_rent": "390.00",
+   "utility_allowance": "106.00"
+  },
+  "codes": {
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    ""
+   ],
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Vpm Management, Inc."
+   ]
+  ],
+  "members": [
+   [
+    "Monica",
+    "Torres Faurrieta",
+    "Head of Household"
+   ],
+   [
+    "Jahaziel",
+    "Nieto Torres",
+    "Minor Child"
+   ],
+   [
+    "Ximena",
+    "Nieto Torres",
+    "Minor Child"
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Income source 'None' (Monica Torres Faurrieta): voi-based calculation ",
+   "Pages 3-4: 'HUD 50059 (Previous)' detected \u2014 excluded from data extrac",
+   "Student status is null for all household members \u2014 verify against HUD "
+  ],
+  "score": 0.71,
+  "warnings": [
+   "cert_review.householdIncome: 120800.00 was not found on the certificat"
+  ]
+ },
+ "J-VIV-06424": {
+  "assets": [
+   [
+    "checking",
+    "",
+    null,
+    "279.00",
+    null,
+    "declared_only"
+   ],
+   [
+    "checking",
+    "Bank of America",
+    "135.06",
+    null,
+    "274.50",
+    "verified"
+   ],
+   [
+    "whole_life_insurance",
+    "Lincoln Heritage Life Ins",
+    null,
+    "1431.00",
+    null,
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "1845.06",
+   "annual_income": "15156.00",
+   "cert_type": "annual",
+   "effective_date": "2027-01-01",
+   "gross_rent": "2119.00",
+   "hh_size": 2,
+   "tenant_rent": "263.00",
+   "utility_allowance": "2013.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "INCOME_DECLARED_NOT_VERIFIED": 1,
+   "NAME_VARIANT": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "declared_only",
+    null,
+    "SSA"
+   ]
+  ],
+  "members": [
+   [
+    "Graciela",
+    "Gallegos",
+    "Head of Household"
+   ],
+   [
+    "Victor",
+    "Gallegos",
+    "Other Adult"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 4: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti",
+   "Pages 7: 'Income Calculation Worksheet' detected \u2014 excluded from data "
+  ],
+  "score": 0.91,
+  "warnings": [
+   "asset_records[0]: balance arrived with no statement or verification of"
+  ]
+ },
+ "J-VIV-06425": {
+  "assets": [
+   [
+    "checking",
+    "Bank of America",
+    null,
+    "344.00",
+    null,
+    "declared_only"
+   ],
+   [
+    "checking",
+    "Bank of America",
+    "0.00",
+    null,
+    "294.50",
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "344.00",
+   "annual_income": null,
+   "cert_type": "annual",
+   "effective_date": "2027-01-01",
+   "gross_rent": null,
+   "hh_size": 1,
+   "tenant_rent": null,
+   "utility_allowance": "443.00"
+  },
+  "codes": {
+   "AR_PREVIOUS_CERT_MISSING": 1,
+   "ASSET_OVERDRAWN": 1,
+   "CERT_AMOUNT_UNACCOUNTED": 1,
+   "HH_SIZE_MISMATCH": 1,
+   "HUD_9887_INCOMPLETE": 1,
+   "INCOME_DECLARED_NOT_VERIFIED": 1,
+   "NAME_VARIANT": 1,
+   "QUESTIONNAIRE_CHILD_SUPPORT_UNVERIFIED": 1,
+   "QUESTIONNAIRE_EMPLOYMENT_UNVERIFIED": 1,
+   "QUESTIONNAIRE_LIFE_INSURANCE_UNVERIFIED": 1,
+   "QUESTIONNAIRE_PENSION_UNVERIFIED": 1,
+   "QUESTIONNAIRE_REAL_ESTATE_UNVERIFIED": 1,
+   "QUESTIONNAIRE_SSA_UNVERIFIED": 1,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "declared_only",
+    null,
+    "Social Security (declared)"
+   ]
+  ],
+  "members": [
+   [
+    "Gustavo",
+    "Arellano-Gonzalez",
+    "Head of Household"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir"
+  ],
+  "score": 0.81,
+  "warnings": [
+   "asset_records[0].voa: balance -4.42 is negative (overdrawn); sent as 0",
+   "asset_records[0]: balance -4.42 is negative (overdrawn); sent as 0.00,",
+   "cert_review.grossRent: 2013.00 was not found on the certification page",
+   "cert_review.householdIncome: 117616.00 was not found on the certificat",
+   "cert_review.tenantRent: 343.00 was not found on the certification page"
+  ]
+ },
+ "J-VIV-06426": {
+  "assets": [
+   [
+    "checking",
+    "",
+    null,
+    "462.00",
+    null,
+    "declared_only"
+   ],
+   [
+    "checking",
+    "Wells Fargo Bank, N.A.",
+    "320.83",
+    null,
+    "461.52",
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "782.83",
+   "annual_income": "14927.00",
+   "cert_type": "annual",
+   "effective_date": "2027-01-01",
+   "gross_rent": "2119.00",
+   "hh_size": 1,
+   "tenant_rent": "2.00",
+   "utility_allowance": "106.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 1,
+   "INCOME_DECLARED_NOT_VERIFIED": 1,
+   "INCOME_SECOND_DECLARATION": 1,
+   "QUESTIONNAIRE_SSA_UNVERIFIED": 1,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "declared_only",
+    null,
+    "Social Security (declared)"
+   ]
+  ],
+  "members": [
+   [
+    "Concepcion",
+    "Guerra",
+    "Head of Household"
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 4: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti",
+   "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data "
+  ],
+  "score": 0.88,
+  "warnings": []
+ },
+ "J-VIV-06427": {
+  "assets": [
+   [
+    "checking",
+    "Bank of America",
+    "0.00",
+    "397.00",
+    null,
+    "verified"
+   ],
+   [
+    "checking",
+    "Bank of America",
+    "1224.98",
+    "734.00",
+    "1979.50",
+    "verified"
+   ],
+   [
+    "savings",
+    "Bank of America",
+    "3000.00",
+    "2000.00",
+    "3000.00",
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "4224.98",
+   "annual_income": null,
+   "cert_type": "annual",
+   "effective_date": "2027-01-01",
+   "gross_rent": "2572.00",
+   "hh_size": 3,
+   "tenant_rent": "2110.00",
+   "utility_allowance": "158.00"
+  },
+  "codes": {
+   "AR_PREVIOUS_CERT_MISSING": 1,
+   "ASSET_SELF_DECLARED_VS_VERIFIED": 3,
+   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "HH_SIZE_MISMATCH": 1,
+   "INCOME_DECLARED_NOT_VERIFIED": 1,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "wages_and_salaries",
+    "declared_only",
+    null,
+    "Non-Federal Wage (declared)"
+   ]
+  ],
+  "members": [
+   [
+    "Yolanda",
+    "Bribiesca",
+    "Head of Household"
+   ],
+   [
+    "Jasmine",
+    "Bribiesca",
+    "Other Adult"
+   ],
+   [
+    "Sofia",
+    "Bribiesca-Soto",
+    "Minor Child"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 14-15: Unrecognized document type \u2014 manual review required"
+  ],
+  "score": 0.85,
+  "warnings": [
+   "cert_review.householdIncome: 119141.00 was not found on the certificat"
+  ]
+ },
+ "J-VIV-06437": {
+  "assets": [
+   [
+    "checking",
+    "Bank of America - USA",
+    "89.37",
+    "2738.00",
+    "2737.67",
+    "verified"
+   ],
+   [
+    "retirement",
+    "Ascensus - Vip Urgent Car",
+    "1197.66",
+    null,
+    null,
+    "verified"
+   ],
+   [
+    "savings",
+    "Bank of America - USA",
+    null,
+    null,
+    null,
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "1287.03",
+   "annual_income": "21252.00",
+   "cert_type": "annual",
+   "effective_date": "2027-01-01",
+   "gross_rent": "2572.00",
+   "hh_size": 3,
+   "tenant_rent": "349.00",
+   "utility_allowance": "158.00"
+  },
+  "codes": {
+   "CERT_SUMMARY_INCOME_MISMATCH": 1,
+   "INCOME_METHODS_DISAGREE": 1,
+   "NAME_VARIANT": 1
+  },
+  "income": [
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Desert VIP Urgent Care Young E"
+   ]
+  ],
+  "members": [
+   [
+    "Bianca",
+    "Avila",
+    "Head of Household"
+   ],
+   [
+    "Jesus",
+    "Rodriguez Avila",
+    "Minor Child"
+   ],
+   [
+    "Angelo",
+    "Rodriguez Avila",
+    "Minor Child"
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 3: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti",
+   "Pages 4: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
+   "Self-declared income amounts not extracted from questionnaire/applicat"
+  ],
+  "score": 0.86,
+  "warnings": []
+ },
+ "J-VIV-06637": {
+  "assets": [
+   [
+    "checking",
+    "Bank of America - USA",
+    "89.37",
+    "2738.00",
+    "2737.67",
+    "verified"
+   ],
+   [
+    "retirement",
+    "Vip Urgent Care 401(K) & ",
+    "1197.66",
+    null,
+    null,
+    "verified"
+   ],
+   [
+    "savings",
+    "Bank of America - USA",
+    null,
+    null,
+    null,
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "1287.03",
+   "annual_income": "21252.00",
+   "cert_type": "annual",
+   "effective_date": "2027-01-01",
+   "gross_rent": "2572.00",
+   "hh_size": 3,
+   "tenant_rent": "349.00",
+   "utility_allowance": "158.00"
+  },
+  "codes": {
+   "CERT_SUMMARY_INCOME_MISMATCH": 1,
+   "INCOME_METHODS_DISAGREE": 1,
+   "NAME_VARIANT": 1,
+   "RENT_IDENTITY_MISMATCH": 1,
+   "SIGNATURE_VERDICT_CONFLICTS_WITH_DATE": 1
+  },
+  "income": [
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Desert VIP Urgent Care Young E"
+   ]
+  ],
+  "members": [
+   [
+    "Bianca",
+    "Avila",
+    "Head of Household"
+   ],
+   [
+    "Jesus",
+    "Rodriguez Avila",
+    "Minor Child"
+   ],
+   [
+    "Angelo",
+    "Rodriguez Avila",
+    "Minor Child"
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 3: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti",
+   "Pages 4: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
+   "Self-declared income amounts not extracted from questionnaire/applicat"
+  ],
+  "score": 0.85,
+  "warnings": []
+ },
+ "J-VIV-06638": {
+  "assets": [
+   [
+    "checking",
+    "Schoolsfirst Federal Cred",
+    "610.87",
+    "60.00",
+    "80.91",
+    "verified"
+   ],
+   [
+    "other",
+    "",
+    null,
+    "2.00",
+    null,
+    "declared_only"
+   ],
+   [
+    "savings",
+    "",
+    null,
+    "5.00",
+    null,
+    "declared_only"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "617.87",
+   "annual_income": "13608.00",
+   "cert_type": "annual",
+   "effective_date": "2027-01-01",
+   "gross_rent": "2119.00",
+   "hh_size": 2,
+   "tenant_rent": "222.00",
+   "utility_allowance": "106.00"
+  },
+  "codes": {
+   "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
+   "CERT_AMOUNT_UNACCOUNTED": 1,
+   "CONFIRMATION_WITHOUT_REPORT": 1,
+   "HH_SIZE_MISMATCH": 1,
+   "MEMBER_IDENTITY_CONFLICT": 1,
+   "SSA_POSSIBLE_OVERPAYMENT": 2
+  },
+  "income": [
+   [
+    "child_support",
+    "verified",
+    null,
+    "Luis A Torres"
+   ],
+   [
+    "public_assistance",
+    "verified",
+    null,
+    "Social Services Department"
+   ]
+  ],
+  "members": [
+   [
+    "Jamie",
+    "Alarcon",
+    "Head of Household"
+   ],
+   [
+    "Natalia",
+    "Torres-Alarcon",
+    "Minor Child"
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 10: 'Income Calculation Worksheet' detected \u2014 excluded from data",
+   "Pages 4: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
+   "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
+   "Pages 9: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti",
+   "Self-declared income amounts not extracted from questionnaire/applicat"
+  ],
+  "score": 0.88,
+  "warnings": []
+ },
+ "J-VIV-06640": {
+  "assets": [
+   [
+    "checking",
+    "Pay Pal",
+    null,
+    null,
+    null,
+    "declared_only"
+   ],
+   [
+    "checking",
+    "Paypal",
+    "1.11",
+    "73.00",
+    null,
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "1.11",
+   "annual_income": "15816.00",
+   "cert_type": "annual",
+   "effective_date": "2027-01-01",
+   "gross_rent": "2119.00",
+   "hh_size": 2,
+   "tenant_rent": "277.00",
+   "utility_allowance": "106.00"
+  },
+  "codes": {
+   "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
+   "CONFIRMATION_WITHOUT_REPORT": 1,
+   "HH_SIZE_MISMATCH": 1,
+   "INCOME_DECLARED_NOT_VERIFIED": 1
+  },
+  "income": [
+   [
+    "ssi",
+    "declared_only",
+    null,
+    "SSI"
+   ]
+  ],
+  "members": [
+   [
+    "Enrique",
+    "Lomeli",
+    "Head of Household"
+   ],
+   [
+    "Eli",
+    "Lomeli",
+    "Minor Child"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 4: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti",
+   "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data "
+  ],
+  "score": 0.82,
+  "warnings": []
+ },
+ "J-VIV-06641": {
+  "assets": [
+   [
+    "checking",
+    "Chase Bank",
+    null,
+    null,
+    null,
+    "declared_only"
+   ],
+   [
+    "checking",
+    "Jpmorgan Chase Bank",
+    "991.35",
+    "1225.00",
+    "1225.00",
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "991.35",
+   "annual_income": "15036.00",
+   "cert_type": "annual",
+   "effective_date": "2027-01-01",
+   "gross_rent": "2119.00",
+   "hh_size": 1,
+   "tenant_rent": "260.00",
+   "utility_allowance": "106.00"
+  },
+  "codes": {
+   "AR_PREVIOUS_CERT_MISSING": 1,
+   "CERT_AMOUNT_UNACCOUNTED": 3,
+   "CONFIRMATION_WITHOUT_REPORT": 1,
+   "INCOME_DECLARED_NOT_VERIFIED": 1,
+   "INCOME_SECOND_DECLARATION": 1,
+   "JOINT_ACCOUNT_OWNERSHIP_PCT": 1,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "declared_only",
+    null,
+    "Social Security (declared)"
+   ]
+  ],
+  "members": [
+   [
+    "Maria",
+    "Caldera",
+    "Head of Household"
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data "
+  ],
+  "score": 0.81,
+  "warnings": []
+ },
+ "J-VIV-06642": {
+  "assets": [
+   [
+    "checking",
+    "Altura Credit Union",
+    "0.00",
+    "331.00",
+    "330.83",
+    "verified"
+   ],
+   [
+    "savings",
+    "Altura Credit Union",
+    "0.01",
+    null,
+    "1025.13",
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "0.01",
+   "annual_income": "33118.00",
+   "cert_type": "annual",
+   "effective_date": "2027-01-01",
+   "gross_rent": "2572.00",
+   "hh_size": 4,
+   "tenant_rent": "634.00",
+   "utility_allowance": "158.00"
+  },
+  "codes": {
+   "ASSET_OVERDRAWN": 1,
+   "CERT_AMOUNT_UNACCOUNTED": 1,
+   "CONFIRMATION_WITHOUT_REPORT": 1,
+   "INCOME_SECOND_DECLARATION": 1,
+   "NAME_VARIANT": 1,
+   "QUESTIONNAIRE_CHILD_SUPPORT_UNVERIFIED": 1,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "other",
+    "verified",
+    null,
+    "Oscar Arias DDS Inc."
+   ],
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Osmar Arias 95"
+   ]
+  ],
+  "members": [
+   [
+    "Maryle",
+    "Mendoza",
+    "Head of Household"
+   ],
+   [
+    "Aleah",
+    "Diaz",
+    "Minor Child"
+   ],
+   [
+    "Jaylah",
+    "Diaz",
+    "Minor Child"
+   ],
+   [
+    "Julian",
+    "Diaz Jr.",
+    "Minor Child"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 4: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti",
+   "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data "
+  ],
+  "score": 0.84,
+  "warnings": [
+   "asset_records[0].voa: balance -93.30 is negative (overdrawn); sent as ",
+   "asset_records[0]: balance -93.30 is negative (overdrawn); sent as 0.00",
+   "income_records[1]: 'Oscar Arias DDS Inc.' has 4 paystub(s) but no veri",
+   "income_records[1]: no type extracted; sent as 'other'"
+  ]
+ },
+ "J-VIV-06674": {
+  "assets": [
+   [
+    "checking",
+    "",
+    null,
+    "1919.00",
+    null,
+    "declared_only"
+   ],
+   [
+    "checking",
+    "Bank of America",
+    "0.00",
+    null,
+    null,
+    "verified"
+   ],
+   [
+    "checking",
+    "Bank of America",
+    "1224.98",
+    null,
+    "1919.50",
+    "verified"
+   ],
+   [
+    "savings",
+    "Bank of America",
+    "3000.00",
+    "3000.00",
+    "3000.00",
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "6143.98",
+   "annual_income": "19441.00",
+   "cert_type": "annual",
+   "effective_date": "2027-01-01",
+   "gross_rent": "2572.00",
+   "hh_size": 3,
+   "tenant_rent": "304.00",
+   "utility_allowance": "158.00"
+  },
+  "codes": {
+   "CERT_SUMMARY_INCOME_MISMATCH": 1,
+   "CONFIRMATION_WITHOUT_REPORT": 1,
+   "MEMBER_IDENTITY_CONFLICT": 1
+  },
+  "income": [
+   [
+    "self_employment",
+    "verified",
+    null,
+    "Riverside County Office of Edu"
+   ]
+  ],
+  "members": [
+   [
+    "Yolanda",
+    "Bribiesca",
+    "Head of Household"
+   ],
+   [
+    "Jasmine",
+    "Bribiesca",
+    "Other Adult"
+   ],
+   [
+    "Sofia",
+    "Bribiesca-Soto",
+    "Minor Child"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 14: Unrecognized document type \u2014 manual review required",
+   "Pages 15: 'Income Calculation Worksheet' detected \u2014 excluded from data",
+   "Pages 4: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti",
+   "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
+   "Self-declared income amounts not extracted from questionnaire/applicat",
+   "Student Status Certification must be signed and dated; a signature cou"
+  ],
+  "score": 0.9,
+  "warnings": []
+ },
+ "J-VIV-06676": {
+  "assets": [
+   [
+    "checking",
+    "Wells Fargo Bank, N.A.",
+    "320.83",
+    "462.00",
+    "461.52",
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "320.83",
+   "annual_income": "14927.00",
+   "cert_type": "annual",
+   "effective_date": "2027-01-01",
+   "gross_rent": "2119.00",
+   "hh_size": 1,
+   "tenant_rent": "257.00",
+   "utility_allowance": "106.00"
+  },
+  "codes": {
+   "CERT_SUMMARY_INCOME_MISMATCH": 1,
+   "CONFIRMATION_WITHOUT_REPORT": 1,
+   "HUD_9887A_INCOMPLETE": 1,
+   "INCOME_DECLARED_NOT_VERIFIED": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "verified",
+    null,
+    "Social Security Administration"
+   ],
+   [
+    "ssi",
+    "declared_only",
+    null,
+    "Supplemental Security Income ("
+   ]
+  ],
+  "members": [
+   [
+    "Concepcion",
+    "Guerra",
+    "Head of Household"
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 4: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti",
+   "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
+   "Student status is null for all household members \u2014 verify against HUD "
+  ],
+  "score": 0.81,
+  "warnings": []
+ },
+ "J-VIV-06677": {
+  "assets": [
+   [
+    "checking",
+    "Mechanics Bank",
+    "65.54",
+    null,
+    "240.98",
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "65.54",
+   "annual_income": "25426.00",
+   "cert_type": "annual",
+   "effective_date": "2027-01-01",
+   "gross_rent": "2119.00",
+   "hh_size": 2,
+   "tenant_rent": "520.00",
+   "utility_allowance": "106.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "CONFIRMATION_WITHOUT_REPORT": 1,
+   "HH_SIZE_MISMATCH": 1,
+   "HUD_9887A_INCOMPLETE": 1,
+   "INCOME_DECLARED_NOT_VERIFIED": 2,
+   "MEMBER_IDENTITY_CONFLICT": 1,
+   "NAME_VARIANT": 2,
+   "TIC_TOTAL_MINOR_DIFF": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "declared_only",
+    null,
+    "Social Security (declared)"
+   ],
+   [
+    "social_security",
+    "declared_only",
+    null,
+    "Social Security (declared)"
+   ]
+  ],
+  "members": [
+   [
+    "Eduardo",
+    "Nava Lucero",
+    "Head of Household"
+   ],
+   [
+    "Jovita",
+    "Garcia de Nava",
+    "Spouse"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 4: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti",
+   "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data "
+  ],
+  "score": 0.88,
+  "warnings": []
+ },
+ "J-VIV-06678": {
+  "assets": [
+   [
+    "checking",
+    "Mechanics Bank",
+    "65.54",
+    "241.00",
+    "240.98",
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "65.54",
+   "annual_income": "25426.00",
+   "cert_type": "annual",
+   "effective_date": "2027-01-01",
+   "gross_rent": "2119.00",
+   "hh_size": 2,
+   "tenant_rent": "520.00",
+   "utility_allowance": "106.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 1,
+   "CONFIRMATION_WITHOUT_REPORT": 1,
+   "HH_SIZE_MISMATCH": 1,
+   "HUD_9887A_INCOMPLETE": 1,
+   "INCOME_DECLARED_NOT_VERIFIED": 3,
+   "INCOME_SECOND_DECLARATION": 1,
+   "MEMBER_IDENTITY_CONFLICT": 2,
+   "NAME_VARIANT": 2,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "declared_only",
+    null,
+    "Social Security (declared)"
+   ],
+   [
+    "ssi",
+    "declared_only",
+    null,
+    "Supplemental Security Income ("
+   ],
+   [
+    "ssi",
+    "declared_only",
+    null,
+    "Supplemental Security Income ("
+   ]
+  ],
+  "members": [
+   [
+    "Eduardo",
+    "Nava Lucero",
+    "Head of Household"
+   ],
+   [
+    "Jovita",
+    "Garcia de Nava",
+    "Spouse"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 4: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti",
+   "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data "
+  ],
+  "score": 0.87,
+  "warnings": []
+ },
+ "J-VRC-06406": {
+  "assets": [
+   [
+    "checking",
+    "",
+    null,
+    "25.00",
+    null,
+    "declared_only"
+   ],
+   [
+    "other",
+    "",
+    null,
+    "25.00",
+    null,
+    "declared_only"
+   ],
+   [
+    "prepaid_debit_card",
+    "",
+    null,
+    "14400.00",
+    null,
+    "declared_only"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "14450.00",
+   "annual_income": "183.09",
+   "cert_type": "annual",
+   "effective_date": "2026-05-29",
+   "gross_rent": "154.00",
+   "hh_size": 1,
+   "tenant_rent": "0.00",
+   "utility_allowance": "154.00"
+  },
+  "codes": {
+   "AR_PREVIOUS_CERT_MISSING": 1,
+   "CERT_SIGNED_AFTER_EFFECTIVE_DATE": 1,
+   "CERT_SUMMARY_INCOME_MISMATCH": 1,
+   "NAME_VARIANT": 1
+  },
+  "income": [
+   [
+    "child_support",
+    "verified",
+    null,
+    "Keith A. Amos"
+   ]
+  ],
+  "members": [
+   [
+    "Tionna",
+    "Simmons",
+    "Head of Household"
+   ]
+  ],
+  "notes": [],
+  "score": 0.86,
+  "warnings": []
+ },
+ "J-VRC-06407": {
+  "assets": [
+   [
+    "prepaid_debit_card",
+    "Direct Express",
+    null,
+    "0.00",
+    null,
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "0.00",
+   "annual_income": "11928.00",
+   "cert_type": "annual",
+   "effective_date": null,
+   "gross_rent": null,
+   "hh_size": 3,
+   "tenant_rent": "135.00",
+   "utility_allowance": "100.00"
+  },
+  "codes": {
+   "AR_PREVIOUS_CERT_MISSING": 1,
+   "INCOME_DECLARED_NOT_VERIFIED": 1,
+   "MEMBER_IDENTITY_CONFLICT": 2,
+   "NAME_VARIANT": 2,
+   "SIGNATURE_DATE_MISSING": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "declared_only",
+    null,
+    "Benefit letter"
+   ]
+  ],
+  "members": [
+   [
+    "Rebecca",
+    "Knott",
+    "Head of Household"
+   ],
+   [
+    "Kyzer",
+    "Sammons",
+    "Minor Child"
+   ],
+   [
+    "Colton",
+    "Knott",
+    "Minor Child"
+   ]
+  ],
+  "notes": [
+   "Pages 26: 'Income Calculation Worksheet' detected \u2014 excluded from data"
+  ],
+  "score": 0.86,
+  "warnings": [
+   "asset_records[0]: balance arrived with no statement or verification of",
+   "cert_review.effectiveDate: 2026-05-29 was not found on the certificati",
+   "cert_review.grossRent: 235.0 was not found on the certification pages "
+  ]
+ },
+ "J-VRC-06408": {
+  "assets": [
+   [
+    "checking",
+    "",
+    null,
+    "0.43",
+    null,
+    "declared_only"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "0.43",
+   "annual_income": "46700.10",
+   "cert_type": "annual",
+   "effective_date": "2026-05-29",
+   "gross_rent": "297.00",
+   "hh_size": 5,
+   "tenant_rent": "104.00",
+   "utility_allowance": "193.00"
+  },
+  "codes": {
+   "AR_PREVIOUS_CERT_MISSING": 1,
+   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "CERT_SIGNED_AFTER_EFFECTIVE_DATE": 1,
+   "CERT_SUMMARY_INCOME_MISMATCH": 2,
+   "INCOME_AMOUNT_NOT_IN_SOURCE": 1,
+   "NAME_VARIANT": 2
+  },
+  "income": [
+   [
+    "child_support",
+    "verified",
+    null,
+    "Butler County Child Support En"
+   ],
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Greg Martin Excavating Inc."
+   ]
+  ],
+  "members": [
+   [
+    "Samantha",
+    "Turner",
+    "Head of Household"
+   ],
+   [
+    "Devonte",
+    "Cornielies",
+    "Co-Head"
+   ],
+   [
+    "Tyler",
+    "Brewer",
+    "Minor Child"
+   ],
+   [
+    "Robert",
+    "Turner",
+    "Minor Child"
+   ],
+   [
+    "Ezra",
+    "Cornielies",
+    "Minor Child"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me"
+  ],
+  "score": 0.89,
+  "warnings": []
+ },
+ "J-VRC-06409": {
+  "assets": [
+   [
+    "checking",
+    "",
+    null,
+    "223.00",
+    null,
+    "declared_only"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "223.00",
+   "annual_income": "29133.00",
+   "cert_type": "annual",
+   "effective_date": "2026-05-29",
+   "gross_rent": "746.00",
+   "hh_size": 3,
+   "tenant_rent": "580.00",
+   "utility_allowance": "1106.00"
+  },
+  "codes": {
+   "AR_PREVIOUS_CERT_MISSING": 1,
+   "CERT_SIGNED_AFTER_EFFECTIVE_DATE": 1,
+   "INCOME_METHODS_DISAGREE": 1,
+   "NAME_VARIANT": 1,
+   "PAYSTUB_COUNT_BELOW_GUIDANCE": 1,
+   "RENT_IDENTITY_MISMATCH": 1
+  },
+  "income": [
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Staffink Investment LLC"
+   ]
+  ],
+  "members": [
+   [
+    "Aridia",
+    "Perez Trinidad",
+    "Head of Household"
+   ],
+   [
+    "Mattwes",
+    "Diaz",
+    "Minor Child"
+   ],
+   [
+    "Unborn",
+    "Child",
+    "Unborn"
+   ]
+  ],
+  "notes": [
+   "Pages 29: 'Income Calculation Worksheet' detected \u2014 excluded from data",
+   "Pages 3-4: 'Income Calculation Worksheet' detected \u2014 excluded from dat"
+  ],
+  "score": 0.91,
+  "warnings": []
+ },
+ "J-VRC-06410": {
+  "assets": [],
+  "cert_review": {
+   "annual_assets": null,
+   "annual_income": "24758.76",
+   "cert_type": "annual",
+   "effective_date": "2026-05-29",
+   "gross_rent": "193.00",
+   "hh_size": 4,
+   "tenant_rent": "0.00",
+   "utility_allowance": "193.00"
+  },
+  "codes": {
+   "AR_PREVIOUS_CERT_MISSING": 1,
+   "CERT_SIGNATURE_DATE_IMPLAUSIBLE": 1,
+   "CERT_SUMMARY_INCOME_MISMATCH": 1,
+   "INCOME_METHODS_DISAGREE": 1,
+   "NAME_VARIANT": 1,
+   "PAYSTUB_COUNT_BELOW_GUIDANCE": 1,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Bickford Senior Living, L.L.C."
+   ]
+  ],
+  "members": [
+   [
+    "Jessica",
+    "Stamey",
+    "Head of Household"
+   ],
+   [
+    "Alicea",
+    "Stamey",
+    "Minor Child"
+   ],
+   [
+    "Aydin",
+    "Stamey",
+    "Minor Child"
+   ],
+   [
+    "Raymond",
+    "Anderson Jr.",
+    "Minor Child"
+   ]
+  ],
+  "notes": [
+   "Income source 'Bickford Senior Living, L.L.C.' (Jessica Stamey): proje",
+   "Pages 24: 'Income Calculation Worksheet' detected \u2014 excluded from data"
+  ],
+  "score": 0.91,
+  "warnings": []
+ }
+}
