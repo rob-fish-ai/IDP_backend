@@ -193,6 +193,12 @@ stay untouched.
 ```
 
 `found: false` means the engine looked and the form is not in the packet.
+A row about a property of a form ("HUD 50059 Includes the Correct Income
+Limits") is not answered by the form being present; such rows are left out
+and the engine's findings cover them. A row asking for the previous form
+("Previous HUD 50059") matches the previous certification the packet
+carries, which the audit otherwise sets aside. A form the engine knows to
+be incomplete says so in its note.
 `confidence` is how sure the engine is of the match and the note together:
 0.9 when the row and the document share a form number, 0.8 when the
 document's title is printed in the row's label, 0.6 when only words match;
