@@ -2523,6 +2523,68 @@ def _repair_declared_magnitudes(declared: list[dict], reference_total, corrobora
             d["matched"] = True
 
 
+def _repair_verified_magnitudes(vi_entries: list[dict], declared: list[dict], reference_total) -> None:
+    """No verified income of a household exceeds the household's certified
+    total by a leading digit.
+
+    The same scan error `_repair_declared_magnitudes` handles on the
+    certification's own lines happens on a verification: "$6,191.28" on an
+    EIV coversheet read as "16191.28", annualised past the whole household's
+    income. When dropping the leading digit brings the figure within 2% of a
+    line the certification declares for that member, the figure is that
+    line's, and the record takes the line's income type when no verified
+    record carries it — the household's own label for the program is more
+    reliable than a type guessed beside a misread number.
+    """
+    try:
+        total = float(str(reference_total).replace(",", "")) if reference_total not in (None, "", "null") else None
+    except ValueError:
+        total = None
+    if not total or total <= 0:
+        return
+    for vi in vi_entries:
+        if vi.get("verificationStatus") in ("declared_only", "self_certified"):
+            continue
+        annual = _record_annual(vi)
+        raw = str(vi.get("rateOfPay") or "").replace(",", "")
+        if annual is None or annual <= total * 1.02 or len(raw) < 2 or not raw[0].isdigit():
+            continue
+        try:
+            fixed = float(raw[1:])
+        except ValueError:
+            continue
+        fixed_annual = round(annual * fixed / float(raw), 2) if float(raw) else None
+        if fixed_annual is None or fixed_annual > total * 1.02:
+            continue
+        lines = [
+            d for d in declared
+            if d.get("kind") not in ("no_assets", "disposal")
+            and _same_member(vi.get("memberName"), d.get("memberName"))
+            and _close(_annual_of(d.get("amount"), d.get("amountPeriod")), fixed_annual)
+        ]
+        if not lines:
+            continue
+        line = lines[0]
+        logger.info("Income: %s's verified %s of %s exceeds the certification total %.2f — a leading digit is the "
+                    "dollar sign; read as %.2f (the certification declares %s %s)",
+                    vi.get("memberName"), vi.get("incomeType"), vi.get("rateOfPay"), total, fixed,
+                    line.get("incomeType"), line.get("amount"))
+        evidence = vi.get("evidence") if isinstance(vi.get("evidence"), dict) else {}
+        evidence["rateOfPay"] = f"printed {vi.get('rateOfPay')}; read as {fixed:.2f} (leading digit is the dollar sign)"
+        vi["evidence"] = evidence
+        vi["rateOfPay"] = f"{fixed:.2f}"
+        declared_type = line.get("incomeType")
+        if declared_type and not _same_income_type(vi.get("incomeType"), declared_type) and not any(
+            o is not vi and o.get("verificationStatus") not in ("declared_only", "self_certified")
+            and _same_member(o.get("memberName"), vi.get("memberName"))
+            and _same_income_type(o.get("incomeType"), declared_type)
+            for o in vi_entries
+        ):
+            logger.info("Income: the repaired figure is the certification's %s line — record retyped from %s",
+                        declared_type, vi.get("incomeType"))
+            vi["incomeType"] = declared_type
+
+
 def _reconcile_income(vi_entries: list[dict], declared: list[dict], certification_type: str | None,
                       ps_entries: list[dict] | None = None, declared_total=None) -> None:
     """Annotate verified records with what the household declared for them;
@@ -2542,6 +2604,7 @@ def _reconcile_income(vi_entries: list[dict], declared: list[dict], certificatio
 
     stub_sources = _paystub_sources(ps_entries or [])
     _repair_declared_magnitudes(declared, declared_total, _independent_annuals(vi_entries, ps_entries or []))
+    _repair_verified_magnitudes(vi_entries, declared, declared_total)
 
     for d in _drop_total_rows(declared, "Declared income", declared_total):
         if d.get("incomeType") == "Zero Income" and (d.get("amount") in (None, "0.00")):

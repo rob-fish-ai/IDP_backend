@@ -881,3 +881,40 @@ def test_a_program_reference_is_not_a_broken_number():
     from app.services.pdf_service import _broken_number_tokens
     assert _broken_number_tokens("Section 202; Sections 202 and 811 PRAC; Section 202/162 PAC. Assistance Payments amount $0") == []
     assert _broken_number_tokens("Income Reported: 12/708 3,359.04") == ["12/708"]
+
+
+def test_a_verified_figure_the_dollar_sign_inflated_is_read_as_the_certifications_line():
+    """J-VIV-06676 re-run: an EIV coversheet's "$6,191.28" came through as
+    16191.28 annually, past the household's whole certified income, typed
+    Social Security. Dropping the leading digit matches the certification's
+    SSI line, so the record is that line: repaired and retyped."""
+    from app.services.extractor import _reconcile_income
+    vis = [{"memberName": "Concepcion Guerra", "sourceName": "Social Security Administration", "incomeType": "Social Security",
+            "type_of_VOI": "EIV Confirmation", "rateOfPay": "16191.28", "rateUnit": "annually", "frequencyOfPay": "annually",
+            "verificationStatus": "verified", "sourcePages": [8]}]
+    declared = [
+        {"memberName": "Concepcion Guerra", "incomeType": "Social Security", "amount": "8736.00", "amountPeriod": "annual", "documentType": "HUD 50059", "page": 2},
+        {"memberName": "Concepcion Guerra", "incomeType": "Supplemental Security Income", "amount": "6191.00", "amountPeriod": "annual", "documentType": "HUD 50059", "page": 2},
+    ]
+    _reconcile_income(vis, declared, "AR", [], declared_total="14927.00")
+    ssi = [v for v in vis if v["incomeType"] == "Supplemental Security Income"]
+    assert ssi and ssi[0]["rateOfPay"] == "6191.28" and "dollar sign" in ssi[0]["evidence"]["rateOfPay"]
+    assert ssi[0]["verificationStatus"] == "verified"
+    # A figure below the total is left alone even when a digit drop would also match something.
+    vis = [{"memberName": "A B", "sourceName": "SSA", "incomeType": "Social Security", "rateOfPay": "1200.00",
+            "rateUnit": "monthly", "frequencyOfPay": "monthly", "verificationStatus": "verified"}]
+    _reconcile_income(vis, [{"memberName": "A B", "incomeType": "Social Security", "amount": "200.00", "amountPeriod": "monthly", "page": 2}], "AR", [], declared_total="20000.00")
+    assert vis[0]["rateOfPay"] == "1200.00"
+
+
+def test_a_voa_that_numbers_its_months_is_accepted_and_the_package_cover_keeps_its_label():
+    from app.schemas.extraction import MonthlyBalance, VerificationOfAsset
+    v = VerificationOfAsset.model_validate({"currentBalance": 320.83, "monthlyBalances": [{"month": 1, "balance": 342.72}, {"month": 2, "balance": "467.21"}]})
+    assert [(m.month, m.balance) for m in v.monthlyBalances] == [("1", "342.72"), ("2", "467.21")]
+    from app.services.two_pass_classifier import _label_by_printed_title
+    cover = "Document Package for Applicant's/Tenant's Consent to the Release Of Information. This Package contains the following documents: 1. HUD-9887/A Fact Sheet"
+    # The cover names the 9887-A's title inside its own longer title; the
+    # longest alias is the cover's, so a cover labelled as the cover stays.
+    assert _label_by_printed_title("HUD 9887 Consent Package Cover", cover) is None
+    consent = "Applicant's/Tenant's Consent to the Release of Information. Verification by Owners of Information Supplied by Individuals Who Apply for Housing Assistance"
+    assert _label_by_printed_title("HUD 9887 Consent Package Cover", consent) == ("HUD 9887-A", "applicant's/tenant's consent to the release of information")

@@ -149,6 +149,8 @@ TAXONOMY: dict[str, dict] = {
                      aliases=("HUD-9887-A", "Applicant's/Tenant's Consent to the Release of Information",
                               "Applicant's / Tenant's Consent to the Release of Information")),
     "HUD 9887 Consent Package Cover": _t(COMPLIANCE, FAMILY_COMPLIANCE,
+                                         aliases=("Document Package for Applicant's/Tenant's Consent to the Release of Information",
+                                                  "Document Package for Applicant's / Tenant's Consent to the Release of Information"),
                                          hint="the \"Document Package for Applicant's/Tenant's Consent to the Release Of Information\" sheet that introduces the package — not a consent form itself"),
     "HUD 9887/A Fact Sheet": _t(COMPLIANCE, FAMILY_COMPLIANCE,
                                 hint="explanatory \"Fact Sheet\" page filed with the package — informational, never signed"),

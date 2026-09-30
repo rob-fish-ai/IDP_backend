@@ -263,6 +263,14 @@ class BankStatementEntry(BaseModel):
     realEstateCurrentMarketValue: Optional[str] = None
     totalClosingCosts: Optional[str] = None
 
+    @field_validator("*", mode="before")
+    @classmethod
+    def coerce_to_str(cls, v):
+        # A number where a string is expected is the value, not an error.
+        if v is not None and not isinstance(v, (str, dict, list)):
+            return str(v)
+        return v
+
 
 class MonthlyBalance(BaseModel):
     """One month's balance as a verification of assets lists it.
@@ -271,8 +279,17 @@ class MonthlyBalance(BaseModel):
     of each of the last six months instead of a six-month average. The
     average is then computed at delivery, oldest month first, from these.
     """
-    month: Optional[str] = None    # as printed: "2026-03", "03/2026", "March 2026"
+    month: Optional[str] = None    # as printed: "2026-03", "03/2026", "March 2026", or "1".."6"
     balance: Optional[str] = None  # numeric string, 2 decimals
+
+    @field_validator("*", mode="before")
+    @classmethod
+    def coerce_to_str(cls, v):
+        # The model returns a bare 1..6 for a VOA that numbers its months;
+        # a number where a string is expected is the value, not an error.
+        if v is not None and not isinstance(v, (str, dict, list)):
+            return str(v)
+        return v
 
 
 class VerificationOfAsset(BaseModel):
@@ -285,6 +302,14 @@ class VerificationOfAsset(BaseModel):
     interestType: Optional[str] = None
     interestRate: Optional[str] = None
     percentageOfOwnership: Optional[str] = None
+
+    @field_validator("*", mode="before")
+    @classmethod
+    def coerce_to_str(cls, v):
+        # A number where a string is expected is the value, not an error.
+        if v is not None and not isinstance(v, (str, dict, list)):
+            return str(v)
+        return v
 
 
 class AssetEntry(BaseModel):
