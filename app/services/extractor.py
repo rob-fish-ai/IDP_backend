@@ -2050,7 +2050,10 @@ Rules:
   commas or columns ("Source/Amount: 500 / 279.92") pair in order with the
   types or sources on the same line, one entry each. Never keep only the first.
 - A declaration of no income ("no income", "$0", zero-income certification)
-  is one entry with incomeType "Zero Income" and amount "0.00".
+  is one entry with incomeType "Zero Income" and amount "0.00" — only when the
+  HOUSEHOLD states it. An agency's report finding nothing ("Employment Income
+  Reported: 0", "EIV received no data", "NO SSI" on a confirmation sheet) is
+  not a declaration of zero income; return no entry for it.
 - Do not invent a row the form does not print. Return {"declared": []} when
   the pages declare nothing.
 
@@ -2099,6 +2102,13 @@ def _extract_declared_income(groups: list[DocumentGroup], settings: Settings,
         if amount is not None and float(amount) > 0 and _labelled_total(amount, page_texts, pages):
             logger.info("Declared income: %s on page %s is printed on a total line — not a source", amount, page)
             continue
+        doc_type = doc_of_page.get(page) if page else (groups[0].document_type if len(groups) == 1 else None)
+        if (r.get("incomeType") or "").strip().lower() == "zero income" and is_countersigned_confirmation(doc_type):
+            # A confirmation sheet restates what an agency found; "found
+            # nothing" there is not the household saying it has nothing.
+            logger.info("Declared income: zero-income line on the %s (page %s) is the agency's report, not a declaration — dropped",
+                        doc_type, page)
+            continue
         out.append({
             "memberName": validation.to_title_case(r.get("memberName")) if r.get("memberName") else None,
             "memberNumber": str(r.get("memberNumber")) if r.get("memberNumber") not in (None, "") else None,
@@ -2108,7 +2118,7 @@ def _extract_declared_income(groups: list[DocumentGroup], settings: Settings,
             "amountPeriod": (r.get("amountPeriod") or "unknown").lower(),
             "page": page,
             "quote": (str(r.get("quote"))[:80] if r.get("quote") else None),
-            "documentType": doc_of_page.get(page) if page else (groups[0].document_type if len(groups) == 1 else None),
+            "documentType": doc_type,
             "matched": False,
         })
     return out
@@ -2212,6 +2222,58 @@ _AMBIGUOUS_TYPE_WORDS = {
     w for w in {x for ws in _TYPE_SYNONYMS.values() for x in ws}
     if sum(1 for ws in _TYPE_SYNONYMS.values() if w in ws) > 1
 }
+
+
+_EARNED_TYPES = frozenset({"non-federal wage", "federal wage", "self-employment"})
+
+
+def _is_earned(income_type: str | None) -> bool:
+    """Wages or self-employment: income the member works for."""
+    key = _type_key(income_type)
+    return key in _EARNED_TYPES or any(w in (income_type or "").lower() for w in ("wage", "self-employ", "employment"))
+
+
+def _merge_same_source_records(vi_entries: list[dict]) -> list[dict]:
+    """One payer, one member, one income type is one income source.
+
+    Several authorizations from one payer for one member — a county's child
+    care certificates, one per child — are components of one income, not
+    an employer spelled twice and not two incomes. Records of the same
+    member and type whose payer names share a word are merged: the record
+    carrying an amount is kept, the pages of the others join it, and the
+    count is noted in evidence.
+    """
+    out: list[dict] = []
+    for vi in vi_entries:
+        if vi.get("verificationStatus") in ("declared_only", "self_certified"):
+            out.append(vi)
+            continue
+        twin = next(
+            (o for o in out
+             if o.get("verificationStatus") not in ("declared_only", "self_certified")
+             and _same_member(o.get("memberName"), vi.get("memberName"))
+             and _same_income_type(o.get("incomeType"), vi.get("incomeType"))
+             and bool(_source_words(o.get("sourceName")) & _source_words(vi.get("sourceName")))),
+            None,
+        )
+        if twin is None:
+            out.append(vi)
+            continue
+        keep, other = (twin, vi) if _vi_has_amount(twin) or not _vi_has_amount(vi) else (vi, twin)
+        pages = sorted({*(keep.get("sourcePages") or []), *(other.get("sourcePages") or [])})
+        keep["sourcePages"] = pages
+        for k, v in other.items():
+            if keep.get(k) in (None, "", []) and v not in (None, "", []):
+                keep[k] = v
+        evidence = keep.get("evidence") if isinstance(keep.get("evidence"), dict) else {}
+        n = int(str(evidence.get("components", "1")).split()[0]) + 1 if evidence.get("components") else 2
+        evidence["components"] = f"{n} documents from this payer (pages {pages})"
+        keep["evidence"] = evidence
+        logger.info("Income: '%s' and '%s' for %s are one %s source — merged (pages %s)",
+                    twin.get("sourceName"), vi.get("sourceName"), vi.get("memberName"), keep.get("incomeType"), pages)
+        if keep is not twin:
+            out[out.index(twin)] = keep
+    return out
 
 
 def _same_income_type(a: str | None, b: str | None) -> bool:
@@ -2626,6 +2688,11 @@ def _reconcile_income(vi_entries: list[dict], declared: list[dict], certificatio
                 _same_income_type(vi.get("incomeType"), d.get("incomeType"))
                 or _source_overlap(vi.get("sourceName"), d.get("sourceName"))
                 or _close(_record_annual(vi), annual_d)
+                # A wage line naming no employer is the member's earned
+                # income, whichever earned type the verification carries: a
+                # county paying a child care provider is "W - Non-federal
+                # wage" on the 50059 and self-employment on the certificate.
+                or (not d.get("sourceName") and _is_earned(d.get("incomeType")) and _is_earned(vi.get("incomeType")))
             )
         ]
         if not candidates and (d.get("incomeType") or "").lower() in ("", "other", "other income"):
@@ -3372,6 +3439,7 @@ def extract_income(
         ps_entries.extend(pss)
     _unify_paystub_sources(ps_entries)
     _repair_paystub_ytd(ps_entries)
+    vi_entries = _merge_same_source_records(vi_entries)
 
     declared = _extract_declared_income(decl_groups, settings, certification_type, household_names)
     _reconcile_income(vi_entries, declared, certification_type, ps_entries, declared_total)

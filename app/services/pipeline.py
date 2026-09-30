@@ -49,6 +49,7 @@ from app.services.cross_doc_validator import (
 )
 from app.services.extractor import (
     CRITICAL_CERT_FIELDS,
+    _amount_on_pages,
     source_names_overlap,
     build_group_texts,
     extract_assets,
@@ -1383,6 +1384,26 @@ def _recover_required_fields_from_images(
     transcript_all = "\n".join(transcripts.values()).lower()
 
     findings: list = []
+
+    # The transcript is the best read of the page. A figure that passed the
+    # provenance check against the first OCR text — "16,481" printed as
+    # the OCR's misread of 18,481 — may not be on the page at all; every
+    # certification figure is checked again here, and one the transcript
+    # does not print becomes a gap the retry re-reads. Recovery is not only
+    # for fields that came back empty.
+    if certification_info:
+        page_texts_now = {pn: (by_page.get(pn) or {}).get("text", "") for pn in group.pages}
+        for f in sorted(_MONEY_CERT_FIELDS):
+            value = getattr(certification_info, f, None)
+            if value in (None, "", "null") or f in gaps["cert"]:
+                continue
+            if not _amount_on_pages(value, page_texts_now, list(group.pages)):
+                logger.warning(
+                    "Required-field recovery: %s=%s is not printed on the transcribed cert page(s) %s — re-reading",
+                    f, value, pages,
+                )
+                setattr(certification_info, f, None)
+                gaps["cert"].append(f)
 
     # Certification cells
     if gaps["cert"] and certification_info:

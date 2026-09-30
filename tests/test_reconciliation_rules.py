@@ -918,3 +918,42 @@ def test_a_voa_that_numbers_its_months_is_accepted_and_the_package_cover_keeps_i
     assert _label_by_printed_title("HUD 9887 Consent Package Cover", cover) is None
     consent = "Applicant's/Tenant's Consent to the Release of Information. Verification by Owners of Information Supplied by Individuals Who Apply for Housing Assistance"
     assert _label_by_printed_title("HUD 9887 Consent Package Cover", consent) == ("HUD 9887-A", "applicant's/tenant's consent to the release of information")
+
+
+def test_one_payer_one_member_one_type_is_one_income_source_and_a_wage_line_matches_it():
+    """Two county child care certificates for one provider are components
+    of one self-employment income, not a duplicate employer; the 50059's
+    "W - Non-federal wage" line naming no employer is that income."""
+    from app.services.extractor import _merge_same_source_records, _reconcile_income
+    from app.services.bug_detector import _check_duplicate_employers
+    from app.schemas.extraction import IncomeExtraction, SourceIncome, VerificationIncomeEntry
+    vis = [
+        {"memberName": "Yolanda Bribiesca", "sourceName": "Riverside County Office of Education / Indio", "incomeType": "Self-Employment",
+         "type_of_VOI": "Self-Declaration", "verificationStatus": "verified", "sourcePages": [13]},
+        {"memberName": "Yolanda Bribiesca", "sourceName": "Riverside County Office of Education (ece/capp)", "incomeType": "Self-Employment",
+         "type_of_VOI": "Self-Declaration", "rateOfPay": "13.90", "rateUnit": "weekly", "verificationStatus": "verified", "sourcePages": [16]},
+        {"memberName": "Yolanda Bribiesca", "sourceName": "Riverside County Office of Education", "incomeType": "Self-Employment",
+         "type_of_VOI": "Self-Declaration", "verificationStatus": "verified", "sourcePages": [17]},
+    ]
+    merged = _merge_same_source_records(vis)
+    assert len(merged) == 1 and merged[0]["sourcePages"] == [13, 16, 17] and merged[0]["rateOfPay"] == "13.90"
+    assert "3 documents" in merged[0]["evidence"]["components"]
+    declared = [{"memberName": "Yolanda Bribiesca", "incomeType": "Non-Federal Wage", "amount": "19441.00", "amountPeriod": "annual",
+                 "documentType": "HUD 50059", "page": 2}]
+    _reconcile_income(merged, declared, "AR", [], declared_total="19441.00")
+    assert declared[0]["matched"] is True and len(merged) == 1
+    assert merged[0]["verificationStatus"] == "verified"
+    inc = IncomeExtraction(sourceIncome=SourceIncome(verificationIncome=[VerificationIncomeEntry(**{k: v for k, v in merged[0].items() if k != "evidence"})]))
+    assert _check_duplicate_employers(inc) == []
+
+
+def test_an_agencys_empty_report_is_not_a_zero_income_declaration():
+    """"Employment Income Reported: 0" on an EIV coversheet is the agency
+    finding nothing, not the household declaring nothing; the prompt says
+    so and the taxonomy marks the sheet as a confirmation the code guard
+    keys on."""
+    from app.services.extractor import DECLARED_INCOME_PROMPT
+    from app.services.doc_taxonomy import is_countersigned_confirmation
+    assert "not a declaration of zero income" in DECLARED_INCOME_PROMPT
+    assert is_countersigned_confirmation("EIV Income Report Confirmation") is True
+    assert is_countersigned_confirmation("Zero Income Certification") is False
