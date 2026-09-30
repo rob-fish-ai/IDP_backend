@@ -22,8 +22,13 @@ import logging
 import re
 
 from app.services.doc_taxonomy import (
-    COMPLIANCE, INCLUDE, TAXONOMY, canonical_label, is_previous_certification,
+    COMPLIANCE, INCLUDE, TAXONOMY, _split_suffix, canonical_label, is_previous_certification,
 )
+
+
+def _base(document_type: str | None) -> str:
+    """The label without its "(Previous)" / "(Superseded)" suffix."""
+    return _split_suffix(document_type or "")[0]
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +52,43 @@ def _form_tokens(text: str) -> set[str]:
 
 def _words(text: str) -> set[str]:
     return {w for w in re.findall(r"[a-z][a-z']{2,}", (text or "").lower()) if w not in _STOP}
+
+
+def _one_edit_apart(a: str, b: str) -> bool:
+    if a == b or abs(len(a) - len(b)) > 1:
+        return False
+    if len(a) == len(b):
+        return sum(x != y for x, y in zip(a, b)) == 1
+    short, long_ = (a, b) if len(a) < len(b) else (b, a)
+    i = 0
+    while i < len(short) and short[i] == long_[i]:
+        i += 1
+    return short[i:] == long_[i + 1:]
+
+
+def _shared_words(row_words: set[str], label_words: set[str]) -> int:
+    """Words in common, a misspelling one edit away counting as the word
+    ("Appliication" is "Application")."""
+    return sum(1 for w in row_words if w in label_words or any(len(w) > 4 and _one_edit_apart(w, l) for l in label_words))
+
+
+# A row that asks about a property of a form — whether it includes the
+# right limits, is dated within 120 days, was calculated properly — is not
+# answered by the form being present. The engine reports those through its
+# findings; such rows are left untouched here.
+_ATTRIBUTE_WORDS = frozenset({
+    "includes", "include", "correct", "within", "days", "consecutive", "calculation", "calculated",
+    "properly", "limits", "limit", "allowance", "rate", "balance", "value", "accurately", "changes",
+    "terminated", "closed", "reminder", "reminders", "counted", "treated", "determined", "used",
+})
+
+
+def is_attribute_row(row: dict) -> bool:
+    return bool(_words(row.get("label") or "") & _ATTRIBUTE_WORDS)
+
+
+def wants_previous(row: dict) -> bool:
+    return bool({"previous", "prior"} & set(re.findall(r"[a-z]+", (row.get("label") or "").lower())))
 
 
 def normalise_rows(payload: dict) -> list[dict]:
@@ -130,9 +172,9 @@ def document_type_for(row: dict) -> tuple[str | None, str | None]:
               if len(n) >= 8 and n.lower() in low]
     if titled:
         return max(titled, key=len), "title"
-    rw = _words(text)
+    rw = _words(row.get("label") or "")
     if rw:
-        scored = [(len(w & rw) / len(rw), label) for label, _, w in candidates if w & rw]
+        scored = [(_shared_words(rw, w) / len(rw), label) for label, _, w in candidates]
         scored.sort(reverse=True)
         if scored and scored[0][0] >= 0.5:
             return scored[0][1], "words"
@@ -157,15 +199,36 @@ def _member_matches(person_name: str | None, subject_label: str | None) -> bool:
 
 def match_checklist(rows: list[dict], extraction) -> list[dict]:
     """One entry per checklist row the packet can answer."""
-    groups = [g for g in (getattr(extraction, "document_groups", None) or [])
-              if g.category != "ignore" and not is_previous_certification(g.document_type)]
+    all_groups = list(getattr(extraction, "document_groups", None) or [])
+    groups = [g for g in all_groups if g.category != "ignore" and not is_previous_certification(g.document_type)]
+    previous = [g for g in all_groups if is_previous_certification(g.document_type)]
+    incomplete = {}
+    for f in getattr(extraction, "finding_records", None) or []:
+        if f.code.endswith("_INCOMPLETE") and isinstance(f.subject_ref, dict) and f.subject_ref.get("document_type"):
+            incomplete[f.subject_ref["document_type"]] = f.text
     inventory = list((getattr(extraction, "document_inventory_hud", None) or type("x", (), {"documents": []})).documents or []) + \
                 list((getattr(extraction, "document_inventory_financial", None) or type("x", (), {"documents": []})).documents or [])
     cert = getattr(extraction, "certification_info", None)
     out: list[dict] = []
     for row in rows:
+        if is_attribute_row(row):
+            continue
         label, how = document_type_for(row)
         if not label:
+            continue
+        if wants_previous(row):
+            # "Previous HUD 50059": the prior certification the packet
+            # carries, which the audit otherwise sets aside.
+            prev = [g for g in previous if _base(g.document_type) == label]
+            if prev:
+                pages = sorted({p for g in prev for p in g.pages})
+                when = next((g.notes for g in prev if g.notes), None)
+                out.append({"finding_id": row["finding_id"], "found": True, "pages": pages,
+                            "confidence": round(_BASE_CONFIDENCE[how], 2),
+                            "note": f"Previous {label} present, page{'s' if len(pages) > 1 else ''} {_page_span(pages)}." + (f" {when}." if when else "")})
+            else:
+                out.append({"finding_id": row["finding_id"], "found": False, "pages": [],
+                            "confidence": round(_BASE_CONFIDENCE[how], 2), "note": f"No previous {label} in the packet."})
             continue
         mine = [g for g in groups if canonical_label(g.document_type)[0] == label]
         if row.get("subject_label"):
@@ -197,6 +260,9 @@ def match_checklist(rows: list[dict], extraction) -> list[dict]:
         elif unsigned:
             note += " Signature not verified from text, check visually."
             confidence = min(confidence, 0.6)
+        if label in incomplete:
+            missing = re.search(r"is missing its (.+?) — ", incomplete[label])
+            note += f" Incomplete: missing its {missing.group(1)}." if missing else " Incomplete."
         out.append({"finding_id": row["finding_id"], "found": True, "pages": pages,
                     "confidence": round(max(0.0, min(1.0, confidence)), 2), "note": note})
     return out

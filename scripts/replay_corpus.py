@@ -39,10 +39,16 @@ def _db_path() -> Path:
 def load_cases(db_path: Path) -> list[dict]:
     c = sqlite3.connect(str(db_path)); c.row_factory = sqlite3.Row
     rows = c.execute(
-        "SELECT case_id, funding_program, cert_type, extraction_result FROM audit_jobs "
+        "SELECT case_id, funding_program, cert_type, extracted_at, extraction_result FROM audit_jobs "
         "WHERE extraction_result IS NOT NULL ORDER BY case_id"
     ).fetchall()
     return [dict(r) for r in rows]
+
+
+def case_key(row: dict) -> str:
+    """A case as of one run. A re-run replaces the stored extraction, so it
+    is a new entry, not a change to the old one."""
+    return f"{row['case_id']}@{int(row.get('extracted_at') or 0)}"
 
 
 def replay_case(row: dict) -> dict:
@@ -143,25 +149,30 @@ def replay_all(db_path: Path) -> dict[str, dict]:
     out: dict[str, dict] = {}
     for row in load_cases(db_path):
         try:
-            out[row["case_id"]] = replay_case(row)
+            out[case_key(row)] = replay_case(row)
         except Exception as exc:  # a case that cannot replay is itself a signal
-            out[row["case_id"]] = {"error": f"{type(exc).__name__}: {exc}"[:300]}
+            out[case_key(row)] = {"error": f"{type(exc).__name__}: {exc}"[:300]}
     return out
 
 
 def diff(base: dict, now: dict) -> list[str]:
+    """Differences on entries both sides hold. Entries only one side holds
+    (a case run since the baseline, or one it replaced) are not
+    differences; `info()` lists them."""
     lines: list[str] = []
-    for case in sorted(set(base) | set(now)):
-        b, n = base.get(case), now.get(case)
-        if b is None:
-            lines.append(f"{case}: new case (not in baseline)"); continue
-        if n is None:
-            lines.append(f"{case}: missing from this run"); continue
+    for case in sorted(set(base) & set(now)):
+        b, n = base[case], now[case]
         for key in sorted(set(b) | set(n)):
             bv, nv = b.get(key), n.get(key)
             if json.dumps(bv, sort_keys=True, default=str) != json.dumps(nv, sort_keys=True, default=str):
                 lines.append(f"{case} {key}:\n    before: {json.dumps(bv, default=str)[:400]}\n    after:  {json.dumps(nv, default=str)[:400]}")
     return lines
+
+
+def info(base: dict, now: dict) -> list[str]:
+    out = [f"{k}: run since the baseline (add with `update`)" for k in sorted(set(now) - set(base))]
+    out += [f"{k}: no longer stored (re-run replaced it)" for k in sorted(set(base) - set(now))]
+    return out
 
 
 def main(argv: list[str]) -> int:
@@ -184,6 +195,8 @@ def main(argv: list[str]) -> int:
     print(f"{len(now)} cases replayed, {len(lines)} difference(s) against baseline")
     for l in lines:
         print(" -", l)
+    for l in info(base, now):
+        print(" ·", l)
     return 1 if lines else 0
 
 

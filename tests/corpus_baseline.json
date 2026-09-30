@@ -1,5 +1,5 @@
 {
- "CAS-TEST-001": {
+ "CAS-TEST-001@1788193587": {
   "assets": [],
   "cert_review": {
    "annual_assets": null,
@@ -25,7 +25,7 @@
    "no household members extracted from this packet"
   ]
  },
- "CAS-TEST-1": {
+ "CAS-TEST-1@1788170268": {
   "assets": [],
   "cert_review": {
    "annual_assets": null,
@@ -51,7 +51,7 @@
    "no household members extracted from this packet"
   ]
  },
- "CAS570103": {
+ "CAS570103@1788200299": {
   "assets": [
    [
     "checking",
@@ -137,7 +137,7 @@
    "income_records[2]: no type extracted; sent as 'other'"
   ]
  },
- "J-CCAC-06733": {
+ "J-CCAC-06733@1790653606": {
   "assets": [
    [
     "prepaid_debit_card",
@@ -216,7 +216,7 @@
    "asset_records[2]: balance arrived with no statement or verification of"
   ]
  },
- "J-CCAC-06734": {
+ "J-CCAC-06734@1790651232": {
   "assets": [
    [
     "checking",
@@ -282,7 +282,7 @@
   "score": 0.83,
   "warnings": []
  },
- "J-CCAC-06735": {
+ "J-CCAC-06735@1790651308": {
   "assets": [
    [
     "prepaid_debit_card",
@@ -345,7 +345,7 @@
    "income_records[1]: 6 quarterly wage-history row(s) not sent as pay stu"
   ]
  },
- "J-CCAC-06736": {
+ "J-CCAC-06736@1790651400": {
   "assets": [
    [
     "prepaid_debit_card",
@@ -406,7 +406,7 @@
    "asset_records[0]: balance arrived with no statement or verification of"
   ]
  },
- "J-CCAC-06737": {
+ "J-CCAC-06737@1790651532": {
   "assets": [
    [
     "checking",
@@ -485,7 +485,7 @@
    "asset_records[2]: balance -263.25 is negative (overdrawn); sent as 0.0"
   ]
  },
- "J-CCAC-06738": {
+ "J-CCAC-06738@1790651545": {
   "assets": [
    [
     "checking",
@@ -569,7 +569,7 @@
   "score": 0.78,
   "warnings": []
  },
- "J-CCAC-06739": {
+ "J-CCAC-06739@1790651573": {
   "assets": [
    [
     "prepaid_debit_card",
@@ -644,7 +644,7 @@
   "score": 0.68,
   "warnings": []
  },
- "J-CCAC-06740": {
+ "J-CCAC-06740@1790651684": {
   "assets": [
    [
     "checking",
@@ -748,7 +748,7 @@
    "asset_records[2]: balance arrived with no statement or verification of"
   ]
  },
- "J-CCAC-06741": {
+ "J-CCAC-06741@1790659108": {
   "assets": [
    [
     "checking",
@@ -848,7 +848,7 @@
    "income_records[3]: 2 quarterly wage-history row(s) not sent as pay stu"
   ]
  },
- "J-CCAC-06742": {
+ "J-CCAC-06742@1790651903": {
   "assets": [
    [
     "checking",
@@ -947,7 +947,7 @@
    "asset_records[0]: balance arrived with no statement or verification of"
   ]
  },
- "J-CCAC-06743": {
+ "J-CCAC-06743@1790652792": {
   "assets": [
    [
     "checking",
@@ -1009,7 +1009,7 @@
   "score": 0.82,
   "warnings": []
  },
- "J-CCAC-06744": {
+ "J-CCAC-06744@1790654613": {
   "assets": [
    [
     "checking",
@@ -1095,7 +1095,7 @@
   "score": 0.86,
   "warnings": []
  },
- "J-CCAC-06745": {
+ "J-CCAC-06745@1790654823": {
   "assets": [
    [
     "prepaid_debit_card",
@@ -1171,7 +1171,7 @@
    "income_records[1]: type 'Other Income' is not in the configured pickli"
   ]
  },
- "J-CCAC-06746": {
+ "J-CCAC-06746@1790655119": {
   "assets": [
    [
     "checking",
@@ -1250,7 +1250,7 @@
    "cert_review.grossRent: 2375.00 was not found on the certification page"
   ]
  },
- "J-CCAC-06747": {
+ "J-CCAC-06747@1790654971": {
   "assets": [
    [
     "checking",
@@ -1309,7 +1309,7 @@
   "score": 0.81,
   "warnings": []
  },
- "J-CCAC-06748": {
+ "J-CCAC-06748@1790655224": {
   "assets": [
    [
     "checking",
@@ -1519,7 +1519,7 @@
    "asset_records[9]: balance arrived with no statement or verification of"
   ]
  },
- "J-CCAC-06749": {
+ "J-CCAC-06749@1790655267": {
   "assets": [
    [
     "prepaid_debit_card",
@@ -1567,7 +1567,7 @@
   "score": 0.9,
   "warnings": []
  },
- "J-CCAC-06751": {
+ "J-CCAC-06751@1790657143": {
   "assets": [],
   "cert_review": {
    "annual_assets": null,
@@ -1618,7 +1618,7 @@
   "score": 0.83,
   "warnings": []
  },
- "J-CCAC-06752": {
+ "J-CCAC-06752@1790657279": {
   "assets": [
    [
     "prepaid_debit_card",
@@ -1677,7 +1677,7 @@
   "score": 0.86,
   "warnings": []
  },
- "J-CCAC-06753": {
+ "J-CCAC-06753@1790657277": {
   "assets": [
    [
     "checking",
@@ -1772,7 +1772,7 @@
    "income_records[2]: 1 quarterly wage-history row(s) not sent as pay stu"
   ]
  },
- "J-CCAC-06832": {
+ "J-CCAC-06832@1790775116": {
   "assets": [
    [
     "prepaid_debit_card",
@@ -1795,16 +1795,9 @@
   },
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
-   "HUD_9887_INCOMPLETE": 1,
-   "INCOME_DECLARED_NOT_VERIFIED": 1
+   "HUD_9887_INCOMPLETE": 1
   },
   "income": [
-   [
-    "social_security",
-    "declared_only",
-    null,
-    "Social Security (declared)"
-   ],
    [
     "ssi",
     "verified",
@@ -1822,15 +1815,13 @@
   "notes": [
    "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
    "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
-   "HUD 9887 must be signed by all adult household members; a signature co",
-   "Income source 'Social Security (declared)' (Elise Dodd): self-declared",
    "Pages 17: 'Notice of Rent Change (Previous)' detected \u2014 excluded from ",
    "Pages 18-19: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr"
   ],
-  "score": 0.89,
+  "score": 0.9,
   "warnings": []
  },
- "J-PORT-05318": {
+ "J-PORT-05318@1789391374": {
   "assets": [
    [
     "checking",
@@ -1942,7 +1933,7 @@
    "income_records[4]: type 'Other Income' is not in the configured pickli"
   ]
  },
- "J-PORT-05319": {
+ "J-PORT-05319@1789167223": {
   "assets": [
    [
     "checking",
@@ -1998,7 +1989,7 @@
   "score": 0.87,
   "warnings": []
  },
- "J-PORT-05320": {
+ "J-PORT-05320@1789188374": {
   "assets": [
    [
     "checking",
@@ -2070,7 +2061,7 @@
   "score": 0.81,
   "warnings": []
  },
- "J-PORT-05754": {
+ "J-PORT-05754@1788988443": {
   "assets": [
    [
     "cash_on_hand",
@@ -2151,7 +2142,7 @@
    "income_records[1]: no type extracted; sent as 'other'"
   ]
  },
- "J-PORT-06173": {
+ "J-PORT-06173@1789613541": {
   "assets": [
    [
     "savings",
@@ -2258,7 +2249,7 @@
    "household_members[1].relationship 'Adult Co-Tenant' has no Cartograph "
   ]
  },
- "J-PORT-06184": {
+ "J-PORT-06184@1789620993": {
   "assets": [
    [
     "savings",
@@ -2382,7 +2373,7 @@
    "income_records[3]: type 'Other Income' is not in the configured pickli"
   ]
  },
- "J-PORT-06205": {
+ "J-PORT-06205@1789652046": {
   "assets": [
    [
     "checking",
@@ -2496,7 +2487,7 @@
   "score": 0.9,
   "warnings": []
  },
- "J-PORT-06238": {
+ "J-PORT-06238@1789665429": {
   "assets": [
    [
     "cash_on_hand",
@@ -2585,7 +2576,7 @@
   "score": 0.83,
   "warnings": []
  },
- "J-TBRE-06337": {
+ "J-TBRE-06337@1789858462": {
   "assets": [
    [
     "checking",
@@ -2658,7 +2649,7 @@
    "income_records[1]: 'Timothy Lee Tinsdale' did not match any household "
   ]
  },
- "J-TBRE-06339": {
+ "J-TBRE-06339@1789862031": {
   "assets": [
    [
     "checking",
@@ -2709,7 +2700,7 @@
    "cert_review.grossRent: 1196.00 was not found on the certification page"
   ]
  },
- "J-TBRE-06340": {
+ "J-TBRE-06340@1790123264": {
   "assets": [
    [
     "checking",
@@ -2775,7 +2766,7 @@
   "score": 0.88,
   "warnings": []
  },
- "J-TBRE-06341": {
+ "J-TBRE-06341@1789994918": {
   "assets": [
    [
     "checking",
@@ -2857,7 +2848,7 @@
    "income_records[0]: type 'Other Income' is not in the configured pickli"
   ]
  },
- "J-VIV-06412": {
+ "J-VIV-06412@1790044679": {
   "assets": [
    [
     "checking",
@@ -2960,7 +2951,7 @@
    "cert_review.utilityAllowance: 2013.00 was not found on the certificati"
   ]
  },
- "J-VIV-06413": {
+ "J-VIV-06413@1790528805": {
   "assets": [
    [
     "checking",
@@ -3048,7 +3039,7 @@
   "score": 0.9,
   "warnings": []
  },
- "J-VIV-06414": {
+ "J-VIV-06414@1790046122": {
   "assets": [
    [
     "checking",
@@ -3107,7 +3098,7 @@
    "cert_review.tenantRent: 306.00 was not found on the certification page"
   ]
  },
- "J-VIV-06415": {
+ "J-VIV-06415@1790046301": {
   "assets": [
    [
     "checking",
@@ -3182,7 +3173,7 @@
    "cert_review.householdIncome: 425126.00 was not found on the certificat"
   ]
  },
- "J-VIV-06416": {
+ "J-VIV-06416@1790046411": {
   "assets": [
    [
     "checking",
@@ -3275,7 +3266,7 @@
    "cert_review.householdIncome: 58494.00 was not found on the certificati"
   ]
  },
- "J-VIV-06417": {
+ "J-VIV-06417@1790047010": {
   "assets": [
    [
     "checking",
@@ -3338,7 +3329,7 @@
    "cert_review.householdIncome: 115035.00 was not found on the certificat"
   ]
  },
- "J-VIV-06418": {
+ "J-VIV-06418@1790047464": {
   "assets": [
    [
     "checking",
@@ -3426,7 +3417,7 @@
    "cert_review.householdIncome: 111328.00 was not found on the certificat"
   ]
  },
- "J-VIV-06419": {
+ "J-VIV-06419@1790046583": {
   "assets": [
    [
     "checking",
@@ -3488,7 +3479,7 @@
    "cert_review.householdIncome: 113500.00 was not found on the certificat"
   ]
  },
- "J-VIV-06420": {
+ "J-VIV-06420@1790047734": {
   "assets": [
    [
     "checking",
@@ -3572,7 +3563,7 @@
    "cert_review.householdIncome: 133140.00 was not found on the certificat"
   ]
  },
- "J-VIV-06421": {
+ "J-VIV-06421@1790047907": {
   "assets": [
    [
     "checking",
@@ -3632,7 +3623,7 @@
    "cert_review.householdIncome: 32359.00 was not found on the certificati"
   ]
  },
- "J-VIV-06422": {
+ "J-VIV-06422@1790048375": {
   "assets": [
    [
     "checking",
@@ -3714,7 +3705,7 @@
    "cert_review.householdIncome: 171750.00 was not found on the certificat"
   ]
  },
- "J-VIV-06423": {
+ "J-VIV-06423@1790047937": {
   "assets": [
    [
     "checking",
@@ -3780,7 +3771,7 @@
    "cert_review.householdIncome: 120800.00 was not found on the certificat"
   ]
  },
- "J-VIV-06424": {
+ "J-VIV-06424@1790194497": {
   "assets": [
    [
     "checking",
@@ -3853,7 +3844,7 @@
    "asset_records[0]: balance arrived with no statement or verification of"
   ]
  },
- "J-VIV-06425": {
+ "J-VIV-06425@1790047930": {
   "assets": [
    [
     "checking",
@@ -3926,7 +3917,7 @@
    "cert_review.tenantRent: 343.00 was not found on the certification page"
   ]
  },
- "J-VIV-06426": {
+ "J-VIV-06426@1790114742": {
   "assets": [
    [
     "checking",
@@ -3985,7 +3976,7 @@
   "score": 0.88,
   "warnings": []
  },
- "J-VIV-06427": {
+ "J-VIV-06427@1790048420": {
   "assets": [
    [
     "checking",
@@ -4065,7 +4056,7 @@
    "cert_review.householdIncome: 119141.00 was not found on the certificat"
   ]
  },
- "J-VIV-06437": {
+ "J-VIV-06437@1790526140": {
   "assets": [
    [
     "checking",
@@ -4141,7 +4132,7 @@
   "score": 0.86,
   "warnings": []
  },
- "J-VIV-06637": {
+ "J-VIV-06637@1790547014": {
   "assets": [
    [
     "checking",
@@ -4219,7 +4210,7 @@
   "score": 0.85,
   "warnings": []
  },
- "J-VIV-06638": {
+ "J-VIV-06638@1790629851": {
   "assets": [
    [
     "checking",
@@ -4301,7 +4292,7 @@
   "score": 0.88,
   "warnings": []
  },
- "J-VIV-06640": {
+ "J-VIV-06640@1790552673": {
   "assets": [
    [
     "checking",
@@ -4365,7 +4356,7 @@
   "score": 0.82,
   "warnings": []
  },
- "J-VIV-06641": {
+ "J-VIV-06641@1790553666": {
   "assets": [
    [
     "checking",
@@ -4425,7 +4416,7 @@
   "score": 0.81,
   "warnings": []
  },
- "J-VIV-06642": {
+ "J-VIV-06642@1790733452": {
   "assets": [
    [
     "checking",
@@ -4513,7 +4504,7 @@
    "income_records[1]: no type extracted; sent as 'other'"
   ]
  },
- "J-VIV-06674": {
+ "J-VIV-06674@1790734685": {
   "assets": [
    [
     "checking",
@@ -4601,7 +4592,7 @@
   "score": 0.9,
   "warnings": []
  },
- "J-VIV-06676": {
+ "J-VIV-06676@1790725175": {
   "assets": [
    [
     "checking",
@@ -4658,7 +4649,7 @@
   "score": 0.81,
   "warnings": []
  },
- "J-VIV-06677": {
+ "J-VIV-06677@1790626908": {
   "assets": [
    [
     "checking",
@@ -4724,7 +4715,7 @@
   "score": 0.88,
   "warnings": []
  },
- "J-VIV-06678": {
+ "J-VIV-06678@1790629289": {
   "assets": [
    [
     "checking",
@@ -4797,7 +4788,7 @@
   "score": 0.87,
   "warnings": []
  },
- "J-VRC-06406": {
+ "J-VRC-06406@1790034865": {
   "assets": [
    [
     "checking",
@@ -4859,7 +4850,7 @@
   "score": 0.86,
   "warnings": []
  },
- "J-VRC-06407": {
+ "J-VRC-06407@1790034430": {
   "assets": [
    [
     "prepaid_debit_card",
@@ -4922,7 +4913,7 @@
    "cert_review.grossRent: 235.0 was not found on the certification pages "
   ]
  },
- "J-VRC-06408": {
+ "J-VRC-06408@1790034633": {
   "assets": [
    [
     "checking",
@@ -4998,7 +4989,7 @@
   "score": 0.89,
   "warnings": []
  },
- "J-VRC-06409": {
+ "J-VRC-06409@1790121427": {
   "assets": [
    [
     "checking",
@@ -5059,7 +5050,7 @@
   "score": 0.91,
   "warnings": []
  },
- "J-VRC-06410": {
+ "J-VRC-06410@1790034612": {
   "assets": [],
   "cert_review": {
    "annual_assets": null,

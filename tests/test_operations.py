@@ -242,3 +242,38 @@ def test_checklist_matches_say_found_pages_signature_and_confidence():
     assert out[5]["found"] and out[5]["confidence"] < 0.9               # placed by nearest match
     assert out[6] == {"finding_id": 6, "found": False, "pages": [], "confidence": 0.8, "note": "No HUD Race and Ethnic Data Form in the packet."}
     assert 7 not in out                                                  # unmappable row left untouched
+
+
+def test_checklist_rows_about_a_forms_properties_or_its_previous_version_are_handled_as_such():
+    """J-CCAC-06832: "HUD 50059 Includes the Correct Income Limits" got a
+    presence note, and "Previous HUD 50059" was matched to the current
+    form. A row about a property of a form is left untouched; a row asking
+    for the previous form finds the previous form; a misspelled label
+    still finds its type; an incomplete form says so."""
+    from types import SimpleNamespace
+    from app.schemas.extraction import CertificationInfo, DocumentGroup, DocumentInventory, DocumentInventoryEntry, Finding
+    from app.services.cartograph.checklist import document_type_for, is_attribute_row, match_checklist
+    assert is_attribute_row({"label": "HUD 50059 Includes the Correct Income Limits"}) is True
+    assert is_attribute_row({"label": "HUD 50059 Completed and Accurate"}) is False
+    assert document_type_for({"label": "Appliication Questionnaire complete, initialed/signed, and dated", "item_code": "HUDS8-FORM-APPLICATION"})[0] == "Application / Housing Questionnaire"
+    assert document_type_for({"label": "Acknowledgement of HUD Handouts", "item_code": "HUDS8-FORM-HUD-HANDOUTS"})[0] == "Acknowledgement of Receipt"
+    def g(label, pages, category="include", notes=None):
+        return DocumentGroup(document_type=label, category=category, pages=pages, page_range=str(pages[0]), combined_text="x", notes=notes)
+    ex = SimpleNamespace(
+        document_groups=[g("HUD 50059", [13, 14]), g("HUD 50059 (Previous)", [18, 19], category="ignore", notes="Previous cert, move-in 9/2/2025"),
+                         g("HUD 9887", [37, 38], category="compliance")],
+        document_inventory_hud=DocumentInventory(documents=[DocumentInventoryEntry(documentType="HUD 9887", isSigned="Yes")]),
+        document_inventory_financial=DocumentInventory(documents=[]),
+        certification_info=CertificationInfo(certificationType="AR", isSigned="No"),
+        finding_records=[Finding(code="HUD_9887_INCOMPLETE", text="HUD 9887 (pages 37, 38) is missing its agencies / expiry page — the form is incomplete.",
+                                 subject_type="document", subject_ref={"document_type": "HUD 9887", "pages": [37, 38]})],
+    )
+    rows = [
+        {"finding_id": 1, "item_code": "HUDS8-INC-LIMIT-50059", "label": "HUD 50059 Includes the Correct Income Limits"},
+        {"finding_id": 2, "item_code": "HUDS8-RECERT-PRIOR-50059", "label": "Previous HUD 50059 Certification Form"},
+        {"finding_id": 3, "item_code": "HUDS8-FORM-9887", "label": "HUD9887 Completed and Signed by All Adult Members"},
+    ]
+    out = {m["finding_id"]: m for m in match_checklist(rows, ex)}
+    assert 1 not in out
+    assert out[2]["found"] and out[2]["pages"] == [18, 19] and out[2]["note"].startswith("Previous HUD 50059 present, pages 18-19.")
+    assert out[3]["found"] and "Incomplete: missing its agencies / expiry page." in out[3]["note"]
