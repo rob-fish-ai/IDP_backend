@@ -103,6 +103,7 @@ def audit_case(
     community_id: int | None = None,
     unit_number: str | None = None,
     effective_date: str | None = None,
+    checklist_rows: list[dict] | None = None,
 ) -> None:
     """Run one notified case end to end.
 
@@ -121,7 +122,7 @@ def audit_case(
         _audit_case(
             store, settings, case_ref=case_ref, documents=documents, cert_type=cert_type,
             program=program, job_id=job_id, community_id=community_id,
-            unit_number=unit_number, effective_date=effective_date,
+            unit_number=unit_number, effective_date=effective_date, checklist_rows=checklist_rows,
         )
     except Exception as exc:
         logger.exception("Unhandled failure auditing case_ref=%s", case_ref)
@@ -149,6 +150,7 @@ def _audit_case(
     community_id: int | None,
     unit_number: str | None,
     effective_date: str | None,
+    checklist_rows: list[dict] | None = None,
 ) -> None:
 
     # Their vocabulary, translated before it reaches anything that keys on
@@ -250,6 +252,7 @@ def _audit_case(
         job_id=job_id,
         community_id=community_id,
         unit_number=unit_number,
+        checklist_rows=checklist_rows,
     )
 
     # An attachment left out of the packet is something the reviewer must

@@ -175,6 +175,31 @@ Never send `self_declared_balance`. It appears in the controller's permitted par
 
 ---
 
+## 6b. checklist_matches
+
+One entry per checklist row of the case the packet can answer, keyed on
+the row's own finding id from the case request (`checklist_rows[]`, or
+`requirements[].community_defaults.checklist_items[].case_finding_ids`).
+Rows the engine cannot map to a document type it knows are left out and
+stay untouched.
+
+```
+{ "finding_id": 88412, "found": true,  "pages": [2, 3],   "confidence": 0.85,
+  "note": "HUD 50059 present, pages 2-3. Not signed: the signature lines are blank." }
+{ "finding_id": 88419, "found": true,  "pages": [38, 39], "confidence": 0.9,
+  "note": "HUD 9887 present, pages 38-39. Signed by Yolanda Bribiesca on 2026-09-16." }
+{ "finding_id": 88421, "found": false, "pages": [],       "confidence": 0.9,
+  "note": "No HUD Race and Ethnic Data Form in the packet." }
+```
+
+`found: false` means the engine looked and the form is not in the packet.
+`confidence` is how sure the engine is of the match and the note together:
+0.9 when the row and the document share a form number, 0.8 when the
+document's title is printed in the row's label, 0.6 when only words match;
+lowered when the classifier placed the page by nearest match or a
+signature could only be inferred. The note is written for the row's note
+field; the status stays Cartograph's to set.
+
 ## 7. expense_records
 
 ```

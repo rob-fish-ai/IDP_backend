@@ -173,3 +173,72 @@ def test_an_unexpected_failure_in_the_audit_task_is_recorded_and_reported(monkey
     tasks.audit_case(case_ref="J-X", documents=[{"url": "https://example.invalid/x"}])
     assert store.get("J-X")["state"] == "extraction_failed"
     assert posted == [("J-X", "unexpected error: source or target not a PDF", "engine_error")]
+
+
+def test_checklist_rows_are_read_from_both_request_shapes():
+    """Today's nested items (one entry, several finding ids) and the flat
+    rows that replace them (one row per finding id, with a subject)
+    produce the same normalised rows; a finding id seen twice is one row."""
+    from app.services.cartograph.checklist import normalise_rows
+    body = {
+        "case_ref": "J-CCAC-06832",
+        "requirements": [{"community_defaults": {"checklist_items": [
+            {"checklist_item_id": 12, "item_code": "HUDS8-FORM-50059", "label": "HUD 50059 Completed and Accurate", "case_finding_ids": [501]},
+            {"checklist_item_id": 13, "item_code": "HUDS8-FORM-9887A", "label": "HUD 9887-A signed by each adult", "case_finding_ids": [502, 503]},
+        ]}}],
+        "checklist_rows": [
+            {"finding_id": 502, "checklist_item_id": 13, "item_code": "HUDS8-FORM-9887A", "label": "HUD 9887-A signed by each adult",
+             "subject_type": "household_member", "subject_id": 77, "subject_label": "Elise Dodd"},
+        ],
+    }
+    rows = normalise_rows(body)
+    assert [(r["finding_id"], r["item_code"], r.get("subject_label")) for r in rows] == [
+        (502, "HUDS8-FORM-9887A", "Elise Dodd"), (501, "HUDS8-FORM-50059", None), (503, "HUDS8-FORM-9887A", None)]
+    assert normalise_rows({}) == []
+
+
+def test_checklist_rows_map_to_document_types_by_form_number_then_title_then_words():
+    from app.services.cartograph.checklist import document_type_for
+    assert document_type_for({"label": "HUD 50059 Completed and Accurate", "item_code": "HUDS8-FORM-50059"}) == ("HUD 50059", "form_number")
+    assert document_type_for({"label": "HUD 9887 Notice and Consent signed", "item_code": "HUDS8-FORM-9887"}) == ("HUD 9887", "form_number")
+    assert document_type_for({"label": "HUD 9887-A signed by each adult", "item_code": "HUDS8-FORM-9887A"}) == ("HUD 9887-A", "form_number")
+    assert document_type_for({"label": "Race and Ethnic Data Reporting Form", "item_code": "HUDS8-FORM-RACE"})[0] == "HUD Race and Ethnic Data Form"
+    assert document_type_for({"label": "Verification of Assets on file for each account", "item_code": "GEN-VOA"})[0] == "Verification of Assets (VOA)"
+    assert document_type_for({"label": "Rent reasonableness memo", "item_code": "X-1"}) == (None, None)
+
+
+def test_checklist_matches_say_found_pages_signature_and_confidence():
+    from types import SimpleNamespace
+    from app.schemas.extraction import CertificationInfo, DocumentGroup, DocumentInventory, DocumentInventoryEntry
+    from app.services.cartograph.checklist import match_checklist
+    def g(label, pages, person=None, notes=None, category="include"):
+        return DocumentGroup(document_type=label, category=category, pages=pages, page_range=str(pages[0]), combined_text="x", person_name=person, notes=notes)
+    ex = SimpleNamespace(
+        document_groups=[g("HUD 50059", [2, 3]), g("HUD 50059 (Previous)", [4], category="ignore"), g("HUD 9887", [38, 39], category="compliance"),
+                         g("HUD 9887-A", [40, 41], person="Yolanda Bribiesca", category="compliance"),
+                         g("HUD 9887-A", [42], person="Jasmine Bribiesca", category="compliance"),
+                         g("Student Status Certification", [27, 28], person="Jasmine Bribiesca", notes="nearest match — page titled 'Student Certification'")],
+        document_inventory_hud=DocumentInventory(documents=[
+            DocumentInventoryEntry(documentType="HUD 9887", isSigned="Yes", signedBy="Yolanda Bribiesca", signatureDate="2026-09-16"),
+            DocumentInventoryEntry(documentType="HUD 9887-A", personName="Yolanda Bribiesca", isSigned="No"),
+            DocumentInventoryEntry(documentType="Student Status Certification", personName="Jasmine Bribiesca", isSigned="No")]),
+        document_inventory_financial=DocumentInventory(documents=[]),
+        certification_info=CertificationInfo(certificationType="AR", isSigned="No"),
+    )
+    rows = [
+        {"finding_id": 1, "item_code": "HUDS8-FORM-50059", "label": "HUD 50059 Completed and Accurate"},
+        {"finding_id": 2, "item_code": "HUDS8-FORM-9887", "label": "HUD 9887 Notice and Consent signed by all adults"},
+        {"finding_id": 3, "item_code": "HUDS8-FORM-9887A", "label": "HUD 9887-A", "subject_label": "Yolanda Bribiesca"},
+        {"finding_id": 4, "item_code": "HUDS8-FORM-9887A", "label": "HUD 9887-A", "subject_label": "Sofia Bribiesca-Soto"},
+        {"finding_id": 5, "item_code": "GEN-STUDENT", "label": "Student Status Certification", "subject_label": "Jasmine Bribiesca"},
+        {"finding_id": 6, "item_code": "HUDS8-FORM-RACE", "label": "Race and Ethnic Data Form"},
+        {"finding_id": 7, "item_code": "X-MEMO", "label": "Rent reasonableness memo"},
+    ]
+    out = {m["finding_id"]: m for m in match_checklist(rows, ex)}
+    assert out[1]["found"] and out[1]["pages"] == [2, 3] and "Not signed: the signature lines are blank" in out[1]["note"]
+    assert out[2]["found"] and "Signed by Yolanda Bribiesca on 2026-09-16" in out[2]["note"] and out[2]["confidence"] == 0.9
+    assert out[3]["found"] and out[3]["pages"] == [40, 41] and "check visually" in out[3]["note"] and out[3]["confidence"] == 0.6
+    assert out[4]["found"] and out[4]["pages"] == [40, 41, 42]          # no row for Sofia: the adults' forms, lower certainty is the reviewer's call
+    assert out[5]["found"] and out[5]["confidence"] < 0.9               # placed by nearest match
+    assert out[6] == {"finding_id": 6, "found": False, "pages": [], "confidence": 0.8, "note": "No HUD Race and Ethnic Data Form in the packet."}
+    assert 7 not in out                                                  # unmappable row left untouched

@@ -151,6 +151,18 @@ A source can arrive with paystubs and no verification entry. That is not an erro
 
 ---
 
+## 6b. `checklist_matches`
+
+| Field | Example | Notes |
+|---|---|---|
+| `finding_id` | `88412` | The case's own checklist row id, from the case request |
+| `found` | `true` | The form is in the packet |
+| `pages` | `[2, 3]` | Packet pages it was read from |
+| `confidence` | `0.85` | Certainty of the match and the note together, 0-1 |
+| `note` | `HUD 50059 present, pages 2-3. Not signed: …` | For the row's note field |
+
+Rows the engine cannot map to a document type are not sent.
+
 ## 7. What needs adding
 
 Three columns are being sent right now with nowhere to land:

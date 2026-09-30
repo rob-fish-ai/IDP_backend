@@ -78,7 +78,9 @@ CREATE TABLE IF NOT EXISTS audit_jobs (
     -- import, and look complete here forever.
     cartograph_delivery TEXT,        -- JSON: status, scan_id, bytes sent
     cartograph_import_result TEXT,   -- JSON: their import outcome + warnings
-    cartograph_import_at REAL
+    cartograph_import_at REAL,
+    cartograph_request TEXT,         -- the case request body as received
+    checklist_rows TEXT              -- JSON: checklist rows read from it
 );
 
 CREATE INDEX IF NOT EXISTS idx_state ON audit_jobs(state);
@@ -146,6 +148,12 @@ class JobStore:
                 ("cartograph_delivery", "TEXT"),
                 ("cartograph_import_result", "TEXT"),
                 ("cartograph_import_at", "REAL"),
+                # The case request exactly as it arrived, and the checklist
+                # rows read out of it. The request model reads the fields it
+                # knows and ignores the rest, so without the raw body nobody
+                # can say what Cartograph sent that the engine dropped.
+                ("cartograph_request", "TEXT"),
+                ("checklist_rows", "TEXT"),
             ):
                 if column not in existing_cols:
                     conn.execute(
@@ -340,6 +348,16 @@ class JobStore:
                     completed_at = ?, updated_at = ?
                 WHERE case_id = ?
             """, (DONE, findings_text, confidence, snapshot_json, now, now, case_id))
+
+    def record_request(self, case_id: str, raw: bytes | str, checklist_rows: list[dict] | None) -> None:
+        """Keep the case request as received, and the checklist rows read
+        from it, on the job row."""
+        text = raw.decode("utf-8", errors="replace") if isinstance(raw, bytes) else raw
+        with self._lock, self._connect() as conn:
+            conn.execute(
+                "UPDATE audit_jobs SET cartograph_request = ?, checklist_rows = ?, updated_at = ? WHERE case_id = ?",
+                (text, json.dumps(checklist_rows or [], default=str), time.time(), case_id),
+            )
 
     def record_delivery(self, case_id: str, response: dict[str, Any]) -> None:
         """Store what the consumer returned when the extraction was handed over.

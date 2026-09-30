@@ -46,6 +46,7 @@ from datetime import datetime, timezone
 
 from app.core.config import Settings
 from app.schemas.extraction import ExtractionResult, HouseholdMember
+from app.services.cartograph.checklist import match_checklist
 from app.services.income_calculator import match_paystubs_to_sources, normalize_rate_unit
 from app.services.members import is_unborn
 from app.services.name_reconciler import _name_similarity
@@ -1226,6 +1227,7 @@ def build_payload(
     unit_number: str | None = None,
     extraction_id: str | None = None,
     extracted_at: str | None = None,
+    checklist_rows: list[dict] | None = None,
 ) -> AdapterResult:
     """Build the ingest body for one audited case.
 
@@ -1260,6 +1262,9 @@ def build_payload(
         "income_records": income,
         "asset_records": assets,
         "findings": build_findings(extraction, members),
+        # One entry per checklist row the packet can answer; rows left out
+        # stay untouched on Cartograph's side.
+        "checklist_matches": match_checklist(checklist_rows or [], extraction),
     }
     attach_confidence(payload, extraction)
 

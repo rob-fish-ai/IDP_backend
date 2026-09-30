@@ -35,6 +35,7 @@ from app.core.auth import verify_cartograph_signature
 from app.core.config import Settings
 from app.core.dependencies import get_settings
 from app.services.audit.job_store import get_job_store
+from app.services.cartograph.checklist import normalise_rows
 from app.services.cartograph.tasks import audit_case
 
 logger = logging.getLogger(__name__)
@@ -65,6 +66,11 @@ class AuditRequest(BaseModel):
     community_id: int | None = None
     unit_number: str | None = None
     effective_date: str | None = None
+    # Carried as sent. The checklist rows are read out of them by
+    # cartograph.checklist; the manifest is kept with the request for now.
+    requirements: list | None = None
+    checklist_rows: list | None = None
+    existing_records_manifest: dict | list | None = None
 
 
 @router.post(
@@ -74,6 +80,7 @@ class AuditRequest(BaseModel):
 )
 async def receive_case(
     payload: AuditRequest,
+    request: Request,
     background_tasks: BackgroundTasks,
     settings: Settings = Depends(get_settings),
 ) -> dict:
@@ -122,10 +129,28 @@ async def receive_case(
             "state": upsert.get("state"),
         }
 
+    # The request as received is kept with the job, and any top-level key
+    # the model does not know is logged: the shape is Cartograph's to
+    # change, and a field the engine ignores must never disappear quietly.
+    raw = await request.body()
+    try:
+        body = json.loads(raw) if raw else {}
+    except ValueError:
+        body = {}
+    unknown = sorted(set(body) - set(AuditRequest.model_fields)) if isinstance(body, dict) else []
+    if unknown:
+        logger.warning("Cartograph audit request case_ref=%s carries keys the engine does not read: %s",
+                       payload.case_ref, unknown)
+    checklist_rows = normalise_rows(body if isinstance(body, dict) else {})
+    try:
+        store.record_request(payload.case_ref, raw, checklist_rows)
+    except Exception:
+        logger.exception("Could not keep the request for case_ref=%s", payload.case_ref)
+
     logger.info(
-        "Cartograph audit request case_ref=%s cert=%s program=%s documents=%d",
+        "Cartograph audit request case_ref=%s cert=%s program=%s documents=%d checklist_rows=%d",
         payload.case_ref, payload.cert_type, payload.program,
-        len(payload.documents),
+        len(payload.documents), len(checklist_rows),
     )
 
     background_tasks.add_task(
@@ -138,6 +163,7 @@ async def receive_case(
         community_id=payload.community_id,
         unit_number=payload.unit_number,
         effective_date=payload.effective_date,
+        checklist_rows=checklist_rows,
     )
 
     return {"status": "accepted", "case_ref": payload.case_ref}
