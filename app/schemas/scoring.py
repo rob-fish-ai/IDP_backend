@@ -49,6 +49,20 @@ WEIGHT_FINDING = 0.40
 # green threshold: unconfirmed is its own state, distinct from both
 # "confirmed good" and "found wrong".
 UNVERIFIED_CEILING = 0.79
+# Ceiling for a value printed on no page of the record's documents: red.
+NOT_ON_PAGE_CEILING = 0.49
+
+# The overall score weights the figures a reviewer acts on above the
+# fields that merely describe a record. A wrong household income scored
+# the same as a wrong middle initial when every field weighed one; a case
+# with sixty easy fields and one wrong headline figure scored 85%.
+HEADLINE_WEIGHT = 3.0
+HEADLINE_FIELDS = frozenset({
+    ("certification", "householdIncome"), ("certification", "tenantRent"), ("certification", "grossRent"),
+    ("certification", "utilityAllowance"), ("certification", "effectiveDate"),
+    ("income", "rateOfPay"), ("income", "selfDeclaredAmount"), ("income", "ytdAmount"),
+    ("asset", "currentBalance"), ("asset", "selfDeclaredAmount"), ("asset", "incomeAmount"),
+})
 
 
 # Ordering used to take the worse of two flags. NA is not a severity — it
@@ -221,6 +235,13 @@ class ExtractionScoreSummary(BaseModel):
     records: list[RecordScoreCard] = []
     overall_composite: float = Field(default=0.0, ge=0.0, le=1.0)
     overall_flag: ScoreFlag = ScoreFlag.RED
+    # The weighted mean of the fields, before coverage; what was extracted,
+    # judged on its own. `coverage` is what the audit says was missed:
+    # 1.0 when nothing, lowered a step per omission signal (field_scorer
+    # .apply_coverage). overall_composite is their product.
+    field_composite: float = Field(default=0.0, ge=0.0, le=1.0)
+    coverage: float = Field(default=1.0, ge=0.0, le=1.0)
+    omissions: list[str] = []
     total_fields: int = 0
     green_fields: int = 0
     yellow_fields: int = 0
@@ -235,11 +256,13 @@ class ExtractionScoreSummary(BaseModel):
         self.yellow_fields = sum(1 for f in all_fields if f.flag == ScoreFlag.YELLOW)
         self.red_fields = sum(1 for f in all_fields if f.flag == ScoreFlag.RED)
         self.na_fields = sum(1 for f in all_fields if f.flag == ScoreFlag.NA)
-        scored = [f for f in all_fields if f.flag != ScoreFlag.NA]
+        scored = [(r, f) for r in self.records for f in r.fields if f.flag != ScoreFlag.NA]
         if scored:
-            self.overall_composite = sum(f.composite for f in scored) / len(scored)
+            weights = [HEADLINE_WEIGHT if (r.record_type, f.field_name) in HEADLINE_FIELDS else 1.0 for r, f in scored]
+            self.field_composite = sum(f.composite * w for (_, f), w in zip(scored, weights)) / sum(weights)
         else:
-            self.overall_composite = 1.0 if all_fields else 0.0
+            self.field_composite = 1.0 if all_fields else 0.0
+        self.overall_composite = round(self.field_composite * self.coverage, 6)
         self.overall_flag = compute_flag(self.overall_composite)
 
         # The composite is an honest mean and stays one. The flag is not a

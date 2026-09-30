@@ -451,3 +451,39 @@ def test_a_voi_row_is_sent_only_when_a_verification_stated_something():
     voi = records[1]["vois"][0]
     assert voi["voi_type"] == "Work Number" and voi["rate_of_pay"] == "21.00" and voi["rate_unit"] == "hourly"
     assert voi["frequency_of_pay"] == "bi-weekly" and voi["ytd_amount"] == "9701.07" and voi["employment_start_date"] == "2026-03-13"
+
+
+def test_a_value_on_no_page_is_red_and_the_overall_weights_headline_figures_and_coverage():
+    """Scoring measures accuracy, not only provenance: a figure printed on
+    no page is red, the figures a reviewer acts on weigh more than the
+    fields that describe a record, and what the audit says was missed
+    lowers the overall."""
+    from app.schemas.extraction import Finding
+    from app.schemas.scoring import ExtractionScoreSummary, FieldScore, RecordScoreCard, ScoreFlag, StageScore
+    from app.services.field_scorer import apply_coverage
+    not_found = FieldScore(field_name="householdIncome", value="16481.00", stages=[
+        StageScore(stage="extraction", score=0.85, reason="Extracted"),
+        StageScore(stage="source_verification", score=0.30, ceiling=0.49, reason="Not found in source text — verify manually")])
+    not_found.recompute()
+    assert not_found.flag == ScoreFlag.RED and "Not found in source text" in not_found.flag_message
+    good = lambda name, rt="certification": FieldScore(field_name=name, stages=[
+        StageScore(stage="extraction", score=0.85), StageScore(stage="source_verification", score=1.0)])
+    cert = RecordScoreCard(record_type="certification", record_label="CertificationInfo",
+                           fields=[not_found, good("effectiveDate"), good("unitNumber"), good("certificationType")])
+    member = RecordScoreCard(record_type="household_member", record_label="A B", fields=[good("FirstName"), good("LastName"), good("DOB")])
+    for f in cert.fields + member.fields: f.recompute()
+    cert.recompute(); member.recompute()
+    s = ExtractionScoreSummary(records=[cert, member]); s.recompute()
+    # Plain mean of the seven fields would be (0.49*? ...) ≈ 0.93; the wrong headline income pulls the weighted mean lower.
+    plain = sum(f.composite for f in cert.fields + member.fields) / 7
+    assert s.field_composite < plain and s.coverage == 1.0 and s.overall_composite == round(s.field_composite, 6)
+    apply_coverage(s, [
+        Finding(code="CERT_AMOUNT_UNACCOUNTED", text="1 income amount(s) on the certification match no extracted record: $12,708.00.", result="na"),
+        Finding(code="CERT_AMOUNT_UNACCOUNTED", text="2 unplaced amount(s) on the certification match no extracted record", result="na"),
+        Finding(code="INCOME_DECLARED_NOT_VERIFIED", text="x: Social Security income declared but no verification carries it"),
+        Finding(code="HH_SIZE_MISMATCH", text="the certification declares 3 member(s) but 2 were extracted (fewer than declared)"),
+        Finding(code="HH_SIZE_MISMATCH", text="the certification declares 1 member(s) but 2 were extracted (more than declared)"),
+    ])
+    s.recompute()
+    assert s.omissions == ["CERT_AMOUNT_UNACCOUNTED", "INCOME_DECLARED_NOT_VERIFIED", "HH_SIZE_MISMATCH"]
+    assert s.coverage == 0.76 and abs(s.overall_composite - s.field_composite * 0.76) < 1e-6

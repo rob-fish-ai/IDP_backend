@@ -2945,7 +2945,7 @@ def _score_and_note(findings: list, *, household, certification_info, income, as
         ("certification", "householdIncome"),  # cross_doc_validator
         ("certification", "isSigned"),         # signature_validator
     }
-    score_summary = build_score_summary(score_cards)
+    score_summary = build_score_summary(score_cards, dedupe_findings(findings))
     findings.extend(_unverifiable_income_amounts(score_cards))
     for card in score_cards:
         for fs in card.flagged_fields:

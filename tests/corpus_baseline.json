@@ -20,7 +20,7 @@
   "notes": [
    "Missing required certification form: no current TIC / HUD 50059 / RD 3"
   ],
-  "score": 0.1,
+  "score": 0.04,
   "warnings": [
    "no household members extracted from this packet"
   ]
@@ -46,7 +46,7 @@
   "notes": [
    "Missing required certification form: no current TIC / HUD 50059 / RD 3"
   ],
-  "score": 0.1,
+  "score": 0.04,
   "warnings": [
    "no household members extracted from this packet"
   ]
@@ -126,7 +126,7 @@
   "notes": [
    "Pages 12: 'Income Calculation Worksheet' detected \u2014 excluded from data"
   ],
-  "score": 0.87,
+  "score": 0.8,
   "warnings": [
    "asset_records[0]: balance arrived with no statement or verification of",
    "asset_records[1]: balance arrived with no statement or verification of",
@@ -209,7 +209,7 @@
    "Pages 20-21: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr",
    "Self-declared income amounts not extracted from questionnaire/applicat"
   ],
-  "score": 0.89,
+  "score": 0.88,
   "warnings": [
    "asset_records[0]: balance arrived with no statement or verification of",
    "asset_records[1]: balance arrived with no statement or verification of",
@@ -279,7 +279,7 @@
    "Pages 27: Unrecognized document type \u2014 manual review required",
    "Self-declared income amounts not extracted from questionnaire/applicat"
   ],
-  "score": 0.83,
+  "score": 0.78,
   "warnings": []
  },
  "J-CCAC-06735@1790651308": {
@@ -339,7 +339,7 @@
    "Pages 29: Unrecognized document type \u2014 manual review required",
    "Pages 7: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti"
   ],
-  "score": 0.83,
+  "score": 0.81,
   "warnings": [
    "asset_records[0]: balance arrived with no statement or verification of",
    "income_records[1]: 6 quarterly wage-history row(s) not sent as pay stu"
@@ -401,7 +401,7 @@
    "Pages 28: Unrecognized document type \u2014 manual review required",
    "Student status is null for all household members \u2014 verify against HUD "
   ],
-  "score": 0.83,
+  "score": 0.71,
   "warnings": [
    "asset_records[0]: balance arrived with no statement or verification of"
   ]
@@ -479,7 +479,7 @@
    "Pages 19-20: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr",
    "Self-declared income amounts not extracted from questionnaire/applicat"
   ],
-  "score": 0.89,
+  "score": 0.87,
   "warnings": [
    "asset_records[2].voa: balance -263.25 is negative (overdrawn); sent as",
    "asset_records[2]: balance -263.25 is negative (overdrawn); sent as 0.0"
@@ -566,7 +566,7 @@
    "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
    "Pages 17-18: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr"
   ],
-  "score": 0.78,
+  "score": 0.59,
   "warnings": []
  },
  "J-CCAC-06739@1790651573": {
@@ -641,7 +641,7 @@
    "Self-declared income amounts not extracted from questionnaire/applicat",
    "Student status is null for all household members \u2014 verify against HUD "
   ],
-  "score": 0.68,
+  "score": 0.62,
   "warnings": []
  },
  "J-CCAC-06740@1790651684": {
@@ -741,7 +741,7 @@
    "Pages 33: Unrecognized document type \u2014 manual review required",
    "Self-declared income amounts not extracted from questionnaire/applicat"
   ],
-  "score": 0.9,
+  "score": 0.89,
   "warnings": [
    "asset_records[0]: balance arrived with no statement or verification of",
    "asset_records[1]: balance arrived with no statement or verification of",
@@ -843,7 +843,7 @@
    "Pages 7: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti",
    "Student status is null for all household members \u2014 verify against HUD "
   ],
-  "score": 0.88,
+  "score": 0.73,
   "warnings": [
    "income_records[3]: 2 quarterly wage-history row(s) not sent as pay stu"
   ]
@@ -942,7 +942,7 @@
    "Pages 18-19: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr",
    "Pages 28: Unrecognized document type \u2014 manual review required"
   ],
-  "score": 0.85,
+  "score": 0.8,
   "warnings": [
    "asset_records[0]: balance arrived with no statement or verification of"
   ]
@@ -1006,7 +1006,7 @@
    "Pages 19: 'Notice of Rent Change (Previous)' detected \u2014 excluded from ",
    "Pages 20-21: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr"
   ],
-  "score": 0.82,
+  "score": 0.76,
   "warnings": []
  },
  "J-CCAC-06744@1790654613": {
@@ -1092,7 +1092,7 @@
    "Pages 17-19: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr",
    "Student status is null for all household members \u2014 verify against HUD "
   ],
-  "score": 0.86,
+  "score": 0.73,
   "warnings": []
  },
  "J-CCAC-06745@1790654823": {
@@ -1166,7 +1166,7 @@
    "Pages 10: 'Income Calculation Worksheet' detected \u2014 excluded from data",
    "Race and Ethnic Data Form present but signatures could not be verified"
   ],
-  "score": 0.75,
+  "score": 0.61,
   "warnings": [
    "income_records[1]: type 'Other Income' is not in the configured pickli"
   ]
@@ -1245,7 +1245,7 @@
    "Self-declared income amounts not extracted from questionnaire/applicat",
    "Student status is null for all household members \u2014 verify against HUD "
   ],
-  "score": 0.81,
+  "score": 0.7,
   "warnings": [
    "cert_review.grossRent: 2375.00 was not found on the certification page"
   ]
@@ -1306,7 +1306,7 @@
    "Pages 28: Unrecognized document type \u2014 manual review required",
    "Self-declared income amounts not extracted from questionnaire/applicat"
   ],
-  "score": 0.81,
+  "score": 0.75,
   "warnings": []
  },
  "J-CCAC-06748@1790655224": {
@@ -1501,7 +1501,7 @@
    "Pages 20-21: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr",
    "Pages 8: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti"
   ],
-  "score": 0.84,
+  "score": 0.74,
   "warnings": [
    "asset_records[0]: balance arrived with no statement or verification of",
    "asset_records[10]: balance arrived with no statement or verification o",
@@ -1615,7 +1615,7 @@
    "Pages 5-7: 'HUD 50059 (Previous)' detected \u2014 excluded from data extrac",
    "Student status is null for all household members \u2014 verify against HUD "
   ],
-  "score": 0.83,
+  "score": 0.77,
   "warnings": []
  },
  "J-CCAC-06752@1790657279": {
@@ -1674,7 +1674,7 @@
    "Pages 18-19: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr",
    "Student status is null for all household members \u2014 verify against HUD "
   ],
-  "score": 0.86,
+  "score": 0.8,
   "warnings": []
  },
  "J-CCAC-06753@1790657277": {
@@ -1766,13 +1766,13 @@
    "Pages 4-5: 'HUD 50059 (Previous)' detected \u2014 excluded from data extrac",
    "Self-declared income amounts not extracted from questionnaire/applicat"
   ],
-  "score": 0.88,
+  "score": 0.72,
   "warnings": [
    "asset_records[0]: balance arrived with no statement or verification of",
    "income_records[2]: 1 quarterly wage-history row(s) not sent as pay stu"
   ]
  },
- "J-CCAC-06832@1790775116": {
+ "J-CCAC-06832@1790783668": {
   "assets": [
    [
     "prepaid_debit_card",
@@ -1818,7 +1818,7 @@
    "Pages 17: 'Notice of Rent Change (Previous)' detected \u2014 excluded from ",
    "Pages 18-19: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr"
   ],
-  "score": 0.9,
+  "score": 0.89,
   "warnings": []
  },
  "J-PORT-05318@1789391374": {
@@ -1928,7 +1928,7 @@
    "Pages 4: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
    "Pages 5-6: 'Tenant Income Certification (TIC) (Previous)' detected \u2014 e"
   ],
-  "score": 0.91,
+  "score": 0.75,
   "warnings": [
    "income_records[4]: type 'Other Income' is not in the configured pickli"
   ]
@@ -1986,7 +1986,7 @@
    "HUD 50059 must be signed and dated; a signature could not be verified ",
    "Pages 14: 'Income Calculation Worksheet' detected \u2014 excluded from data"
   ],
-  "score": 0.87,
+  "score": 0.79,
   "warnings": []
  },
  "J-PORT-05320@1789188374": {
@@ -2058,7 +2058,7 @@
   "notes": [
    "HUD 50059 must be signed and dated; a signature could not be verified "
   ],
-  "score": 0.81,
+  "score": 0.69,
   "warnings": []
  },
  "J-PORT-05754@1788988443": {
@@ -2133,7 +2133,7 @@
    "Pages 15: 'Income Calculation Worksheet' detected \u2014 excluded from data",
    "Pages 18: 'Income Calculation Worksheet' detected \u2014 excluded from data"
   ],
-  "score": 0.84,
+  "score": 0.83,
   "warnings": [
    "asset_records[0]: balance arrived with no statement or verification of",
    "asset_records[1]: balance arrived with no statement or verification of",
@@ -2244,7 +2244,7 @@
    "Pages 6: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
    "Tenant Release and Consent Form must be signed by all adult members; a"
   ],
-  "score": 0.73,
+  "score": 0.52,
   "warnings": [
    "household_members[1].relationship 'Adult Co-Tenant' has no Cartograph "
   ]
@@ -2367,7 +2367,7 @@
    "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
    "Pages 6: 'Income Calculation Worksheet' detected \u2014 excluded from data "
   ],
-  "score": 0.73,
+  "score": 0.35,
   "warnings": [
    "household_members[1].relationship 'Adult Co-Tenant' has no Cartograph ",
    "income_records[3]: type 'Other Income' is not in the configured pickli"
@@ -2484,7 +2484,7 @@
    "Pages 3: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
    "Pages 8-10: 'Income Calculation Worksheet' detected \u2014 excluded from da"
   ],
-  "score": 0.9,
+  "score": 0.82,
   "warnings": []
  },
  "J-PORT-06238@1789665429": {
@@ -2573,7 +2573,7 @@
    "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
    "Pages 4-5: 'Tenant Income Certification (TIC) (Previous)' detected \u2014 e"
   ],
-  "score": 0.83,
+  "score": 0.79,
   "warnings": []
  },
  "J-TBRE-06337@1789858462": {
@@ -2643,7 +2643,7 @@
    "Pages 4: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
    "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data "
   ],
-  "score": 0.86,
+  "score": 0.74,
   "warnings": [
    "cert_review.grossRent: 1196.00 was not found on the certification page",
    "income_records[1]: 'Timothy Lee Tinsdale' did not match any household "
@@ -2695,7 +2695,7 @@
    "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
    "Self-declared income amounts not extracted from questionnaire/applicat"
   ],
-  "score": 0.86,
+  "score": 0.76,
   "warnings": [
    "cert_review.grossRent: 1196.00 was not found on the certification page"
   ]
@@ -2763,7 +2763,7 @@
    "Pages 6: Unrecognized document type \u2014 manual review required",
    "Self-declared income amounts not extracted from questionnaire/applicat"
   ],
-  "score": 0.88,
+  "score": 0.79,
   "warnings": []
  },
  "J-TBRE-06341@1789994918": {
@@ -2842,7 +2842,7 @@
    "Pages 4: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
    "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data "
   ],
-  "score": 0.88,
+  "score": 0.89,
   "warnings": [
    "asset_records[4]: type 'Investment' is not in the configured picklist;",
    "income_records[0]: type 'Other Income' is not in the configured pickli"
@@ -2942,7 +2942,7 @@
    "Pages 2: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti",
    "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data "
   ],
-  "score": 0.87,
+  "score": 0.69,
   "warnings": [
    "asset_records[0]: balance arrived with no statement or verification of",
    "asset_records[0]: type 'Investment' is not in the configured picklist;",
@@ -3036,7 +3036,7 @@
    "Pages 4: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti",
    "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data "
   ],
-  "score": 0.9,
+  "score": 0.6,
   "warnings": []
  },
  "J-VIV-06414@1790046122": {
@@ -3093,7 +3093,7 @@
    "Pages 2-3: 'HUD 50059 (Previous)' detected \u2014 excluded from data extrac",
    "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data "
   ],
-  "score": 0.85,
+  "score": 0.77,
   "warnings": [
    "cert_review.tenantRent: 306.00 was not found on the certification page"
   ]
@@ -3168,7 +3168,7 @@
    "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
    "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data "
   ],
-  "score": 0.87,
+  "score": 0.57,
   "warnings": [
    "cert_review.householdIncome: 425126.00 was not found on the certificat"
   ]
@@ -3261,7 +3261,7 @@
    "Income source 'Paloma Air Conditioning Corp.' (Beatriz Ibarra Alfianza",
    "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data "
   ],
-  "score": 0.85,
+  "score": 0.69,
   "warnings": [
    "cert_review.householdIncome: 58494.00 was not found on the certificati"
   ]
@@ -3324,7 +3324,7 @@
    "Pages 4: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti",
    "Pages 5-7: 'Income Calculation Worksheet' detected \u2014 excluded from dat"
   ],
-  "score": 0.85,
+  "score": 0.55,
   "warnings": [
    "cert_review.householdIncome: 115035.00 was not found on the certificat"
   ]
@@ -3412,7 +3412,7 @@
    "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
    "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir"
   ],
-  "score": 0.81,
+  "score": 0.65,
   "warnings": [
    "cert_review.householdIncome: 111328.00 was not found on the certificat"
   ]
@@ -3474,7 +3474,7 @@
    "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
    "Self-declared income amounts not extracted from questionnaire/applicat"
   ],
-  "score": 0.86,
+  "score": 0.74,
   "warnings": [
    "cert_review.householdIncome: 113500.00 was not found on the certificat"
   ]
@@ -3558,7 +3558,7 @@
    "Pages 5-6: 'Income Calculation Worksheet' detected \u2014 excluded from dat",
    "Student status is null for all household members \u2014 verify against HUD "
   ],
-  "score": 0.82,
+  "score": 0.66,
   "warnings": [
    "cert_review.householdIncome: 133140.00 was not found on the certificat"
   ]
@@ -3618,7 +3618,7 @@
    "Pages 4: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti",
    "Pages 5-6: 'Income Calculation Worksheet' detected \u2014 excluded from dat"
   ],
-  "score": 0.84,
+  "score": 0.62,
   "warnings": [
    "cert_review.householdIncome: 32359.00 was not found on the certificati"
   ]
@@ -3700,7 +3700,7 @@
    "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
    "Self-declared income amounts not extracted from questionnaire/applicat"
   ],
-  "score": 0.75,
+  "score": 0.67,
   "warnings": [
    "cert_review.householdIncome: 171750.00 was not found on the certificat"
   ]
@@ -3766,7 +3766,7 @@
    "Pages 3-4: 'HUD 50059 (Previous)' detected \u2014 excluded from data extrac",
    "Student status is null for all household members \u2014 verify against HUD "
   ],
-  "score": 0.71,
+  "score": 0.67,
   "warnings": [
    "cert_review.householdIncome: 120800.00 was not found on the certificat"
   ]
@@ -3839,7 +3839,7 @@
    "Pages 4: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti",
    "Pages 7: 'Income Calculation Worksheet' detected \u2014 excluded from data "
   ],
-  "score": 0.91,
+  "score": 0.83,
   "warnings": [
    "asset_records[0]: balance arrived with no statement or verification of"
   ]
@@ -3908,7 +3908,7 @@
    "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
    "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir"
   ],
-  "score": 0.81,
+  "score": 0.56,
   "warnings": [
    "asset_records[0].voa: balance -4.42 is negative (overdrawn); sent as 0",
    "asset_records[0]: balance -4.42 is negative (overdrawn); sent as 0.00,",
@@ -3973,7 +3973,7 @@
    "Pages 4: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti",
    "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data "
   ],
-  "score": 0.88,
+  "score": 0.73,
   "warnings": []
  },
  "J-VIV-06427@1790048420": {
@@ -4051,7 +4051,7 @@
    "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
    "Pages 14-15: Unrecognized document type \u2014 manual review required"
   ],
-  "score": 0.85,
+  "score": 0.63,
   "warnings": [
    "cert_review.householdIncome: 119141.00 was not found on the certificat"
   ]
@@ -4129,7 +4129,7 @@
    "Pages 4: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
    "Self-declared income amounts not extracted from questionnaire/applicat"
   ],
-  "score": 0.86,
+  "score": 0.8,
   "warnings": []
  },
  "J-VIV-06637@1790547014": {
@@ -4207,7 +4207,7 @@
    "Pages 4: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
    "Self-declared income amounts not extracted from questionnaire/applicat"
   ],
-  "score": 0.85,
+  "score": 0.8,
   "warnings": []
  },
  "J-VIV-06638@1790629851": {
@@ -4289,7 +4289,7 @@
    "Pages 9: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti",
    "Self-declared income amounts not extracted from questionnaire/applicat"
   ],
-  "score": 0.88,
+  "score": 0.8,
   "warnings": []
  },
  "J-VIV-06640@1790552673": {
@@ -4353,7 +4353,7 @@
    "Pages 4: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti",
    "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data "
   ],
-  "score": 0.82,
+  "score": 0.64,
   "warnings": []
  },
  "J-VIV-06641@1790553666": {
@@ -4413,7 +4413,7 @@
    "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
    "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data "
   ],
-  "score": 0.81,
+  "score": 0.57,
   "warnings": []
  },
  "J-VIV-06642@1790733452": {
@@ -4496,7 +4496,7 @@
    "Pages 4: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti",
    "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data "
   ],
-  "score": 0.84,
+  "score": 0.75,
   "warnings": [
    "asset_records[0].voa: balance -93.30 is negative (overdrawn); sent as ",
    "asset_records[0]: balance -93.30 is negative (overdrawn); sent as 0.00",
@@ -4589,7 +4589,7 @@
    "Self-declared income amounts not extracted from questionnaire/applicat",
    "Student Status Certification must be signed and dated; a signature cou"
   ],
-  "score": 0.9,
+  "score": 0.89,
   "warnings": []
  },
  "J-VIV-06676@1790725175": {
@@ -4646,7 +4646,7 @@
    "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
    "Student status is null for all household members \u2014 verify against HUD "
   ],
-  "score": 0.81,
+  "score": 0.76,
   "warnings": []
  },
  "J-VIV-06677@1790626908": {
@@ -4712,7 +4712,7 @@
    "Pages 4: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti",
    "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data "
   ],
-  "score": 0.88,
+  "score": 0.6,
   "warnings": []
  },
  "J-VIV-06678@1790629289": {
@@ -4785,7 +4785,7 @@
    "Pages 4: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti",
    "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data "
   ],
-  "score": 0.87,
+  "score": 0.51,
   "warnings": []
  },
  "J-VRC-06406@1790034865": {
@@ -4847,7 +4847,7 @@
    ]
   ],
   "notes": [],
-  "score": 0.86,
+  "score": 0.85,
   "warnings": []
  },
  "J-VRC-06407@1790034430": {
@@ -4906,7 +4906,7 @@
   "notes": [
    "Pages 26: 'Income Calculation Worksheet' detected \u2014 excluded from data"
   ],
-  "score": 0.86,
+  "score": 0.77,
   "warnings": [
    "asset_records[0]: balance arrived with no statement or verification of",
    "cert_review.effectiveDate: 2026-05-29 was not found on the certificati",
@@ -4986,7 +4986,7 @@
   "notes": [
    "Acknowledgement of Receipt of HUD Forms must be signed by all adult me"
   ],
-  "score": 0.89,
+  "score": 0.79,
   "warnings": []
  },
  "J-VRC-06409@1790121427": {
@@ -5105,7 +5105,7 @@
    "Income source 'Bickford Senior Living, L.L.C.' (Jessica Stamey): proje",
    "Pages 24: 'Income Calculation Worksheet' detected \u2014 excluded from data"
   ],
-  "score": 0.91,
+  "score": 0.83,
   "warnings": []
  }
 }

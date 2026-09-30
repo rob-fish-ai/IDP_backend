@@ -21,6 +21,7 @@ import re
 
 from app.schemas.extraction import Finding
 from app.schemas.scoring import (
+    NOT_ON_PAGE_CEILING,
     UNVERIFIED_CEILING,
     ExtractionScoreSummary,
     FieldScore,
@@ -342,10 +343,14 @@ def score_source_verification(
                 stage = StageScore(stage="source_verification", score=0.70, ceiling=UNVERIFIED_CEILING,
                                    reason="Found elsewhere in the packet, not in this record's documents")
             elif own_flag == "green":
-                stage = StageScore(stage="source_verification", score=0.50,
+                # A value printed on no page of the record's documents is
+                # the strongest sign the engine has that a figure was
+                # invented or misread. It is red, not "review recommended",
+                # and the adapter never delivers it.
+                stage = StageScore(stage="source_verification", score=0.30, ceiling=NOT_ON_PAGE_CEILING,
                                    reason="Not found in source text — verify manually")
             else:
-                stage = StageScore(stage="source_verification", score=0.30,
+                stage = StageScore(stage="source_verification", score=0.30, ceiling=NOT_ON_PAGE_CEILING,
                                    reason=f"Not found + poor OCR ({own_flag}) — unreliable")
             fs.stages.append(stage)
             fs.recompute()
@@ -1395,7 +1400,45 @@ def _score_certification_rules(card: RecordScoreCard, cert_type: str | None) -> 
 # Summary builder
 # ---------------------------------------------------------------------------
 
-def build_score_summary(cards: list[RecordScoreCard]) -> ExtractionScoreSummary:
+def build_score_summary(cards: list[RecordScoreCard], findings: list | None = None) -> ExtractionScoreSummary:
     summary = ExtractionScoreSummary(records=cards)
+    if findings is not None:
+        apply_coverage(summary, findings)
     summary.recompute()
     return summary
+
+
+# Findings that say the extraction covers less than the packet declares:
+# a certification income line no record accounts for, a declared source
+# nothing verifies, a household smaller than the form counts, a total the
+# sources do not reach. A per-field average cannot see what was never
+# extracted; these can.
+_OMISSION_CODES = frozenset({
+    "INCOME_DECLARED_NOT_VERIFIED", "HH_SIZE_MISMATCH", "TIC_TOTAL_MISMATCH", "TIC_TOTAL_NOT_EXTRACTED",
+    "TIC_TOTAL_NO_CALCULATIONS", "CERT_AMOUNT_UNACCOUNTED",
+})
+COVERAGE_STEP = 0.08
+COVERAGE_FLOOR = 0.5
+
+
+def apply_coverage(summary: ExtractionScoreSummary, findings: list) -> None:
+    """Lower the overall score for what the audit says was missed.
+
+    Each omission signal costs a fixed step, to a floor: the overall is the
+    field score times coverage. An unaccounted certification amount counts
+    only when it is an income amount — limits and subtotals are expected
+    to be unplaced. A household-size mismatch counts only when fewer
+    members were extracted than declared.
+    """
+    codes: list[str] = []
+    for f in findings:
+        if not isinstance(f, Finding) or f.code not in _OMISSION_CODES:
+            continue
+        text = (f.text or "").lower()
+        if f.code == "CERT_AMOUNT_UNACCOUNTED" and "income amount" not in text:
+            continue
+        if f.code == "HH_SIZE_MISMATCH" and "fewer than declared" not in text:
+            continue
+        codes.append(f.code)
+    summary.omissions = codes
+    summary.coverage = max(COVERAGE_FLOOR, round(1.0 - COVERAGE_STEP * len(codes), 4))
