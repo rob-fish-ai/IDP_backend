@@ -240,7 +240,8 @@ def test_checklist_matches_say_found_pages_signature_and_confidence():
     assert out[3]["found"] and out[3]["pages"] == [40, 41] and "check visually" in out[3]["note"] and out[3]["confidence"] == 0.6
     assert out[4]["found"] and out[4]["pages"] == [40, 41, 42]          # no row for Sofia: the adults' forms, lower certainty is the reviewer's call
     assert out[5]["found"] and out[5]["confidence"] < 0.9               # placed by nearest match
-    assert out[6] == {"finding_id": 6, "found": False, "pages": [], "confidence": 0.8, "note": "No HUD Race and Ethnic Data Form in the packet."}
+    assert out[6] == {"finding_id": 6, "found": False, "pages": [], "confidence": 0.8, "note": "[Scan] No HUD Race and Ethnic Data Form in the packet."}
+    assert all(m["note"].startswith("[Scan] ") for m in out.values())
     assert 7 not in out                                                  # unmappable row left untouched
 
 
@@ -275,5 +276,5 @@ def test_checklist_rows_about_a_forms_properties_or_its_previous_version_are_han
     ]
     out = {m["finding_id"]: m for m in match_checklist(rows, ex)}
     assert 1 not in out
-    assert out[2]["found"] and out[2]["pages"] == [18, 19] and out[2]["note"].startswith("Previous HUD 50059 present, pages 18-19.")
+    assert out[2]["found"] and out[2]["pages"] == [18, 19] and out[2]["note"].startswith("[Scan] Previous HUD 50059 present, pages 18-19.")
     assert out[3]["found"] and "Incomplete: missing its agencies / expiry page." in out[3]["note"]

@@ -185,11 +185,11 @@ stay untouched.
 
 ```
 { "finding_id": 88412, "found": true,  "pages": [2, 3],   "confidence": 0.85,
-  "note": "HUD 50059 present, pages 2-3. Not signed: the signature lines are blank." }
+  "note": "[Scan] HUD 50059 present, pages 2-3. Not signed: the signature lines are blank." }
 { "finding_id": 88419, "found": true,  "pages": [38, 39], "confidence": 0.9,
-  "note": "HUD 9887 present, pages 38-39. Signed by Yolanda Bribiesca on 2026-09-16." }
+  "note": "[Scan] HUD 9887 present, pages 38-39. Signed by Yolanda Bribiesca on 2026-09-16." }
 { "finding_id": 88421, "found": false, "pages": [],       "confidence": 0.9,
-  "note": "No HUD Race and Ethnic Data Form in the packet." }
+  "note": "[Scan] No HUD Race and Ethnic Data Form in the packet." }
 ```
 
 `found: false` means the engine looked and the form is not in the packet.
@@ -204,7 +204,9 @@ be incomplete says so in its note.
 document's title is printed in the row's label, 0.6 when only words match;
 lowered when the classifier placed the page by nearest match or a
 signature could only be inferred. The note is written for the row's note
-field; the status stays Cartograph's to set.
+field and always starts with `[Scan] `: on a later run Cartograph clears a
+note with that prefix from any row it sent that the reply omits, and never
+touches a note staff typed. The status stays Cartograph's to set.
 
 ## 7. expense_records
 

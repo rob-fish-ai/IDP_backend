@@ -265,10 +265,16 @@ def match_checklist(rows: list[dict], extraction) -> list[dict]:
             note += f" Incomplete: missing its {missing.group(1)}." if missing else " Incomplete."
         out.append({"finding_id": row["finding_id"], "found": True, "pages": pages,
                     "confidence": round(max(0.0, min(1.0, confidence)), 2), "note": note})
+    for m in out:
+        m["note"] = NOTE_PREFIX + m["note"]
     return out
 
-
 _CERT_FORMS = {"HUD 50059", "Tenant Income Certification (TIC)", "HUD 3560 Form"}
+
+# Every note the engine writes carries this prefix. Cartograph clears a
+# row's note on a later run only when it starts with it, so a note typed
+# by staff is never touched and a rerun matches a first run.
+NOTE_PREFIX = "[Scan] "
 
 
 def _page_span(pages: list[int]) -> str:
