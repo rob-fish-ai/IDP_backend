@@ -64,7 +64,11 @@ _NOT_HOUSEHOLD_RE = re.compile(
     r"\b(limits?|penalt(?:y|ies)|fined?|fines)\b|\bnot (?:less|more) than\b"
     r"|\bat move[\s-]?in\b|\bmove[\s-]?in income\b|\bprior\b|\bprevious\b"
     r"|\badjusted\b|\bimputed\b|\bpassbook\b|\binflation\b|\bfactor\b|\bthreshold\b"
-    r"|\brent\b|\bsubsid(?:y|ies)\b",
+    r"|\brent\b|\bsubsid(?:y|ies)\b"
+    # A monthly figure, or a percentage of one, on an annual certification
+    # is the form's own arithmetic ("Monthly Adjusted Income", "30% of
+    # Monthly Adjusted Income"), never a source the engine could have missed.
+    r"|\bmonthly\b|\d{1,2}\s?%\s+of\b|\bpercent\b",
     re.IGNORECASE,
 )
 # How far back to look for that label. Far enough for "Designated Income

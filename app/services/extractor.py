@@ -758,6 +758,20 @@ def extract_certification_info(
                     field, value, form_pages,
                 )
                 cert_info_dict[field] = None
+        # A fixed form labels its figures. Where the certification prints
+        # exactly one amount beside a field's own label ("110. Tenant Rent:
+        # $246"), that printed figure is the field: it wins over a model
+        # read that disagrees (an assistance payment of $1,665 delivered as
+        # the tenant rent) and fills a field the model left empty.
+        for field, labelled in _labelled_cert_amounts(form_text).items():
+            current = cert_info_dict.get(field)
+            if current in (None, "", "null"):
+                logger.info("Cert info: %s filled from the form's labelled figure %s", field, labelled)
+                cert_info_dict[field] = labelled
+            elif _amt_or_none(current) != _amt_or_none(labelled):
+                logger.warning("Cert info: %s=%s disagrees with the form's labelled figure %s — the printed figure wins",
+                               field, current, labelled)
+                cert_info_dict[field] = labelled
         # The household size is a printed count on every certification form
         # (a 50059's "53. Number of Family Members" plus "54. Number of
         # Non-Family Members", a TIC's "Current Household Size"). The model
@@ -790,7 +804,36 @@ def extract_certification_info(
 
 
 # Date fields that must be printed on the certification form's own pages.
-_FORM_DATE_FIELDS = ("signatureDate", "moveInDate")
+# Every certification date carries provenance, like every amount. An
+# effective date printed on no certification page was delivered from a
+# packet whose real certification was dated a year earlier.
+_FORM_DATE_FIELDS = ("signatureDate", "moveInDate", "effectiveDate")
+
+# The labels a certification form prints beside its own figures. Each is
+# matched only when it is followed by one amount within a few characters,
+# and used only when the form prints exactly one such amount, so a table
+# that lists the label in a header row and the figure elsewhere is not read.
+_CERT_LABELS = {
+    "tenantRent": r"\btenant\s+rent\b",
+    "utilityAllowance": r"\butility\s+allowance\b",
+    "grossRent": r"\bgross\s+rent\b",
+    "federalRentAssistance": r"\bassistance\s+payment\b",
+    "householdIncome": r"\btotal\s+annual\s+income\b",
+}
+_LABELLED_AMOUNT = r"[:\s]{0,6}\$?\s?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?|\d+(?:\.\d{2})?)(?![\d,.])"
+
+
+def _labelled_cert_amounts(form_text: str) -> dict[str, str]:
+    """{field: amount} for every certification field whose label the form
+    prints beside exactly one amount."""
+    plain = re.sub(r"\s+", " ", strip_html(form_text or ""))
+    out: dict[str, str] = {}
+    for field, label in _CERT_LABELS.items():
+        hits = {m.group(1).replace(",", "") for m in re.finditer(label + _LABELLED_AMOUNT, plain, re.IGNORECASE)}
+        hits = {h for h in hits if _amt_or_none(h) is not None}
+        if len(hits) == 1:
+            out[field] = f"{float(next(iter(hits))):.2f}"
+    return out
 _CERT_MONEY_FIELDS = ("householdIncome", "grossRent", "tenantRent", "utilityAllowance", "rentLimit",
                       "federalRentAssistance", "nonFederalRentAssistance")
 # A labelled count on a form: the value after the label, which must not be

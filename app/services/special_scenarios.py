@@ -1,6 +1,7 @@
 """Special scenario checks (Section 19)."""
 
 import logging
+import re
 from datetime import date, datetime
 
 from app.schemas.context import PipelineContext
@@ -303,6 +304,33 @@ def _check_cryptocurrency(assets: AssetExtraction | None) -> list[Finding]:
     return findings
 
 
+# A marked "yes" near an indicator word: "[X] Yes", "☒ Yes", "(X) Yes",
+# "Yes X", "Yes ☒". An unmarked box (☐, [ ], □) or a bare "Yes No" pair
+# is the question, not the answer.
+# A marker after "yes" that is itself followed by "no" belongs to the "no"
+# box ("yes ☒ no" in a box-before-label layout), so it does not mark yes.
+_MARKED_YES_RE = re.compile(
+    r"(?:\[\s*x\s*\]|☒|\(\s*x\s*\)|\bx)\s*yes\b"
+    r"|\byes\s*(?:\[\s*x\s*\]|☒|\(\s*x\s*\)|\bx\b)(?!\s*(?:\[\s*\]|☐|□)?\s*no\b)",
+    re.IGNORECASE,
+)
+
+
+def _indicated(text_lower: str, indicators: tuple[str, ...]) -> bool:
+    """True when an indicator word is followed, within a form line, by a
+    marked yes — or appears in prose with no yes/no choice at all (a
+    narrative "currently homeless"). A form asking "Are you homeless?
+    Yes No" is a question on every copy of that form, not an indication."""
+    for kw in indicators:
+        for m in re.finditer(re.escape(kw), text_lower):
+            window = text_lower[m.end(): m.end() + 120]
+            if _MARKED_YES_RE.search(window):
+                return True
+            if not re.search(r"\byes\b|\bno\b|\?", window) and not re.search(r"\?", text_lower[max(0, m.start() - 40): m.start()]):
+                return True
+    return False
+
+
 def _check_homeless_applicant(
     document_groups: list[DocumentGroup],
 ) -> list[Finding]:
@@ -314,7 +342,7 @@ def _check_homeless_applicant(
         dt = g.document_type.lower()
         if "application" in dt or "questionnaire" in dt:
             text_lower = g.combined_text.lower()
-            if any(kw in text_lower for kw in homeless_indicators):
+            if _indicated(text_lower, homeless_indicators):
                 findings.append(make_finding(
                     "HOMELESS_APPLICANT_INDICATED",
                     f"Pages {g.page_range}: Application indicates possible homeless applicant — "

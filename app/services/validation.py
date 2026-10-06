@@ -18,8 +18,10 @@ _SSN_MASKED_PATTERN = re.compile(r"\*{3}-\*{2}-(\d{4})")
 # ("441- 66- 8882"). A phone number (3-3-4) or a ten-digit run never fits.
 _SSN_SHAPED_RE = re.compile(r"(?<![\d*xX#])(\d{3})[\s-]*(\d{2})[\s-]*(\d{4})(?![\d-])")
 # The masked forms: ***-**-1234, XXX-XX-1234, #####1234, *****1234.
+# Any run of at least four mask characters, with separators, before the
+# last four: ***-**-1234, ***-***-1234 (EIV's print), XXX-XX-1234, *****1234.
 _SSN_MASKED_SHAPED_RE = re.compile(
-    r"(?:[*xX#•]{3}[\s-]*[*xX#•]{2}[\s-]*|[*xX#•]{5,}[\s-]*)(\d{4})(?!\d)"
+    r"(?<![\d])[*xX#•](?:[*xX#•\s-]*[*xX#•]){3,}[\s-]*(\d{4})(?!\d)"
 )
 # Only the last four, alone or after a label ("last 4: 1234", "SSN 1234").
 _SSN_LAST4_RE = re.compile(

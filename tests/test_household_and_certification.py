@@ -408,3 +408,36 @@ def test_a_surname_one_edit_from_the_certifications_spelling_takes_the_forms_spe
     hh = HouseholdDemographics(houseHold=[HouseholdMember(FirstName="Ana", LastName="Soto")])
     resolve_identities(hh, [_group("HUD 50059", [2])], {2: "Soto Ana; Sota Luis; Soro Eva"})
     assert hh.houseHold[0].LastName == "Soto"
+
+
+def test_a_fixed_forms_labelled_figure_wins_and_a_question_is_not_an_answer():
+    """J-CCAC-07076: the 50059 prints "Tenant Rent: $246" and "Assistance
+    Payment: $1,665"; the model delivered 1,665 as the tenant rent. The
+    printed figure beside the field's own label wins. And nine cases were
+    flagged homeless because the questionnaire asks "Are you homeless?
+    Yes No" — a question on every copy of a form is not an indication."""
+    from app.services.extractor import _labelled_cert_amounts
+    from app.services.special_scenarios import _indicated
+    form = ("108. Total Tenant Payment: $286 110. Tenant Rent: $246 111. Utility Reimbursement: $0 "
+            "112. Assistance Payment: $1,665 86. Total Annual Income: $11,462 31. Gross Rent: $1,951.00")
+    got = _labelled_cert_amounts(form)
+    assert got == {"tenantRent": "246.00", "grossRent": "1951.00", "federalRentAssistance": "1665.00", "householdIncome": "11462.00"}
+    # A label printed twice with two different figures is ambiguous and not used.
+    assert "tenantRent" not in _labelled_cert_amounts("Tenant Rent: $246 ... Tenant Rent: $304")
+    kws = ("homeless", "no fixed address", "shelter", "unhoused")
+    assert _indicated("homeless preference: are you homeless? yes no", kws) is False
+    assert _indicated("are you currently homeless? ☐ yes ☒ no", kws) is False
+    assert _indicated("are you currently homeless? [x] yes [ ] no", kws) is True
+    assert _indicated("applicant is currently homeless and staying with a relative", kws) is True
+
+
+def test_a_monthly_figure_on_the_certification_is_a_derivation_and_masked_ssns_keep_their_last_four():
+    from app.services.completeness import _NOT_HOUSEHOLD_RE
+    from app.services.validation import normalize_ssn
+    assert _NOT_HOUSEHOLD_RE.search("A-1 $994.00 Monthly Income A-2 ")
+    assert _NOT_HOUSEHOLD_RE.search("A-3 $288.20 30% of Monthly Adjusted")
+    assert not _NOT_HOUSEHOLD_RE.search("1 | SS - Social security | ")
+    assert normalize_ssn("***-***-2508") == "***-**-2508"
+    assert normalize_ssn("***-**-2508") == "***-**-2508"
+    assert normalize_ssn("XXX-XX-1234") == "***-**-1234"
+    assert normalize_ssn("02/20/1959") is None
