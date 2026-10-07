@@ -137,6 +137,63 @@
    "income_records[2]: no type extracted; sent as 'other'"
   ]
  },
+ "J-AFIA-07118@1791310337": {
+  "assets": [],
+  "cert_review": {
+   "annual_assets": null,
+   "annual_income": "22101.12",
+   "cert_type": "annual",
+   "effective_date": "2026-11-01",
+   "gross_rent": "541.00",
+   "hh_size": 2,
+   "tenant_rent": "541.00",
+   "utility_allowance": "0.00"
+  },
+  "codes": {
+   "CERT_SUMMARY_INCOME_MISMATCH": 1,
+   "INCOME_METHODS_DISAGREE": 1,
+   "PAYSTUB_COUNT_BELOW_GUIDANCE": 1
+  },
+  "income": [
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Natures Way Early Learning"
+   ]
+  ],
+  "members": [
+   [
+    "Harmony",
+    "Carrier",
+    "Head of Household"
+   ],
+   [
+    "Rosalie",
+    "Walton",
+    "Minor Child"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Income source 'C S W W Inc.': wage history only (2 period total(s) thr",
+   "Income source 'Natures Way Early Learning' (Harmony Carrier): projecte",
+   "Income source 'Staples the Office Superstore LLC': wage history only (",
+   "Income source 'Town Pump Inc.': latest pay date 2025-03-31 is 20 month",
+   "Income source 'Virk Hospitality Great Falls LLC': latest pay date 2025",
+   "Pages 11: 'Income Calculation Worksheet' detected \u2014 excluded from data",
+   "Pages 7-8: 'HUD 50059 (Previous)' detected \u2014 excluded from data extrac",
+   "Pages 9-10: 'Tenant Income Certification (TIC) (Previous)' detected \u2014 "
+  ],
+  "score": 0.74,
+  "warnings": [
+   "income_records[1]: 'Staples the Office Superstore LLC' is wage history",
+   "income_records[2]: 'C S W W Inc.' is wage history only (not declared, ",
+   "income_records[3]: 'Town Pump Inc.' is wage history only (not declared",
+   "income_records[4]: 'Virk Hospitality Great Falls LLC' is wage history "
+  ]
+ },
  "J-CCAC-06733@1790653606": {
   "assets": [
    [
@@ -177,7 +234,6 @@
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "HUD_9887A_INCOMPLETE": 1,
-   "MEMBER_IDENTITY_CONFLICT": 1,
    "NAME_VARIANT": 1
   },
   "income": [
@@ -314,12 +370,6 @@
     "verified",
     null,
     "Social Security Administration"
-   ],
-   [
-    "wages_and_salaries",
-    "verified",
-    null,
-    "Total Facility Maintenance Inc"
    ]
   ],
   "members": [
@@ -342,7 +392,7 @@
   "score": 0.81,
   "warnings": [
    "asset_records[0]: balance arrived with no statement or verification of",
-   "income_records[1]: 6 quarterly wage-history row(s) not sent as pay stu"
+   "income_records[1]: 'Total Facility Maintenance Inc.' is wage history o"
   ]
  },
  "J-CCAC-06736@1791222578": {
@@ -410,7 +460,7 @@
    "Pages 28: Unrecognized document type \u2014 manual review required",
    "Student status is null for all household members \u2014 verify against HUD "
   ],
-  "score": 0.62,
+  "score": 0.68,
   "warnings": []
  },
  "J-CCAC-06737@1790651532": {
@@ -824,12 +874,6 @@
     "verified",
     null,
     "Social Security"
-   ],
-   [
-    "wages_and_salaries",
-    "verified",
-    null,
-    "Global Food Services LLC"
    ]
   ],
   "members": [
@@ -850,9 +894,9 @@
    "Pages 7: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti",
    "Student status is null for all household members \u2014 verify against HUD "
   ],
-  "score": 0.73,
+  "score": 0.8,
   "warnings": [
-   "income_records[3]: 2 quarterly wage-history row(s) not sent as pay stu"
+   "income_records[3]: 'Global Food Services LLC' is wage history only (no"
   ]
  },
  "J-CCAC-06742@1790651903": {
@@ -1741,12 +1785,6 @@
     "verified_not_declared",
     null,
     "Social Security Administration"
-   ],
-   [
-    "wages_and_salaries",
-    "verified",
-    null,
-    "Catholic Charities of the Arch"
    ]
   ],
   "members": [
@@ -1766,10 +1804,10 @@
    "Pages 4-5: 'HUD 50059 (Previous)' detected \u2014 excluded from data extrac",
    "Self-declared income amounts not extracted from questionnaire/applicat"
   ],
-  "score": 0.79,
+  "score": 0.86,
   "warnings": [
    "asset_records[0]: balance arrived with no statement or verification of",
-   "income_records[2]: 1 quarterly wage-history row(s) not sent as pay stu"
+   "income_records[2]: 'Catholic Charities of the Archdioce' is wage histo"
   ]
  },
  "J-CCAC-06832@1790783668": {
@@ -1867,12 +1905,6 @@
     "verified",
     null,
     "Social Security Administration"
-   ],
-   [
-    "wages_and_salaries",
-    "verified",
-    null,
-    "Addus Healthcare Inc."
    ]
   ],
   "members": [
@@ -1892,7 +1924,7 @@
   ],
   "score": 0.81,
   "warnings": [
-   "income_records[2]: 6 quarterly wage-history row(s) not sent as pay stu"
+   "income_records[2]: 'Addus Healthcare Inc.' is wage history only (not d"
   ]
  },
  "J-CCAC-07069@1791237993": {
@@ -2913,12 +2945,6 @@
     "verified",
     null,
     "Social Security Administration"
-   ],
-   [
-    "wages_and_salaries",
-    "verified",
-    null,
-    "Help At Home Inc."
    ]
   ],
   "members": [
@@ -2938,7 +2964,7 @@
   ],
   "score": 0.79,
   "warnings": [
-   "income_records[2]: 6 quarterly wage-history row(s) not sent as pay stu"
+   "income_records[2]: 'Help At Home Inc.' is wage history only (not decla"
   ]
  },
  "J-CCAC-07089@1791259732": {
@@ -3042,7 +3068,7 @@
    "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
    "Pages 2-3: 'HUD 50059 (Previous)' detected \u2014 excluded from data extrac"
   ],
-  "score": 0.57,
+  "score": 0.64,
   "warnings": [
    "asset_records[1]: balance arrived with no statement or verification of",
    "asset_records[2]: balance arrived with no statement or verification of",
@@ -3090,12 +3116,6 @@
     "verified",
     null,
     "Social Security Administration"
-   ],
-   [
-    "wages_and_salaries",
-    "verified",
-    null,
-    "HR Service Group LLC"
    ]
   ],
   "members": [
@@ -3115,7 +3135,7 @@
   "score": 0.86,
   "warnings": [
    "asset_records[0]: 'Pierrette Mccoy' did not match any household member",
-   "income_records[1]: 3 quarterly wage-history row(s) not sent as pay stu"
+   "income_records[1]: 'HR Service Group LLC' is wage history only (not de"
   ]
  },
  "J-CCAC-07091@1791260040": {
@@ -3236,12 +3256,6 @@
     "verified",
     null,
     "Social Security Administration"
-   ],
-   [
-    "wages_and_salaries",
-    "verified",
-    null,
-    "Catholic Charities of the Arch"
    ]
   ],
   "members": [
@@ -3265,7 +3279,7 @@
    "asset_records[1]: balance -104.03 is negative (overdrawn); sent as 0.0",
    "asset_records[2]: type 'Annuity' is not in the configured picklist; co",
    "asset_records[4]: balance arrived with no statement or verification of",
-   "income_records[2]: 6 quarterly wage-history row(s) not sent as pay stu"
+   "income_records[2]: 'Catholic Charities of the Archdiocese' is wage his"
   ]
  },
  "J-CCAC-07093@1791260308": {
@@ -3468,12 +3482,6 @@
     "verified",
     null,
     "Social Security"
-   ],
-   [
-    "wages_and_salaries",
-    "verified",
-    null,
-    "Encompass Health Hom"
    ]
   ],
   "members": [
@@ -3493,7 +3501,7 @@
    "asset_records[0]: balance arrived with no statement or verification of",
    "asset_records[1]: balance arrived with no statement or verification of",
    "income_records[2]: type 'Other Income' is not in the configured pickli",
-   "income_records[3]: 2 quarterly wage-history row(s) not sent as pay stu"
+   "income_records[3]: 'Encompass Health Hom' is wage history only (not de"
   ]
  },
  "J-CCAC-07096@1791260694": {
@@ -3701,19 +3709,7 @@
     "wages_and_salaries",
     "verified",
     null,
-    "Cadc LLC"
-   ],
-   [
-    "wages_and_salaries",
-    "verified",
-    null,
     "Dining With the Dankos LLC"
-   ],
-   [
-    "wages_and_salaries",
-    "verified",
-    null,
-    "Harris Ventures Inc."
    ],
    [
     "wages_and_salaries",
@@ -3745,8 +3741,8 @@
   ],
   "score": 0.73,
   "warnings": [
-   "income_records[1]: 7 quarterly wage-history row(s) not sent as pay stu",
-   "income_records[3]: 2 quarterly wage-history row(s) not sent as pay stu"
+   "income_records[1]: 'Cadc LLC' is wage history only (not declared, no c",
+   "income_records[3]: 'Harris Ventures Inc.' is wage history only (not de"
   ]
  },
  "J-CCAC-07100@1791261310": {
@@ -3976,7 +3972,7 @@
    "Pages 48: Unrecognized document type \u2014 manual review required",
    "Pages 4: 'Income Calculation Worksheet' detected \u2014 excluded from data "
   ],
-  "score": 0.67,
+  "score": 0.74,
   "warnings": [
    "asset_records[0]: balance arrived with no statement or verification of",
    "asset_records[1]: balance arrived with no statement or verification of"
@@ -4377,7 +4373,7 @@
    "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
    "Self-declared income amounts not extracted from questionnaire/applicat"
   ],
-  "score": 0.7,
+  "score": 0.76,
   "warnings": [
    "asset_records[1]: balance arrived with no statement or verification of",
    "asset_records[4]: type 'Investment' is not in the configured picklist;"
@@ -4567,7 +4563,7 @@
    "Pages 36: Unrecognized document type \u2014 manual review required",
    "Pages 4-5: 'HUD 50059 (Previous)' detected \u2014 excluded from data extrac"
   ],
-  "score": 0.71,
+  "score": 0.77,
   "warnings": []
  },
  "J-CCAC-07112@1791262962": {
@@ -4946,7 +4942,7 @@
    "Pages 4: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
    "Pages 5-6: 'Tenant Income Certification (TIC) (Previous)' detected \u2014 e"
   ],
-  "score": 0.75,
+  "score": 0.82,
   "warnings": [
    "income_records[4]: type 'Other Income' is not in the configured pickli"
   ]
@@ -5262,7 +5258,7 @@
    "Pages 6: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
    "Tenant Release and Consent Form must be signed by all adult members; a"
   ],
-  "score": 0.52,
+  "score": 0.57,
   "warnings": [
    "household_members[1].relationship 'Adult Co-Tenant' has no Cartograph "
   ]
@@ -5385,7 +5381,7 @@
    "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
    "Pages 6: 'Income Calculation Worksheet' detected \u2014 excluded from data "
   ],
-  "score": 0.35,
+  "score": 0.41,
   "warnings": [
    "household_members[1].relationship 'Adult Co-Tenant' has no Cartograph ",
    "income_records[3]: type 'Other Income' is not in the configured pickli"
@@ -5502,7 +5498,7 @@
    "Pages 3: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
    "Pages 8-10: 'Income Calculation Worksheet' detected \u2014 excluded from da"
   ],
-  "score": 0.82,
+  "score": 0.89,
   "warnings": []
  },
  "J-PORT-06238@1789665429": {
@@ -7514,7 +7510,7 @@
    "Pages 4: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti",
    "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data "
   ],
-  "score": 0.75,
+  "score": 0.81,
   "warnings": [
    "asset_records[0].voa: balance -93.30 is negative (overdrawn); sent as ",
    "asset_records[0]: balance -93.30 is negative (overdrawn); sent as 0.00",

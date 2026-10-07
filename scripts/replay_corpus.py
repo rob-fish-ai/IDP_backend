@@ -99,6 +99,8 @@ def replay_case(row: dict) -> dict:
     income.sourceIncome.verificationIncome, declared_findings = pipeline._collapse_declared_duplicates(income.sourceIncome.verificationIncome)
     name_findings.extend(declared_findings)
     identity_findings = resolve_identities(household, groups, page_text) if household and household.houseHold else []
+    if hasattr(pipeline, "_reconcile_relationships_with_age"):
+        pipeline._reconcile_relationships_with_age(household, cert)
     income_calculations = pipeline._compute_income_calculations(income, cert, ctx) if income else []
 
     findings.extend(pipeline._generate_findings(

@@ -633,6 +633,39 @@ def _stale_note(dates: list[date], reference_date: date | None) -> str | None:
     )
 
 
+_AGGREGATE_INTERVALS = frozenset({"quarterly", "annually", "annual", "yearly"})
+
+
+def _history_only_note(vi_entry, paystubs: list) -> str | None:
+    """Why a source is prior employment rather than current income, or None.
+
+    A wage history (EIV, Work Number) reports what an employer paid in
+    past periods: a quarter's total, a year's total. It shows the person
+    worked there; it does not show they still do. A source whose only
+    evidence is such period aggregates — no pay-period stub, no rate on a
+    verification, no payment ledger — and that the household declares
+    nowhere is prior employment to confirm as ended. It is reported, and
+    it is not counted toward current income, however recent the last
+    period is.
+    """
+    if not paystubs:
+        return None
+    if any((ps.payInterval or "").strip().lower() not in _AGGREGATE_INTERVALS for ps in paystubs):
+        return None
+    if vi_entry is not None and (
+        vi_entry.rateOfPay or vi_entry.selfDeclaredAmount or vi_entry.declaredAnnualAmount
+        or vi_entry.ytdAmount or vi_entry.paymentHistory
+    ):
+        return None
+    dates = [d for d in (_parse_date(ps.payDate) for ps in paystubs) if d]
+    through = f" through {max(dates).isoformat()}" if dates else ""
+    return (
+        f"wage history only ({len(paystubs)} period total(s){through}), not declared by the "
+        f"household and no current pay document — prior employment to confirm as ended, "
+        f"not current income"
+    )
+
+
 def _stale_wage_note(
     paystubs: list[PayStubEntry], reference_date: date | None,
 ) -> str | None:
@@ -788,7 +821,7 @@ def calculate_all_methods(
             more = "; next method used" if idx + 1 < len(candidates) else ""
             results.append(_row(method, None, f"[rejected] {details} — {problem}{more}"))
             continue
-        stale = _stale_note(dates, reference_date)
+        stale = _stale_note(dates, reference_date) or _history_only_note(vi_entry, matching_paystubs)
         if stale:
             details = f"[historical] {stale}; {details}"
         results.append(_row(method, annual, details))

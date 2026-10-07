@@ -92,6 +92,17 @@ def _surname_tokens(last: str) -> list[str]:
     return [t for t in re.split(r"[-\s]+", (last or "").strip()) if t and t not in _SURNAME_PARTICLES]
 
 
+def _issuable(value: str | None) -> bool:
+    """False for a full number the Social Security Administration never
+    issues — 999-99-9999, 000-00-0000, 123-45-0000. A form's own
+    instruction ("if you do not have a SSN please enter 999-99-9999") and
+    a placeholder typed in its place are not evidence about a person. A
+    masked number or a last-four cannot be judged and is kept."""
+    from app.services.validation import _ssn_parts_plausible
+    m = re.fullmatch(r"(\d{3})\D?(\d{2})\D?(\d{4})", (value or "").strip())
+    return True if not m else _ssn_parts_plausible(*m.groups())
+
+
 def _base_surname(last: str) -> str:
     """The first name-bearing part of a compound surname."""
     parts = _surname_tokens(last)
@@ -260,7 +271,7 @@ def _table_claims(text: str, members, claims, pn: int, authority: int, document_
         key = _member_key(who)
         if ssn_col is not None and ssn_col < len(cells):
             value = _ssn_from_cell(cells[ssn_col])
-            if value:
+            if value and _issuable(value):
                 claims[key]["ssn"].append({"value": value, "page": pn, "authority": authority, "document_type": document_type})
                 claimed.add(value)
         if dob_col is not None:
@@ -299,7 +310,7 @@ def collect_identity_claims(members, document_groups, page_text: dict[int, str])
             for m in _SSN_RE.finditer(text):
                 value = f"{m.group(1)}-{m.group(2)}-{m.group(3)}"
                 value = re.sub(r"[Xx]{3}-[Xx]{2}", "***-**", value)
-                if value in by_row:
+                if value in by_row or not _issuable(value):
                     continue
                 who = _nearest_member(text[max(0, m.start() - _NAME_WINDOW):m.start()], members, g.person_name)
                 if who is None:

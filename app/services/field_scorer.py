@@ -1439,6 +1439,10 @@ def apply_coverage(summary: ExtractionScoreSummary, findings: list) -> None:
             continue
         if f.code == "HH_SIZE_MISMATCH" and "fewer than declared" not in text:
             continue
+        # Extracting more than the form declares is a different problem
+        # (a duplicate, a past employer counted) from missing something.
+        if f.code == "TIC_TOTAL_MISMATCH" and "lower)" not in text:
+            continue
         codes.append(f.code)
     summary.omissions = codes
     summary.coverage = max(COVERAGE_FLOOR, round(1.0 - COVERAGE_STEP * len(codes), 4))

@@ -499,6 +499,7 @@ def run_extraction_pipeline(
             )
         except Exception:
             logger.exception("Identity resolution failed — keeping extracted values")
+    _reconcile_relationships_with_age(household, certification_info)
     logger.info("Step 4f/6: Computing income calculations from the final income list")
     income_calculations = _compute_income_calculations(income, certification_info, ctx) if income else []
 
@@ -2808,6 +2809,24 @@ def _generate_findings(
     ))
 
     return findings
+
+
+def _reconcile_relationships_with_age(household, certification_info) -> None:
+    """A role only an adult can hold cannot belong to a minor. Runs after
+    identity resolution, when each date of birth is the authoritative one."""
+    from app.services.members import relationship_for_age
+    if not household or not household.houseHold:
+        return
+    reference = getattr(certification_info, "effectiveDate", None) if certification_info else None
+    if not reference:
+        from datetime import date
+        reference = date.today().isoformat()
+    for m in household.houseHold:
+        fixed = relationship_for_age(m.relationship, m.DOB, reference)
+        if fixed != m.relationship:
+            logger.info("Household: %s %s (born %s) cannot be '%s' — relationship read as '%s'",
+                        m.FirstName, m.LastName, m.DOB, m.relationship, fixed)
+            m.relationship = fixed
 
 
 def _calculation_and_compliance_findings(findings: list, income_calculations: list, certification_info, document_groups) -> None:

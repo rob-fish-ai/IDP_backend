@@ -204,6 +204,7 @@ _RELATIONSHIP_OUT = {
     "unborn child": "Unborn", "unborn": "Unborn", "expected child": "Unborn",
     "other adult": "Other Adult", "adult": "Other Adult", "o": "Other Adult",
 }
+_ADULT_ONLY_OUT = frozenset({"Co-Head", "Spouse", "Other Adult", "Live-in Aide"})
 _CHILD_WORDS = ("dependent", "child", "son", "daughter", "grandson", "granddaughter", "grandchild",
                 "minor", "stepson", "stepdaughter", "stepchild", "niece", "nephew", "d", "c")
 _ADULT_RELATIVE_WORDS = ("mother", "father", "parent", "brother", "sister", "sibling", "grandmother",
@@ -238,9 +239,14 @@ def relationship_out(printed: str | None, dob: str | None, effective_date: str |
     key = (printed or "").strip().lower().rstrip(".")
     if not key:
         return None
-    if key in _RELATIONSHIP_OUT:
-        return _RELATIONSHIP_OUT[key]
     age = _age_at(dob, effective_date)
+    if key in _RELATIONSHIP_OUT:
+        out = _RELATIONSHIP_OUT[key]
+        # A role only an adult can hold cannot belong to a minor, whatever
+        # a one-letter code on the form was taken to mean.
+        if age is not None and age < 18 and out in _ADULT_ONLY_OUT:
+            return "Minor Child"
+        return out
     if any(key == w or key.startswith(w + " ") or key.endswith(" " + w) for w in _CHILD_WORDS):
         if age is not None and age >= 18:
             return "Other Adult"
@@ -699,6 +705,18 @@ def _frequency_out(entry, stubs: list | None = None) -> str | None:
     return None
 
 
+def _is_history_only(entry, calc: dict | None) -> bool:
+    """A source with no current figure whose every calculation is historical
+    and that carries no declaration and no rate of its own."""
+    if not calc or calc.get("annual_income") is not None:
+        return False
+    alternatives = calc.get("alternatives") or []
+    if not alternatives or any(a.get("status") != "historical" for a in alternatives if a.get("status") != "audit"):
+        return False
+    return not (entry.rateOfPay or entry.selfDeclaredAmount or getattr(entry, "declaredAnnualAmount", None)
+                or entry.ytdAmount or getattr(entry, "paymentHistory", None))
+
+
 def _calculations_by_source(extraction: ExtractionResult) -> dict[tuple[str, str], dict]:
     """The engine's annual figure per source, with how it was reached.
 
@@ -806,6 +824,15 @@ def build_income_records(
             entry.memberName, members, warnings, context,
         )
         calc = calculations.get(_calc_key(entry.memberName, entry.sourceName))
+        if _is_history_only(entry, calc):
+            # Prior employment the audit reports as a finding. Cartograph
+            # totals what it receives, so a past employer sent as a record
+            # is counted as current income there whatever the engine says.
+            warnings.append(
+                f"{context}: '{entry.sourceName}' is wage history only (not declared, no current "
+                f"pay document); reported as a finding, not sent as an income record"
+            )
+            continue
 
         paystubs = [
             {

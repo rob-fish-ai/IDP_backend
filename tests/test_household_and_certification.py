@@ -441,3 +441,28 @@ def test_a_monthly_figure_on_the_certification_is_a_derivation_and_masked_ssns_k
     assert normalize_ssn("***-**-2508") == "***-**-2508"
     assert normalize_ssn("XXX-XX-1234") == "***-**-1234"
     assert normalize_ssn("02/20/1959") is None
+
+
+def test_a_relationship_is_read_against_the_members_age_and_a_placeholder_ssn_is_no_claim():
+    """J-AFIA-07118: a TIC's code C beside a child born in 2022 came out
+    as "Co-Head", and the questionnaire's instruction "if you do not have
+    a SSN please enter 999-99-9999" was read as a second SSN for each
+    member. A role only an adult can hold cannot belong to a minor; a
+    number the SSA never issues is not evidence about a person."""
+    from app.schemas.extraction import HouseholdDemographics, HouseholdMember
+    from app.services.cartograph.adapter import relationship_out
+    from app.services.identity import _issuable, resolve_identities
+    from app.services.members import relationship_for_age
+    assert relationship_for_age("Co-Head", "2022-06-23", "2026-11-01") == "Child"
+    assert relationship_for_age("Co-Head", "1990-06-23", "2026-11-01") == "Co-Head"
+    assert relationship_for_age("Head", "2010-01-01", "2026-11-01") == "Head"          # an emancipated minor can head
+    assert relationship_for_age("Spouse", None, "2026-11-01") == "Spouse"              # no date, no judgement
+    assert relationship_out("Co-Head", "2022-06-23", "2026-11-01") == "Minor Child"
+    assert relationship_out("Co-Head", "1990-06-23", "2026-11-01") == "Co-Head"
+    assert _issuable("999-99-9999") is False and _issuable("000-12-3456") is False
+    assert _issuable("516-39-8061") is True and _issuable("***-**-8061") is True
+    hh = HouseholdDemographics(houseHold=[HouseholdMember(FirstName="Harmony", LastName="Carrier", socialSecurityNumber="***-**-8061")])
+    cert = "<table><tr><th>Last Name</th><th>First Name</th><th>SSN</th></tr><tr><td>Carrier</td><td>Harmony</td><td>8061</td></tr></table>"
+    form = "Harmony Carrier Social Security Number (SSN): 516 - 39 - 8061 (If you do not have a SSN please enter 999-99-9999)"
+    groups = [_group("Tenant Income Certification (TIC)", [5]), _group("Application / Housing Questionnaire", [15])]
+    assert [f.code for f in resolve_identities(hh, groups, {5: cert, 15: form})] == []

@@ -487,3 +487,33 @@ def test_a_value_on_no_page_is_red_and_the_overall_weights_headline_figures_and_
     s.recompute()
     assert s.omissions == ["CERT_AMOUNT_UNACCOUNTED", "INCOME_DECLARED_NOT_VERIFIED", "HH_SIZE_MISMATCH"]
     assert s.coverage == 0.76 and abs(s.overall_composite - s.field_composite * 0.76) < 1e-6
+
+
+def test_wage_history_alone_does_not_establish_a_current_income():
+    """A source whose only evidence is period totals (EIV quarters), that
+    the household declares nowhere and no current pay document supports,
+    is prior employment: reported, not counted, not delivered."""
+    from app.schemas.extraction import PayStubEntry, VerificationIncomeEntry
+    from app.services.income_calculator import _history_only_note
+    q = lambda d: PayStubEntry(memberName="A B", sourceName="Staples", payDate=d, grossPay="1000.00", payInterval="quarterly")
+    bare = VerificationIncomeEntry(memberName="A B", sourceName="Staples", incomeType="Non-Federal Wage")
+    note = _history_only_note(bare, [q("2025-12-31"), q("2025-09-30")])
+    assert note and "wage history only" in note and "2025-12-31" in note
+    declared = VerificationIncomeEntry(memberName="A B", sourceName="Staples", incomeType="Non-Federal Wage", declaredAnnualAmount="12000.00")
+    assert _history_only_note(declared, [q("2025-12-31")]) is None
+    with_rate = VerificationIncomeEntry(memberName="A B", sourceName="Staples", incomeType="Non-Federal Wage", rateOfPay="15.00")
+    assert _history_only_note(with_rate, [q("2025-12-31")]) is None
+    stub = PayStubEntry(memberName="A B", sourceName="Staples", payDate="2026-06-05", grossPay="700.00", payInterval="bi-weekly")
+    assert _history_only_note(bare, [q("2025-12-31"), stub]) is None
+    assert _history_only_note(bare, []) is None
+
+
+def test_coverage_falls_only_when_the_extraction_falls_short():
+    from app.schemas.extraction import Finding
+    from app.schemas.scoring import ExtractionScoreSummary
+    from app.services.field_scorer import apply_coverage
+    s = ExtractionScoreSummary()
+    apply_coverage(s, [Finding(code="TIC_TOTAL_MISMATCH", text="TIC declares $22,101.12 but extracted sources sum to $39,616.88 (79% higher). Sources: ...")])
+    assert s.omissions == [] and s.coverage == 1.0
+    apply_coverage(s, [Finding(code="TIC_TOTAL_MISMATCH", text="TIC declares $25,426.00 but extracted sources sum to $18,708.00 (26% lower). Sources: ...")])
+    assert s.omissions == ["TIC_TOTAL_MISMATCH"] and s.coverage == 0.92
