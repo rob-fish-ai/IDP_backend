@@ -97,6 +97,7 @@ def _build_entry(g: DocumentGroup) -> DocumentInventoryEntry:
     signed = _detect_signature(g.combined_text)
     signer = _extract_signer(g.combined_text)
     sig_date = _extract_signature_date(g.combined_text)
+    sig_state = "read" if sig_date else _signature_date_state(g.combined_text)
     doc_date = _extract_document_date(g.combined_text)
 
     return DocumentInventoryEntry(
@@ -109,6 +110,7 @@ def _build_entry(g: DocumentGroup) -> DocumentInventoryEntry:
         isSigned=signed,
         signedBy=to_title_case(signer),
         signatureDate=sig_date,
+        signatureDateState=sig_state,
         documentDate=doc_date,
         notes=g.notes,
     )
@@ -165,6 +167,41 @@ def _extract_signature_date(text: str) -> str | None:
         m = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
         if m:
             return normalize_date(m.group(1))
+    return None
+
+
+# The date slot beside a signature: the "Date" label that follows the
+# signature label on the same line or the next, and whatever sits after it
+# up to the end of the line.
+_SIGNATURE_DATE_SLOT_RE = re.compile(
+    r"(?:signature|signed)[^\n]{0,80}?\bdate[^\n]{0,10}?[:\s_]*([^\n]*)"
+    r"|(?:signature|signed)[^\n]*\n[^\n]{0,40}?\bdate[^\n]{0,10}?[:\s_]*([^\n]*)",
+    re.IGNORECASE,
+)
+# Marks a form prints in an empty slot, and the OCR's own placeholder for
+# a region it could not read.
+_SLOT_FILLER_RE = re.compile(r"[_\-.\s|:]+|<\|ref\|>.*?<\|/ref\|>|<\|det\|>.*?<\|/det\|>")
+
+
+def _signature_date_state(text: str) -> str | None:
+    """Whether the date slot beside the signature was written in.
+
+    "unclear" when the slot holds characters that did not read as a date
+    (handwriting the OCR could not resolve), "blank" when it holds nothing
+    but the form's own underline, None when no such slot was found. Only
+    consulted when no signature date was read, so the two reasons a date is
+    missing — unreadable and absent — are reported as what they are.
+    """
+    for m in _SIGNATURE_DATE_SLOT_RE.finditer(text):
+        content = m.group(1) if m.group(1) is not None else m.group(2)
+        if content is None:
+            continue
+        # The slot ends at the next label on the line ("Date: ___ Unit: 4B").
+        content = re.split(r"\s{2,}|\t|\b[A-Z][a-z]+\s*:", content, maxsplit=1)[0]
+        if re.search(r"<\|ref\|>", content):
+            return "unclear"
+        remaining = _SLOT_FILLER_RE.sub("", content)
+        return "unclear" if remaining else "blank"
     return None
 
 

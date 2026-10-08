@@ -197,8 +197,13 @@ def _member_matches(person_name: str | None, subject_label: str | None) -> bool:
     return len(shared) >= 2 or (bool(shared) and (len(a) == 1 or len(b) == 1))
 
 
-def match_checklist(rows: list[dict], extraction) -> list[dict]:
-    """One entry per checklist row the packet can answer."""
+def match_checklist(rows: list[dict], extraction, expect_previous: bool = False) -> list[dict]:
+    """One entry per checklist row the packet can answer.
+
+    Rows asking for a previous form are answered only when the packet is
+    expected to carry one (``expect_previous``); otherwise they are left
+    out, and Cartograph leaves the row alone.
+    """
     all_groups = list(getattr(extraction, "document_groups", None) or [])
     groups = [g for g in all_groups if g.category != "ignore" and not is_previous_certification(g.document_type)]
     previous = [g for g in all_groups if is_previous_certification(g.document_type)]
@@ -219,6 +224,8 @@ def match_checklist(rows: list[dict], extraction) -> list[dict]:
         if wants_previous(row):
             # "Previous HUD 50059": the prior certification the packet
             # carries, which the audit otherwise sets aside.
+            if not expect_previous:
+                continue
             prev = [g for g in previous if _base(g.document_type) == label]
             if prev:
                 pages = sorted({p for g in prev for p in g.pages})
@@ -255,8 +262,7 @@ def match_checklist(rows: list[dict], extraction) -> list[dict]:
             confidence = min(confidence, 0.85)
         elif signed:
             who = f" by {signed.signedBy}" if signed.signedBy else ""
-            when = f" on {signed.signatureDate}" if signed.signatureDate else ", date not read"
-            note += f" Signed{who}{when}."
+            note += f" Signed{who}{_signed_when(signed)}."
         elif unsigned:
             note += " Signature not verified from text, check visually."
             confidence = min(confidence, 0.6)
@@ -266,15 +272,30 @@ def match_checklist(rows: list[dict], extraction) -> list[dict]:
         out.append({"finding_id": row["finding_id"], "found": True, "pages": pages,
                     "confidence": round(max(0.0, min(1.0, confidence)), 2), "note": note})
     for m in out:
-        m["note"] = NOTE_PREFIX + m["note"]
+        m["note_source"] = NOTE_SOURCE
     return out
 
 _CERT_FORMS = {"HUD 50059", "Tenant Income Certification (TIC)", "HUD 3560 Form"}
 
-# Every note the engine writes carries this prefix. Cartograph clears a
-# row's note on a later run only when it starts with it, so a note typed
-# by staff is never touched and a rerun matches a first run.
-NOTE_PREFIX = "[Scan] "
+# Every note the engine writes is marked as the scan's in a field of its
+# own, so Cartograph can tell it from a note typed by staff (and clear it
+# on a rerun) without the marker sitting in the text for staff to delete.
+NOTE_SOURCE = "scan"
+
+
+def _signed_when(entry) -> str:
+    """The date half of "Signed by X on Y". A date the entry carries is
+    given; otherwise the entry says whether the date slot was written in
+    (the handwriting could not be read) or left blank — two different
+    things for the file, one a reading problem and the other a missing date."""
+    if entry.signatureDate:
+        return f" on {entry.signatureDate}"
+    state = getattr(entry, "signatureDateState", None)
+    if state == "unclear":
+        return ", date unclear"
+    if state == "blank":
+        return ", undated"
+    return ", date not read"
 
 
 def _page_span(pages: list[int]) -> str:

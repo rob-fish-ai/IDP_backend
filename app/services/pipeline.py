@@ -5,6 +5,7 @@ import re
 import time
 
 from app.core.config import Settings
+from app.core.dependencies import get_settings as _settings
 from app.schemas.context import PipelineContext
 from app.schemas.scoring import GREEN_THRESHOLD
 from app.schemas.extraction import (
@@ -2761,6 +2762,7 @@ def _generate_findings(
     findings.extend(validate_cert_type_requirements(
         cert_type, document_groups, inventory_hud, household,
         funding_program=ctx.funding_program if ctx else None,
+        expect_previous_cert=_settings().report_previous_cert_missing,
     ))
 
     # --- 17. Affirmative response cross-reference (Section 11) ---

@@ -12,7 +12,6 @@
    "utility_allowance": null
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "NO_ASSET_CERT_MISSING": 1
   },
   "income": [],
@@ -38,7 +37,6 @@
    "utility_allowance": null
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "NO_ASSET_CERT_MISSING": 1
   },
   "income": [],
@@ -81,7 +79,6 @@
    "utility_allowance": "47.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "CERT_AMOUNT_UNACCOUNTED": 3,
    "INCOME_METHODS_DISAGREE": 1,
    "TIC_TOTAL_MINOR_DIFF": 1
@@ -1184,7 +1181,6 @@
    "utility_allowance": "44.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "INCOME_DECLARED_NOT_VERIFIED": 1,
    "MEMBER_IDENTITY_CONFLICT": 2
@@ -2007,7 +2003,6 @@
    "utility_allowance": "50.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1
   },
@@ -2080,7 +2075,6 @@
    "utility_allowance": "40.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "HUD_9887_INCOMPLETE": 1,
    "NAME_VARIANT": 1
@@ -2208,7 +2202,6 @@
    "utility_allowance": "50.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "HUD_9887_INCOMPLETE": 1,
    "QUESTIONNAIRE_LIFE_INSURANCE_UNVERIFIED": 1
@@ -2335,7 +2328,6 @@
    "utility_allowance": "50.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1,
    "MEMBER_IDENTITY_CONFLICT": 2
@@ -2410,7 +2402,6 @@
    "utility_allowance": "50.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -2471,7 +2462,6 @@
    "utility_allowance": "50.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "ASSET_OWNER_NOT_IN_ROSTER": 1,
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "HUD_9887_INCOMPLETE": 1
@@ -2655,7 +2645,6 @@
    "utility_allowance": "50.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -3160,7 +3149,6 @@
    "utility_allowance": "44.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1
   },
@@ -3635,7 +3623,6 @@
    "utility_allowance": "44.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "HUD_9887_INCOMPLETE": 1,
    "NAME_VARIANT": 1
@@ -3694,7 +3681,6 @@
    "utility_allowance": "44.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1
   },
@@ -3842,7 +3828,6 @@
    "utility_allowance": "44.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "HUD_9887_INCOMPLETE": 1,
    "NAME_VARIANT": 1
@@ -3938,7 +3923,6 @@
    "utility_allowance": "44.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1,
    "INCOME_DECLARED_NOT_VERIFIED": 1,
@@ -4000,7 +3984,6 @@
    "utility_allowance": "48.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1
   },
@@ -4056,7 +4039,6 @@
    "utility_allowance": "48.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1,
    "MEMBER_IDENTITY_CONFLICT": 1,
@@ -4341,7 +4323,6 @@
    "utility_allowance": "44.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -4473,7 +4454,6 @@
    "utility_allowance": "44.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "CERT_AMOUNT_UNACCOUNTED": 3,
    "HUD_9887_INCOMPLETE": 1,
    "NAME_VARIANT": 1
@@ -4588,7 +4568,6 @@
    "utility_allowance": "48.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -4723,7 +4702,6 @@
    "utility_allowance": "44.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1,
    "MEMBER_IDENTITY_CONFLICT": 2,
@@ -4977,7 +4955,6 @@
    "utility_allowance": "58.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "INCOME_DECLARED_NOT_VERIFIED": 1,
    "SIGNATURE_DATE_MISSING": 1
   },
@@ -5049,7 +5026,6 @@
    "utility_allowance": "58.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "INCOME_DECLARED_NOT_VERIFIED": 1,
    "INCOME_SECOND_DECLARATION": 1,
    "SIGNATURE_DATE_MISSING": 1
@@ -5113,7 +5089,6 @@
    "utility_allowance": "42.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "MEMBER_IDENTITY_CONFLICT": 1,
    "NAME_VARIANT": 1,
    "PAYSTUB_COUNT_BELOW_GUIDANCE": 1,
@@ -5186,7 +5161,6 @@
    "utility_allowance": "64.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "INCOME_DECLARED_NOT_VERIFIED": 2,
    "INCOME_VERIFIED_NOT_DECLARED": 1,
    "MEMBER_SSN_PLACEHOLDER": 4,
@@ -5293,7 +5267,6 @@
    "utility_allowance": "64.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "INCOME_DECLARED_NOT_VERIFIED": 5,
    "MEMBER_SSN_PLACEHOLDER": 4,
    "NAME_VARIANT": 3,
@@ -5441,7 +5414,6 @@
    "utility_allowance": "222.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "INCOME_METHODS_DISAGREE": 1,
@@ -5612,7 +5584,6 @@
    "utility_allowance": "221.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "INCOME_MEMBER_NOT_IN_ROSTER": 1,
@@ -5685,7 +5656,6 @@
    "utility_allowance": "221.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "TIC_TOTAL_MISMATCH": 1
   },
   "income": [
@@ -5744,7 +5714,6 @@
    "utility_allowance": "222.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "MEMBER_IDENTITY_CONFLICT": 1,
    "NAME_VARIANT": 1
@@ -5833,9 +5802,7 @@
    "tenant_rent": "978.00",
    "utility_allowance": "222.00"
   },
-  "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1
-  },
+  "codes": {},
   "income": [
    [
     "other",
@@ -6134,7 +6101,6 @@
    "utility_allowance": "106.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "INCOME_DECLARED_NOT_VERIFIED": 3,
    "NAME_VARIANT": 1,
@@ -6225,7 +6191,6 @@
    "utility_allowance": "158.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "HH_SIZE_MISMATCH": 1,
@@ -6389,7 +6354,6 @@
    "utility_allowance": "106.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "CERT_AMOUNT_UNACCOUNTED": 3,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -6453,7 +6417,6 @@
    "utility_allowance": "2414.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "HH_SIZE_MISMATCH": 1,
    "INCOME_AMOUNT_NOT_IN_SOURCE": 1,
    "NAME_VARIANT": 2,
@@ -6531,7 +6494,6 @@
    "utility_allowance": "158.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "CERT_AMOUNT_UNACCOUNTED": 3,
    "HUD_9887_INCOMPLETE": 1,
@@ -6675,7 +6637,6 @@
    "utility_allowance": "2013.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "INCOME_AMOUNT_NOT_IN_SOURCE": 1,
    "NAME_VARIANT": 1,
@@ -6888,7 +6849,6 @@
    "utility_allowance": "443.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "ASSET_OVERDRAWN": 1,
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "HH_SIZE_MISMATCH": 1,
@@ -7028,7 +6988,6 @@
    "utility_allowance": "158.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "ASSET_SELF_DECLARED_VS_VERIFIED": 3,
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "HH_SIZE_MISMATCH": 1,
@@ -7400,7 +7359,6 @@
    "utility_allowance": "106.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "CERT_AMOUNT_UNACCOUNTED": 3,
    "CONFIRMATION_WITHOUT_REPORT": 1,
    "INCOME_DECLARED_NOT_VERIFIED": 1,
@@ -7840,7 +7798,6 @@
    "utility_allowance": "154.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "CERT_SIGNED_AFTER_EFFECTIVE_DATE": 1,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "NAME_VARIANT": 1
@@ -7886,7 +7843,6 @@
    "utility_allowance": "100.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "INCOME_DECLARED_NOT_VERIFIED": 1,
    "MEMBER_IDENTITY_CONFLICT": 2,
    "NAME_VARIANT": 2,
@@ -7949,7 +7905,6 @@
    "utility_allowance": "193.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "CERT_SIGNED_AFTER_EFFECTIVE_DATE": 1,
    "CERT_SUMMARY_INCOME_MISMATCH": 2,
@@ -8025,7 +7980,6 @@
    "utility_allowance": "1106.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "CERT_SIGNED_AFTER_EFFECTIVE_DATE": 1,
    "INCOME_METHODS_DISAGREE": 1,
    "NAME_VARIANT": 1,
@@ -8077,7 +8031,6 @@
    "utility_allowance": "193.00"
   },
   "codes": {
-   "AR_PREVIOUS_CERT_MISSING": 1,
    "CERT_SIGNATURE_DATE_IMPLAUSIBLE": 1,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "INCOME_METHODS_DISAGREE": 1,

@@ -240,8 +240,10 @@ def test_checklist_matches_say_found_pages_signature_and_confidence():
     assert out[3]["found"] and out[3]["pages"] == [40, 41] and "check visually" in out[3]["note"] and out[3]["confidence"] == 0.6
     assert out[4]["found"] and out[4]["pages"] == [40, 41, 42]          # no row for Sofia: the adults' forms, lower certainty is the reviewer's call
     assert out[5]["found"] and out[5]["confidence"] < 0.9               # placed by nearest match
-    assert out[6] == {"finding_id": 6, "found": False, "pages": [], "confidence": 0.8, "note": "[Scan] No HUD Race and Ethnic Data Form in the packet."}
-    assert all(m["note"].startswith("[Scan] ") for m in out.values())
+    assert out[6] == {"finding_id": 6, "found": False, "pages": [], "confidence": 0.8, "note": "No HUD Race and Ethnic Data Form in the packet.", "note_source": "scan"}
+    # The scan's notes are told from staff notes by a field, not a marker
+    # in the text staff would have to delete.
+    assert all(m["note_source"] == "scan" and not m["note"].startswith("[") for m in out.values())
     assert 7 not in out                                                  # unmappable row left untouched
 
 
@@ -274,7 +276,36 @@ def test_checklist_rows_about_a_forms_properties_or_its_previous_version_are_han
         {"finding_id": 2, "item_code": "HUDS8-RECERT-PRIOR-50059", "label": "Previous HUD 50059 Certification Form"},
         {"finding_id": 3, "item_code": "HUDS8-FORM-9887", "label": "HUD9887 Completed and Signed by All Adult Members"},
     ]
-    out = {m["finding_id"]: m for m in match_checklist(rows, ex)}
+    out = {m["finding_id"]: m for m in match_checklist(rows, ex, expect_previous=True)}
     assert 1 not in out
-    assert out[2]["found"] and out[2]["pages"] == [18, 19] and out[2]["note"].startswith("[Scan] Previous HUD 50059 present, pages 18-19.")
+    assert out[2]["found"] and out[2]["pages"] == [18, 19] and out[2]["note"].startswith("Previous HUD 50059 present, pages 18-19.")
     assert out[3]["found"] and "Incomplete: missing its agencies / expiry page." in out[3]["note"]
+    # A case holds one certification and the prior year lives on its own
+    # record, so by default a previous-form row is not the packet's to
+    # answer and is left untouched.
+    assert 2 not in {m["finding_id"] for m in match_checklist(rows, ex)}
+
+
+def test_checklist_note_says_whether_a_missing_signature_date_is_unreadable_or_absent():
+    """"Date not read" covered two different things: handwriting the OCR
+    could not resolve and a date slot left blank. The note says which."""
+    from types import SimpleNamespace
+    from app.schemas.extraction import DocumentGroup, DocumentInventory, DocumentInventoryEntry
+    from app.services.cartograph.checklist import match_checklist
+    from app.services.inventory_builder import _build_entry
+    def g(label, pages, text):
+        return DocumentGroup(document_type=label, category="compliance", pages=pages, page_range=str(pages[0]), combined_text=text)
+    unclear = g("HUD 92006", [40], "Signature of Head of Household: Yolanda Bribiesca   Date: 9/lb/2o")
+    blank = g("HUD 9887", [41], "Signature of Head of Household: Yolanda Bribiesca   Date: ______________")
+    entries = [_build_entry(unclear), _build_entry(blank)]
+    assert [e.signatureDateState for e in entries] == ["unclear", "blank"]
+    ex = SimpleNamespace(document_groups=[unclear, blank],
+                         document_inventory_hud=DocumentInventory(documents=entries),
+                         document_inventory_financial=DocumentInventory(documents=[]), certification_info=None)
+    rows = [{"finding_id": 1, "item_code": "HUDS8-FORM-92006", "label": "HUD 92006"},
+            {"finding_id": 2, "item_code": "HUDS8-FORM-9887", "label": "HUD 9887"}]
+    out = {m["finding_id"]: m for m in match_checklist(rows, ex)}
+    assert out[1]["note"].endswith("Signed, date unclear.")
+    assert out[2]["note"].endswith("Signed, undated.")
+    read = _build_entry(g("HUD 9887", [1], "Signature of Head of Household: Yolanda Bribiesca   Date: 09/16/2026"))
+    assert (read.signatureDate, read.signatureDateState) == ("2026-09-16", "read")

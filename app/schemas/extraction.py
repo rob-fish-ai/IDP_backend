@@ -87,6 +87,13 @@ class CertificationInfo(BaseModel):
     grossRent: Optional[str] = None
     tenantRent: Optional[str] = None
     utilityAllowance: Optional[str] = None
+    # The unit's full rent before assistance, where the form prints one
+    # (HUD 50059 field 29, the lease's "Contract Rent", RD 3560-8 note rate
+    # rent). HUD's gross rent is this plus the utility allowance; a tax
+    # credit form's gross rent is the tenant's rent plus the allowance. The
+    # two definitions share a name, so the consumer needs both figures to
+    # know which one it has.
+    contractRent: Optional[str] = None
     rentLimit: Optional[str] = None
     # Rent assistance as the certification records it. These existed only as
     # underscore-prefixed names read off __dict__ that nothing ever wrote, so
@@ -383,6 +390,11 @@ class DocumentInventoryEntry(BaseModel):
     isSigned: Optional[str] = None
     signedBy: Optional[str] = None
     signatureDate: Optional[str] = None
+    # What the date slot beside the signature holds when no date was read:
+    # "unclear" (something is written there that could not be read as a
+    # date) or "blank" (the slot is empty). "read" when signatureDate is
+    # set; None when the page has no date slot beside the signature.
+    signatureDateState: Optional[str] = None
     documentDate: Optional[str] = None
     notes: Optional[str] = None
 

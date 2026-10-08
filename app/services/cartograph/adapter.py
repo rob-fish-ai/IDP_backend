@@ -670,10 +670,34 @@ def build_cert_review(
         "annual_assets": f"{asset_total:.2f}" if asset_records else None,
         "head_of_household_name": hoh_name,
         "tenant_rent": _money(info.tenantRent),
+        "contract_rent": _money(info.contractRent),
         "gross_rent": _money(info.grossRent),
+        "gross_rent_basis": _gross_rent_basis(info),
         "utility_allowance": _money(info.utilityAllowance),
         "max_program_rent": _money(info.rentLimit),
     }
+
+
+def _gross_rent_basis(info) -> str | None:
+    """Which definition the certification's gross rent follows, read from
+    its own arithmetic: HUD's "contract rent + utility allowance" or the
+    tax-credit "tenant rent + utility allowance". The two share a name and
+    a consumer that assumes one of them warns on every form that uses the
+    other. None when the form's figures settle neither."""
+    def _f(value):
+        try:
+            return float(str(value).replace(",", ""))
+        except (TypeError, ValueError):
+            return None
+    gross, allowance = _f(info.grossRent), _f(info.utilityAllowance)
+    if gross is None or allowance is None:
+        return None
+    contract, tenant = _f(info.contractRent), _f(info.tenantRent)
+    if contract is not None and abs(contract + allowance - gross) <= 1.0:
+        return "contract_plus_allowance"
+    if tenant is not None and abs(tenant + allowance - gross) <= 1.0:
+        return "tenant_plus_allowance"
+    return None
 
 
 def _calc_key(member: str | None, source: str | None) -> tuple[str, str]:
@@ -1291,7 +1315,10 @@ def build_payload(
         "findings": build_findings(extraction, members),
         # One entry per checklist row the packet can answer; rows left out
         # stay untouched on Cartograph's side.
-        "checklist_matches": match_checklist(checklist_rows or [], extraction),
+        "checklist_matches": match_checklist(
+            checklist_rows or [], extraction,
+            expect_previous=settings.report_previous_cert_missing,
+        ),
     }
     attach_confidence(payload, extraction)
 

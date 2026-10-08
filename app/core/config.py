@@ -218,4 +218,10 @@ class Settings(BaseSettings):
     cartograph_type_aliases: dict[str, str] = {}
     # Bound the outbound POST so a stalled connection cannot wedge a worker.
     cartograph_timeout_seconds: float = 30.0
+    # Whether a packet is expected to carry the prior year's certification.
+    # Cartograph's cases hold one certification plus continuation pages and
+    # the prior year lives on its own record, so a missing previous cert is
+    # not a gap in the packet; the finding and the checklist rows that ask
+    # for a previous form are off unless this is set.
+    report_previous_cert_missing: bool = False
 

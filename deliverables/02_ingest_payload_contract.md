@@ -71,11 +71,24 @@ Scalar fields only. Omit any key with no value; do not send `null`, which would 
   "annual_assets":     "3362.55",
   "head_of_household_name": "Marcus Halvorsen",
   "tenant_rent":       "865.00",
-  "gross_rent":        "940.00",
+  "contract_rent":     "1180.00",
+  "gross_rent":        "1255.00",
+  "gross_rent_basis":  "contract_plus_allowance",
   "utility_allowance": "75.00",
   "max_program_rent":  "1024.00"
 }
 ```
+
+`gross_rent` is the figure the certification prints under that name, and
+the two programs define it differently: HUD (50059, model lease, RD
+3560-8) prints contract rent + utility allowance, a tax-credit TIC prints
+tenant rent + utility allowance. `contract_rent` is sent where the form
+prints one (50059 field 29, the lease's "Contract Rent", 3560-8 note rate
+rent) and omitted where it does not. `gross_rent_basis` says which
+definition the form's own arithmetic settles —
+`contract_plus_allowance` or `tenant_plus_allowance` — and is omitted when
+the figures settle neither, so a consumer that keeps the two under
+separate fields can route the figure without guessing from the form type.
 
 `cert_type` accepts `initial`, `annual`, `interim` only. The engine's four certification types map as `MI → initial`, `AR → annual`, `IR → interim`; **AR-SC has no target value** and is an open decision (Section 15).
 
@@ -184,29 +197,38 @@ Rows the engine cannot map to a document type it knows are left out and
 stay untouched.
 
 ```
-{ "finding_id": 88412, "found": true,  "pages": [2, 3],   "confidence": 0.85,
-  "note": "[Scan] HUD 50059 present, pages 2-3. Not signed: the signature lines are blank." }
-{ "finding_id": 88419, "found": true,  "pages": [38, 39], "confidence": 0.9,
-  "note": "[Scan] HUD 9887 present, pages 38-39. Signed by Yolanda Bribiesca on 2026-09-16." }
-{ "finding_id": 88421, "found": false, "pages": [],       "confidence": 0.9,
-  "note": "[Scan] No HUD Race and Ethnic Data Form in the packet." }
+{ "finding_id": 88412, "found": true,  "pages": [2, 3],   "confidence": 0.85, "note_source": "scan",
+  "note": "HUD 50059 present, pages 2-3. Not signed: the signature lines are blank." }
+{ "finding_id": 88419, "found": true,  "pages": [38, 39], "confidence": 0.9,  "note_source": "scan",
+  "note": "HUD 9887 present, pages 38-39. Signed by Yolanda Bribiesca on 2026-09-16." }
+{ "finding_id": 88423, "found": true,  "pages": [40],     "confidence": 0.9,  "note_source": "scan",
+  "note": "HUD 92006 present, page 40. Signed, date unclear." }
+{ "finding_id": 88421, "found": false, "pages": [],       "confidence": 0.9,  "note_source": "scan",
+  "note": "No HUD Race and Ethnic Data Form in the packet." }
 ```
 
 `found: false` means the engine looked and the form is not in the packet.
 A row about a property of a form ("HUD 50059 Includes the Correct Income
 Limits") is not answered by the form being present; such rows are left out
 and the engine's findings cover them. A row asking for the previous form
-("Previous HUD 50059") matches the previous certification the packet
-carries, which the audit otherwise sets aside. A form the engine knows to
-be incomplete says so in its note.
+("Previous HUD 50059") is left out: the case holds one certification and
+the prior year lives on its own record in Cartograph, so the packet is not
+expected to carry it (the engine answers such rows only when configured
+to expect a previous form). A form the engine knows to be incomplete says
+so in its note. A signed form's note gives the signature date when it was
+read; otherwise it says `date unclear` (something is written in the date
+slot that could not be read) or `undated` (the slot is blank) — a reading
+problem and a missing date are different things for the file.
 `confidence` is how sure the engine is of the match and the note together:
 0.9 when the row and the document share a form number, 0.8 when the
 document's title is printed in the row's label, 0.6 when only words match;
 lowered when the classifier placed the page by nearest match or a
 signature could only be inferred. The note is written for the row's note
-field and always starts with `[Scan] `: on a later run Cartograph clears a
-note with that prefix from any row it sent that the reply omits, and never
-touches a note staff typed. The status stays Cartograph's to set.
+field, with no marker in the text; `note_source: "scan"` on every entry
+is what tells it from a note staff typed. Cartograph records the source
+with the note, and on a later run clears a scan-sourced note from any row
+it sent that the reply omits, never one staff typed. The status stays
+Cartograph's to set.
 
 ## 7. expense_records
 

@@ -466,3 +466,55 @@ def test_a_relationship_is_read_against_the_members_age_and_a_placeholder_ssn_is
     form = "Harmony Carrier Social Security Number (SSN): 516 - 39 - 8061 (If you do not have a SSN please enter 999-99-9999)"
     groups = [_group("Tenant Income Certification (TIC)", [5]), _group("Application / Housing Questionnaire", [15])]
     assert [f.code for f in resolve_identities(hh, groups, {5: cert, 15: form})] == []
+
+
+def test_a_previous_certification_is_owed_only_where_the_packet_is_expected_to_carry_one():
+    """Thirteen cases carried "previous certification missing" on packets
+    that hold one certification plus continuation pages, the prior year
+    living on the consumer's own record. The finding is off unless the
+    packet is expected to carry the prior form."""
+    hh = HouseholdDemographics(houseHold=[_member("T", "S", "1972-07-27", "***-**-5009")])
+    ar = [_group("HUD 50059", [1, 2])]
+    assert validate_cert_type_requirements("AR", ar, None, hh) == []
+    codes = {f.code for f in validate_cert_type_requirements("AR", ar, None, hh, expect_previous_cert=True)}
+    assert codes == {"AR_PREVIOUS_CERT_MISSING"}
+    with_prev = ar + [_group("HUD 50059 (Previous)", [3, 4], category="ignore")]
+    assert validate_cert_type_requirements("AR", with_prev, None, hh, expect_previous_cert=True) == []
+
+
+def test_a_signed_certification_with_no_date_read_says_whether_the_date_is_unclear_or_absent():
+    """"No signature date was found" covered a date written in handwriting
+    the OCR could not resolve and a date slot left blank. The first is the
+    engine's to re-read; the second is the property's undated form."""
+    from app.schemas.extraction import DocumentInventoryEntry
+    from app.services.signature_validator import _check_signature_date_agreement, _certification_date_state
+    signed = CertificationInfo(isSigned="Yes")
+    unclear = _check_signature_date_agreement(signed, "unclear")
+    blank = _check_signature_date_agreement(signed, "blank")
+    unknown = _check_signature_date_agreement(signed, None)
+    assert [f.code for f in unclear + blank + unknown] == ["SIGNATURE_DATE_MISSING"] * 3
+    assert unclear[0].label == "Signed certification, date unclear" and unclear[0].assignment == F.ASSIGN_INTERNAL
+    assert blank[0].label == "Signed certification, undated" and blank[0].assignment == F.ASSIGN_CLIENT
+    assert unknown[0].label == "Signed certification with no date"
+    assert _check_signature_date_agreement(CertificationInfo(isSigned="Yes", signatureDate="2026-09-16"), "read") == []
+    inv = DocumentInventory(documents=[DocumentInventoryEntry(documentType="HUD 9887", signatureDateState="blank"),
+                                       DocumentInventoryEntry(documentType="HUD 50059", signatureDateState="unclear")])
+    assert _certification_date_state(DocumentInventory(documents=[]), inv) == "unclear"
+    assert _certification_date_state(None, DocumentInventory(documents=[])) is None
+
+
+def test_gross_rent_is_delivered_with_the_definition_the_form_follows():
+    """HUD's gross rent is contract rent + allowance; a tax credit form's is
+    tenant rent + allowance. The same name on both, so the consumer gets
+    the contract rent where the form prints one and which arithmetic the
+    figures settle."""
+    from app.services.cartograph.adapter import _gross_rent_basis
+    hud = CertificationInfo(tenantRent="865.00", contractRent="1180.00", utilityAllowance="75.00", grossRent="1255.00")
+    assert _gross_rent_basis(hud) == "contract_plus_allowance"
+    tic = CertificationInfo(tenantRent="580.00", utilityAllowance="116.00", grossRent="696.00")
+    assert _gross_rent_basis(tic) == "tenant_plus_allowance"
+    assert _gross_rent_basis(CertificationInfo(tenantRent="580.00", utilityAllowance="116.00", grossRent="746.00")) is None
+    assert _gross_rent_basis(CertificationInfo(grossRent="746.00")) is None
+    from app.services.extractor import _labelled_cert_amounts
+    read = _labelled_cert_amounts("29. Contract Rent $1,180.00  30. Utility Allowance $75.00  31. Gross Rent $1,255.00  110. Tenant Rent $865.00")
+    assert read["contractRent"] == "1180.00" and read["grossRent"] == "1255.00" and read["tenantRent"] == "865.00"

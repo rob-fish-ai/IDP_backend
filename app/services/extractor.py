@@ -194,6 +194,10 @@ FIELDS TO EXTRACT:
   allowance", not the limit line above it.
 - tenantRent: Tenant rent portion. Numeric string with 2 decimals.
 - utilityAllowance: Utility allowance amount. Numeric string with 2 decimals.
+- contractRent: the unit's full rent before any assistance, where the form
+  prints one ("Contract Rent", HUD 50059 field 29, RD 3560-8 "Note Rate
+  Rent"). Numeric string with 2 decimals. null when the form has no such
+  line (a TIC usually has none) — never copy tenantRent or grossRent here.
 - rentLimit: Rent limit for the unit (incl. "Current rent limit for this
   unit" / "Maximum Gross Rent Limit" lines). Numeric string with 2 decimals.
 - federalRentAssistance / nonFederalRentAssistance: rent assistance the form records
@@ -211,9 +215,9 @@ FIELDS TO EXTRACT:
 
 DOCUMENT-SPECIFIC GUIDANCE:
 - TIC Form: Cert type is in the header area (checkboxes for Initial/Annual/Interim/Other). Effective date is labeled "Effective Date" — the adjacent "Move-in Date" line is a DIFFERENT field; do not confuse them (on recertifications they differ by one or more years). Income is in Part III "Income". Rent fields are in Part IV "Rent".
-- HUD 50059: Cert type is field 2b "Type of Action" (1=Initial, 2=Annual, 3=Interim, etc.). Effective date is field 2a. Field 29 = Contract Rent, Field 30 = Utility Allowance, Field 31 = Gross Rent (this is the true grossRent, NOT field 29). Field 110 = Tenant Rent. Field 86 = Total Annual Income.
-- HUD 3560 (RD 3560-8 / USDA): Line 30.a = Note Rate Rent (use as tenantRent or grossRent depending on form), Line 30.b = Utility Allowance, Line 30.c = Gross Note Rate Rent (use as grossRent). Line 33 = Final NTC (Net Tenant Contribution = tenantRent). Line 18.f = Monthly Income, Line 20 = Adjusted Annual Income.
-- HUD Model Lease: Gross Rent = Contract Rent + Utility Allowance. Record grossRent from the "Gross Rent" line if shown, otherwise compute Contract Rent + UA. "Tenant Rent" / tenant's portion = tenantRent. "Utility Allowance" = utilityAllowance. "Unit" / dwelling unit number = unitNumber. Lease commencement date = effectiveDate. Signature date on the lease = signatureDate.
+- HUD 50059: Cert type is field 2b "Type of Action" (1=Initial, 2=Annual, 3=Interim, etc.). Effective date is field 2a. Field 29 = Contract Rent (= contractRent), Field 30 = Utility Allowance, Field 31 = Gross Rent (this is the true grossRent, NOT field 29). Field 110 = Tenant Rent. Field 86 = Total Annual Income.
+- HUD 3560 (RD 3560-8 / USDA): Line 30.a = Note Rate Rent (= contractRent), Line 30.b = Utility Allowance, Line 30.c = Gross Note Rate Rent (use as grossRent). Line 33 = Final NTC (Net Tenant Contribution = tenantRent). Line 18.f = Monthly Income, Line 20 = Adjusted Annual Income.
+- HUD Model Lease: Gross Rent = Contract Rent + Utility Allowance. "Contract Rent" = contractRent. Record grossRent from the "Gross Rent" line if shown, otherwise compute Contract Rent + UA. "Tenant Rent" / tenant's portion = tenantRent. "Utility Allowance" = utilityAllowance. "Unit" / dwelling unit number = unitNumber. Lease commencement date = effectiveDate. Signature date on the lease = signatureDate.
 - Self-Certification forms (OHCS "Self-Certification of Household Annual Income", NY "AR Self Certification" / "Owner's Eligibility Determination" — classified as TIC): header "Effective Date" or "Recert Yr & Effective Date" = effectiveDate; "Unit Number" / "Apt #" = unitNumber; "Add Total Annual Household Income from all Sources" (a+b) = householdIncome; the owner section's "Rent" = tenantRent, "Utility Allowance" = utilityAllowance, "Current Income Limit" and "Current Maximum Gross Rent Limit" = limits (rentLimit), NOT rent; resident + owner signature blocks = isSigned/signatureDate.
 
 MULTI-SOURCE FALLBACK (CRITICAL):
@@ -817,6 +821,7 @@ _CERT_LABELS = {
     "tenantRent": r"\btenant\s+rent\b",
     "utilityAllowance": r"\butility\s+allowance\b",
     "grossRent": r"\bgross\s+rent\b",
+    "contractRent": r"\b(?:contract|note\s+rate)\s+rent\b",
     "federalRentAssistance": r"\bassistance\s+payment\b",
     "householdIncome": r"\btotal\s+annual\s+income\b",
 }
@@ -834,7 +839,7 @@ def _labelled_cert_amounts(form_text: str) -> dict[str, str]:
         if len(hits) == 1:
             out[field] = f"{float(next(iter(hits))):.2f}"
     return out
-_CERT_MONEY_FIELDS = ("householdIncome", "grossRent", "tenantRent", "utilityAllowance", "rentLimit",
+_CERT_MONEY_FIELDS = ("householdIncome", "grossRent", "tenantRent", "utilityAllowance", "contractRent", "rentLimit",
                       "federalRentAssistance", "nonFederalRentAssistance")
 # A labelled count on a form: the value after the label, which must not be
 # the next item's number. On a 50059 read column-wise, "Number of Family

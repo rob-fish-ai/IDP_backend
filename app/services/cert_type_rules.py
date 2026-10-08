@@ -25,6 +25,7 @@ def validate_cert_type_requirements(
     inventory_hud: DocumentInventory | None,
     household: HouseholdDemographics | None,
     funding_program: str | None = None,
+    expect_previous_cert: bool = False,
 ) -> list[Finding]:
     """Check certification-type-specific document requirements per Section 12.
 
@@ -57,7 +58,7 @@ def validate_cert_type_requirements(
 
     if ct in ("MI", "IC"):
         findings.extend(_check_mi_requirements(doc_types, hud_doc_types, member_count, hud_property))
-    elif ct == "AR":
+    elif ct == "AR" and expect_previous_cert:
         findings.extend(_check_ar_requirements(doc_types, document_groups))
     elif ct == "AR-SC":
         findings.extend(_check_arsc_requirements(document_groups))
@@ -159,7 +160,12 @@ def _check_ar_requirements(
     doc_types: set[str],
     document_groups: list[DocumentGroup],
 ) -> list[Finding]:
-    """Annual Recertification — previous cert must exist for comparison."""
+    """Annual Recertification — previous cert must exist for comparison.
+
+    Only when the packet is expected to carry it (``report_previous_cert_missing``):
+    a consumer that keeps the prior year on its own record files one
+    certification per packet, and the comparison is theirs to make.
+    """
     findings: list[Finding] = []
 
     # Previous certification should exist

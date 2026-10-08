@@ -66,7 +66,9 @@ One per case.
 | `annual_assets` | `915.00` | Summed from the asset records sent, since the form carries no total |
 | `head_of_household_name` | `Dolores Ackerman` | Convenience field; the authoritative flag is `is_hoh` on the member |
 | `tenant_rent` | `1180.00` | |
-| `gross_rent` | `1245.00` | |
+| `contract_rent` | `1180.00` | The unit's full rent before assistance, where the form prints one (50059 field 29, lease, 3560-8); omitted otherwise |
+| `gross_rent` | `1245.00` | As the form prints it: contract + UA on HUD forms, tenant + UA on a TIC |
+| `gross_rent_basis` | `contract_plus_allowance` | Which definition the form's figures settle: `contract_plus_allowance` or `tenant_plus_allowance`; omitted when neither |
 | `utility_allowance` | `65.00` | |
 | `max_program_rent` | `1245.00` | Program rent limit. Null when not extracted, which disables the rent-limit checks |
 
@@ -159,7 +161,8 @@ A source can arrive with paystubs and no verification entry. That is not an erro
 | `found` | `true` | The form is in the packet |
 | `pages` | `[2, 3]` | Packet pages it was read from |
 | `confidence` | `0.85` | Certainty of the match and the note together, 0-1 |
-| `note` | `HUD 50059 present, pages 2-3. Not signed: …` | For the row's note field |
+| `note` | `HUD 50059 present, pages 2-3. Not signed: …` | For the row's note field; no marker in the text |
+| `note_source` | `scan` | Always `scan`; what tells an engine note from one staff typed, so Cartograph clears only scan notes on a rerun |
 
 Rows the engine cannot map to a document type are not sent.
 

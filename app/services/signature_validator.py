@@ -38,7 +38,9 @@ def validate_signatures(
     migration. Both forms are handled by findings.render / findings.records.
     """
     findings: list = []
-    findings.extend(_check_signature_date_agreement(certification_info))
+    findings.extend(_check_signature_date_agreement(
+        certification_info, _certification_date_state(inventory_hud, inventory_financial),
+    ))
     findings.extend(_check_signed_after_effective(certification_info))
     adult_count = _count_adults(household, certification_info)
     member_count = len(household.houseHold) if household else 0
@@ -330,8 +332,20 @@ def _check_signed_after_effective(
     )]
 
 
+def _certification_date_state(*inventories: DocumentInventory | None) -> str | None:
+    """What the inventory saw in the date slot of the certification form:
+    "read", "unclear", "blank" or None when it has no such form."""
+    from app.services.doc_taxonomy import is_current_certification_form
+    for inventory in inventories:
+        for doc in (inventory.documents if inventory else []):
+            if is_current_certification_form(doc.documentType or ""):
+                return getattr(doc, "signatureDateState", None)
+    return None
+
+
 def _check_signature_date_agreement(
     certification_info: CertificationInfo | None,
+    date_state: str | None = None,
 ) -> list[Finding]:
     """The signature verdict and its date have to describe the same document.
 
@@ -376,6 +390,35 @@ def _check_signature_date_agreement(
         )]
 
     if signed == "yes" and not signed_date:
+        # Two different things are reported as what they are: a date that
+        # is written but could not be read is the engine's to re-read; a
+        # blank date slot is the property's undated certification.
+        if date_state == "unclear":
+            return [make_finding(
+                "SIGNATURE_DATE_MISSING",
+                "Certification is signed and a date is written beside the "
+                "signature, but it could not be read — confirm the date from "
+                "the page; a certification must be both signed AND dated "
+                "(Section 11)",
+                label="Signed certification, date unclear",
+                category=CATEGORY_FILE_REVIEW,
+                assignment=ASSIGN_INTERNAL,
+                correction_required="Read the date beside the signature from the page image",
+                resolution_type=RESOLVE_PRESENCE,
+            )]
+        if date_state == "blank":
+            return [make_finding(
+                "SIGNATURE_DATE_MISSING",
+                "Certification is signed but the date beside the signature is "
+                "blank — a certification must be both signed AND dated, and an "
+                "undated signature cannot be placed in the certification period "
+                "(Section 11)",
+                label="Signed certification, undated",
+                category=CATEGORY_FILE_REVIEW,
+                assignment=ASSIGN_CLIENT,
+                correction_required="Obtain a dated signature on the certification",
+                resolution_type=RESOLVE_PRESENCE,
+            )]
         return [make_finding(
             "SIGNATURE_DATE_MISSING",
             "Certification is recorded as signed but no signature date was "
