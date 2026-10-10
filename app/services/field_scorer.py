@@ -411,6 +411,7 @@ _FIELD_LABEL_WORDS = {
     "grossRent": ("gross rent", "rent"),
     "householdIncome": ("income",),
     "householdSize": ("household", "members", "family", "size"),
+    "unitNumber": ("unit", "apt", "apartment", "bldg"),
     "numberOfBedrooms": ("bedroom", "br", "size"),
     "currentBalance": ("balance", "value", "amount", "equity"),
     "averageSixMonthBalance": ("average", "balance"),
@@ -455,6 +456,22 @@ def _find_number(value: str, text: str) -> int | None:
     return None
 
 
+# Identifiers, not amounts: the OCR splits them with a space ("Unit
+# Number: 8 81" for unit 881) and the digits, not the spacing, are the
+# value. Amounts are never matched this way — "1 234" is two numbers.
+_IDENTIFIER_FIELDS = {"unitNumber"}
+
+
+def _find_spaced_digits(digits: str, text: str) -> int | None:
+    """Position of the digit string in text allowing one space between
+    any two digits, as a whole token; None when absent."""
+    if not digits:
+        return None
+    pattern = r"(?<!\d)" + r"\s?".join(re.escape(d) for d in digits) + r"(?!\d)"
+    m = re.search(pattern, text)
+    return m.start() if m else None
+
+
 def _is_numeric_value(value: str) -> bool:
     return re.fullmatch(r"\$?\s*-?\d[\d,]*(?:\.\d+)?", value.strip()) is not None
 
@@ -477,11 +494,13 @@ def _find_value(value: str, field_name: str, texts: list[str]) -> str | None:
         best = None
         for text in texts:
             pos = _find_number(val, text)
+            if pos is None and field_name in _IDENTIFIER_FIELDS:
+                pos = _find_spaced_digits(digits, text)
             if pos is None:
                 continue
             if not short:
                 return "strong"
-            window = text[max(0, pos - _LABEL_REACH):pos]
+            window = text[max(0, pos - _LABEL_REACH):pos].lower()
             if any(w in window for w in labels):
                 return "strong"
             best = "weak"

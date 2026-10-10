@@ -172,7 +172,7 @@ def _audit_case(
     # window between the notification and the download is kept as small as
     # the queue allows.
     try:
-        pdf_bytes, packet_warnings = fetch_packet(documents)
+        pdf_bytes, packet_warnings, document_spans = fetch_packet(documents)
     except DocumentUnavailable as exc:
         logger.error("case_ref=%s document unavailable: %s", case_ref, exc)
         store.mark_extraction_failed(case_ref, f"document unavailable: {exc}")
@@ -253,6 +253,7 @@ def _audit_case(
         community_id=community_id,
         unit_number=unit_number,
         checklist_rows=checklist_rows,
+        document_spans=document_spans,
     )
 
     # An attachment left out of the packet is something the reviewer must

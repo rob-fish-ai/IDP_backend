@@ -71,6 +71,11 @@ class AuditRequest(BaseModel):
     requirements: list | None = None
     checklist_rows: list | None = None
     existing_records_manifest: dict | list | None = None
+    # Cartograph's statement of how it wants rent figures delivered
+    # (version, instruction, the figures it holds). The engine delivers
+    # every rent figure with its source whatever the version says, so the
+    # contract is recorded, not interpreted.
+    rent_extraction_contract: dict | None = None
 
 
 @router.post(

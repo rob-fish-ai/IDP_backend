@@ -74,10 +74,35 @@ Scalar fields only. Omit any key with no value; do not send `null`, which would 
   "contract_rent":     "1180.00",
   "gross_rent":        "1255.00",
   "gross_rent_basis":  "contract_plus_allowance",
+  "hud_gross_rent":    "1255.00",
+  "tenant_gross_rent": "940.00",
   "utility_allowance": "75.00",
-  "max_program_rent":  "1024.00"
+  "max_program_rent":  "1024.00",
+  "rent_field_sources": {
+    "tenant_rent":       { "form_type": "HUD-50059", "source_job_document_id": 2621, "effective_date": "2026-07-01", "pages": [2, 3] },
+    "utility_allowance": { "form_type": "HUD-50059", "source_job_document_id": 2621, "effective_date": "2026-07-01", "pages": [2, 3] },
+    "contract_rent":     { "form_type": "HUD-50059", "source_job_document_id": 2621, "effective_date": "2026-07-01", "pages": [2, 3] },
+    "gross_rent":        { "form_type": "HUD-50059", "source_job_document_id": 2621, "effective_date": "2026-07-01", "pages": [2, 3] },
+    "hud_gross_rent":    { "form_type": "HUD-50059", "source_job_document_id": 2621, "effective_date": "2026-07-01", "pages": [2, 3] },
+    "tenant_gross_rent": { "form_type": "HUD-50059", "source_job_document_id": 2621, "effective_date": "2026-07-01", "pages": [2, 3],
+                           "derived_from": ["tenant_rent", "utility_allowance"] },
+    "max_program_rent":  { "form_type": "HUD-50059", "source_job_document_id": 2621, "effective_date": "2026-07-01", "pages": [2, 3] }
+  }
 }
 ```
+
+Per `rent_extraction_contract` v2 on the case request, the two gross
+rents are also sent under their own names, each only when the form's
+figures settle it: `hud_gross_rent` is contract rent + utility allowance
+(a 50059's box 31); `tenant_gross_rent` is the tenant's rent + utility
+allowance with no subsidy in it (a TIC's printed gross rent; on a 50059
+the total tenant payment, derived from the two printed figures and marked
+`derived_from`). `rent_field_sources` names, for every rent figure sent,
+the form type (`HUD-50059`, `TIC`, `RD-3560-8`, `HUD-LEASE`), the request
+document (`source_job_document_id`, from `documents[].job_document_id`)
+and the packet pages it was read from, and the certification's effective
+date. The engine never puts a HUD gross rent into `max_program_rent`: that
+field carries only a printed rent limit.
 
 `gross_rent` is the figure the certification prints under that name, and
 the two programs define it differently: HUD (50059, model lease, RD

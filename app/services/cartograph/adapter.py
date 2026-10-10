@@ -626,6 +626,7 @@ def build_cert_review(
     members: list[dict],
     asset_records: list[dict],
     warnings: list[str],
+    document_spans: list[dict] | None = None,
 ) -> dict:
     """Map the certification form onto the cert_review record."""
     info = extraction.certification_info
@@ -661,7 +662,7 @@ def build_cert_review(
         if value:
             asset_total += float(value)
 
-    return {
+    review = {
         "cert_type": cert_type,
         "effective_date": _iso_date(info.effectiveDate),
         "unit_number": info.unitNumber,
@@ -676,6 +677,79 @@ def build_cert_review(
         "utility_allowance": _money(info.utilityAllowance),
         "max_program_rent": _money(info.rentLimit),
     }
+    review.update(_rent_by_definition(review, extraction, document_spans))
+    return review
+
+
+# The certification form's label as Cartograph names form types.
+_FORM_TYPE_OUT = {
+    "HUD 50059": "HUD-50059",
+    "Tenant Income Certification (TIC)": "TIC",
+    "HUD 3560 Form": "RD-3560-8",
+    "HUD Model Lease": "HUD-LEASE",
+}
+# Forms whose printed gross rent is HUD's: contract rent + utility allowance.
+_HUD_RENT_FORMS = {"HUD-50059", "RD-3560-8", "HUD-LEASE"}
+_RENT_FIELDS = ("tenant_rent", "utility_allowance", "contract_rent", "gross_rent", "max_program_rent")
+
+
+def _rent_by_definition(review: dict, extraction, document_spans: list[dict] | None) -> dict:
+    """The two gross rents under their own names, and the source of every
+    rent figure sent.
+
+    `hud_gross_rent` is contract rent + utility allowance (a 50059's box
+    31); `tenant_gross_rent` is the tenant's rent + utility allowance with
+    no subsidy in it (a TIC's gross rent, a 50059's total tenant payment).
+    Each is given only when the form's own figures settle it. Every rent
+    figure then carries `rent_field_sources[field]`: the form type, the
+    request document and effective date it was read from, so a consumer
+    that keeps HUD's and the tax credit's gross rent apart can route the
+    figure without guessing from the form type.
+    """
+    from app.services.doc_taxonomy import canonical_label, is_current_certification_form
+    group = next(
+        (g for g in (getattr(extraction, "document_groups", None) or [])
+         if is_current_certification_form(g.document_type) and g.category != "ignore"),
+        None,
+    )
+    if group is None:
+        return {}
+    label = canonical_label(group.document_type)[0]
+    form_type = _FORM_TYPE_OUT.get(label, label)
+    pages = sorted(int(p) for p in group.pages)
+    source = {"form_type": form_type, "effective_date": review.get("effective_date"), "pages": pages}
+    for span in document_spans or []:
+        if pages and span.get("first_page") and span.get("last_page") and \
+                span["first_page"] <= pages[0] <= span["last_page"]:
+            source["source_job_document_id"] = span.get("job_document_id")
+            break
+
+    def _f(value):
+        try:
+            return float(value) if value not in (None, "") else None
+        except (TypeError, ValueError):
+            return None
+    tenant, allowance, gross = _f(review.get("tenant_rent")), _f(review.get("utility_allowance")), _f(review.get("gross_rent"))
+    basis = review.get("gross_rent_basis")
+    out: dict = {"hud_gross_rent": None, "tenant_gross_rent": None}
+    derived: dict[str, list[str]] = {}
+    if gross is not None and (basis == "contract_plus_allowance" or (basis is None and form_type in _HUD_RENT_FORMS)):
+        out["hud_gross_rent"] = review["gross_rent"]
+    if gross is not None and basis == "tenant_plus_allowance":
+        out["tenant_gross_rent"] = review["gross_rent"]
+    elif tenant is not None and allowance is not None:
+        out["tenant_gross_rent"] = f"{tenant + allowance:.2f}"
+        derived["tenant_gross_rent"] = ["tenant_rent", "utility_allowance"]
+    sources = {}
+    for field in _RENT_FIELDS + ("hud_gross_rent", "tenant_gross_rent"):
+        value = out.get(field) if field in out else review.get(field)
+        if value in (None, ""):
+            continue
+        sources[field] = dict(source)
+        if field in derived:
+            sources[field]["derived_from"] = derived[field]
+    out["rent_field_sources"] = sources
+    return out
 
 
 def _gross_rent_basis(info) -> str | None:
@@ -1279,6 +1353,7 @@ def build_payload(
     extraction_id: str | None = None,
     extracted_at: str | None = None,
     checklist_rows: list[dict] | None = None,
+    document_spans: list[dict] | None = None,
 ) -> AdapterResult:
     """Build the ingest body for one audited case.
 
@@ -1308,7 +1383,7 @@ def build_payload(
             "community_id": community_id,
             "unit_number": unit_number,
         },
-        "cert_review": build_cert_review(extraction, members, assets, warnings),
+        "cert_review": build_cert_review(extraction, members, assets, warnings, document_spans),
         "household_members": members,
         "income_records": income,
         "asset_records": assets,

@@ -4062,7 +4062,7 @@
   "notes": [
    "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir"
   ],
-  "score": 0.75,
+  "score": 0.76,
   "warnings": []
  },
  "J-CCAC-07105@1791262287": {
@@ -4266,7 +4266,7 @@
    "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
    "Pages 4-5: 'HUD 50059 (Previous)' detected \u2014 excluded from data extrac"
   ],
-  "score": 0.75,
+  "score": 0.76,
   "warnings": []
  },
  "J-CCAC-07108@1791262263": {
@@ -5628,7 +5628,7 @@
    "Pages 4: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
    "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data "
   ],
-  "score": 0.74,
+  "score": 0.75,
   "warnings": [
    "cert_review.grossRent: 1196.00 was not found on the certification page",
    "income_records[1]: 'Timothy Lee Tinsdale' did not match any household "
@@ -6153,7 +6153,7 @@
    "cert_review.householdIncome: 425126.00 was not found on the certificat"
   ]
  },
- "J-VIV-06416@1790046411": {
+ "J-VIV-06416@1791562179": {
   "assets": [
    [
     "checking",
@@ -6166,23 +6166,23 @@
    [
     "checking",
     "Mechanics Bank",
-    "716.87",
+    "336.71",
     "987.00",
-    null,
+    "986.96",
     "verified"
    ],
    [
     "checking",
-    "Palo Verde Apartments",
-    "336.71",
+    "Mechanics Bank",
+    "716.87",
     null,
-    null,
+    "1555.44",
     "verified"
    ]
   ],
   "cert_review": {
    "annual_assets": "2608.58",
-   "annual_income": null,
+   "annual_income": "8481.00",
    "cert_type": "annual",
    "effective_date": "2027-01-01",
    "gross_rent": "2572.00",
@@ -6191,20 +6191,18 @@
    "utility_allowance": "158.00"
   },
   "codes": {
-   "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
-   "CERT_AMOUNT_UNACCOUNTED": 2,
-   "HH_SIZE_MISMATCH": 1,
-   "INCOME_METHODS_DISAGREE": 1,
-   "MEMBER_MERGED": 2,
-   "NAME_VARIANT": 2,
-   "QUESTIONNAIRE_CHILD_SUPPORT_UNVERIFIED": 1,
-   "QUESTIONNAIRE_LIFE_INSURANCE_UNVERIFIED": 1,
-   "QUESTIONNAIRE_PENSION_UNVERIFIED": 1,
-   "QUESTIONNAIRE_REAL_ESTATE_UNVERIFIED": 1,
-   "QUESTIONNAIRE_SSA_UNVERIFIED": 1,
+   "CERT_AMOUNT_UNACCOUNTED": 1,
+   "CONFIRMATION_WITHOUT_REPORT": 1,
+   "NAME_VARIANT": 4,
    "TIC_TOTAL_MISMATCH": 1
   },
   "income": [
+   [
+    "other",
+    "verified",
+    null,
+    ""
+   ],
    [
     "wages_and_salaries",
     "verified",
@@ -6215,34 +6213,35 @@
   "members": [
    [
     "Beatriz",
-    "Ibarra Alfianza",
+    "Ibarra Almanza",
     "Head of Household"
    ],
    [
-    "Doug",
-    "Ibarra Alfianza",
-    "Co-Head"
+    "Alma",
+    "Morales Ibarra",
+    "Other Adult"
    ],
    [
-    "Alma",
-    "Morales",
+    "Fernanda",
+    "Morales Ibarra",
     "Other Adult"
    ],
    [
     "Pedro",
-    "Morales",
+    "Morales Ibarra",
     "Other Adult"
    ]
   ],
   "notes": [
    "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
    "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
-   "Income source 'Paloma Air Conditioning Corp.' (Beatriz Ibarra Alfianza",
-   "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data "
+   "Pages 4: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti",
+   "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
+   "Student Status Certification must be signed and dated; a signature cou"
   ],
-  "score": 0.69,
+  "score": 0.9,
   "warnings": [
-   "cert_review.householdIncome: 58494.00 was not found on the certificati"
+   "income_records[0]: type 'Other Income' is not in the configured pickli"
   ]
  },
  "J-VIV-06417@1790047010": {
@@ -6814,7 +6813,7 @@
    "Pages 4: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti",
    "Pages 7: 'Income Calculation Worksheet' detected \u2014 excluded from data "
   ],
-  "score": 0.83,
+  "score": 0.84,
   "warnings": [
    "asset_records[0]: balance arrived with no statement or verification of"
   ]
@@ -7262,7 +7261,7 @@
    "Pages 9: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti",
    "Self-declared income amounts not extracted from questionnaire/applicat"
   ],
-  "score": 0.8,
+  "score": 0.81,
   "warnings": []
  },
  "J-VIV-06640@1790552673": {
@@ -7618,7 +7617,7 @@
    "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
    "Student status is null for all household members \u2014 verify against HUD "
   ],
-  "score": 0.76,
+  "score": 0.77,
   "warnings": []
  },
  "J-VIV-06677@1790626908": {

@@ -518,3 +518,52 @@ def test_gross_rent_is_delivered_with_the_definition_the_form_follows():
     from app.services.extractor import _labelled_cert_amounts
     read = _labelled_cert_amounts("29. Contract Rent $1,180.00  30. Utility Allowance $75.00  31. Gross Rent $1,255.00  110. Tenant Rent $865.00")
     assert read["contractRent"] == "1180.00" and read["grossRent"] == "1255.00" and read["tenantRent"] == "865.00"
+
+
+def test_rent_figures_are_delivered_under_their_definitions_with_their_source():
+    """J-VIV-06416: Cartograph's import called a generic gross rent
+    ambiguous. A 50059 prints contract rent + UA as gross rent and the
+    total tenant payment is tenant rent + UA; each goes under its own
+    name, and every rent figure names the form, request document and
+    pages it was read from."""
+    from app.services.cartograph.adapter import _rent_by_definition
+    ex = SimpleNamespace(document_groups=[_group("HUD 9887", [1]), _group("HUD 50059", [2, 3])])
+    spans = [{"job_document_id": 2621, "filename": "file-review-upload.pdf", "first_page": 1, "last_page": 43}]
+    review = {"effective_date": "2027-01-01", "tenant_rent": "54.00", "utility_allowance": "158.00",
+              "contract_rent": "2414.00", "gross_rent": "2572.00", "gross_rent_basis": "contract_plus_allowance", "max_program_rent": None}
+    out = _rent_by_definition(review, ex, spans)
+    assert out["hud_gross_rent"] == "2572.00" and out["tenant_gross_rent"] == "212.00"
+    src = out["rent_field_sources"]
+    assert set(src) == {"tenant_rent", "utility_allowance", "contract_rent", "gross_rent", "hud_gross_rent", "tenant_gross_rent"}
+    assert src["gross_rent"] == {"form_type": "HUD-50059", "source_job_document_id": 2621, "effective_date": "2027-01-01", "pages": [2, 3]}
+    assert src["tenant_gross_rent"]["derived_from"] == ["tenant_rent", "utility_allowance"]
+    tic = SimpleNamespace(document_groups=[_group("Tenant Income Certification (TIC)", [5])])
+    out = _rent_by_definition({"effective_date": "2026-05-01", "tenant_rent": "580.00", "utility_allowance": "116.00",
+                               "gross_rent": "696.00", "gross_rent_basis": "tenant_plus_allowance"}, tic, [
+        {"job_document_id": 7, "first_page": 1, "last_page": 4}, {"job_document_id": 8, "first_page": 5, "last_page": 9}])
+    assert out["hud_gross_rent"] is None and out["tenant_gross_rent"] == "696.00"
+    assert out["rent_field_sources"]["gross_rent"]["source_job_document_id"] == 8 and "derived_from" not in out["rent_field_sources"]["tenant_gross_rent"]
+    assert _rent_by_definition(review, SimpleNamespace(document_groups=[]), spans) == {}
+
+
+def test_a_labelled_figure_on_the_transcribed_form_fills_a_field_the_first_read_lost():
+    """J-VIV-06416: the first OCR text had lost the 50059's rent block, so
+    the provenance guard emptied contractRent, and recovery re-read only
+    the required fields. A label printed beside one figure on the
+    transcript fills any empty amount."""
+    from app.services.pipeline import _fill_cert_from_labels
+    info = CertificationInfo(tenantRent="54.00", grossRent=None, contractRent=None)
+    text = "29. Contract Rent: $2,414.00\n30. Utility Allowance: $158.00\n31. Gross Rent: $2,572.00\n110. Tenant Rent: $54"
+    assert sorted(_fill_cert_from_labels(info, text, skip=["grossRent"])) == ["contractRent", "utilityAllowance"]
+    assert (info.contractRent, info.utilityAllowance, info.grossRent, info.tenantRent) == ("2414.00", "158.00", None, "54.00")
+
+
+def test_an_identifier_is_found_across_a_space_the_ocr_put_in_it():
+    """J-VIV-06416: unit 881 printed as "Unit Number: 8 81" was scored as
+    not on the page and withheld. Digits are the identifier; an amount is
+    never matched this way."""
+    from app.services.field_scorer import _find_value
+    assert _find_value("881", "unitNumber", ["Unit Number: 8 81\nContract Rent: $2,414.00"]) == "strong"
+    assert _find_value("881", "unitNumber", ["Unit Number: 881"]) == "strong"
+    assert _find_value("881", "unitNumber", ["Unit Number: 882"]) is None
+    assert _find_value("1234.00", "tenantRent", ["Tenant Rent: $1 234.00"]) is None

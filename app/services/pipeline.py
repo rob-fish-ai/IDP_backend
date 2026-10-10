@@ -994,6 +994,19 @@ def _required_field_gaps(household, certification_info) -> dict:
     }
 
 
+def _fill_cert_from_labels(certification_info, form_text: str, skip: list[str] = ()) -> list[str]:
+    """Fill every empty certification amount whose label the form prints
+    beside exactly one figure; the names of the fields filled."""
+    from app.services.extractor import _labelled_cert_amounts
+    filled: list[str] = []
+    for f, labelled in _labelled_cert_amounts(form_text).items():
+        if f in skip or getattr(certification_info, f, None) not in (None, "", "null"):
+            continue
+        setattr(certification_info, f, labelled)
+        filled.append(f)
+    return filled
+
+
 def _label_blank_in(transcript: str, label: str) -> bool:
     """True when the transcript shows `label` followed by the blank marker."""
     start = 0
@@ -1243,6 +1256,16 @@ def _recover_required_fields_from_images(
     transcript_all = "\n".join(transcripts.values()).lower()
 
     findings: list = []
+
+    # The transcript prints the form's own labelled figures. A field the
+    # first OCR text did not carry — so the provenance guard emptied it —
+    # is filled from the label on the transcribed page, which is where the
+    # figure's provenance now lies. A 50059's contract rent was dropped as
+    # "not printed" on a first read that had lost the rent block, and no
+    # later step read it back.
+    if certification_info:
+        for f in _fill_cert_from_labels(certification_info, group.combined_text, skip=gaps["cert"]):
+            logger.info("Required-field recovery: %s filled from the transcribed form's labelled figure", f)
 
     # The transcript is the best read of the page. A figure that passed the
     # provenance check against the first OCR text — "16,481" printed as

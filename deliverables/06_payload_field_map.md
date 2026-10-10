@@ -69,6 +69,9 @@ One per case.
 | `contract_rent` | `1180.00` | The unit's full rent before assistance, where the form prints one (50059 field 29, lease, 3560-8); omitted otherwise |
 | `gross_rent` | `1245.00` | As the form prints it: contract + UA on HUD forms, tenant + UA on a TIC |
 | `gross_rent_basis` | `contract_plus_allowance` | Which definition the form's figures settle: `contract_plus_allowance` or `tenant_plus_allowance`; omitted when neither |
+| `hud_gross_rent` | `1255.00` | Contract rent + UA (50059 box 31); only when the form's figures settle it |
+| `tenant_gross_rent` | `940.00` | Tenant rent + UA, no subsidy (TIC gross rent; 50059 total tenant payment, derived) |
+| `rent_field_sources` | `{tenant_rent: {form_type, source_job_document_id, effective_date, pages}, …}` | One entry per rent figure sent; `derived_from` names the figures a computed one came from |
 | `utility_allowance` | `65.00` | |
 | `max_program_rent` | `1245.00` | Program rent limit. Null when not extracted, which disables the rent-limit checks |
 
