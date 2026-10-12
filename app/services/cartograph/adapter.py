@@ -40,6 +40,8 @@ indistinguishable from a packet that never had one.
 import hashlib
 import logging
 import re
+
+from app.services.validation import normalize_date
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -774,6 +776,104 @@ def _gross_rent_basis(info) -> str | None:
     return None
 
 
+# Cartograph's benefit types for an EIV report row, by the engine's income type.
+_EIV_BENEFIT_TYPES = (
+    ("supplemental security", "ssi"),
+    (" ssi", "ssi"),
+    ("social security", "social_security"),
+    ("unemployment", "unemployment_benefits"),
+    ("wage", "employment_wages"),
+    ("employment", "employment_wages"),
+)
+_EIV_FREQUENCIES = {"weekly": "weekly", "bi-weekly": "biweekly", "semi-monthly": "semimonthly",
+                    "monthly": "monthly", "quarterly": "quarterly", "annually": "annually"}
+
+
+_EIV_SECTION_HEADINGS = {
+    "social_security": ("social security benefits",),
+    "ssi": ("supplemental security income benefits",),
+    "dual_entitlement": ("dual entitlement",),
+    "unemployment_benefits": ("unemployment benefits",),
+    "employment_wages": ("wages", "employment information"),
+}
+_EIV_STATUS_RE = re.compile(r"payment\s+status\s+code\s*:?\s*([A-Z]{1,3}\d{0,2}\s*[-–]\s*[^\n]{3,60}?)(?:\s{2,}|\n|$)", re.IGNORECASE)
+_EIV_REPORT_DATE_RE = re.compile(r"report\s+date\s*:?\s*(\d{1,2}/\d{1,2}/\d{2,4})", re.IGNORECASE)
+
+
+def _eiv_pages(extraction) -> dict[int, str]:
+    """{page: text} for every page of an EIV income report in the packet."""
+    from app.services.doc_taxonomy import canonical_label
+    out: dict[int, str] = {}
+    for g in getattr(extraction, "document_groups", None) or []:
+        if g.category == "ignore" or canonical_label(g.document_type)[0] != "EIV Income Report":
+            continue
+        for page in g.pages:
+            out[int(page)] = g.combined_text or ""
+    return out
+
+
+def _eiv_rows(entry, extraction) -> list[dict]:
+    """The `eivs` rows for a verification entry read off an EIV income
+    report: one per benefit section, in Cartograph's shape.
+
+    An entry is the report's when any of its pages is an EIV income report
+    page — the record may also rest on an award letter the extractor
+    merged in, and the VOI type it was given then names the letter. The
+    report date is the report's own (it can list benefits since
+    discontinued, so the date places the amount) and is read off the
+    report page, as is the section's payment status code; the amount is
+    the record's rate when the report prints it. Nothing for a
+    countersigned confirmation sheet, which is a declaration.
+    """
+    from app.services.extractor import _amount_on_pages
+    from app.services.income_calculator import normalize_frequency
+    kind = (entry.type_of_VOI or "").lower()
+    if "confirmation" in kind:
+        return []
+    report_pages = _eiv_pages(extraction)
+    pages = [p for p in _pages_of(entry) if p in report_pages]
+    if not pages and "eiv" not in kind:
+        return []
+    income_type = f" {(entry.incomeType or '').lower()}"
+    if "dual" in (entry.programName or "").lower():
+        benefit_type = "dual_entitlement"
+    else:
+        benefit_type = next((out for word, out in _EIV_BENEFIT_TYPES if word in income_type), "other")
+    # The OCR renders the report's tables as HTML; cells become spaced text.
+    text = re.sub(r"<[^>]+>", "  ", "\n".join(report_pages[p] for p in pages))
+    report_date = next((normalize_date(m.group(1)) for m in _EIV_REPORT_DATE_RE.finditer(text)), None)
+    status = entry.paymentStatus or _eiv_section_status(text, benefit_type)
+    amount = _money(entry.rateOfPay)
+    if amount and pages and not _amount_on_pages(amount, {p: report_pages[p] for p in pages}, pages):
+        amount = None
+    frequency = _EIV_FREQUENCIES.get(normalize_frequency(entry.frequencyOfPay or entry.rateUnit) or "")
+    return [{
+        "benefit_type": benefit_type,
+        "source_name": entry.sourceName,
+        "report_date": report_date or _iso_date(entry.dateReceived),
+        "amount": amount,
+        "frequency": frequency if amount else None,
+        "annual_amount": None,
+        "payment_status": status,
+        "notes": None,
+        "pages": pages or _pages_of(entry),
+    }]
+
+
+def _eiv_section_status(text: str, benefit_type: str) -> str | None:
+    """The payment status code printed in the report section for this
+    benefit, as printed; None when the section or its code is not there."""
+    lower = text.lower()
+    for heading in _EIV_SECTION_HEADINGS.get(benefit_type, ()):
+        idx = lower.find(heading)
+        while idx >= 0:
+            m = _EIV_STATUS_RE.search(text, idx, idx + 1500)
+            if m:
+                return " ".join(m.group(1).split())
+            idx = lower.find(heading, idx + len(heading))
+    return None
+
+
 def _calc_key(member: str | None, source: str | None) -> tuple[str, str]:
     return ((member or "").strip().lower(), (source or "").strip().lower())
 
@@ -948,7 +1048,14 @@ def build_income_records(
         # verification is its stubs, or a declaration, has no such row —
         # an empty one arrived in Cartograph as a placeholder to delete.
         vois: list[dict] = []
-        if entry.rateOfPay or entry.ytdAmount or entry.hoursPerPayPeriod or entry.overtimeRate:
+        # An EIV income report is its own child row in Cartograph, one per
+        # benefit section, keyed on the report date and the amount in force;
+        # it is not a VOI.
+        eivs = _eiv_rows(entry, extraction)
+        # The VOI row stays when the entry also rests on a form of its own
+        # (an award letter the extractor merged with the report).
+        letter_pages = set(_pages_of(entry)) - {p for row in eivs for p in row["pages"]}
+        if (not eivs or letter_pages) and (entry.rateOfPay or entry.ytdAmount or entry.hoursPerPayPeriod or entry.overtimeRate):
             vois.append({
                 "voi_type": entry.type_of_VOI,
                 "date_received": _iso_date(entry.dateReceived),
@@ -992,6 +1099,7 @@ def build_income_records(
             ],
             "paystubs": paystubs,
             "vois": vois,
+            "eivs": eivs,
             "zero_income": None,
         })
 
@@ -1064,6 +1172,7 @@ def build_income_records(
                     for s in stubs
                 ],
                 "vois": [],
+                "eivs": [],
                 "zero_income": None,
             })
 

@@ -283,8 +283,11 @@ Benefit Report for Household of …", one section per household member):
     incomeType "Social Security", sourceName "Social Security Administration",
     type_of_VOI "EIV Report", rateOfPay = the most recent GROSS benefit (HUD counts
     the benefit before the Medicare deduction), rateUnit "monthly", frequencyOfPay
-    "monthly", dateReceived = the "Report Date". Earlier years' rows are history,
-    not the rate.
+    "monthly", dateReceived = the "Report Date", paymentStatus = the section's
+    "Payment Status Code" exactly as printed ("C - Current payment status",
+    "ND - Denied claim", "C01 - Current Pay"). Earlier years' rows are history,
+    not the rate. A section whose status is denied / terminated / suspended with
+    no current amount is not income and gets no record.
   - "Supplemental Security Income Benefits" with a payment amount → the same, with
     incomeType "Supplemental Security Income".
   - "Dual Entitlement" with an amount → a second Social Security entry noting it.

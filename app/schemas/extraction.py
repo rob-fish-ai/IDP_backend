@@ -195,6 +195,10 @@ class VerificationIncomeEntry(BaseModel):
     employmentStatus: Optional[str] = None  # Active, Terminated, On Leave
     terminationDate: Optional[str] = None
     hireDate: Optional[str] = None
+    # An agency report's payment status code as printed ("C - Current
+    # payment status", "ND - Denied claim", "C01 - Current Pay"): whether
+    # the benefit the report lists is in force.
+    paymentStatus: Optional[str] = None
     dateReceived: Optional[str] = None  # Date VOI was received/signed by employer
     # Provenance (see PayStubEntry) and the reconciliation verdict:
     #   verified              read from a third-party document

@@ -152,6 +152,7 @@ A source can arrive with paystubs and no verification entry. That is not an erro
 | `pages` | `[13]` | Packet pages this record was read from |
 | `confidence` | `{score, flag, review[]}` | As on income records |
 | `bank_statements[]` | | `statement_date`, `balance`. Only statements carrying at least one of the two are sent |
+| `eivs[]` | | One row per benefit section of an EIV income report, attached to that benefit's income record: `benefit_type` (`social_security`, `ssi`, `dual_entitlement`, `employment_wages`, `unemployment_benefits`, `other`), `source_name`, `report_date` (the report's own date), `amount` + `frequency` (the figure in force), `annual_amount` (only when the report states one), `payment_status` as printed, `notes`, `pages`. An EIV report is never sent as a `vois` row |
 | `voa` | `null` | `voa_date`, `reported_value`, `source`, and `month_1_balance`…`month_6_balance` (oldest first) when the VOA lists monthly balances instead of an average |
 
 ---

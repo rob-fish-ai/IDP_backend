@@ -173,9 +173,35 @@ One object per **(member, source)** pair. The engine's flat per-paystub output i
       "frequency_of_pay": "biweekly", "ytd_amount": "18406.00",
       "ytd_start_date": "2026-01-01", "ytd_end_date": "2026-06-05" }
   ],
+  "eivs": [],
   "zero_income": null
 }
 ```
+
+**An EIV income report is its own child row.** A record verified by HUD's
+EIV income report carries one `eivs[]` row per benefit section of the
+report, attached to that benefit's record (the Social Security section on
+the Social Security record, the SSI section on the SSI record), never a
+`vois` row for the same pages:
+
+```
+"eivs": [
+  { "benefit_type": "ssi", "source_name": "Social Security Administration",
+    "report_date": "2026-02-05", "amount": "994.00", "frequency": "monthly",
+    "annual_amount": null, "payment_status": "C01 - Current Pay",
+    "notes": null, "pages": [12, 13] }
+]
+```
+
+`benefit_type` is one of `social_security`, `ssi`, `dual_entitlement`,
+`employment_wages`, `unemployment_benefits`, `other`. `report_date` is the
+date of the report itself, not the benefit's start: the report can list a
+benefit since discontinued, and the date is what places the amount in the
+certification year. `amount` is the periodic figure in force with its
+`frequency`; `annual_amount` only when the report states one.
+`payment_status` is the section's code as printed. A section reporting no
+data, or a denied or terminated claim with no current amount, is not
+income and produces no record.
 
 **Zero income is a child, not a type.** `zero_income` is not a valid `income_type` and fails validation. Set the parent to `other` and attach a `zero_income` object with `affidavit_date`, `signed`, `notes`.
 

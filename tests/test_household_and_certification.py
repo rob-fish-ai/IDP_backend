@@ -567,3 +567,35 @@ def test_an_identifier_is_found_across_a_space_the_ocr_put_in_it():
     assert _find_value("881", "unitNumber", ["Unit Number: 881"]) == "strong"
     assert _find_value("881", "unitNumber", ["Unit Number: 882"]) is None
     assert _find_value("1234.00", "tenantRent", ["Tenant Rent: $1 234.00"]) is None
+
+
+def test_an_eiv_income_report_is_delivered_as_an_eiv_row_on_its_benefit_record():
+    """Lawrence Manor: Cartograph keeps an EIV report as its own child
+    row, one per benefit section, keyed on the report date and the amount
+    in force. It went out as a VOI — and on J-CCAC-07512 the extractor
+    had merged the report with an SSA award letter, so the VOI type named
+    the letter. The report's pages decide; its date and the section's
+    status code are read off the report page. A confirmation sheet is not
+    the report."""
+    from app.schemas.extraction import VerificationIncomeEntry
+    from app.services.cartograph.adapter import _eiv_rows
+    report = ("HUD-EIV: Income Information - By Head of Household\nSocial Security Benefits\nVerification Data\n"
+              "Payment Status Code: ND - Denied claim\nNet Monthly Benefit if Payable: $0.00\nDate Received by EIV: 08-JAN-26\n"
+              "Supplemental Security Income Benefits\nVerification Data\nPayment Status Code: C01 - Current Pay\n"
+              "SSI Monthly Assistance Amount (Current): $994.00\nReport Date: 02/05/2026")
+    ex = SimpleNamespace(document_groups=[_group("SSA Benefit Letter", [5], "Your benefit is $994.00 monthly"),
+                                          _group("EIV Income Report", [12, 13], report, category="include")])
+    ssi = VerificationIncomeEntry(memberName="Valerie Thomas", sourceName="Social Security Administration",
+                                  incomeType="Supplemental Security Income", type_of_VOI="Agency Benefit Letter", rateOfPay="994.00",
+                                  rateUnit="monthly", frequencyOfPay="monthly", dateReceived="2026-01-08", sourcePages=[5, 12, 13])
+    assert _eiv_rows(ssi, ex) == [{"benefit_type": "ssi", "source_name": "Social Security Administration", "report_date": "2026-02-05",
+                                   "amount": "994.00", "frequency": "monthly", "annual_amount": None,
+                                   "payment_status": "C01 - Current Pay", "notes": None, "pages": [12, 13]}]
+    # A rate the report does not print is the letter's, not the report's.
+    other = VerificationIncomeEntry(incomeType="Social Security", type_of_VOI="EIV Report", rateOfPay="789.00", rateUnit="monthly", sourcePages=[12])
+    row = _eiv_rows(other, ex)[0]
+    assert row["benefit_type"] == "social_security" and row["amount"] is None and row["payment_status"] == "ND - Denied claim"
+    dual = VerificationIncomeEntry(incomeType="Social Security", programName="Dual Entitlement", type_of_VOI="EIV Report", rateOfPay="100.00", rateUnit="monthly")
+    assert _eiv_rows(dual, ex)[0]["benefit_type"] == "dual_entitlement"
+    assert _eiv_rows(VerificationIncomeEntry(incomeType="Social Security", type_of_VOI="EIV Confirmation", rateOfPay="789.00", sourcePages=[12]), ex) == []
+    assert _eiv_rows(VerificationIncomeEntry(incomeType="Social Security", type_of_VOI="Agency Benefit Letter", rateOfPay="789.00", sourcePages=[5]), ex) == []
