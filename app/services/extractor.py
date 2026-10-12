@@ -770,7 +770,9 @@ def extract_certification_info(
         # $246"), that printed figure is the field: it wins over a model
         # read that disagrees (an assistance payment of $1,665 delivered as
         # the tenant rent) and fills a field the model left empty.
-        for field, labelled in _labelled_cert_amounts(form_text).items():
+        for field, labelled in _labelled_cert_amounts(
+            [strip_html(g.combined_text or "") for g in form_groups]
+        ).items():
             current = cert_info_dict.get(field)
             if current in (None, "", "null"):
                 logger.info("Cert info: %s filled from the form's labelled figure %s", field, labelled)
@@ -817,9 +819,11 @@ def extract_certification_info(
 _FORM_DATE_FIELDS = ("signatureDate", "moveInDate", "effectiveDate")
 
 # The labels a certification form prints beside its own figures. Each is
-# matched only when it is followed by one amount within a few characters,
-# and used only when the form prints exactly one such amount, so a table
-# that lists the label in a header row and the figure elsewhere is not read.
+# matched only when it is followed by one amount within a few characters.
+# A label beside exactly one amount is read outright; one beside several
+# is read only when the form's own arithmetic singles one out (see
+# _settle_by_arithmetic), so a table that lists the label in a header row
+# and the figure elsewhere is not guessed at.
 _CERT_LABELS = {
     "tenantRent": r"\btenant\s+rent\b",
     "utilityAllowance": r"\butility\s+allowance\b",
@@ -828,20 +832,100 @@ _CERT_LABELS = {
     "federalRentAssistance": r"\bassistance\s+payment\b",
     "householdIncome": r"\btotal\s+annual\s+income\b",
 }
+# Labelled figures read only to settle an ambiguous one by arithmetic; they
+# are not certification fields and are never delivered.
+_CERT_ARITHMETIC_LABELS = {
+    "totalTenantPayment": r"\btotal\s+tenant\s+payment\b",
+}
+# The identities a certification form prints its rent figures under:
+# (the parts, their sum). A HUD 50059's gross rent is the contract rent
+# plus the utility allowance and its contract rent is the tenant rent plus
+# the assistance payment; a tax-credit TIC's gross rent and a 50059's total
+# tenant payment are the tenant rent plus the utility allowance.
+_CERT_IDENTITIES = (
+    (("contractRent", "utilityAllowance"), "grossRent"),
+    (("tenantRent", "utilityAllowance"), "grossRent"),
+    (("tenantRent", "utilityAllowance"), "totalTenantPayment"),
+    (("tenantRent", "federalRentAssistance"), "contractRent"),
+)
+_IDENTITY_TOLERANCE = 1.0
 _LABELLED_AMOUNT = r"[:\s]{0,6}\$?\s?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?|\d+(?:\.\d{2})?)(?![\d,.])"
 
 
-def _labelled_cert_amounts(form_text: str) -> dict[str, str]:
-    """{field: amount} for every certification field whose label the form
-    prints beside exactly one amount."""
+def _labelled_candidates(form_text: str) -> dict[str, set[float]]:
+    """{field: every distinct amount the form prints beside the field's label}."""
     plain = re.sub(r"\s+", " ", strip_html(form_text or ""))
-    out: dict[str, str] = {}
-    for field, label in _CERT_LABELS.items():
-        hits = {m.group(1).replace(",", "") for m in re.finditer(label + _LABELLED_AMOUNT, plain, re.IGNORECASE)}
-        hits = {h for h in hits if _amt_or_none(h) is not None}
-        if len(hits) == 1:
-            out[field] = f"{float(next(iter(hits))):.2f}"
+    out: dict[str, set[float]] = {}
+    for field, label in {**_CERT_LABELS, **_CERT_ARITHMETIC_LABELS}.items():
+        hits = {_amt_or_none(m.group(1).replace(",", ""))
+                for m in re.finditer(label + _LABELLED_AMOUNT, plain, re.IGNORECASE)}
+        hits.discard(None)
+        if hits:
+            out[field] = hits
     return out
+
+
+def _settle_by_arithmetic(candidates: dict[str, set[float]]) -> dict[str, float]:
+    """The one figure per label, where the form settles it.
+
+    A label printed beside one amount is that amount. A label printed
+    beside several — a 50059 read column-wise put the tenant rent's $242
+    on the "Utility allowance" line as well as the allowance's own $46 —
+    is settled by the form's own arithmetic: the candidate that makes an
+    identity hold with the figures already settled is the printed one,
+    when exactly one candidate does. A label the arithmetic cannot settle
+    stays unread, as before.
+    """
+    settled = {f: next(iter(v)) for f, v in candidates.items() if len(v) == 1}
+    open_fields = {f for f, v in candidates.items() if len(v) > 1}
+    progress = True
+    while progress and open_fields:
+        progress = False
+        for field in sorted(open_fields):
+            fits: set[float] = set()
+            for value in candidates[field]:
+                trial = {**settled, field: value}
+                for parts, total in _CERT_IDENTITIES:
+                    members = (*parts, total)
+                    if field not in members or any(m not in trial for m in members):
+                        continue
+                    if abs(sum(trial[p] for p in parts) - trial[total]) <= _IDENTITY_TOLERANCE:
+                        fits.add(value)
+                        break
+            if len(fits) == 1:
+                settled[field] = next(iter(fits))
+                open_fields.discard(field)
+                progress = True
+    return settled
+
+
+def _labelled_cert_amounts(form_text: str | list[str]) -> dict[str, str]:
+    """{field: amount} for every certification field whose label the form
+    prints beside one amount, or beside several of which the form's own
+    arithmetic singles out one.
+
+    Given several forms' texts, each form is settled on its own figures and
+    a field is read only when every form that prints it agrees: the
+    arithmetic tells which of two figures on ONE form is the printed one,
+    never which of two forms is the current certification (a packet with
+    two 50059s would otherwise take whichever happened to print its whole
+    rent block).
+    """
+    texts = [form_text] if isinstance(form_text, str) else list(form_text)
+    agreed: dict[str, set[float]] = {}
+    unsettled: set[str] = set()
+    for text in texts:
+        candidates = _labelled_candidates(text)
+        settled = _settle_by_arithmetic(candidates)
+        for field in candidates:
+            if field not in _CERT_LABELS:
+                continue
+            if field in settled:
+                agreed.setdefault(field, set()).add(settled[field])
+            else:
+                unsettled.add(field)
+    return {f: f"{next(iter(v)):.2f}" for f, v in agreed.items()
+            if f not in unsettled and len(v) == 1}
 _CERT_MONEY_FIELDS = ("householdIncome", "grossRent", "tenantRent", "utilityAllowance", "contractRent", "rentLimit",
                       "federalRentAssistance", "nonFederalRentAssistance")
 # A labelled count on a form: the value after the label, which must not be

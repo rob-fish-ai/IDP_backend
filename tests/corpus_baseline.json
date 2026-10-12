@@ -9814,6 +9814,111 @@
    "income_records[0]: 'None' is wage history only (not declared, no curre"
   ]
  },
+ "J-CCAC-07613@1791817135": {
+  "assets": [
+   [
+    "checking",
+    "JPMorgan Chase Bank, N.A.",
+    "3275.12",
+    "926.00",
+    "926.00",
+    "verified"
+   ],
+   [
+    "whole_life_insurance",
+    "Colonial Penn Life",
+    null,
+    "932.00",
+    null,
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "4207.12",
+   "annual_income": "11928.00",
+   "cert_type": "annual",
+   "effective_date": "2026-06-01",
+   "gross_rent": "1088.00",
+   "hh_size": 1,
+   "tenant_rent": "242.00",
+   "utility_allowance": "242.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 2
+  },
+  "income": [
+   [
+    "ssi",
+    "verified",
+    null,
+    "Social Security Administration"
+   ]
+  ],
+  "members": [
+   [
+    "Valerie",
+    "Thomas",
+    "Head of Household"
+   ]
+  ],
+  "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 11-14: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr",
+   "Self-declared income amounts not extracted from questionnaire/applicat"
+  ],
+  "score": 0.9,
+  "warnings": [
+   "asset_records[1]: balance arrived with no statement or verification of"
+  ]
+ },
+ "J-CCAC-07616@1791813832": {
+  "assets": [
+   [
+    "checking",
+    "Bank of America",
+    "885.46",
+    "1057.00",
+    "1057.00",
+    "verified"
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "885.46",
+   "annual_income": "30588.00",
+   "cert_type": "annual",
+   "effective_date": "2026-08-01",
+   "gross_rent": "1088.00",
+   "hh_size": 1,
+   "tenant_rent": "671.00",
+   "utility_allowance": "46.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "HUD_9887A_INCOMPLETE": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "verified",
+    null,
+    "Social Security Administration"
+   ]
+  ],
+  "members": [
+   [
+    "Yvonne",
+    "Smith",
+    "Head of Household"
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 11-12: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr"
+  ],
+  "score": 0.93,
+  "warnings": []
+ },
  "J-PORT-05318@1789391374": {
   "assets": [
    [

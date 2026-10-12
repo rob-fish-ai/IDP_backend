@@ -599,3 +599,50 @@ def test_an_eiv_income_report_is_delivered_as_an_eiv_row_on_its_benefit_record()
     assert _eiv_rows(dual, ex)[0]["benefit_type"] == "dual_entitlement"
     assert _eiv_rows(VerificationIncomeEntry(incomeType="Social Security", type_of_VOI="EIV Confirmation", rateOfPay="789.00", sourcePages=[12]), ex) == []
     assert _eiv_rows(VerificationIncomeEntry(incomeType="Social Security", type_of_VOI="Agency Benefit Letter", rateOfPay="789.00", sourcePages=[5]), ex) == []
+
+
+def test_an_ambiguous_labelled_figure_is_settled_by_the_forms_arithmetic():
+    """J-CCAC-07613: the 50059 prints "Utility Allowance: $46.00" in the rent
+    block, and a column-wise read of the summary line put the tenant rent's
+    $242 beside "Utility allowance" as well. Two candidates for one label;
+    the one that makes contract rent + allowance = gross rent (1,042 + 46 =
+    1,088) is the printed figure. A label the arithmetic cannot settle stays
+    unread, and the total tenant payment is used to settle but never read."""
+    from app.services.extractor import _labelled_cert_amounts
+    form = ("Total Tenant Payment: $288 Assistance Payment: $800 Tenant Rent: $242 "
+            "Contract Rent: $1,042.00 Utility Allowance: $46.00 Gross Rent: $1,088.00 "
+            "Tenant rent  Recertification  Utility allowance  $242.00  Assistance pay "
+            "Contract rent  $1,042.00  Total tenant payment  $28.00  Gross rent  $1,088")
+    got = _labelled_cert_amounts(form)
+    assert got["utilityAllowance"] == "46.00"
+    assert got["contractRent"] == "1042.00" and got["grossRent"] == "1088.00" and got["tenantRent"] == "242.00"
+    assert "totalTenantPayment" not in got
+    # TIC identity: tenant rent + allowance = gross rent settles the tenant rent.
+    tic = "Tenant Rent $650 Utility Allowance $75 Gross Rent $725 Tenant Rent $725"
+    assert _labelled_cert_amounts(tic)["tenantRent"] == "650.00"
+    # Neither candidate fits an identity: still ambiguous, still not read.
+    assert "tenantRent" not in _labelled_cert_amounts("Tenant Rent: $246 Utility Allowance $50 Gross Rent $900 Tenant Rent: $304")
+    # Two labels ambiguous at once, each candidate pairing consistent: nothing to settle them by.
+    got = _labelled_cert_amounts("Tenant Rent $700 Utility Allowance $50 Utility Allowance $75 Gross Rent $750 Gross Rent $775")
+    assert "utilityAllowance" not in got and "grossRent" not in got and got["tenantRent"] == "700.00"
+
+
+def test_arithmetic_settles_within_one_form_never_between_forms():
+    """J-CCAC-07103: a 2025 and a 2026 HUD 50059 both classified current.
+    Pooled, the arithmetic settled the tenant rent on the 2025 form because
+    only it printed the whole rent block. Each form is settled on its own
+    figures, and two forms that disagree leave the field unread."""
+    from app.services.extractor import _labelled_cert_amounts
+    form_2026 = "110. Tenant Rent $285 112. Assistance Payment $1,693 86. Total Annual Income $13,703"
+    form_2025 = ("110. Tenant Rent $293 30. Utility Allowance $40 31. Gross Rent $1,951 "
+                 "29. Contract Rent $1,911 112. Assistance Payment $1,618 86. Total Annual Income $13,703")
+    got = _labelled_cert_amounts([form_2026, form_2025])
+    assert "tenantRent" not in got and "federalRentAssistance" not in got
+    assert got["householdIncome"] == "13703.00"          # both forms agree
+    assert got["utilityAllowance"] == "40.00"            # printed on one form only, unambiguous
+    # One form still settles its own ambiguity.
+    one = ("Tenant Rent: $242 Contract Rent: $1,042.00 Utility Allowance: $46.00 Gross Rent: $1,088.00 "
+           "Utility allowance $242.00")
+    assert _labelled_cert_amounts([one])["utilityAllowance"] == "46.00"
+    # A field ambiguous and unsettled on one form is not read even when another form prints it once.
+    assert "tenantRent" not in _labelled_cert_amounts(["Tenant Rent $500", "Tenant Rent $500 Tenant Rent $510"])
