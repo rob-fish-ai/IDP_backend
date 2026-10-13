@@ -75,7 +75,7 @@ def replay_case(row: dict) -> dict:
 
     # Post-model merges in the extractor (idempotent on reconciled records).
     vis = [v.model_dump() for v in income.sourceIncome.verificationIncome]
-    for name in ("_merge_same_source_records",):
+    for name in ("_merge_same_source_records", "_merge_same_benefit_records"):
         fn = getattr(extractor, name, None)
         if fn:
             vis = fn(vis)

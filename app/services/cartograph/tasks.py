@@ -105,6 +105,7 @@ def audit_case(
     effective_date: str | None = None,
     checklist_rows: list[dict] | None = None,
     existing_records_manifest: dict | list | None = None,
+    fallback_packet: str | Path | None = None,
 ) -> None:
     """Run one notified case end to end.
 
@@ -124,7 +125,7 @@ def audit_case(
             store, settings, case_ref=case_ref, documents=documents, cert_type=cert_type,
             program=program, job_id=job_id, community_id=community_id,
             unit_number=unit_number, effective_date=effective_date, checklist_rows=checklist_rows,
-            existing_records_manifest=existing_records_manifest,
+            existing_records_manifest=existing_records_manifest, fallback_packet=fallback_packet,
         )
     except Exception as exc:
         logger.exception("Unhandled failure auditing case_ref=%s", case_ref)
@@ -154,6 +155,7 @@ def _audit_case(
     effective_date: str | None,
     checklist_rows: list[dict] | None = None,
     existing_records_manifest: dict | list | None = None,
+    fallback_packet: str | Path | None = None,
 ) -> None:
 
     # Their vocabulary, translated before it reaches anything that keys on
@@ -174,25 +176,38 @@ def _audit_case(
     # Fetch first, before anything expensive. Presigned URLs expire, so the
     # window between the notification and the download is kept as small as
     # the queue allows.
+    from_kept_packet = False
     try:
         pdf_bytes, packet_warnings, document_spans = fetch_packet(documents)
     except DocumentUnavailable as exc:
-        logger.error("case_ref=%s document unavailable: %s", case_ref, exc)
-        store.mark_extraction_failed(case_ref, f"document unavailable: {exc}")
-        # Recoverable on their side: reissue the link and notify again.
-        post_failure(case_ref, str(exc), settings,
-                     error_code="document_unavailable")
-        return
+        kept = Path(fallback_packet) if fallback_packet else None
+        if kept is not None and kept.is_file():
+            # A case run again after a restart: the presigned URLs have
+            # expired, but the packet they pointed at was kept the first
+            # time. Its attachment boundaries were not, so the rent figures
+            # go out without a source document id.
+            logger.warning("case_ref=%s documents unavailable (%s) — auditing the packet kept at %s",
+                           case_ref, exc, kept)
+            pdf_bytes, packet_warnings, document_spans = kept.read_bytes(), [], None
+            from_kept_packet = True
+        else:
+            logger.error("case_ref=%s document unavailable: %s", case_ref, exc)
+            store.mark_extraction_failed(case_ref, f"document unavailable: {exc}")
+            # Recoverable on their side: reissue the link and notify again.
+            post_failure(case_ref, str(exc), settings,
+                         error_code="document_unavailable")
+            return
     for warning in packet_warnings:
         logger.warning("case_ref=%s packet warning: %s", case_ref, warning)
 
     # The packet itself is kept for a while: every contested finding so
     # far has needed the rendered page, and the client had to be asked for
     # the file each time.
-    try:
-        keep_packet(pdf_bytes, case_ref, settings)
-    except Exception:
-        logger.exception("Could not keep the packet for case_ref=%s", case_ref)
+    if not from_kept_packet:
+        try:
+            keep_packet(pdf_bytes, case_ref, settings)
+        except Exception:
+            logger.exception("Could not keep the packet for case_ref=%s", case_ref)
 
     # Per-job work dir: page images and texts are named by page number only,
     # so concurrent extractions must not share one.

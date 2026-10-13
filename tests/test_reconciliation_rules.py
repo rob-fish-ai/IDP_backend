@@ -987,3 +987,86 @@ def test_a_declared_amount_with_the_decimal_read_as_a_separator_is_repaired_when
     d = [{"memberName": "Elise Dodd", "incomeType": "Social Security", "amount": "994000.00", "amountPeriod": "unknown", "page": 41}]
     _repair_declared_magnitudes(d, "11928.00", corroborating=[])
     assert d[0]["amount"] is None
+
+
+# ---------------------------------------------------------------------------
+# One Social Security benefit stated by two documents
+# ---------------------------------------------------------------------------
+
+def _ssa(itype, rate, *, member="Cleveland White", status="verified", voi="SSA Benefit Letter", pages=(17, 18), **extra):
+    rec = {"memberName": member, "sourceName": "Social Security Administration", "incomeType": itype,
+           "rateOfPay": rate, "rateUnit": "monthly", "frequencyOfPay": "monthly", "verificationStatus": status,
+           "type_of_VOI": voi, "sourcePages": list(pages), "evidence": {}}
+    rec.update(extra)
+    return rec
+
+
+def test_the_same_benefit_figure_under_two_labels_is_one_record():
+    """J-CCAC-07517: the SSA letter says Social Security $994; the EIV
+    report lists the same $994 as SSI; the 50059's line is "SI - SSI
+    $11,928". One benefit, kept on the record the certification's line was
+    attached to, with the other document noted."""
+    from app.services.extractor import _merge_same_benefit_records
+    letter = _ssa("Social Security", "994.00", declaredAnnualAmount="11928.00", declaredSource="HUD 50059")
+    eiv = _ssa("Supplemental Security Income", "994.00", status="verified_not_declared", voi="EIV Report", pages=(22,))
+    wages = {"memberName": "Cleveland White", "sourceName": "Addus Homecare", "incomeType": "Non-Federal Wage",
+             "rateOfPay": "994.00", "rateUnit": "monthly", "verificationStatus": "verified", "sourcePages": [30]}
+    out = _merge_same_benefit_records([letter, eiv, wages])
+    assert out == [letter, wages]
+    assert letter["sourcePages"] == [17, 18, 22] and letter["verificationStatus"] == "verified"
+    assert letter["evidence"]["corroboratedBy"].startswith("EIV Report (pages [22]): Supplemental Security Income 994.00")
+    assert letter["evidence"]["programOnOtherDocument"] == "EIV Report: Supplemental Security Income"
+
+
+def test_two_benefits_of_different_figures_stay_two_records():
+    """J-CCAC-07448: Social Security $789 and SSI $198 on one EIV report,
+    both declared on the 50059. Two programs, two figures, two records."""
+    from app.services.extractor import _merge_same_benefit_records
+    ss = _ssa("Social Security", "789.00", voi="EIV Report", declaredAnnualAmount="9468.00")
+    ssi = _ssa("Supplemental Security Income", "198.00", voi="EIV Report", declaredAnnualAmount="2376.00")
+    assert _merge_same_benefit_records([ss, ssi]) == [ss, ssi]
+    # Nor does one member's benefit merge with another's of the same figure.
+    other = _ssa("Social Security", "789.00", member="Jamal White")
+    assert _merge_same_benefit_records([ss, other]) == [ss, other]
+
+
+def test_one_certification_line_and_one_verified_benefit_are_one_income_whatever_each_calls_it():
+    """The 50059 says "SS - Social Security $21,720", the packet verifies
+    one SSA benefit typed SSI. Same payer, same member, one line each side:
+    the declaration joins the verified record, where its figure is compared
+    with the verification's, instead of a declared-only Social Security
+    record beside an SSI record "verified but not declared"."""
+    from app.services.extractor import _merge_same_benefit_records
+    verified = _ssa("Supplemental Security Income", "994.00", status="verified_not_declared", voi="EIV Report", pages=(22,))
+    line = {"memberName": "Cleveland White", "sourceName": "Soc. Sec.", "incomeType": "Social Security",
+            "selfDeclaredAmount": "21720.00", "selfDeclaredSource": "HUD 50059", "frequencyOfPay": "annually",
+            "type_of_VOI": "Self-Declaration", "sourcePages": [2], "verificationStatus": "declared_only",
+            "declaredAnnualAmount": "21720.00", "declaredSource": "HUD 50059", "evidence": {}}
+    out = _merge_same_benefit_records([line, verified])
+    assert out == [verified]
+    assert verified["declaredAnnualAmount"] == "21720.00" and verified["declaredSource"] == "HUD 50059"
+    assert verified["verificationStatus"] == "verified" and verified["sourcePages"] == [2, 22]
+    # An annual declaration is not written over a monthly rate's self-declared amount.
+    assert "selfDeclaredAmount" not in verified
+    assert verified["evidence"]["programOnOtherDocument"] == "HUD 50059: Social Security"
+
+    # Two verified benefits and two lines are not one-to-one: left as they are.
+    ss = _ssa("Social Security", "789.00", voi="EIV Report")
+    ssi = _ssa("Supplemental Security Income", "198.00", voi="EIV Report")
+    line_a = dict(line, incomeType="Social Security")
+    line_b = dict(line, incomeType="Supplemental Security Income")
+    assert _merge_same_benefit_records([ss, ssi, line_a, line_b]) == [ss, ssi, line_a, line_b]
+
+
+def test_a_second_certification_line_beside_a_verified_benefit_that_has_its_own_stays_declared():
+    """J-VIV-06676: the TIC declares Social Security and SSI; the packet
+    verifies the Social Security. The SSI line is a second program the
+    certification declares and nothing verifies — not a restatement of the
+    one verified benefit."""
+    from app.services.extractor import _merge_same_benefit_records
+    ss = _ssa("Social Security", "1200.00", declaredAnnualAmount="14400.00", declaredSource="TIC")
+    ssi_line = {"memberName": "Cleveland White", "sourceName": "Supplemental Security Income (declared)",
+                "incomeType": "Supplemental Security Income", "selfDeclaredAmount": "3000.00",
+                "frequencyOfPay": "annually", "verificationStatus": "declared_only",
+                "declaredAnnualAmount": "3000.00", "declaredSource": "TIC", "sourcePages": [2], "evidence": {}}
+    assert _merge_same_benefit_records([ss, ssi_line]) == [ss, ssi_line]

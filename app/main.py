@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -26,6 +27,13 @@ async def lifespan(_app: FastAPI):
         start_maintenance_thread, start_poller_thread,
         stop_maintenance_thread, stop_poller_thread,
     )
+    from app.services.audit.job_store import get_job_store
+    from app.services.cartograph.resume import interrupted_cases, start_resume_thread
+
+    # Cases that were in flight when the last process stopped are claimed
+    # before the maintenance thread starts, or its first sweep would fail
+    # them as wedged instead of letting them run again.
+    start_resume_thread(settings, get_job_store(settings.audit_job_db))
     start_poller_thread()
     start_maintenance_thread()
     try:
@@ -33,6 +41,15 @@ async def lifespan(_app: FastAPI):
     finally:
         stop_poller_thread()
         stop_maintenance_thread()
+        try:
+            in_flight = [r["case_id"] for r in interrupted_cases(get_job_store(settings.audit_job_db))]
+        except Exception:
+            in_flight = []
+        if in_flight:
+            logging.getLogger(__name__).warning(
+                "Stopping with %d case(s) in flight; they are audited again at the next start: %s",
+                len(in_flight), ", ".join(in_flight),
+            )
 
 
 def create_app() -> FastAPI:

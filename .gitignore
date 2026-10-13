@@ -12,3 +12,6 @@ eval/runs/
 
 # Real tenant packets (PII) — never committed
 eval/pdfs/
+
+# Supervisor pidfiles and stop flag (scripts/engine.sh)
+run/

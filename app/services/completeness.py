@@ -48,8 +48,13 @@ logger = logging.getLogger(__name__)
 # that way, and the head of household's whole income sat on a TIC as
 # "17,874" — the largest figure on the page, and the one line the scanner
 # could not see while it flagged the $3,359.56 beside it.
+#
+# A figure that runs on into more digits is not an amount: the 50059's own
+# boilerplate cites "24 CFR 5.657, 880.603, 884.218, 886.324, 891.410", and
+# read to two decimals those regulation numbers were reported as $880.60,
+# $884.21 and $886.32 the household had not accounted for.
 _AMOUNT_RE = re.compile(
-    r"\$?\s*(\d{1,3}(?:,\d{3})+(?:\.\d{2})?|\d+\.\d{2})"
+    r"(?<![\d.,])\$?\s*(\d{1,3}(?:,\d{3})+(?:\.\d{2})?|\d+\.\d{2})(?!\d)"
 )
 
 # Words a certification uses to label a figure that is not the household's:
@@ -68,7 +73,15 @@ _NOT_HOUSEHOLD_RE = re.compile(
     # A monthly figure, or a percentage of one, on an annual certification
     # is the form's own arithmetic ("Monthly Adjusted Income", "30% of
     # Monthly Adjusted Income"), never a source the engine could have missed.
-    r"|\bmonthly\b|\d{1,2}\s?%\s+of\b|\bpercent\b",
+    r"|\bmonthly\b|\d{1,2}\s?%\s+of\b|\bpercent\b"
+    # The form's own arithmetic on the other side of the ledger: what the
+    # household pays out or is allowed, not what it receives or holds. A
+    # medical expense, a deduction, the assistance payment, a security
+    # deposit, a Medicare premium — each sat on a 50059 as an "unaccounted"
+    # amount, and no record the engine could have missed would carry it.
+    # A total is the sum of lines, never a line.
+    r"|\btotal\b|\bdeductions?\b|\bexpenses?\b|\bassistance payment\b"
+    r"|\bdeposit\b|\bmedicare\b|\bpremiums?\b",
     re.IGNORECASE,
 )
 # How far back to look for that label. Far enough for "Designated Income

@@ -309,3 +309,108 @@ def test_checklist_note_says_whether_a_missing_signature_date_is_unreadable_or_a
     assert out[2]["note"].endswith("Signed, undated.")
     read = _build_entry(g("HUD 9887", [1], "Signature of Head of Household: Yolanda Bribiesca   Date: 09/16/2026"))
     assert (read.signatureDate, read.signatureDateState) == ("2026-09-16", "read")
+
+
+# ---------------------------------------------------------------------------
+# Cases in flight when the engine stopped
+# ---------------------------------------------------------------------------
+
+def _resume_settings(tmp_path):
+    from types import SimpleNamespace
+    return SimpleNamespace(output_dir=tmp_path, audit_resume_on_start=True,
+                           audit_resume_delay_seconds=0, audit_pipeline_concurrency=2)
+
+
+def test_cases_in_flight_at_the_last_stop_are_claimed_and_audited_again(monkeypatch, tmp_path):
+    """Fifteen cases of one morning's batch were mid-extraction when the pod
+    went down; at the next start the watchdog failed them and Cartograph
+    took each failure for a result. Now they are claimed before the
+    watchdog's first sweep and run again from the request as received and
+    the packet kept — a row with no request cannot be run and is failed at
+    once instead."""
+    import json
+    from app.services.audit.job_store import JobStore
+    from app.services.cartograph import resume
+    store = JobStore(tmp_path / "jobs.db")
+    settings = _resume_settings(tmp_path)
+
+    def in_flight(case, state="extracting", source="cartograph", request=None):
+        store.upsert_pending(case, case, "annual", "HUD 202 PRAC", None, source=source, claimed=True)
+        if state == "extracting":
+            store.mark_extracting(case)
+        if request is not None:
+            store.record_request(case, json.dumps(request), [])
+        with store._connect() as conn:  # long stale, as after a two-day outage
+            conn.execute("UPDATE audit_jobs SET updated_at = ? WHERE case_id = ?", (time.time() - 160_000, case))
+
+    in_flight("J-A", request={"case_ref": "J-A", "documents": [{"url": "https://x/a.pdf", "job_document_id": 1}],
+                              "cert_type": "annual", "job_id": 7, "unit_number": "406",
+                              "existing_records_manifest": {"household_members": [{"id": 1}]}})
+    (tmp_path / "pdfs").mkdir()
+    (tmp_path / "pdfs" / "J-A_20261010-044732.pdf").write_bytes(b"%PDF-old")
+    (tmp_path / "pdfs" / "J-A_20261010-052947.pdf").write_bytes(b"%PDF-new")
+    in_flight("J-B", state="queued", request={"case_ref": "J-B", "documents": [{"url": "https://x/b.pdf"}]})
+    in_flight("J-C")                                   # no request kept
+    in_flight("500Rb00001", source="salesforce")       # the poller's, not ours
+    store.upsert_pending("J-D", "J-D", "annual", "HUD", None, source="cartograph", claimed=True)
+    store.mark_done("J-D", findings_text="", confidence=1.0)
+
+    posted: list = []
+    monkeypatch.setattr("app.services.cartograph.client.post_failure",
+                        lambda case_ref, reason, settings, **kw: posted.append((case_ref, kw.get("error_code"))))
+    assert len(store.list_wedged(("queued", "extracting"), stale_seconds=1800)) == 4
+
+    rows = resume.claim_interrupted_cases(settings, store)
+    assert [r["case_id"] for r in rows] == ["J-A", "J-B"]
+    a = rows[0]["kwargs"]
+    assert a["fallback_packet"].endswith("J-A_20261010-052947.pdf")
+    assert a["job_id"] == 7 and a["unit_number"] == "406" and a["documents"][0]["job_document_id"] == 1
+    assert a["existing_records_manifest"] == {"household_members": [{"id": 1}]}
+    assert rows[1]["kwargs"]["fallback_packet"] is None
+    # Claimed rows are no longer wedged; the one that cannot run is failed and reported.
+    assert [r["case_id"] for r in store.list_wedged(("queued", "extracting"), stale_seconds=1800)] == ["500Rb00001"]
+    assert store.get("J-C")["state"] == "extraction_failed" and "re-notify" in store.get("J-C")["error"]
+    assert posted == [("J-C", "engine_restarted")]
+    assert store.get("500Rb00001")["state"] == "extracting" and store.get("J-D")["state"] == "done"
+
+    ran: list = []
+    done = resume.run_interrupted_cases(settings, rows, run=lambda **kw: ran.append(kw["case_ref"]), delay=0)
+    assert sorted(done) == sorted(ran) == ["J-A", "J-B"]
+
+
+def test_a_case_run_again_after_its_links_expired_is_audited_from_the_kept_packet(monkeypatch, tmp_path):
+    from app.services.audit.job_store import JobStore
+    from app.services.cartograph import tasks
+    from app.services.cartograph.documents import DocumentUnavailable
+    from types import SimpleNamespace
+    store = JobStore(tmp_path / "jobs.db")
+    store.upsert_pending("J-A", "J-A", "annual", "HUD", None, source="cartograph", claimed=True)
+    kept = tmp_path / "J-A_20261010-052947.pdf"
+    kept.write_bytes(b"%PDF-kept")
+    settings = SimpleNamespace(output_dir=tmp_path, pdf_retention_days=14, pdf_retention_max_mb=10,
+                               cartograph_extract_attempts=1, cartograph_retry_delay_seconds=0)
+    seen: dict = {}
+
+    def expired(_documents):
+        raise DocumentUnavailable("403 on every presigned URL")
+
+    def process(pdf_bytes, *_a, **_k):
+        seen["bytes"] = pdf_bytes
+        raise RuntimeError("stop here")
+
+    monkeypatch.setattr(tasks, "fetch_packet", expired)
+    monkeypatch.setattr(tasks, "process_pdf_full", process)
+    monkeypatch.setattr(tasks, "keep_packet", lambda *a, **k: seen.setdefault("kept_again", True))
+    monkeypatch.setattr(tasks, "post_failure", lambda *a, **k: None)
+    tasks._audit_case(store, settings, case_ref="J-A", documents=[{"url": "https://x/a.pdf"}], cert_type="annual",
+                      program=None, job_id=None, community_id=None, unit_number=None, effective_date=None,
+                      fallback_packet=str(kept))
+    assert seen["bytes"] == b"%PDF-kept" and "kept_again" not in seen
+    assert store.get("J-A")["state"] == "extraction_failed" and "stop here" in store.get("J-A")["error"]
+
+    # Without a kept packet the expired links fail the case as before.
+    store.upsert_pending("J-B", "J-B", "annual", "HUD", None, source="cartograph", claimed=True)
+    tasks._audit_case(store, settings, case_ref="J-B", documents=[{"url": "https://x/b.pdf"}], cert_type="annual",
+                      program=None, job_id=None, community_id=None, unit_number=None, effective_date=None,
+                      fallback_packet=str(tmp_path / "missing.pdf"))
+    assert "document unavailable" in store.get("J-B")["error"]

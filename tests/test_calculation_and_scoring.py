@@ -517,3 +517,18 @@ def test_coverage_falls_only_when_the_extraction_falls_short():
     assert s.omissions == [] and s.coverage == 1.0
     apply_coverage(s, [Finding(code="TIC_TOTAL_MISMATCH", text="TIC declares $25,426.00 but extracted sources sum to $18,708.00 (26% lower). Sources: ...")])
     assert s.omissions == ["TIC_TOTAL_MISMATCH"] and s.coverage == 0.92
+
+
+def test_the_forms_own_outgoings_and_citations_are_not_unaccounted_amounts():
+    """On a 50059, "Medical Expense $7,617", "Assistance Payment $544" and
+    "Total Deductions $400" are the form's arithmetic, and "24 CFR 5.657,
+    880.603, 884.218" are regulation numbers; each was reported as an amount
+    the household had not accounted for. An income line is still one."""
+    from app.services.completeness import _amounts_in
+    for label in ("Medical Expense: $7,617.00", "Assistance Payment $544.00", "Total Deductions: $400.00",
+                  "Security Deposit $242.00", "Medicare (SS) $185.00", "Total Cash Value of Assets: $1,858.00"):
+        assert _NOT_HOUSEHOLD_RE.search(label), label
+    for label in ("SS - Social Security $11,928", "Life insurance $932.00", "W - Non-federal wage 21,043.20"):
+        assert not _NOT_HOUSEHOLD_RE.search(label), label
+    assert not _amounts_in("This information is authorized by 24 CFR 5.657, 880.603, 884.218, 886.324, 891.410 and 891.750")
+    assert dict(_amounts_in("103. Medical Expense: $7,617 104. Medical Deduction: $6,522 | SS - Social Security $11,928")) == {11928.0: 1}

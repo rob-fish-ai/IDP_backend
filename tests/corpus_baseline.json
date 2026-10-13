@@ -253,7 +253,7 @@
    "utility_allowance": "44.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
    "NAME_VARIANT": 1
   },
@@ -339,7 +339,7 @@
    "utility_allowance": "44.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 2
+   "CERT_AMOUNT_UNACCOUNTED": 1
   },
   "income": [
    [
@@ -394,7 +394,6 @@
    "utility_allowance": "48.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "NAME_VARIANT": 1
   },
@@ -562,7 +561,6 @@
   "codes": {
    "ASSET_OVERDRAWN": 1,
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "NAME_VARIANT": 1
   },
   "income": [
@@ -647,7 +645,6 @@
    "utility_allowance": "44.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 2,
    "HH_SIZE_MISMATCH": 1
   },
   "income": [
@@ -688,7 +685,7 @@
    "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
    "Pages 17-18: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr"
   ],
-  "score": 0.59,
+  "score": 0.65,
   "warnings": []
  },
  "J-CCAC-06739@1790651573": {
@@ -731,9 +728,7 @@
    "tenant_rent": "250.00",
    "utility_allowance": "44.00"
   },
-  "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1
-  },
+  "codes": {},
   "income": [
    [
     "social_security",
@@ -851,7 +846,6 @@
    "utility_allowance": "44.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 2,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "NAME_VARIANT": 1
   },
@@ -939,10 +933,9 @@
    "utility_allowance": "44.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
-   "SIGNATURE_DATE_MISSING": 1,
-   "TIC_TOTAL_MISMATCH": 1
+   "SIGNATURE_DATE_MISSING": 1
   },
   "income": [
    [
@@ -950,13 +943,6 @@
     "verified",
     null,
     "Retirement Systems Division, N",
-    null
-   ],
-   [
-    "social_security",
-    "verified",
-    null,
-    "Social Security Administration",
     null
    ],
    [
@@ -990,7 +976,7 @@
   ],
   "score": 0.8,
   "warnings": [
-   "income_records[3]: 'Global Food Services LLC' is wage history only (no"
+   "income_records[2]: 'Global Food Services LLC' is wage history only (no"
   ]
  },
  "J-CCAC-06742@1790651903": {
@@ -1069,9 +1055,7 @@
    "tenant_rent": "255.00",
    "utility_allowance": "44.00"
   },
-  "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1
-  },
+  "codes": {},
   "income": [
    [
     "social_security",
@@ -1222,7 +1206,7 @@
    "utility_allowance": "44.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "CERT_AMOUNT_UNACCOUNTED": 1,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "HH_SIZE_MISMATCH": 1
   },
@@ -1232,13 +1216,6 @@
     "verified",
     null,
     "Retirement Systems Division, N",
-    null
-   ],
-   [
-    "social_security",
-    "verified",
-    null,
-    "Social Security Administration",
     null
    ],
    [
@@ -1265,7 +1242,7 @@
    "Pages 17-19: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr",
    "Student status is null for all household members \u2014 verify against HUD "
   ],
-  "score": 0.73,
+  "score": 0.72,
   "warnings": []
  },
  "J-CCAC-06745@1790654823": {
@@ -1400,7 +1377,6 @@
    "utility_allowance": "44.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "TIC_TOTAL_NOT_EXTRACTED": 1
   },
   "income": [
@@ -1460,7 +1436,6 @@
    "utility_allowance": "48.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1,
    "NAME_VARIANT": 1
   },
@@ -1681,7 +1656,6 @@
   },
   "codes": {
    "ASSET_OWNER_NOT_IN_ROSTER": 2,
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "MEMBER_IDENTITY_CONFLICT": 1
   },
   "income": [
@@ -1710,7 +1684,7 @@
    "Pages 20-21: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr",
    "Pages 8: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti"
   ],
-  "score": 0.74,
+  "score": 0.81,
   "warnings": [
    "asset_records[0]: balance arrived with no statement or verification of",
    "asset_records[10]: balance arrived with no statement or verification o",
@@ -1750,9 +1724,7 @@
    "tenant_rent": "244.00",
    "utility_allowance": "44.00"
   },
-  "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1
-  },
+  "codes": {},
   "income": [
    [
     "ssi",
@@ -1794,7 +1766,6 @@
    "utility_allowance": "50.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
    "INCOME_AMOUNT_NOT_IN_SOURCE": 1,
@@ -1860,7 +1831,6 @@
    "utility_allowance": "44.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
    "INCOME_DECLARED_NOT_VERIFIED": 1
@@ -1952,23 +1922,13 @@
    "utility_allowance": "44.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
-   "HUD_9887_INCOMPLETE": 1,
-   "INCOME_VERIFIED_NOT_DECLARED": 1,
-   "TIC_TOTAL_MISMATCH": 1
+   "HUD_9887_INCOMPLETE": 1
   },
   "income": [
    [
     "social_security",
     "verified",
-    null,
-    "Social Security Administration",
-    null
-   ],
-   [
-    "ssi",
-    "verified_not_declared",
     null,
     "Social Security Administration",
     null
@@ -1994,10 +1954,10 @@
    "Pages 4-5: 'HUD 50059 (Previous)' detected \u2014 excluded from data extrac",
    "Self-declared income amounts not extracted from questionnaire/applicat"
   ],
-  "score": 0.86,
+  "score": 0.87,
   "warnings": [
    "asset_records[0]: balance arrived with no statement or verification of",
-   "income_records[2]: 'Catholic Charities of the Archdioce' is wage histo"
+   "income_records[1]: 'Catholic Charities of the Archdioce' is wage histo"
   ]
  },
  "J-CCAC-06832@1790783668": {
@@ -2023,7 +1983,6 @@
    "utility_allowance": "44.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1
   },
   "income": [
@@ -2086,18 +2045,9 @@
    "utility_allowance": "48.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
-   "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "NAME_VARIANT": 1
   },
   "income": [
-   [
-    "social_security",
-    "verified",
-    null,
-    "Social Security Administration",
-    3689
-   ],
    [
     "ssi",
     "verified",
@@ -2124,9 +2074,9 @@
    "Pages 18: 'Notice of Rent Change (Previous)' detected \u2014 excluded from ",
    "Pages 19-20: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr"
   ],
-  "score": 0.81,
+  "score": 0.86,
   "warnings": [
-   "income_records[2]: 'Addus Healthcare Inc.' is wage history only (not d"
+   "income_records[1]: 'Addus Healthcare Inc.' is wage history only (not d"
   ]
  },
  "J-CCAC-07069@1791237993": {
@@ -2161,7 +2111,6 @@
    "utility_allowance": "44.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1,
    "NAME_VARIANT": 1
   },
@@ -2216,7 +2165,6 @@
    "utility_allowance": "50.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1
   },
   "income": [
@@ -2296,7 +2244,7 @@
    "utility_allowance": "40.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1,
    "NAME_VARIANT": 1
   },
@@ -2439,7 +2387,6 @@
    "utility_allowance": "50.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 2,
    "HUD_9887_INCOMPLETE": 1,
    "QUESTIONNAIRE_LIFE_INSURANCE_UNVERIFIED": 1
   },
@@ -2581,7 +2528,6 @@
    "utility_allowance": "50.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1,
    "MEMBER_IDENTITY_CONFLICT": 2
   },
@@ -2666,7 +2612,6 @@
   },
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1,
    "MEMBER_IDENTITY_CONFLICT": 2
   },
@@ -2733,7 +2678,7 @@
   },
   "codes": {
    "ASSET_OWNER_NOT_IN_ROSTER": 1,
-   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "CERT_AMOUNT_UNACCOUNTED": 3,
    "HUD_9887_INCOMPLETE": 1
   },
   "income": [
@@ -2760,7 +2705,7 @@
    "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
    "Self-declared income amounts not extracted from questionnaire/applicat"
   ],
-  "score": 0.75,
+  "score": 0.69,
   "warnings": [
    "asset_records[0]: 'Martha Reddin' did not match any household member (",
    "household_members[0] 'Beatrice Redditt' date of birth read as 1943-09-"
@@ -2789,7 +2734,6 @@
    "utility_allowance": "50.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "HUD_9887_INCOMPLETE": 1
   },
@@ -2854,7 +2798,6 @@
    "utility_allowance": "50.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1
   },
   "income": [
@@ -2936,7 +2879,6 @@
   },
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1,
    "MEMBER_IDENTITY_CONFLICT": 1,
    "QUESTIONNAIRE_PENSION_UNVERIFIED": 1
@@ -3084,7 +3026,6 @@
    "utility_allowance": "50.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 2,
    "HUD_9887_INCOMPLETE": 1
   },
   "income": [
@@ -3175,7 +3116,6 @@
    "utility_allowance": "50.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1,
    "JOINT_ACCOUNT_OWNERSHIP_PCT": 2,
    "MEMBER_IDENTITY_CONFLICT": 1
@@ -3344,7 +3284,7 @@
   },
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
-   "CERT_AMOUNT_UNACCOUNTED": 3,
+   "CERT_AMOUNT_UNACCOUNTED": 2,
    "HUD_9887_INCOMPLETE": 1,
    "INCOME_AMOUNT_NOT_IN_SOURCE": 1,
    "INCOME_DECLARED_NOT_VERIFIED": 2,
@@ -3437,7 +3377,6 @@
    "utility_allowance": "44.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1,
    "NAME_VARIANT": 2
   },
@@ -3496,7 +3435,7 @@
    "utility_allowance": "44.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
+   "CERT_AMOUNT_UNACCOUNTED": 2,
    "HUD_9887_INCOMPLETE": 1
   },
   "income": [
@@ -3523,7 +3462,7 @@
    "Pages 20: Unrecognized document type \u2014 manual review required",
    "Self-declared income amounts not extracted from questionnaire/applicat"
   ],
-  "score": 0.91,
+  "score": 0.83,
   "warnings": [
    "household_members[0] 'Barbara Hamilton' date of birth read as 1950-03-"
   ]
@@ -3675,7 +3614,6 @@
    "utility_allowance": "44.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 2,
    "HUD_9887_INCOMPLETE": 1,
    "MEMBER_IDENTITY_CONFLICT": 1
   },
@@ -3740,7 +3678,7 @@
    "utility_allowance": "48.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1
   },
   "income": [
@@ -3829,7 +3767,6 @@
    "utility_allowance": "48.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1,
    "INCOME_DECLARED_NOT_VERIFIED": 1,
    "NAME_VARIANT": 1
@@ -3957,7 +3894,7 @@
    "utility_allowance": "50.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1,
    "SIGNATURE_VERDICT_CONFLICTS_WITH_DATE": 1
   },
@@ -4023,7 +3960,7 @@
    "utility_allowance": "44.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1,
    "NAME_VARIANT": 1
   },
@@ -4138,7 +4075,7 @@
    "Pages 6: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
    "Self-declared income amounts not extracted from questionnaire/applicat"
   ],
-  "score": 0.73,
+  "score": 0.67,
   "warnings": [
    "income_records[1]: 'Cadc LLC' is wage history only (not declared, no c",
    "income_records[3]: 'Harris Ventures Inc.' is wage history only (not de"
@@ -4357,7 +4294,6 @@
    "utility_allowance": "44.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1,
    "INCOME_DECLARED_NOT_VERIFIED": 1,
    "SSA_POSSIBLE_OVERPAYMENT": 1,
@@ -4485,7 +4421,7 @@
    "utility_allowance": "48.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
+   "CERT_AMOUNT_UNACCOUNTED": 2,
    "HUD_9887_INCOMPLETE": 1,
    "MEMBER_IDENTITY_CONFLICT": 1,
    "NAME_VARIANT": 1
@@ -4512,7 +4448,7 @@
   "notes": [
    "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir"
   ],
-  "score": 0.76,
+  "score": 0.7,
   "warnings": []
  },
  "J-CCAC-07105@1791262287": {
@@ -4556,7 +4492,7 @@
    "utility_allowance": "44.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1,
    "INCOME_DECLARED_NOT_VERIFIED": 1
   },
@@ -4808,17 +4744,9 @@
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "CERT_AMOUNT_UNACCOUNTED": 1,
-   "HUD_9887_INCOMPLETE": 1,
-   "TIC_TOTAL_MISMATCH": 1
+   "HUD_9887_INCOMPLETE": 1
   },
   "income": [
-   [
-    "social_security",
-    "verified",
-    null,
-    "Social Security Administration",
-    3793
-   ],
    [
     "ssi",
     "verified",
@@ -4881,7 +4809,6 @@
    "utility_allowance": "44.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 2,
    "HUD_9887_INCOMPLETE": 1,
    "QUESTIONNAIRE_PENSION_UNVERIFIED": 1
   },
@@ -4954,7 +4881,7 @@
    "utility_allowance": "44.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 3,
+   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1,
    "NAME_VARIANT": 1
   },
@@ -5018,7 +4945,6 @@
    "utility_allowance": "48.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1,
    "TIC_TOTAL_MISMATCH": 1
   },
@@ -5082,7 +5008,7 @@
    "utility_allowance": "48.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
+   "CERT_AMOUNT_UNACCOUNTED": 2,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "HUD_9887_INCOMPLETE": 1,
    "INCOME_METHODS_DISAGREE": 1,
@@ -5113,7 +5039,7 @@
    "Income source 'Balton Corporation' (Andre Young): projected annual $14",
    "Pages 6: 'Income Calculation Worksheet' detected \u2014 excluded from data "
   ],
-  "score": 0.88,
+  "score": 0.81,
   "warnings": [
    "household_members[0] 'Andre Young' date of birth read as 1976-07-06; C",
    "income_records[0]: 6 quarterly wage-history row(s) not sent as pay stu"
@@ -5160,7 +5086,6 @@
    "utility_allowance": "50.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1,
    "SIGNATURE_DATE_MISSING": 1
   },
@@ -5231,7 +5156,6 @@
    "utility_allowance": "44.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1,
    "MEMBER_IDENTITY_CONFLICT": 2,
    "SSA_POSSIBLE_OVERPAYMENT": 2
@@ -5352,7 +5276,7 @@
    "Pages 43: Unrecognized document type \u2014 manual review required",
    "Self-declared income amounts not extracted from questionnaire/applicat"
   ],
-  "score": 0.9,
+  "score": 0.83,
   "warnings": [
    "asset_records[1]: balance arrived with no statement or verification of",
    "household_members[0] 'Lonnie Bates' date of birth read as 1954-01-25; "
@@ -5547,7 +5471,6 @@
    "utility_allowance": "46.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
    "NAME_VARIANT": 1
@@ -5642,7 +5565,6 @@
    "utility_allowance": "41.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 2,
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
    "NAME_VARIANT": 1
@@ -5766,10 +5688,8 @@
    "utility_allowance": "46.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
-   "CERT_SUMMARY_INCOME_MISMATCH": 1,
-   "INCOME_DECLARED_NOT_VERIFIED": 2,
-   "TIC_TOTAL_MISMATCH": 1
+   "CERT_SUMMARY_INCOME_MISMATCH": 2,
+   "INCOME_DECLARED_NOT_VERIFIED": 1
   },
   "income": [
    [
@@ -5791,21 +5711,7 @@
     "verified",
     null,
     "Social Security Administration",
-    null
-   ],
-   [
-    "social_security",
-    "verified",
-    null,
-    "Social Security Administration",
     3962
-   ],
-   [
-    "ssi",
-    "declared_only",
-    null,
-    "Supplemental Security Income (",
-    null
    ]
   ],
   "members": [
@@ -5822,10 +5728,10 @@
    "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
    "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir"
   ],
-  "score": 0.67,
+  "score": 0.71,
   "warnings": [
    "asset_records[1]: balance arrived with no statement or verification of",
-   "income_records[4]: type 'Other Income' is not in the configured pickli"
+   "income_records[2]: type 'Other Income' is not in the configured pickli"
   ]
  },
  "J-CCAC-07485@1791600629": {
@@ -5860,7 +5766,6 @@
    "utility_allowance": "41.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 2,
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
    "INCOME_DECLARED_NOT_VERIFIED": 1,
@@ -5944,7 +5849,6 @@
    "utility_allowance": "46.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
    "NAME_VARIANT": 1
@@ -6010,7 +5914,6 @@
    "utility_allowance": null
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
    "INCOME_DECLARED_NOT_VERIFIED": 1,
@@ -6187,7 +6090,7 @@
    "utility_allowance": "46.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 3,
+   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
   },
@@ -6218,7 +6121,7 @@
    "Self-declared income amounts not extracted from questionnaire/applicat",
    "Student status is null for all household members \u2014 verify against HUD "
   ],
-  "score": 0.67,
+  "score": 0.72,
   "warnings": [
    "asset_records[0]: balance arrived with no statement or verification of",
    "asset_records[0]: type 'Investment' is not in the configured picklist;",
@@ -6277,7 +6180,7 @@
   },
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
-   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
   },
@@ -6356,7 +6259,6 @@
    "utility_allowance": "46.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 2,
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
    "NAME_VARIANT": 1
@@ -6682,7 +6584,7 @@
    "utility_allowance": "41.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
    "NAME_VARIANT": 1,
@@ -6716,7 +6618,7 @@
    "Pages 6-7: 'HUD 50059 (Previous)' detected \u2014 excluded from data extrac",
    "Student status is null for all household members \u2014 verify against HUD "
   ],
-  "score": 0.72,
+  "score": 0.78,
   "warnings": [
    "asset_records[6]: type 'Investment' is not in the configured picklist;",
    "income_records[1]: 'A-Pro Staffing, LLC' is wage history only (not dec",
@@ -6736,7 +6638,6 @@
    "utility_allowance": "46.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
    "NAME_VARIANT": 1,
@@ -6802,22 +6703,12 @@
    "utility_allowance": "46.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
-   "INCOME_VERIFIED_NOT_DECLARED": 1,
-   "QUESTIONNAIRE_PENSION_UNVERIFIED": 1,
-   "TIC_TOTAL_MISMATCH": 1
+   "QUESTIONNAIRE_PENSION_UNVERIFIED": 1
   },
   "income": [
    [
     "social_security",
     "verified",
-    null,
-    "Social Security Administration",
-    null
-   ],
-   [
-    "social_security",
-    "verified_not_declared",
     null,
     "Social Security Administration",
     4003
@@ -6839,7 +6730,7 @@
    "Pages 27: Unrecognized document type \u2014 manual review required",
    "Self-declared income amounts not extracted from questionnaire/applicat"
   ],
-  "score": 0.9,
+  "score": 0.93,
   "warnings": [
    "asset_records[1]: balance arrived with no statement or verification of"
   ]
@@ -6867,7 +6758,6 @@
    "utility_allowance": "46.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "NAME_VARIANT": 1
   },
   "income": [
@@ -6995,7 +6885,6 @@
   },
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
-   "CERT_AMOUNT_UNACCOUNTED": 2,
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
   },
@@ -7061,7 +6950,6 @@
    "utility_allowance": "46.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "INCOME_METHODS_DISAGREE": 1,
    "MEMBER_IDENTITY_CONFLICT": 1,
    "SIGNATURE_VERDICT_CONFLICTS_WITH_DATE": 1,
@@ -7148,7 +7036,7 @@
    "utility_allowance": "46.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "CERT_AMOUNT_UNACCOUNTED": 1,
    "INCOME_AMOUNT_NOT_IN_SOURCE": 1,
    "INCOME_METHODS_DISAGREE": 1,
    "SIGNATURE_VERDICT_CONFLICTS_WITH_DATE": 1,
@@ -7232,7 +7120,6 @@
    "utility_allowance": "41.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 2,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -7270,7 +7157,7 @@
    "Income source 'Addus Homecare' (Christina Smith): projected annual $74",
    "Pages 10-11: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr"
   ],
-  "score": 0.82,
+  "score": 0.89,
   "warnings": [
    "income_records[1]: 12 quarterly wage-history row(s) not sent as pay st"
   ]
@@ -7499,7 +7386,7 @@
   "score": 0.84,
   "warnings": []
  },
- "J-CCAC-07516@1791603873": {
+ "J-CCAC-07516@1791854256": {
   "assets": [
    [
     "checking",
@@ -7508,7 +7395,7 @@
     "124.00",
     "123.92",
     "verified",
-    3522
+    3917
    ],
    [
     "whole_life_insurance",
@@ -7517,7 +7404,7 @@
     "983.00",
     null,
     "verified",
-    3521
+    3541
    ]
   ],
   "cert_review": {
@@ -7531,10 +7418,8 @@
    "utility_allowance": "46.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
-   "HUD_9887_INCOMPLETE": 1,
-   "NAME_VARIANT": 1
+   "HUD_9887_INCOMPLETE": 1
   },
   "income": [
    [
@@ -7542,7 +7427,7 @@
     "verified",
     null,
     "Social Security Administration",
-    4042
+    4056
    ]
   ],
   "members": [
@@ -7558,7 +7443,9 @@
   "notes": [
    "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
    "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
-   "Pages 12-13: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr",
+   "Pages 16-17: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr",
+   "Pages 3: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
+   "Pages 4: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
    "Self-declared income amounts not extracted from questionnaire/applicat"
   ],
   "score": 0.9,
@@ -7580,9 +7467,7 @@
   },
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
-   "HUD_9887_INCOMPLETE": 1,
-   "INCOME_VERIFIED_NOT_DECLARED": 1,
-   "TIC_TOTAL_MISMATCH": 1
+   "HUD_9887_INCOMPLETE": 1
   },
   "income": [
    [
@@ -7591,13 +7476,6 @@
     null,
     "Social Security Administration",
     null
-   ],
-   [
-    "ssi",
-    "verified_not_declared",
-    null,
-    "Social Security Administration",
-    4043
    ]
   ],
   "members": [
@@ -7617,7 +7495,7 @@
    "Self-declared income amounts not extracted from questionnaire/applicat",
    "Student status is null for all household members \u2014 verify against HUD "
   ],
-  "score": 0.87,
+  "score": 0.89,
   "warnings": []
  },
  "J-CCAC-07518@1791604158": {
@@ -7743,7 +7621,6 @@
    "utility_allowance": "46.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 2,
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
   },
@@ -7853,7 +7730,6 @@
    "utility_allowance": "46.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
   },
@@ -7916,7 +7792,7 @@
    "utility_allowance": "46.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 3,
+   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
    "SSA_POSSIBLE_OVERPAYMENT": 1
@@ -7947,7 +7823,7 @@
    "Pages 13: 'HUD 50059 (Previous)' detected \u2014 excluded from data extract",
    "Student status is null for all household members \u2014 verify against HUD "
   ],
-  "score": 0.83,
+  "score": 0.91,
   "warnings": []
  },
  "J-CCAC-07522@1791831552": {
@@ -7973,7 +7849,6 @@
    "utility_allowance": "41.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
   },
@@ -8046,7 +7921,6 @@
    "utility_allowance": "46.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 2,
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
   },
@@ -8388,7 +8262,7 @@
    "utility_allowance": "41.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 3,
+   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
   },
@@ -8425,7 +8299,7 @@
    "Pages 28: Unrecognized document type \u2014 manual review required",
    "Self-declared income amounts not extracted from questionnaire/applicat"
   ],
-  "score": 0.82,
+  "score": 0.89,
   "warnings": [
    "asset_records[0]: balance arrived with no statement or verification of",
    "asset_records[1]: balance arrived with no statement or verification of",
@@ -8558,7 +8432,6 @@
    "utility_allowance": "41.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
   },
@@ -8637,7 +8510,7 @@
    "utility_allowance": "46.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "CERT_AMOUNT_UNACCOUNTED": 1,
    "FIXED_INCOME_PAYSTUB": 1,
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -8789,7 +8662,6 @@
    "utility_allowance": "46.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
    "NAME_VARIANT": 1
@@ -8847,7 +8719,6 @@
    "utility_allowance": "46.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
    "INCOME_AMOUNT_NOT_IN_SOURCE": 1,
@@ -8914,7 +8785,7 @@
    "utility_allowance": "46.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 3,
+   "CERT_AMOUNT_UNACCOUNTED": 2,
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
   },
@@ -8950,7 +8821,7 @@
    "Pages 10-13: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr",
    "Self-declared income amounts not extracted from questionnaire/applicat"
   ],
-  "score": 0.87,
+  "score": 0.94,
   "warnings": []
  },
  "J-CCAC-07535@1791605999": {
@@ -9193,7 +9064,7 @@
    "utility_allowance": "46.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 3,
+   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
    "NAME_VARIANT": 1
@@ -9514,7 +9385,6 @@
    "utility_allowance": "31.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
   },
@@ -9578,7 +9448,6 @@
    "utility_allowance": "41.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "MEMBER_IDENTITY_CONFLICT": 1
   },
   "income": [
@@ -9630,7 +9499,6 @@
    "utility_allowance": "46.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
   },
@@ -9931,7 +9799,6 @@
    "utility_allowance": "41.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
   },
@@ -10175,7 +10042,7 @@
    "utility_allowance": "46.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 3,
+   "CERT_AMOUNT_UNACCOUNTED": 2,
    "CERT_SIGNED_AFTER_EFFECTIVE_DATE": 1,
    "NAME_VARIANT": 1,
    "SIGNATURE_VERDICT_CONFLICTS_WITH_DATE": 1
@@ -10381,7 +10248,6 @@
    "utility_allowance": "46.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
    "NAME_VARIANT": 1
@@ -10502,7 +10368,6 @@
    "utility_allowance": "46.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
   },
@@ -10567,7 +10432,7 @@
    "utility_allowance": "31.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
   },
@@ -10710,9 +10575,7 @@
   },
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
-   "HUD_9887_INCOMPLETE": 1,
-   "INCOME_VERIFIED_NOT_DECLARED": 1,
-   "TIC_TOTAL_MISMATCH": 1
+   "HUD_9887_INCOMPLETE": 1
   },
   "income": [
    [
@@ -10721,13 +10584,6 @@
     null,
     "Social Security Administration",
     null
-   ],
-   [
-    "ssi",
-    "verified_not_declared",
-    null,
-    "Social Security Administration",
-    4148
    ]
   ],
   "members": [
@@ -10802,7 +10658,6 @@
    "utility_allowance": "46.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
    "NAME_VARIANT": 1
@@ -10925,9 +10780,7 @@
    "tenant_rent": "242.00",
    "utility_allowance": "242.00"
   },
-  "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 2
-  },
+  "codes": {},
   "income": [
    [
     "ssi",
@@ -10999,7 +10852,6 @@
    "utility_allowance": "46.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
   },
@@ -11056,7 +10908,6 @@
   },
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
-   "CERT_AMOUNT_UNACCOUNTED": 2,
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
   },
@@ -12314,7 +12165,6 @@
   },
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 2,
-   "CERT_AMOUNT_UNACCOUNTED": 2,
    "HUD_9887_INCOMPLETE": 1,
    "INCOME_DECLARED_NOT_VERIFIED": 1,
    "NAME_VARIANT": 2,
@@ -12402,7 +12252,7 @@
   },
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 2,
-   "CERT_AMOUNT_UNACCOUNTED": 3,
+   "CERT_AMOUNT_UNACCOUNTED": 1,
    "CONFIRMATION_WITHOUT_REPORT": 1,
    "HH_SIZE_MISMATCH": 1,
    "INCOME_DECLARED_NOT_VERIFIED": 2,
@@ -12471,7 +12321,7 @@
    "Pages 4: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti",
    "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data "
   ],
-  "score": 0.6,
+  "score": 0.67,
   "warnings": []
  },
  "J-VIV-06414@1790046122": {
@@ -12666,7 +12516,6 @@
    "utility_allowance": "158.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "CONFIRMATION_WITHOUT_REPORT": 1,
    "NAME_VARIANT": 4,
    "TIC_TOTAL_MISMATCH": 1
@@ -12760,7 +12609,6 @@
    "utility_allowance": "106.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HH_SIZE_MISMATCH": 1,
    "HUD_9887_INCOMPLETE": 1,
    "INCOME_DECLARED_NOT_VERIFIED": 2,
@@ -12856,7 +12704,7 @@
    "utility_allowance": "106.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 3,
+   "CERT_AMOUNT_UNACCOUNTED": 1,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "HUD_9887_INCOMPLETE": 1,
    "NAME_VARIANT": 1,
@@ -12900,7 +12748,7 @@
    "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
    "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir"
   ],
-  "score": 0.65,
+  "score": 0.71,
   "warnings": [
    "cert_review.householdIncome: 111328.00 was not found on the certificat"
   ]
@@ -13016,7 +12864,7 @@
   },
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
-   "CERT_AMOUNT_UNACCOUNTED": 3,
+   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1,
    "NAME_VARIANT": 1,
    "TIC_TOTAL_MISMATCH": 1
@@ -13098,7 +12946,6 @@
    "utility_allowance": "158.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HH_SIZE_MISMATCH": 1,
    "INCOME_DECLARED_NOT_VERIFIED": 1,
    "TIC_TOTAL_MISMATCH": 1
@@ -13173,7 +13020,7 @@
    "utility_allowance": "2013.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "CERT_AMOUNT_UNACCOUNTED": 1,
    "INCOME_AMOUNT_NOT_IN_SOURCE": 1,
    "NAME_VARIANT": 1,
    "QUESTIONNAIRE_LIFE_INSURANCE_UNVERIFIED": 1,
@@ -13343,7 +13190,7 @@
    "utility_allowance": "2013.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "CERT_AMOUNT_UNACCOUNTED": 1,
    "INCOME_DECLARED_NOT_VERIFIED": 1,
    "NAME_VARIANT": 1
   },
@@ -13615,7 +13462,7 @@
    "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
    "Pages 14-15: Unrecognized document type \u2014 manual review required"
   ],
-  "score": 0.63,
+  "score": 0.56,
   "warnings": [
    "cert_review.householdIncome: 119141.00 was not found on the certificat"
   ]
@@ -13842,7 +13689,6 @@
   },
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "CONFIRMATION_WITHOUT_REPORT": 1,
    "HH_SIZE_MISMATCH": 1,
    "MEMBER_IDENTITY_CONFLICT": 1,
@@ -13998,7 +13844,7 @@
    "utility_allowance": "106.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 3,
+   "CERT_AMOUNT_UNACCOUNTED": 2,
    "CONFIRMATION_WITHOUT_REPORT": 1,
    "INCOME_DECLARED_NOT_VERIFIED": 1,
    "INCOME_SECOND_DECLARATION": 1,
@@ -14064,7 +13910,6 @@
   },
   "codes": {
    "ASSET_OVERDRAWN": 1,
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "CONFIRMATION_WITHOUT_REPORT": 1,
    "INCOME_SECOND_DECLARATION": 1,
    "NAME_VARIANT": 1,
@@ -14398,7 +14243,6 @@
    "utility_allowance": "106.00"
   },
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 1,
    "CONFIRMATION_WITHOUT_REPORT": 1,
    "HH_SIZE_MISMATCH": 1,
    "HUD_9887A_INCOMPLETE": 1,

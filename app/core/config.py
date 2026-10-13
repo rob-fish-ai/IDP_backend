@@ -179,6 +179,16 @@ class Settings(BaseSettings):
     audit_watchdog_seconds: int = 1800           # 30 minutes
     audit_watchdog_max_retries: int = 5
 
+    # A Cartograph case that was mid-audit when the engine stopped (a pod
+    # restart, a deploy, a crash) is run again at the next start, from the
+    # request as received and the packet kept under output_dir/pdfs, instead
+    # of being failed by the watchdog and re-notified by hand. The rows are
+    # claimed the moment the engine starts; the work begins after the delay,
+    # so a start that cannot bind its port (the previous process still
+    # draining) has exited before any audit is re-run.
+    audit_resume_on_start: bool = True
+    audit_resume_delay_seconds: float = 10.0
+
     # Retention — terminal rows (done / *_failed / mulesoft_timeout) older
     # than this are deleted by the periodic maintenance sweep. Keeps the
     # SQLite DB from growing unbounded while still leaving the dashboard a

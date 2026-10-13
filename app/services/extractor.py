@@ -2454,6 +2454,157 @@ def _merge_same_source_records(vi_entries: list[dict]) -> list[dict]:
     return out
 
 
+def _ssa_payer(name: str | None) -> bool:
+    low = (name or "").lower()
+    return "social security" in low or bool(re.search(r"\b(ssa|ssi|ssdi)\b|soc\.?\s*sec", low))
+
+
+def _is_ssa_record(vi: dict) -> bool:
+    return _ss_family(vi.get("incomeType")) or _ssa_payer(vi.get("sourceName"))
+
+
+def _merge_same_benefit_records(vi_entries: list[dict]) -> list[dict]:
+    """One member's one Social Security benefit, stated by two documents,
+    is one record.
+
+    The SSA letter says "Social Security $994"; the EIV report lists the
+    same $994 under "SSI Monthly Assistance Amount"; the 50059 codes the
+    line "SI - SSI". Read one document at a time that became a Social
+    Security record and an SSI record for one person, $11,928 a year each:
+    the household's income doubled, the certification's total was reported
+    wrong, and the SSI was reported as verified but never declared.
+
+    Social Security and SSI are two programs, and a person can draw both
+    (SS $789 and SSI $198 on one EIV report), so two figures stay two
+    records. The same figure under two labels is one benefit whose program
+    the documents name differently, which is noted on the record kept: the
+    one the certification's line was attached to, else the one marked
+    verified, else the first read.
+
+    Likewise a certification's one Social Security line beside the member's
+    one verified Social Security record: one payer, one member, one line on
+    each side is one income, whichever of the family's names each document
+    used. The declaration joins the verified record, where its figure is
+    compared with the verification's, instead of standing as a declared-
+    only second record while the verified one is reported as undeclared.
+    """
+    groups: list[list[dict]] = []
+    for vi in vi_entries:
+        if not _is_ssa_record(vi) or not vi.get("memberName"):
+            continue
+        for group in groups:
+            if _same_member(group[0].get("memberName"), vi.get("memberName")):
+                group.append(vi)
+                break
+        else:
+            groups.append([vi])
+
+    dropped: list[dict] = []
+    for group in groups:
+        verified = [v for v in group if v.get("verificationStatus") not in ("declared_only", "self_certified")]
+        declared = [v for v in group if v.get("verificationStatus") == "declared_only"]
+
+        # Two verified statements of one figure are one benefit.
+        merged = True
+        while merged and len(verified) > 1:
+            merged = False
+            for i, a in enumerate(verified):
+                for b in verified[i + 1:]:
+                    annual_a, annual_b = _record_annual(a), _record_annual(b)
+                    if annual_a is None or annual_b is None or not _close(annual_a, annual_b):
+                        continue
+                    keep, other = _benefit_keeper(a, b)
+                    _fold_benefit(keep, other, corroborated=True)
+                    verified.remove(other)
+                    dropped.append(other)
+                    merged = True
+                    break
+                if merged:
+                    break
+
+        # One line on the certification, one verified record: one income.
+        # A verified record already carrying a line of its own makes the
+        # declared-only one a second line, which stays what it is: a
+        # second program the certification declares and the packet does
+        # not verify.
+        if len(verified) == 1 and len(declared) == 1 and not (
+            verified[0].get("declaredAnnualAmount") or verified[0].get("declaredSource")
+        ):
+            keep, line = verified[0], declared[0]
+            _fold_benefit(keep, line, corroborated=False)
+            dropped.append(line)
+
+    if not dropped:
+        return vi_entries
+    return [vi for vi in vi_entries if not any(vi is d for d in dropped)]
+
+
+def _benefit_keeper(a: dict, b: dict) -> tuple[dict, dict]:
+    """Of two verified statements of one benefit, the record kept: the one
+    the certification's line was attached to, else the one marked
+    verified, else the first read."""
+    def rank(v: dict) -> tuple[int, int]:
+        return (
+            0 if v.get("declaredAnnualAmount") or v.get("selfDeclaredAmount") else 1,
+            0 if v.get("verificationStatus") == "verified" else 1,
+        )
+    return (a, b) if rank(a) <= rank(b) else (b, a)
+
+
+def _fold_benefit(keep: dict, other: dict, *, corroborated: bool) -> None:
+    """Fold a second statement of one benefit into the record kept."""
+    pages = sorted({*(keep.get("sourcePages") or []), *(other.get("sourcePages") or [])})
+    keep["sourcePages"] = pages
+    evidence = keep.get("evidence") if isinstance(keep.get("evidence"), dict) else {}
+    keep["evidence"] = evidence
+    if corroborated:
+        where = other.get("type_of_VOI") or "another document"
+    else:
+        where = other.get("declaredSource") or other.get("selfDeclaredSource") or "the certification"
+    if corroborated:
+        rate = other.get("rateOfPay")
+        unit = other.get("rateUnit") or other.get("frequencyOfPay") or ""
+        evidence["corroboratedBy"] = (
+            f"{where} (pages {other.get('sourcePages') or []}): "
+            f"{other.get('incomeType')} {rate} {unit}".strip()
+        )
+        if other.get("verificationStatus") == "verified":
+            keep["verificationStatus"] = "verified"
+        for k, v in other.items():
+            if keep.get(k) in (None, "", [], {}) and v not in (None, "", [], {}):
+                keep[k] = v
+        logger.info(
+            "Income: %s's %s (%s) and %s (%s) are one benefit of the same figure — merged (pages %s)",
+            keep.get("memberName"), keep.get("incomeType"), keep.get("type_of_VOI"),
+            other.get("incomeType"), where, pages,
+        )
+    else:
+        # The certification's line: its annual figure is compared with the
+        # verification's downstream, so it is carried as the declared
+        # amount, never as a rate the calculator would multiply.
+        annual = other.get("declaredAnnualAmount")
+        if not annual:
+            computed = _record_annual(other)
+            annual = f"{computed:.2f}" if computed is not None else None
+        if annual and not keep.get("declaredAnnualAmount"):
+            keep["declaredAnnualAmount"] = annual
+            keep["declaredSource"] = other.get("declaredSource") or other.get("selfDeclaredSource")
+        if other.get("selfDeclaredAmount") and not keep.get("selfDeclaredAmount") and (
+            not keep.get("frequencyOfPay") or other.get("frequencyOfPay") in (None, keep.get("frequencyOfPay"))
+        ):
+            keep["selfDeclaredAmount"] = other["selfDeclaredAmount"]
+            keep["selfDeclaredSource"] = other.get("selfDeclaredSource")
+        if keep.get("verificationStatus") == "verified_not_declared":
+            keep["verificationStatus"] = "verified"
+        logger.info(
+            "Income: the %s's %s line for %s is the member's one verified Social Security benefit (%s) — "
+            "declaration attached, not a second record",
+            where, other.get("incomeType"), keep.get("memberName"), keep.get("incomeType"),
+        )
+    if not _same_income_type(keep.get("incomeType"), other.get("incomeType")):
+        evidence["programOnOtherDocument"] = f"{where}: {other.get('incomeType')}"
+
+
 def _same_income_type(a: str | None, b: str | None) -> bool:
     ka, kb = _type_key(a), _type_key(b)
     if ka and ka == kb:
@@ -3646,6 +3797,7 @@ def extract_income(
 
     declared = _extract_declared_income(decl_groups, settings, certification_type, household_names)
     _reconcile_income(vi_entries, declared, certification_type, ps_entries, declared_total)
+    vi_entries = _merge_same_benefit_records(vi_entries)
 
     result = scrub_extracted_dict({
         "sourceIncome": {"payStub": ps_entries, "verificationIncome": vi_entries},

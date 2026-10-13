@@ -357,10 +357,16 @@ Live-service state as of 2026-07. Sorted by blast radius, not urgency.
 
 ### Deployment / operations
 
-- **`--reload` does not actually reload on the RunPod pod.** The uvicorn
-  worker keeps the same PID across file edits, so pushed code changes require
-  a manual `kill && nohup uvicorn ...` restart to take effect. Do not assume
-  a commit is running just because it's on master.
+- **The engine runs under `scripts/engine.sh`** (`start`, `stop`, `restart`,
+  `status`): a keep-alive loop that starts uvicorn again whenever it exits,
+  and which the pod's `/post_start.sh` calls at boot, so a pod restart
+  brings the engine back by itself. Pushed code takes effect only after
+  `scripts/engine.sh restart`; `status` prints the checkout the running
+  process started from. A Cartograph case in flight when the engine stops
+  is audited again at the next start (`app/services/cartograph/resume.py`),
+  from the request as received and the packet kept under
+  `output_dir/pdfs`, so a restart never needs to wait for one — uvicorn is
+  given `IDP_STOP_GRACE` seconds (30) and then killed.
 - **No `.gitignore`.** `.env` (Anthropic + Salesforce + webhook credentials)
   and `.venv/` and `uvicorn.log` are protected only by discipline. Never
   `git add -A` / `git add .` — always name files. Adding a `.gitignore` is
