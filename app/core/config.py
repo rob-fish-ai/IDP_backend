@@ -155,11 +155,15 @@ class Settings(BaseSettings):
     audit_poll_interval_seconds: int = 60
     audit_poll_batch_size: int = 5
 
-    # Cases processed concurrently within a poll batch. Each case's OCR
-    # is external HTTP and LLM calls are network-bound, so 3 concurrent
-    # pipelines roughly triple throughput; one 70-page merge no longer
-    # blocks the rest of the batch. Job state transitions are claim-based
-    # and page artifacts are isolated per-job, so parallel runs are safe.
+    # Cases audited at once — in a poll batch, through the Cartograph
+    # intake, and when interrupted cases are run again at start. Each
+    # case's OCR is external HTTP and LLM calls are network-bound, so 3
+    # concurrent pipelines roughly triple throughput; one 70-page merge no
+    # longer blocks the rest. Job state transitions are claim-based and page
+    # artifacts are isolated per-job, so parallel runs are safe. The bound
+    # is also the memory guard: a rendered packet is large, the pod is
+    # capped at 16 GB, and 26 at once was enough for the kernel to kill the
+    # engine (2026-10-13). Cases beyond the bound wait in line.
     audit_pipeline_concurrency: int = 3
 
     # Audit job storage (SQLite). Persists case state across restarts.

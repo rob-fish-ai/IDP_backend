@@ -414,3 +414,35 @@ def test_a_case_run_again_after_its_links_expired_is_audited_from_the_kept_packe
                       program=None, job_id=None, community_id=None, unit_number=None, effective_date=None,
                       fallback_packet=str(tmp_path / "missing.pdf"))
     assert "document unavailable" in store.get("J-B")["error"]
+
+
+def test_the_intake_audits_a_few_cases_at_once_and_keeps_the_waiting_ones_alive():
+    """Thirty-four notifications in one hour once became twenty-six packets
+    rendered together, the pod's memory cap, and a dead engine. Now a few
+    run at once and the rest wait in line — with a heartbeat, so the
+    watchdog does not take a long wait for a dead worker."""
+    import threading
+    from app.services.cartograph.intake import Intake
+
+    gate = threading.Event()
+    started: list[str] = []
+    touched: list[str] = []
+
+    def run(**kwargs):
+        started.append(kwargs["case_ref"])
+        gate.wait(5)
+
+    store = type("Store", (), {"touch": staticmethod(lambda case_ref: touched.append(case_ref))})()
+    intake = Intake(workers=2, run=run, store=store, heartbeat_seconds=0.05)
+    futures = [intake.submit(case_ref=f"J-{i}", documents=[]) for i in range(5)]
+    time.sleep(0.3)
+    assert sorted(started) == ["J-0", "J-1"]
+    assert intake.running() == ["J-0", "J-1"] and intake.waiting() == ["J-2", "J-3", "J-4"]
+    # Only the waiting cases are kept alive; the running ones have the pipeline's own heartbeat.
+    assert set(touched) == {"J-2", "J-3", "J-4"}
+    gate.set()
+    for f in futures:
+        f.result(timeout=5)
+    assert sorted(started) == [f"J-{i}" for i in range(5)]
+    assert intake.running() == [] and intake.waiting() == []
+    intake.shutdown()

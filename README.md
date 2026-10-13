@@ -366,7 +366,11 @@ Live-service state as of 2026-07. Sorted by blast radius, not urgency.
   is audited again at the next start (`app/services/cartograph/resume.py`),
   from the request as received and the packet kept under
   `output_dir/pdfs`, so a restart never needs to wait for one — uvicorn is
-  given `IDP_STOP_GRACE` seconds (30) and then killed.
+  given `IDP_STOP_GRACE` seconds (30) and then killed. Notified cases go
+  through a bounded intake (`app/services/cartograph/intake.py`): at most
+  `audit_pipeline_concurrency` (3) are audited at once and the rest wait in
+  line with their heartbeat kept, because the pod's 16 GB memory cap is
+  reached well before thirty packets are rendered together.
 - **No `.gitignore`.** `.env` (Anthropic + Salesforce + webhook credentials)
   and `.venv/` and `uvicorn.log` are protected only by discipline. Never
   `git add -A` / `git add .` — always name files. Adding a `.gitignore` is

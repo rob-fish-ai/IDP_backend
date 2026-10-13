@@ -28,7 +28,7 @@ from __future__ import annotations
 import json
 import logging
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from app.core.auth import verify_cartograph_signature
@@ -36,7 +36,7 @@ from app.core.config import Settings
 from app.core.dependencies import get_settings
 from app.services.audit.job_store import get_job_store
 from app.services.cartograph.checklist import normalise_rows
-from app.services.cartograph.tasks import audit_case
+from app.services.cartograph.intake import enqueue_case
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/integration", tags=["Cartograph"])
@@ -87,19 +87,19 @@ class AuditRequest(BaseModel):
 async def receive_case(
     payload: AuditRequest,
     request: Request,
-    background_tasks: BackgroundTasks,
     settings: Settings = Depends(get_settings),
 ) -> dict:
-    """Accept an audit notification, acknowledge, and work in the background.
+    """Accept an audit notification, acknowledge, and put the case in line.
 
     Returns 202 without doing anything expensive. An extraction takes
     minutes — OCR on every page plus several model calls — and Cartograph
     holds no connection open for it. The result arrives later as a signed
     POST to their ingest endpoint, not in the response to this call.
 
-    The engine fetches the documents itself as the first act of the
-    background task, so the presigned URLs only need to outlive the queue
-    rather than the whole audit.
+    The case joins the intake (`cartograph.intake`), where a few are
+    audited at once and the rest wait their turn; the engine fetches the
+    documents as the first act of the audit, so the presigned URLs only
+    need to outlive the wait rather than the whole audit.
     """
     # Idempotency lives in the job store rather than in the signature window.
     # Cartograph is expected to retry, and a retry is indistinguishable from
@@ -159,8 +159,7 @@ async def receive_case(
         len(payload.documents), len(checklist_rows),
     )
 
-    background_tasks.add_task(
-        audit_case,
+    enqueue_case(
         case_ref=payload.case_ref,
         documents=[d.model_dump() for d in payload.documents],
         cert_type=payload.cert_type,

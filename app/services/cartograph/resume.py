@@ -1,7 +1,7 @@
 """Pick up the cases that were in flight when the engine last stopped.
 
-A Cartograph case runs as a background task of the process that received
-the notification. When that process stops — a pod restart, a deploy, a
+A Cartograph case runs on a worker of the process that received the
+notification. When that process stops — a pod restart, a deploy, a
 crash — its job row stays in `queued` or `extracting`, nothing runs it
 again, and the watchdog fails it half an hour later with a request to
 re-notify. Fifteen cases of one morning's batch ended that way, two days
@@ -23,7 +23,6 @@ import json
 import logging
 import threading
 import time
-from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from app.services.audit.job_store import _OWNED_STATES
@@ -114,29 +113,31 @@ def claim_interrupted_cases(settings, store) -> list[dict]:
 
 
 def run_interrupted_cases(settings, rows: list[dict], *, run=None, delay: float | None = None) -> list[str]:
-    """Audit the claimed rows again, a few at a time, after the delay."""
-    from app.services.cartograph.tasks import audit_case
-    run = run or audit_case
+    """Audit the claimed rows again through the intake, after the delay.
+    They share its workers with whatever Cartograph sends meanwhile, so
+    the bound on cases running at once holds across both."""
+    from app.services.cartograph.intake import Intake, get_intake
     delay = settings.audit_resume_delay_seconds if delay is None else delay
     if not rows:
         return []
     if delay > 0:
         time.sleep(delay)
+    intake = get_intake(settings) if run is None else Intake(workers=settings.audit_pipeline_concurrency, run=run)
     done: list[str] = []
-    workers = max(1, int(settings.audit_pipeline_concurrency or 1))
-    with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="idp-resume") as pool:
-        futures = {}
-        for row in rows:
-            kwargs = row["kwargs"]
-            logger.info("Resume: auditing case_ref=%s again (packet %s)", row["case_id"],
-                        "kept" if kwargs.get("fallback_packet") else "to be fetched")
-            futures[pool.submit(run, **kwargs)] = row["case_id"]
-        for future, case_ref in futures.items():
-            try:
-                future.result()
-            except Exception:
-                logger.exception("Resume: case_ref=%s failed while being audited again", case_ref)
-            done.append(case_ref)
+    futures = {}
+    for row in rows:
+        kwargs = row["kwargs"]
+        logger.info("Resume: auditing case_ref=%s again (packet %s)", row["case_id"],
+                    "kept" if kwargs.get("fallback_packet") else "to be fetched")
+        futures[intake.submit(**kwargs)] = row["case_id"]
+    for future, case_ref in futures.items():
+        try:
+            future.result()
+        except Exception:
+            logger.exception("Resume: case_ref=%s failed while being audited again", case_ref)
+        done.append(case_ref)
+    if run is not None:
+        intake.shutdown()
     return done
 
 

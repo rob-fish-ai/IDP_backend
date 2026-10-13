@@ -28,17 +28,20 @@ async def lifespan(_app: FastAPI):
         stop_maintenance_thread, stop_poller_thread,
     )
     from app.services.audit.job_store import get_job_store
+    from app.services.cartograph.intake import get_intake, shutdown_intake
     from app.services.cartograph.resume import interrupted_cases, start_resume_thread
 
     # Cases that were in flight when the last process stopped are claimed
     # before the maintenance thread starts, or its first sweep would fail
     # them as wedged instead of letting them run again.
+    get_intake(settings)
     start_resume_thread(settings, get_job_store(settings.audit_job_db))
     start_poller_thread()
     start_maintenance_thread()
     try:
         yield
     finally:
+        shutdown_intake()
         stop_poller_thread()
         stop_maintenance_thread()
         try:
