@@ -51,6 +51,7 @@ from app.schemas.extraction import ExtractionResult, HouseholdMember
 from app.services.cartograph.checklist import match_checklist
 from app.services.income_calculator import match_paystubs_to_sources, normalize_rate_unit
 from app.services.members import is_unborn
+from app.services.cartograph.manifest import link_payload
 from app.services.name_reconciler import _name_similarity
 
 logger = logging.getLogger(__name__)
@@ -1463,6 +1464,7 @@ def build_payload(
     extracted_at: str | None = None,
     checklist_rows: list[dict] | None = None,
     document_spans: list[dict] | None = None,
+    existing_records_manifest: dict | list | None = None,
 ) -> AdapterResult:
     """Build the ingest body for one audited case.
 
@@ -1504,6 +1506,9 @@ def build_payload(
             expect_previous=settings.report_previous_cert_missing,
         ),
     }
+    # Cartograph's own ids on the rows that correspond to records it already
+    # holds, so its import updates them in place instead of recreating them.
+    link_payload(payload, existing_records_manifest, warnings, aliases=settings.cartograph_type_aliases)
     attach_confidence(payload, extraction)
 
     if warnings:

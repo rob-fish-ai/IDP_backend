@@ -84,6 +84,9 @@ All amounts are plain decimal strings: no currency symbol, no thousands separato
 | Field | Example | Meaning |
 |---|---|---|
 | `ref` | `m01` | Request-scoped handle. Do not persist |
+| `existing_member_id` | `4629` | The `id` of the member in the request's `existing_records_manifest` this row corresponds to, or null for a member Cartograph does not hold. Linked on date of birth plus a recognisable name, on a close name alone when either side has no date, or on a near-identical uncontested name when the dates disagree (reported in warnings: one of the two dates was misread or mistyped). Names are matched against the manifest's `first_name`/`last_name` and every entry of its `aka_names` |
+| `person_id` | `1981` | The manifest member's `person_id`, echoed with `existing_member_id`; null when the manifest has none |
+| `aka_names` | `["Victoria Pole"]` | The packet's spelling of the name when it is not one the manifest already has for the person (neither its name nor an aka). A suggestion for staff to accept or dismiss, never a rename. Empty otherwise |
 | `first_name` | `Dolores` | |
 | `middle_name` | `R.` | Often absent |
 | `last_name` | `Ackerman` | |
@@ -108,6 +111,7 @@ One per income source. Paystubs arrive nested underneath rather than as a flat l
 | Field | Example | Meaning |
 |---|---|---|
 | `member_ref` | `m01` | Null when the earner could not be matched to a member, with a warning. The record is still sent, the income is real even when its owner is uncertain |
+| `existing_record_id` | `4329` | The `id` of the manifest income record this row corresponds to: the same member (by `existing_member_id`), the same `income_type` with Cartograph's own aliases applied (`non_federal_wages` and `wages_and_salaries` are one type), and, when the member holds several rows of that type, the closest `source_name`. Null for a record with no counterpart, which is created as before. A member sent without `existing_member_id` never carries record ids |
 | `income_type` | `wages_and_salaries` | From the supplied picklist. `other` means no match; see section 1 |
 | `source_name` | `Redwood Facilities Group LLC` | Employer or payer as extracted |
 | `frequency_of_pay` | `bi-weekly` | How often the person is paid. As the record states it; when it does not, the rate's own unit (a monthly benefit is paid monthly). Null for an hourly rate with no stated pay period |
@@ -139,6 +143,7 @@ A source can arrive with paystubs and no verification entry. That is not an erro
 | Field | Example | Meaning |
 |---|---|---|
 | `member_ref` | `m01` | Null when the owner could not be matched, with a warning |
+| `existing_record_id` | `3519` | The manifest asset record this row corresponds to, on the same rule as income: same member, same `asset_type`, and the closest `institution_name` when the member holds several of that type. Null when there is none |
 | `asset_type` | `checking` | From the supplied picklist. `other` means no match |
 | `institution_name` | `Meridian Savings Bank` | Bank or source |
 | `current_value` | `4830.00` | **Verified** balance. Present only with a statement or a VOA behind it. See section 1 |

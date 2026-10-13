@@ -67,7 +67,8 @@ class AuditRequest(BaseModel):
     unit_number: str | None = None
     effective_date: str | None = None
     # Carried as sent. The checklist rows are read out of them by
-    # cartograph.checklist; the manifest is kept with the request for now.
+    # cartograph.checklist; the manifest links the payload's rows to the
+    # records Cartograph already holds (cartograph.manifest).
     requirements: list | None = None
     checklist_rows: list | None = None
     existing_records_manifest: dict | list | None = None
@@ -169,6 +170,7 @@ async def receive_case(
         unit_number=payload.unit_number,
         effective_date=payload.effective_date,
         checklist_rows=checklist_rows,
+        existing_records_manifest=payload.existing_records_manifest,
     )
 
     return {"status": "accepted", "case_ref": payload.case_ref}

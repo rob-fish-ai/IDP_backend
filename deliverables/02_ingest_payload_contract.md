@@ -21,6 +21,8 @@ Delivered to `POST /webhooks/runpod_ocr_results`. Endpoint and authentication ar
 
 **Members are addressed by client-assigned refs, never by name.** Each member carries a `ref` invented by the engine (`"m01"`); income, asset, and expense records reference `member_ref`. The importer builds a ref → ID map as it creates members. Name matching across free-text strings is a known source of silent mis-attribution; addressing members by ref removes it.
 
+**Rows Cartograph already holds are addressed by their own ids.** The request's `existing_records_manifest` lists the case's existing members, income records and asset records with their ids. A payload row that corresponds to one carries that id back (`existing_member_id` and `person_id` on a member, `existing_record_id` on an income or asset record) and the importer updates the row in place, filling blanks only; a row without an id is created. A missed link costs a duplicate for staff to merge, a wrong one writes one person's figures onto another's record, so a link needs identity evidence: the date of birth with a recognisable name, a close name alone when a date is missing, or a near-identical uncontested name when the dates disagree (reported). Record links need the member link plus the same type (Cartograph's aliases applied) and, among several rows of one type, the closest source name.
+
 **Data records are full-replace; findings are not.** Extraction-owned child records are cleared and rewritten on re-import. Findings are matched on their stable `finding_key` and updated in place, so a re-audit does not duplicate them and reviewer resolutions survive. See Section 11.
 
 ---
@@ -128,6 +130,9 @@ separate fields can route the figure without guessing from the form type.
 ```
 {
   "ref":               "m01",
+  "existing_member_id": 4629,              // manifest member id, or null (Section 1)
+  "person_id":          1981,              // echoed from the manifest, or null
+  "aka_names":          [],                // the packet's spelling when new to Cartograph; a suggestion
   "first_name":        "Marcus",
   "last_name":         "Halvorsen",
   "date_of_birth":     "1974-11-02",     // ISO; parsed engine-side
@@ -153,6 +158,7 @@ One object per **(member, source)** pair. The engine's flat per-paystub output i
 ```
 {
   "member_ref":            "m01",
+  "existing_record_id":    4329,                  // manifest income record id, or null
   "income_type":           "non_federal_wages",   // validated, Section 10.1
   "source_name":           "Northgate Logistics LLC",
   "verification_status":   "received",
@@ -212,6 +218,7 @@ income and produces no record.
 ```
 {
   "member_ref":                "m01",
+  "existing_record_id":        3519,           // manifest asset record id, or null
   "asset_type":                "checking",     // validated, Section 10.2
   "institution_name":          "Cascade Credit Union",
   "current_value":             "3234.11",

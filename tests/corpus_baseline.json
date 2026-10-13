@@ -57,6 +57,7 @@
     null,
     "2095.43",
     null,
+    null,
     null
    ],
    [
@@ -64,6 +65,7 @@
     "Bank Of America",
     null,
     "700.76",
+    null,
     null,
     null
    ]
@@ -88,36 +90,48 @@
     "other",
     null,
     null,
-    "Heela Jindhupal"
+    "Heela Jindhupal",
+    null
    ],
    [
     "other",
     "verified",
     null,
-    "Safeguard On Demand"
+    "Safeguard On Demand",
+    null
    ],
    [
     "public_assistance",
     null,
     null,
-    "Public Assistance"
+    "Public Assistance",
+    null
    ]
   ],
   "members": [
    [
     "Rahmatullah",
     "Samsoor",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ],
    [
     "Malala",
     "Wolusmal",
-    null
+    null,
+    null,
+    null,
+    []
    ],
    [
     "Rahmanullah",
     "Samsoor",
-    null
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -156,19 +170,26 @@
     "wages_and_salaries",
     "verified",
     null,
-    "Natures Way Early Learning"
+    "Natures Way Early Learning",
+    null
    ]
   ],
   "members": [
    [
     "Harmony",
     "Carrier",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ],
    [
     "Rosalie",
     "Walton",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -199,7 +220,8 @@
     null,
     "0.20",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -207,7 +229,8 @@
     null,
     "774.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -215,7 +238,8 @@
     null,
     "1614.00",
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -238,20 +262,25 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ],
    [
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Leo",
     "Marvel",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -277,7 +306,8 @@
     null,
     "19.00",
     "19.00",
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -285,7 +315,8 @@
     null,
     null,
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "whole_life_insurance",
@@ -293,7 +324,8 @@
     "1502.87",
     "1503.00",
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -314,14 +346,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Frederick",
     "Barney",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -343,7 +379,8 @@
     null,
     "3.00",
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -366,14 +403,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Andre",
     "Toles",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -400,7 +441,8 @@
     "387.29",
     "387.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "prepaid_debit_card",
@@ -408,7 +450,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -432,20 +475,25 @@
     "social_security",
     "declared_only",
     null,
-    "Social Security (declared)"
+    "Social Security (declared)",
+    null
    ],
    [
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Joyce",
     "Perkins",
-    "Head of Household"
+    "Head of Household",
+    3060,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -458,7 +506,9 @@
    "Student status is null for all household members \u2014 verify against HUD "
   ],
   "score": 0.68,
-  "warnings": []
+  "warnings": [
+   "household_members[0] 'Joyce Perkins' date of birth read as 1956-02-13;"
+  ]
  },
  "J-CCAC-06737@1790651532": {
   "assets": [
@@ -468,7 +518,8 @@
     null,
     "7.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "checking",
@@ -476,7 +527,8 @@
     "0.00",
     null,
     "7.02",
-    "verified"
+    "verified",
+    null
    ],
    [
     "checking",
@@ -484,7 +536,8 @@
     "0.00",
     "0.05",
     "5.01",
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -492,7 +545,8 @@
     "0.05",
     null,
     "15.96",
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -516,14 +570,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Charles",
     "Butler",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -547,7 +605,8 @@
     null,
     "296.00",
     "296.00",
-    "verified"
+    "verified",
+    null
    ],
    [
     "checking",
@@ -555,7 +614,8 @@
     null,
     null,
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "savings",
@@ -563,7 +623,8 @@
     "10.95",
     "10.95",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -571,7 +632,8 @@
     null,
     null,
     null,
-    "declared_only"
+    "declared_only",
+    null
    ]
   ],
   "cert_review": {
@@ -593,26 +655,32 @@
     "public_assistance",
     "verified",
     null,
-    "Illinois Department of Human S"
+    "Illinois Department of Human S",
+    null
    ],
    [
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ],
    [
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Lavenia",
     "McGowan",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -631,7 +699,8 @@
     null,
     null,
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "prepaid_debit_card",
@@ -639,7 +708,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -647,7 +717,8 @@
     "267.88",
     "268.00",
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -668,20 +739,25 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ],
    [
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Patric",
     "O Connor",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -706,7 +782,8 @@
     null,
     "8298.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "checking",
@@ -714,7 +791,8 @@
     "5242.13",
     null,
     "8297.83",
-    "verified"
+    "verified",
+    null
    ],
    [
     "checking",
@@ -722,7 +800,8 @@
     "7231.57",
     null,
     "11083.35",
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -730,7 +809,8 @@
     "1131.62",
     "1132.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -738,7 +818,8 @@
     null,
     "3426.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -746,7 +827,8 @@
     null,
     "1123.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -754,7 +836,8 @@
     null,
     "891.00",
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -777,14 +860,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Sayeed",
     "Mumin",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -810,7 +897,8 @@
     null,
     "117.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "checking",
@@ -818,7 +906,8 @@
     "189.24",
     null,
     "117.00",
-    "verified"
+    "verified",
+    null
    ],
    [
     "checking",
@@ -826,7 +915,8 @@
     "61.54",
     "62.00",
     "0.00",
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -834,7 +924,8 @@
     "0.00",
     null,
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -858,26 +949,32 @@
     "pension",
     "verified",
     null,
-    "Retirement Systems Division, N"
+    "Retirement Systems Division, N",
+    null
    ],
    [
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ],
    [
     "ssi",
     "verified",
     null,
-    "Social Security"
+    "Social Security",
+    null
    ]
   ],
   "members": [
    [
     "Linda",
     "Akil",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -904,7 +1001,8 @@
     null,
     "190.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "checking",
@@ -912,7 +1010,8 @@
     "163.95",
     null,
     "190.00",
-    "verified"
+    "verified",
+    null
    ],
    [
     "checking",
@@ -920,7 +1019,8 @@
     "7.60",
     null,
     "7.60",
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -928,7 +1028,8 @@
     null,
     "19000000.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "savings",
@@ -936,7 +1037,8 @@
     null,
     null,
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "whole_life_insurance",
@@ -944,7 +1046,8 @@
     null,
     "1000000.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "whole_life_insurance",
@@ -952,7 +1055,8 @@
     null,
     "661.00",
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -973,14 +1077,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Gladys",
     "Bellamy",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -1003,7 +1111,8 @@
     "41.14",
     "504.00",
     "504.00",
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -1011,7 +1120,8 @@
     null,
     null,
     null,
-    "declared_only"
+    "declared_only",
+    null
    ]
   ],
   "cert_review": {
@@ -1032,20 +1142,25 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ],
    [
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Curry",
     "Tracy",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -1065,7 +1180,8 @@
     null,
     "117.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "checking",
@@ -1073,7 +1189,8 @@
     "189.24",
     null,
     "117.00",
-    "verified"
+    "verified",
+    null
    ],
    [
     "checking",
@@ -1081,7 +1198,8 @@
     "61.54",
     "62.00",
     "0.00",
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -1089,7 +1207,8 @@
     "0.00",
     null,
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -1112,26 +1231,32 @@
     "pension",
     "verified",
     null,
-    "Retirement Systems Division, N"
+    "Retirement Systems Division, N",
+    null
    ],
    [
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ],
    [
     "ssi",
     "verified",
     null,
-    "Social Security"
+    "Social Security",
+    null
    ]
   ],
   "members": [
    [
     "Linda",
     "Akil",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -1151,7 +1276,8 @@
     null,
     null,
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "prepaid_debit_card",
@@ -1159,7 +1285,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -1167,7 +1294,8 @@
     "125000.00",
     "126.00",
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -1190,20 +1318,25 @@
     "other",
     "declared_only",
     null,
-    "Other Income (declared)"
+    "Other Income (declared)",
+    null
    ],
    [
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "David",
     "Alston",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -1225,7 +1358,8 @@
     null,
     "787.36",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "checking",
@@ -1233,7 +1367,8 @@
     "6787.38",
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "other",
@@ -1241,7 +1376,8 @@
     null,
     "337.32",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "savings",
@@ -1249,7 +1385,8 @@
     "33013.20",
     null,
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -1271,14 +1408,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Diana",
     "Smith",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -1304,7 +1445,8 @@
     null,
     "21.00",
     "21.00",
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -1327,14 +1469,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Larry",
     "Eddings",
-    "Head of Household"
+    "Head of Household",
+    3058,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -1357,7 +1503,8 @@
     null,
     null,
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "checking",
@@ -1365,7 +1512,8 @@
     null,
     "2640.00",
     "2639.57",
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -1373,7 +1521,8 @@
     null,
     "1439.57",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "whole_life_insurance",
@@ -1381,7 +1530,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -1389,7 +1539,8 @@
     null,
     "1351.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -1397,7 +1548,8 @@
     null,
     "1662.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -1405,7 +1557,8 @@
     null,
     "1737.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -1413,7 +1566,8 @@
     "2580.39",
     "2561.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -1421,7 +1575,8 @@
     null,
     "231.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "whole_life_insurance",
@@ -1429,7 +1584,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -1437,7 +1593,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -1445,7 +1602,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -1453,7 +1611,8 @@
     null,
     "1564.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -1461,7 +1620,8 @@
     null,
     "2035.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -1469,7 +1629,8 @@
     null,
     "2305.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -1477,7 +1638,8 @@
     null,
     "2661.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -1485,7 +1647,8 @@
     null,
     "1336.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -1493,7 +1656,8 @@
     null,
     "849.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -1501,7 +1665,8 @@
     null,
     "1847.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ]
   ],
   "cert_review": {
@@ -1524,14 +1689,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Lela",
     "Anderson",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -1567,7 +1736,8 @@
     "72.13",
     "72.00",
     "72.15",
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -1588,14 +1758,18 @@
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Elise",
     "Dodd",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -1633,20 +1807,25 @@
     "social_security",
     "declared_only",
     null,
-    "Social Security (declared)"
+    "Social Security (declared)",
+    null
    ],
    [
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Joyce",
     "Perkins",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -1666,7 +1845,8 @@
     "72.13",
     "72.00",
     "72.15",
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -1690,20 +1870,25 @@
     "social_security",
     "declared_only",
     null,
-    "Social Security (declared)"
+    "Social Security (declared)",
+    null
    ],
    [
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Elise",
     "Dodd",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -1725,7 +1910,8 @@
     null,
     "416.00",
     "416.00",
-    "verified"
+    "verified",
+    null
    ],
    [
     "retirement",
@@ -1733,7 +1919,8 @@
     "0.00",
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -1741,7 +1928,8 @@
     "50.01",
     "50.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -1749,7 +1937,8 @@
     null,
     "5149.00",
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -1774,20 +1963,25 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ],
    [
     "ssi",
     "verified_not_declared",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Willie",
     "Brooks",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -1814,7 +2008,8 @@
     "72.13",
     "72.00",
     "72.15",
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -1836,14 +2031,18 @@
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Elise",
     "Dodd",
-    "Head of Household"
+    "Head of Household",
+    2940,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -1863,7 +2062,8 @@
     null,
     "391.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "checking",
@@ -1871,7 +2071,8 @@
     "301.80",
     null,
     "391.00",
-    "verified"
+    "verified",
+    3132
    ]
   ],
   "cert_review": {
@@ -1894,20 +2095,25 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3689
    ],
    [
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Terrence",
     "Sullivan",
-    "Head of Household"
+    "Head of Household",
+    3068,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -1931,7 +2137,8 @@
     "0.71",
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -1939,7 +2146,8 @@
     null,
     "1.00",
     null,
-    "verified"
+    "verified",
+    3133
    ]
   ],
   "cert_review": {
@@ -1962,14 +2170,18 @@
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3690
    ]
   ],
   "members": [
    [
     "William",
     "Rice",
-    "Head of Household"
+    "Head of Household",
+    3069,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -1989,7 +2201,8 @@
     "182.63",
     "183.00",
     null,
-    "verified"
+    "verified",
+    3138
    ]
   ],
   "cert_review": {
@@ -2011,20 +2224,25 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3694
    ],
    [
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3695
    ]
   ],
   "members": [
    [
     "Cornelius",
     "Jackson",
-    "Head of Household"
+    "Head of Household",
+    3070,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -2045,7 +2263,8 @@
     null,
     "2988.00",
     null,
-    "declared_only"
+    "declared_only",
+    3139
    ],
    [
     "checking",
@@ -2053,7 +2272,8 @@
     "3700.48",
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "checking",
@@ -2061,7 +2281,8 @@
     "4124.45",
     null,
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -2084,14 +2305,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3696
    ]
   ],
   "members": [
    [
     "Willie",
     "Norrington",
-    "Head of Household"
+    "Head of Household",
+    3071,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -2102,7 +2327,9 @@
    "Pages 4: 'Income Calculation Worksheet' detected \u2014 excluded from data "
   ],
   "score": 0.91,
-  "warnings": []
+  "warnings": [
+   "household_members[0] 'Willie Norrington' date of birth read as 1952-01"
+  ]
  },
  "J-CCAC-07076@1791257500": {
   "assets": [
@@ -2112,7 +2339,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -2120,7 +2348,8 @@
     null,
     "55.00",
     null,
-    "declared_only"
+    "declared_only",
+    3149
    ]
   ],
   "cert_review": {
@@ -2146,26 +2375,32 @@
     "public_assistance",
     "declared_only",
     null,
-    "Temporary Assistance (declared"
+    "Temporary Assistance (declared",
+    null
    ],
    [
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3699
    ],
    [
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3700
    ]
   ],
   "members": [
    [
     "Chris",
     "Harris",
-    "Head of Household"
+    "Head of Household",
+    3072,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -2177,7 +2412,8 @@
   "score": 0.67,
   "warnings": [
    "asset_records[0]: balance arrived with no statement or verification of",
-   "cert_review.householdIncome: 11855.04 was not found on the certificati"
+   "cert_review.householdIncome: 11855.04 was not found on the certificati",
+   "household_members[0] 'Chris Harris' date of birth read as 1959-11-08; "
   ]
  },
  "J-CCAC-07077@1791257777": {
@@ -2188,7 +2424,8 @@
     "2330.94",
     "1300.00",
     null,
-    "verified"
+    "verified",
+    3152
    ]
   ],
   "cert_review": {
@@ -2211,14 +2448,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3703
    ]
   ],
   "members": [
    [
     "Joyce",
     "Ramsey",
-    "Head of Household"
+    "Head of Household",
+    3073,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -2228,7 +2469,9 @@
    "Race and Ethnic Data Form present but signatures could not be verified"
   ],
   "score": 0.93,
-  "warnings": []
+  "warnings": [
+   "household_members[0] 'Joyce Ramsey' date of birth read as 1955-09-16; "
+  ]
  },
  "J-CCAC-07078@1791258019": {
   "assets": [
@@ -2238,7 +2481,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -2246,7 +2490,8 @@
     null,
     "55.00",
     null,
-    "declared_only"
+    "declared_only",
+    3153
    ]
   ],
   "cert_review": {
@@ -2272,26 +2517,32 @@
     "public_assistance",
     "declared_only",
     null,
-    "Temporary Assistance (declared"
+    "Temporary Assistance (declared",
+    null
    ],
    [
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3704
    ],
    [
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3705
    ]
   ],
   "members": [
    [
     "Chris",
     "Harris",
-    "Head of Household"
+    "Head of Household",
+    3074,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -2303,7 +2554,8 @@
   "score": 0.68,
   "warnings": [
    "asset_records[0]: balance arrived with no statement or verification of",
-   "cert_review.householdIncome: 11855.04 was not found on the certificati"
+   "cert_review.householdIncome: 11855.04 was not found on the certificati",
+   "household_members[0] 'Chris Harris' date of birth read as 1959-11-08; "
   ]
  },
  "J-CCAC-07079@1791258515": {
@@ -2314,7 +2566,8 @@
     "1246.61",
     "2217.00",
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -2337,14 +2590,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Maurice",
     "Carr",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -2354,7 +2611,9 @@
    "Student status is null for all household members \u2014 verify against HUD "
   ],
   "score": 0.88,
-  "warnings": []
+  "warnings": [
+   "household_members[0] 'Maurice Carr' matches none of the 1 member(s) Ca"
+  ]
  },
  "J-CCAC-07080@1791258465": {
   "assets": [
@@ -2364,7 +2623,8 @@
     "741.27",
     "780.00",
     null,
-    "verified"
+    "verified",
+    3158
    ],
    [
     "savings",
@@ -2372,7 +2632,8 @@
     "5109.08",
     "192.00",
     null,
-    "verified"
+    "verified",
+    3157
    ],
    [
     "whole_life_insurance",
@@ -2380,7 +2641,8 @@
     null,
     "10000.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "whole_life_insurance",
@@ -2388,7 +2650,8 @@
     null,
     "23.00",
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -2412,14 +2675,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3711
    ]
   ],
   "members": [
    [
     "Lonnie",
     "Bates",
-    "Head of Household"
+    "Head of Household",
+    3076,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -2429,7 +2696,8 @@
   ],
   "score": 0.9,
   "warnings": [
-   "asset_records[1]: balance arrived with no statement or verification of"
+   "asset_records[1]: balance arrived with no statement or verification of",
+   "household_members[0] 'Lonnie Bates' date of birth read as 1954-01-25; "
   ]
  },
  "J-CCAC-07081@1791258513": {
@@ -2440,7 +2708,8 @@
     null,
     "1443.00",
     null,
-    "declared_only"
+    "declared_only",
+    3159
    ],
    [
     "checking",
@@ -2448,7 +2717,8 @@
     null,
     null,
     "1000.00",
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -2471,14 +2741,18 @@
     "pension",
     "verified",
     null,
-    "Office of Retirement Programs"
+    "Office of Retirement Programs",
+    3712
    ]
   ],
   "members": [
    [
     "Beatrice",
     "Redditt",
-    "Head of Household"
+    "Head of Household",
+    3077,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -2488,7 +2762,8 @@
   ],
   "score": 0.75,
   "warnings": [
-   "asset_records[0]: 'Martha Reddin' did not match any household member ("
+   "asset_records[0]: 'Martha Reddin' did not match any household member (",
+   "household_members[0] 'Beatrice Redditt' date of birth read as 1943-09-"
   ]
  },
  "J-CCAC-07082@1791258623": {
@@ -2499,7 +2774,8 @@
     null,
     "182.00",
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -2522,20 +2798,25 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3713
    ],
    [
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Michael",
     "Boldon",
-    "Head of Household"
+    "Head of Household",
+    3078,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -2558,7 +2839,8 @@
     "0.00",
     null,
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -2580,14 +2862,18 @@
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Lupe",
     "Banda",
-    "Head of Household"
+    "Head of Household",
+    3079,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -2607,7 +2893,8 @@
     "0.00",
     "25.00",
     null,
-    "verified"
+    "verified",
+    3167
    ],
    [
     "whole_life_insurance",
@@ -2615,7 +2902,8 @@
     null,
     "1.50",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "whole_life_insurance",
@@ -2623,7 +2911,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -2631,7 +2920,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -2656,20 +2946,25 @@
     "pension",
     "verified",
     null,
-    "Metropolitan Life Insurance Co"
+    "Metropolitan Life Insurance Co",
+    3719
    ],
    [
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3720
    ]
   ],
   "members": [
    [
     "James",
     "Smith",
-    "Head of Household"
+    "Head of Household",
+    3081,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -2679,7 +2974,9 @@
    "Student status is null for all household members \u2014 verify against HUD "
   ],
   "score": 0.69,
-  "warnings": []
+  "warnings": [
+   "household_members[0] 'James Smith' date of birth read as 1953-07-01; C"
+  ]
  },
  "J-CCAC-07085@1791259161": {
   "assets": [
@@ -2689,7 +2986,8 @@
     null,
     "242.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "checking",
@@ -2697,7 +2995,8 @@
     "286.99",
     null,
     "242.00",
-    "verified"
+    "verified",
+    null
    ],
    [
     "checking",
@@ -2705,7 +3004,8 @@
     "7.60",
     null,
     "7.60",
-    "verified"
+    "verified",
+    3172
    ],
    [
     "whole_life_insurance",
@@ -2713,7 +3013,8 @@
     null,
     "571.00",
     null,
-    "verified"
+    "verified",
+    3171
    ]
   ],
   "cert_review": {
@@ -2734,14 +3035,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3723
    ]
   ],
   "members": [
    [
     "Gladys",
     "Bellamy",
-    "Head of Household"
+    "Head of Household",
+    3082,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -2752,7 +3057,8 @@
   ],
   "score": 0.9,
   "warnings": [
-   "asset_records[1]: balance arrived with no statement or verification of"
+   "asset_records[1]: balance arrived with no statement or verification of",
+   "household_members[0] 'Gladys Bellamy' date of birth read as 1940-05-16"
   ]
  },
  "J-CCAC-07086@1791259201": {
@@ -2763,7 +3069,8 @@
     null,
     "2894.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ]
   ],
   "cert_review": {
@@ -2785,14 +3092,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Otis",
     "Frazier",
-    "Head of Household"
+    "Head of Household",
+    3083,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -2813,7 +3124,8 @@
     null,
     "4187.00",
     null,
-    "declared_only"
+    "declared_only",
+    3182
    ],
    [
     "checking",
@@ -2821,7 +3133,8 @@
     null,
     "13113.00",
     "13113.00",
-    "verified"
+    "verified",
+    null
    ],
    [
     "checking",
@@ -2829,7 +3142,8 @@
     "1822.35",
     null,
     "4187.00",
-    "verified"
+    "verified",
+    null
    ],
    [
     "other",
@@ -2837,7 +3151,8 @@
     null,
     "10000.90",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "savings",
@@ -2845,7 +3160,8 @@
     "18600.09",
     "18600.00",
     null,
-    "verified"
+    "verified",
+    3183
    ]
   ],
   "cert_review": {
@@ -2869,20 +3185,25 @@
     "pension",
     "verified",
     null,
-    "Metropolitan Life Insurance Co"
+    "Metropolitan Life Insurance Co",
+    null
    ],
    [
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3729
    ]
   ],
   "members": [
    [
     "Grover",
     "Williams",
-    "Head of Household"
+    "Head of Household",
+    3084,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -2893,7 +3214,8 @@
   ],
   "score": 0.88,
   "warnings": [
-   "asset_records[4]: type 'Investment' is not in the configured picklist;"
+   "asset_records[4]: type 'Investment' is not in the configured picklist;",
+   "household_members[0] 'Grover Williams' date of birth read as 1953-02-0"
   ]
  },
  "J-CCAC-07088@1791259627": {
@@ -2904,7 +3226,8 @@
     null,
     "230.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ]
   ],
   "cert_review": {
@@ -2927,20 +3250,25 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ],
    [
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Franchesta",
     "Welch",
-    "Head of Household"
+    "Head of Household",
+    3085,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -2964,7 +3292,8 @@
     "515.68",
     "181.00",
     "300.00",
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -2972,7 +3301,8 @@
     null,
     "13.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "whole_life_insurance",
@@ -2980,7 +3310,8 @@
     null,
     "1508.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "whole_life_insurance",
@@ -2988,7 +3319,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -2996,7 +3328,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -3024,32 +3357,39 @@
     "other",
     "declared_only",
     null,
-    "Other Income (declared)"
+    "Other Income (declared)",
+    null
    ],
    [
     "pension",
     "declared_only",
     null,
-    "Pension (declared)"
+    "Pension (declared)",
+    null
    ],
    [
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ],
    [
     "veterans_benefits",
     "verified",
     null,
-    "Department of Veterans Affairs"
+    "Department of Veterans Affairs",
+    null
    ]
   ],
   "members": [
    [
     "Lawrence",
     "Mitchell",
-    "Head of Household"
+    "Head of Household",
+    3086,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -3073,7 +3413,8 @@
     null,
     "814.00",
     null,
-    "declared_only"
+    "declared_only",
+    3190
    ],
    [
     "checking",
@@ -3081,7 +3422,8 @@
     "380.09",
     null,
     "814.00",
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -3104,14 +3446,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3735
    ]
   ],
   "members": [
    [
     "Sachiko",
     "McCoy",
-    "Head of Household"
+    "Head of Household",
+    3087,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -3135,7 +3481,8 @@
     "45.04",
     "392.00",
     "391.93",
-    "verified"
+    "verified",
+    3192
    ]
   ],
   "cert_review": {
@@ -3157,14 +3504,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3738
    ]
   ],
   "members": [
    [
     "Barbara",
     "Hamilton",
-    "Head of Household"
+    "Head of Household",
+    3088,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -3173,7 +3524,9 @@
    "Self-declared income amounts not extracted from questionnaire/applicat"
   ],
   "score": 0.91,
-  "warnings": []
+  "warnings": [
+   "household_members[0] 'Barbara Hamilton' date of birth read as 1950-03-"
+  ]
  },
  "J-CCAC-07092@1791260174": {
   "assets": [
@@ -3183,7 +3536,8 @@
     null,
     null,
     "308.00",
-    "verified"
+    "verified",
+    null
    ],
    [
     "checking",
@@ -3191,7 +3545,8 @@
     "0.00",
     null,
     "0.00",
-    "verified"
+    "verified",
+    null
    ],
    [
     "other",
@@ -3199,7 +3554,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -3207,7 +3563,8 @@
     "5.62",
     "6.00",
     null,
-    "verified"
+    "verified",
+    3199
    ],
    [
     "whole_life_insurance",
@@ -3215,7 +3572,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -3237,20 +3595,25 @@
     "pension",
     "verified",
     null,
-    "Voya Retirement Annuity (Vener"
+    "Voya Retirement Annuity (Vener",
+    null
    ],
    [
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Dianne",
     "Dotson",
-    "Head of Household"
+    "Head of Household",
+    3089,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -3267,6 +3630,7 @@
    "asset_records[1]: balance -104.03 is negative (overdrawn); sent as 0.0",
    "asset_records[2]: type 'Annuity' is not in the configured picklist; co",
    "asset_records[4]: balance arrived with no statement or verification of",
+   "household_members[0] 'Dianne Dotson' date of birth read as 1954-08-16;",
    "income_records[2]: 'Catholic Charities of the Archdiocese' is wage his"
   ]
  },
@@ -3278,7 +3642,8 @@
     null,
     "615.00",
     null,
-    "declared_only"
+    "declared_only",
+    3200
    ],
    [
     "checking",
@@ -3286,7 +3651,8 @@
     "205.08",
     null,
     "615.00",
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -3294,7 +3660,8 @@
     null,
     "832.00",
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -3317,20 +3684,25 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3745
    ],
    [
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3746
    ]
   ],
   "members": [
    [
     "Jacqueline",
     "Myers",
-    "Head of Household"
+    "Head of Household",
+    3090,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -3353,7 +3725,8 @@
     "2162.25",
     "2192.00",
     "2192.00",
-    "verified"
+    "verified",
+    3203
    ]
   ],
   "cert_review": {
@@ -3375,20 +3748,25 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3749
    ],
    [
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3750
    ]
   ],
   "members": [
    [
     "Virginia",
     "Johnson",
-    "Head of Household"
+    "Head of Household",
+    3091,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -3409,7 +3787,8 @@
     null,
     "168.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "checking",
@@ -3417,7 +3796,8 @@
     "0.00",
     null,
     "167.83",
-    "verified"
+    "verified",
+    3209
    ],
    [
     "whole_life_insurance",
@@ -3425,7 +3805,8 @@
     null,
     "103.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -3433,7 +3814,8 @@
     null,
     "133.00",
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -3457,26 +3839,32 @@
     "other",
     "declared_only",
     null,
-    "Other Income (declared)"
+    "Other Income (declared)",
+    null
    ],
    [
     "social_security",
     "verified",
     null,
-    "Social Security"
+    "Social Security",
+    null
    ],
    [
     "ssi",
     "verified",
     null,
-    "Social Security"
+    "Social Security",
+    null
    ]
   ],
   "members": [
    [
     "Ravinia",
     "Ray",
-    "Head of Household"
+    "Head of Household",
+    3092,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -3500,7 +3888,8 @@
     "4.78",
     "33.00",
     "33.00",
-    "verified"
+    "verified",
+    3213
    ]
   ],
   "cert_review": {
@@ -3522,14 +3911,18 @@
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Curtis",
     "Mason",
-    "Head of Household"
+    "Head of Household",
+    3093,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -3549,7 +3942,8 @@
     null,
     "1215.00",
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -3572,14 +3966,18 @@
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Patricia",
     "Thompson",
-    "Head of Household"
+    "Head of Household",
+    3094,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -3601,7 +3999,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -3609,7 +4008,8 @@
     null,
     "19.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ]
   ],
   "cert_review": {
@@ -3632,14 +4032,18 @@
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Debra",
     "Williams",
-    "Head of Household"
+    "Head of Household",
+    3095,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -3659,7 +4063,8 @@
     "62.82",
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -3667,7 +4072,8 @@
     null,
     "623.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ]
   ],
   "cert_review": {
@@ -3689,32 +4095,39 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ],
    [
     "wages_and_salaries",
     "verified",
     null,
-    "Dining With the Dankos LLC"
+    "Dining With the Dankos LLC",
+    null
    ],
    [
     "wages_and_salaries",
     "verified",
     null,
-    "Hutton of Memphis LLC"
+    "Hutton of Memphis LLC",
+    null
    ],
    [
     "wages_and_salaries",
     "verified",
     null,
-    "Surge Staffing LLC"
+    "Surge Staffing LLC",
+    null
    ]
   ],
   "members": [
    [
     "Howard",
     "Myers",
-    "Head of Household"
+    "Head of Household",
+    3096,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -3739,7 +4152,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -3762,20 +4176,25 @@
     "social_security",
     "verified",
     null,
-    "Social Security"
+    "Social Security",
+    3772
    ],
    [
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3771
    ]
   ],
   "members": [
    [
     "William",
     "McLaurin",
-    "Head of Household"
+    "Head of Household",
+    3097,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -3787,7 +4206,8 @@
   ],
   "score": 0.94,
   "warnings": [
-   "asset_records[0]: balance arrived with no statement or verification of"
+   "asset_records[0]: balance arrived with no statement or verification of",
+   "household_members[0] 'William McLaurin' date of birth read as 1953-04-"
   ]
  },
  "J-CCAC-07101@1791261410": {
@@ -3798,7 +4218,8 @@
     null,
     "74.00",
     "74.33",
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -3806,7 +4227,8 @@
     null,
     "14.33",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "whole_life_insurance",
@@ -3814,7 +4236,8 @@
     null,
     "760.00",
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -3837,20 +4260,25 @@
     "social_security",
     "verified",
     null,
-    "Social Security"
+    "Social Security",
+    null
    ],
    [
     "ssi",
     "verified",
     null,
-    "Social Security"
+    "Social Security",
+    null
    ]
   ],
   "members": [
    [
     "Alfred",
     "Jackson",
-    "Head of Household"
+    "Head of Household",
+    3098,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -3869,7 +4297,8 @@
     null,
     "422.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "checking",
@@ -3877,7 +4306,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    3233
    ],
    [
     "checking",
@@ -3885,7 +4315,8 @@
     "1339.85",
     "1339.05",
     "421.83",
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -3893,7 +4324,8 @@
     null,
     "1400.00",
     null,
-    "declared_only"
+    "declared_only",
+    3231
    ],
    [
     "whole_life_insurance",
@@ -3901,7 +4333,8 @@
     null,
     "41.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -3909,7 +4342,8 @@
     null,
     "2157.00",
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -3934,20 +4368,25 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3780
    ],
    [
     "ssi",
     "declared_only",
     null,
-    "Supplemental Security Income ("
+    "Supplemental Security Income (",
+    null
    ]
   ],
   "members": [
    [
     "Ronell",
     "Bolden",
-    "Head of Household"
+    "Head of Household",
+    3099,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -3970,7 +4409,8 @@
     "109.09",
     "422.00",
     "422.00",
-    "verified"
+    "verified",
+    3235
    ]
   ],
   "cert_review": {
@@ -3992,14 +4432,18 @@
     "pension",
     "verified",
     null,
-    "Chicago Transit Authority Empl"
+    "Chicago Transit Authority Empl",
+    3783
    ]
   ],
   "members": [
    [
     "Kay",
     "King",
-    "Head of Household"
+    "Head of Household",
+    3100,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -4017,7 +4461,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -4025,7 +4470,8 @@
     null,
     "350.33",
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -4049,14 +4495,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Tina",
     "Lofton",
-    "Head of Household"
+    "Head of Household",
+    3101,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -4073,7 +4523,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "prepaid_debit_card",
@@ -4081,7 +4532,8 @@
     null,
     "332.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "prepaid_debit_card",
@@ -4089,7 +4541,8 @@
     null,
     "708.00",
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -4112,37 +4565,49 @@
     "social_security",
     "declared_only",
     null,
-    "Social Security (declared)"
+    "Social Security (declared)",
+    null
    ],
    [
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ],
    [
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ],
    [
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Charles",
     "Garner",
-    "Head of Household"
+    "Head of Household",
+    3103,
+    null,
+    []
    ],
    [
     "Victoria",
     "Pole",
-    "Other Adult"
+    "Other Adult",
+    3102,
+    null,
+    [
+     "Victoria Pole"
+    ]
    ]
   ],
   "notes": [
@@ -4163,7 +4628,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -4184,20 +4650,25 @@
     "social_security",
     "verified",
     null,
-    "Social Security"
+    "Social Security",
+    null
    ],
    [
     "ssi",
     "verified",
     null,
-    "Social Security"
+    "Social Security",
+    null
    ]
   ],
   "members": [
    [
     "Terence",
     "Barnes",
-    "Head of Household"
+    "Head of Household",
+    3104,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -4215,7 +4686,8 @@
     null,
     "434.00",
     "434.00",
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -4223,7 +4695,8 @@
     null,
     "2287.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "whole_life_insurance",
@@ -4231,7 +4704,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -4252,14 +4726,18 @@
     "ssi",
     "verified",
     null,
-    "Social Security"
+    "Social Security",
+    null
    ]
   ],
   "members": [
    [
     "Mae",
     "Dotson",
-    "Head of Household"
+    "Head of Household",
+    3105,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -4277,7 +4755,8 @@
     null,
     "170.00",
     "379.00",
-    "verified"
+    "verified",
+    3246
    ],
    [
     "other",
@@ -4285,7 +4764,8 @@
     null,
     "94300.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "prepaid_debit_card",
@@ -4293,7 +4773,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "prepaid_debit_card",
@@ -4301,7 +4782,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -4309,7 +4791,8 @@
     null,
     "6.00",
     null,
-    "declared_only"
+    "declared_only",
+    3247
    ]
   ],
   "cert_review": {
@@ -4333,20 +4816,25 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3793
    ],
    [
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Anthony",
     "Nightengale",
-    "Head of Household"
+    "Head of Household",
+    3106,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -4357,7 +4845,8 @@
   "score": 0.76,
   "warnings": [
    "asset_records[1]: balance arrived with no statement or verification of",
-   "asset_records[4]: type 'Investment' is not in the configured picklist;"
+   "asset_records[4]: type 'Investment' is not in the configured picklist;",
+   "household_members[0] 'Anthony Nightengale' date of birth read as 1948-"
   ]
  },
  "J-CCAC-07109@1791262260": {
@@ -4368,7 +4857,8 @@
     null,
     "1147.00",
     null,
-    "verified"
+    "verified",
+    3250
    ],
    [
     "savings",
@@ -4376,7 +4866,8 @@
     null,
     "1235.11",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ]
   ],
   "cert_review": {
@@ -4399,14 +4890,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3795
    ]
   ],
   "members": [
    [
     "Annie",
     "Leggett",
-    "Head of Household"
+    "Head of Household",
+    3107,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -4414,7 +4909,9 @@
    "Pages 4: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti"
   ],
   "score": 0.91,
-  "warnings": []
+  "warnings": [
+   "household_members[0] 'Annie Leggett' date of birth read as 1954-07-09;"
+  ]
  },
  "J-CCAC-07110@1791262323": {
   "assets": [
@@ -4424,7 +4921,8 @@
     "10267.80",
     "10268.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -4432,7 +4930,8 @@
     null,
     "9060.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "whole_life_insurance",
@@ -4440,7 +4939,8 @@
     null,
     "307.00",
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -4463,14 +4963,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Shirley",
     "White",
-    "Head of Household"
+    "Head of Household",
+    3108,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -4490,7 +4994,8 @@
     "65.50",
     "66.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -4498,7 +5003,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    3269
    ]
   ],
   "cert_review": {
@@ -4521,20 +5027,27 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ],
    [
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3806
    ]
   ],
   "members": [
    [
     "Gearldine",
     "Roberts",
-    "Head of Household"
+    "Head of Household",
+    3110,
+    null,
+    [
+     "Gearldine Roberts"
+    ]
    ]
   ],
   "notes": [
@@ -4554,7 +5067,8 @@
     "272.89",
     "382.00",
     "382.00",
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -4579,14 +5093,18 @@
     "wages_and_salaries",
     "verified",
     null,
-    "Balton Corporation"
+    "Balton Corporation",
+    3807
    ]
   ],
   "members": [
    [
     "Andre",
     "Young",
-    "Head of Household"
+    "Head of Household",
+    3111,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -4597,6 +5115,7 @@
   ],
   "score": 0.88,
   "warnings": [
+   "household_members[0] 'Andre Young' date of birth read as 1976-07-06; C",
    "income_records[0]: 6 quarterly wage-history row(s) not sent as pay stu"
   ]
  },
@@ -4608,7 +5127,8 @@
     null,
     "3478.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "checking",
@@ -4616,7 +5136,8 @@
     "0.00",
     null,
     "2890.83",
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -4624,7 +5145,8 @@
     null,
     "203.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ]
   ],
   "cert_review": {
@@ -4647,20 +5169,25 @@
     "pension",
     "verified",
     null,
-    "Securian Life Insurance Compan"
+    "Securian Life Insurance Compan",
+    null
    ],
    [
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Flora",
     "Washington",
-    "Head of Household"
+    "Head of Household",
+    3112,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -4680,7 +5207,8 @@
     null,
     "803.00",
     "803.11",
-    "verified"
+    "verified",
+    null
    ],
    [
     "checking",
@@ -4688,7 +5216,8 @@
     "901.09",
     null,
     null,
-    "verified"
+    "verified",
+    3272
    ]
   ],
   "cert_review": {
@@ -4712,14 +5241,18 @@
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Sheila",
     "Scott",
-    "Head of Household"
+    "Head of Household",
+    3113,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -4727,7 +5260,9 @@
    "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir"
   ],
   "score": 0.89,
-  "warnings": []
+  "warnings": [
+   "household_members[0] 'Sheila Scott' date of birth read as 1950-11-20; "
+  ]
  },
  "J-CCAC-07115@1791263295": {
   "assets": [
@@ -4737,7 +5272,8 @@
     null,
     "780.00",
     null,
-    "declared_only"
+    "declared_only",
+    3279
    ],
    [
     "checking",
@@ -4745,7 +5281,8 @@
     "545.53",
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -4753,7 +5290,8 @@
     "5763.81",
     "5109.00",
     null,
-    "verified"
+    "verified",
+    3280
    ],
    [
     "whole_life_insurance",
@@ -4761,7 +5299,8 @@
     null,
     "23.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "whole_life_insurance",
@@ -4769,7 +5308,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -4792,14 +5332,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3815
    ]
   ],
   "members": [
    [
     "Lonnie",
     "Bates",
-    "Head of Household"
+    "Head of Household",
+    3115,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -4810,7 +5354,8 @@
   ],
   "score": 0.9,
   "warnings": [
-   "asset_records[1]: balance arrived with no statement or verification of"
+   "asset_records[1]: balance arrived with no statement or verification of",
+   "household_members[0] 'Lonnie Bates' date of birth read as 1954-01-25; "
   ]
  },
  "J-CCAC-07448@1791593806": {
@@ -4821,7 +5366,8 @@
     null,
     null,
     "452.73",
-    "verified"
+    "verified",
+    3408
    ],
    [
     "savings",
@@ -4829,7 +5375,8 @@
     "0.00",
     null,
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -4851,20 +5398,25 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3908
    ],
    [
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Ardis",
     "Garrett",
-    "Head of Household"
+    "Head of Household",
+    4281,
+    1841,
+    []
    ]
   ],
   "notes": [
@@ -4883,7 +5435,8 @@
     null,
     "453.00",
     "452.73",
-    "verified"
+    "verified",
+    3411
    ],
    [
     "savings",
@@ -4891,7 +5444,8 @@
     "0.00",
     null,
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -4914,20 +5468,25 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3911
    ],
    [
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Ardis",
     "Garrett",
-    "Head of Household"
+    "Head of Household",
+    4282,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -4946,7 +5505,8 @@
     "927.23",
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -4954,7 +5514,8 @@
     null,
     "927.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "whole_life_insurance",
@@ -4962,7 +5523,8 @@
     null,
     "1817.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "whole_life_insurance",
@@ -4970,7 +5532,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -4994,14 +5557,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Antoinette",
     "Harrison",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -5012,7 +5579,8 @@
   ],
   "score": 0.9,
   "warnings": [
-   "asset_records[0]: balance arrived with no statement or verification of"
+   "asset_records[0]: balance arrived with no statement or verification of",
+   "household_members[0] 'Antoinette Harrison' matches none of the 1 membe"
   ]
  },
  "J-CCAC-07451@1791595643": {
@@ -5023,7 +5591,8 @@
     "554.90",
     "1207.00",
     "1207.00",
-    "verified"
+    "verified",
+    3415
    ],
    [
     "checking",
@@ -5031,7 +5600,8 @@
     null,
     "1207.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "savings",
@@ -5039,7 +5609,8 @@
     "415.07",
     "415.00",
     null,
-    "verified"
+    "verified",
+    3417
    ],
    [
     "whole_life_insurance",
@@ -5047,7 +5618,8 @@
     null,
     "2379.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -5055,7 +5627,8 @@
     null,
     "624.00",
     null,
-    "verified"
+    "verified",
+    3414
    ]
   ],
   "cert_review": {
@@ -5079,14 +5652,20 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3922
    ]
   ],
   "members": [
    [
     "Argel",
     "Neeley",
-    "Head of Household"
+    "Head of Household",
+    4287,
+    1844,
+    [
+     "Argel Neeley"
+    ]
    ]
   ],
   "notes": [
@@ -5103,6 +5682,7 @@
   "warnings": [
    "asset_records[0]: balance arrived with no statement or verification of",
    "asset_records[1]: balance arrived with no statement or verification of",
+   "household_members[0] 'Argel Neeley' date of birth read as 1938-10-22; ",
    "income_records[1]: 'Wright Bros Const Co. Inc.' is wage history only (",
    "income_records[2]: 'Holmes Personnel Consultants, Inc.' is wage histor",
    "income_records[3]: 'The Catholic Charities of the' is wage history onl",
@@ -5117,7 +5697,8 @@
     null,
     "1752.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "checking",
@@ -5125,7 +5706,8 @@
     null,
     "452.00",
     null,
-    "verified"
+    "verified",
+    3428
    ],
    [
     "prepaid_debit_card",
@@ -5133,7 +5715,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -5141,7 +5724,8 @@
     null,
     "1.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "savings",
@@ -5149,7 +5733,8 @@
     null,
     "2.00",
     null,
-    "declared_only"
+    "declared_only",
+    3430
    ],
    [
     "whole_life_insurance",
@@ -5157,7 +5742,8 @@
     null,
     "50000.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "whole_life_insurance",
@@ -5165,7 +5751,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -5189,38 +5776,46 @@
     "other",
     "declared_only",
     null,
-    "Final Exp-Ins"
+    "Final Exp-Ins",
+    null
    ],
    [
     "pension",
     "verified",
     null,
-    "U.S. Office of Personnel Manag"
+    "U.S. Office of Personnel Manag",
+    3961
    ],
    [
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ],
    [
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3962
    ],
    [
     "ssi",
     "declared_only",
     null,
-    "Supplemental Security Income ("
+    "Supplemental Security Income (",
+    null
    ]
   ],
   "members": [
    [
     "Alfrieda",
     "Parham",
-    "Head of Household"
+    "Head of Household",
+    4331,
+    1858,
+    []
    ]
   ],
   "notes": [
@@ -5241,7 +5836,8 @@
     "1381.73",
     null,
     "685.17",
-    "verified"
+    "verified",
+    3441
    ],
    [
     "savings",
@@ -5249,7 +5845,8 @@
     "581.32",
     null,
     "340.00",
-    "verified"
+    "verified",
+    3442
    ]
   ],
   "cert_review": {
@@ -5274,20 +5871,27 @@
     "pension",
     "verified",
     null,
-    "Lawrence Manor"
+    "Lawrence Manor",
+    3970
    ],
    [
     "social_security",
     "declared_only",
     null,
-    "Social Security (declared)"
+    "Social Security (declared)",
+    3969
    ]
   ],
   "members": [
    [
     "Artemese",
     "Smith",
-    "Head of Household"
+    "Head of Household",
+    4433,
+    1876,
+    [
+     "Artemese Smith"
+    ]
    ]
   ],
   "notes": [
@@ -5307,7 +5911,8 @@
     null,
     "441.00",
     "441.00",
-    "verified"
+    "verified",
+    3445
    ],
    [
     "whole_life_insurance",
@@ -5315,7 +5920,8 @@
     null,
     "1129.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "whole_life_insurance",
@@ -5323,7 +5929,8 @@
     null,
     "830.00",
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -5347,20 +5954,25 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3972
    ],
    [
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3971
    ]
   ],
   "members": [
    [
     "Beverly",
     "Bramlett",
-    "Head of Household"
+    "Head of Household",
+    4434,
+    1877,
+    []
    ]
   ],
   "notes": [
@@ -5383,7 +5995,8 @@
     "73.17",
     "62.00",
     "61.52",
-    "verified"
+    "verified",
+    3448
    ]
   ],
   "cert_review": {
@@ -5409,20 +6022,25 @@
     "other",
     "declared_only",
     null,
-    "Yvonne Grant"
+    "Yvonne Grant",
+    3981
    ],
    [
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3980
    ]
   ],
   "members": [
    [
     "Bernard",
     "Grant",
-    "Head of Household"
+    "Head of Household",
+    4445,
+    1878,
+    []
    ]
   ],
   "notes": [
@@ -5444,7 +6062,8 @@
     "1.73",
     "88.00",
     "87.80",
-    "verified"
+    "verified",
+    3453
    ],
    [
     "savings",
@@ -5452,7 +6071,8 @@
     null,
     "67.80",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ]
   ],
   "cert_review": {
@@ -5476,20 +6096,25 @@
     "other",
     "verified",
     null,
-    "Yvonne Pickett-Grant"
+    "Yvonne Pickett-Grant",
+    3986
    ],
    [
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3987
    ]
   ],
   "members": [
    [
     "Bernard",
     "Grant",
-    "Head of Household"
+    "Head of Household",
+    4446,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -5511,7 +6136,8 @@
     null,
     null,
     "23443.72",
-    "verified"
+    "verified",
+    3454
    ],
    [
     "checking",
@@ -5519,7 +6145,8 @@
     "23145.76",
     "23444.00",
     "23309.11",
-    "verified"
+    "verified",
+    null
    ],
    [
     "other",
@@ -5527,7 +6154,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "other",
@@ -5535,7 +6163,8 @@
     null,
     "85.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "other",
@@ -5543,7 +6172,8 @@
     null,
     "2312.00",
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -5566,14 +6196,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3988
    ]
   ],
   "members": [
    [
     "Berkley",
     "Honoroff",
-    "Head of Household"
+    "Head of Household",
+    4447,
+    1879,
+    []
    ]
   ],
   "notes": [
@@ -5600,7 +6234,8 @@
     null,
     "1354.00",
     null,
-    "declared_only"
+    "declared_only",
+    3457
    ],
    [
     "checking",
@@ -5608,7 +6243,8 @@
     "1372.88",
     "565.00",
     "1354.10",
-    "verified"
+    "verified",
+    null
    ],
    [
     "checking",
@@ -5616,7 +6252,8 @@
     "512.74",
     null,
     "564.58",
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -5624,7 +6261,8 @@
     "9363.86",
     "9264.00",
     null,
-    "verified"
+    "verified",
+    3458
    ]
   ],
   "cert_review": {
@@ -5648,14 +6286,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3989
    ]
   ],
   "members": [
    [
     "Barbara",
     "Taylor",
-    "Head of Household"
+    "Head of Household",
+    4448,
+    1880,
+    []
    ]
   ],
   "notes": [
@@ -5681,7 +6323,8 @@
     "311.43",
     "90.00",
     "90.00",
-    "verified"
+    "verified",
+    3462
    ],
    [
     "savings",
@@ -5689,7 +6332,8 @@
     null,
     "90.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "whole_life_insurance",
@@ -5697,7 +6341,8 @@
     "12317.56",
     "12318.00",
     null,
-    "verified"
+    "verified",
+    3461
    ]
   ],
   "cert_review": {
@@ -5721,19 +6366,26 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3992
    ]
   ],
   "members": [
    [
     "Bettie",
     "Tinner",
-    "Head of Household"
+    "Head of Household",
+    4449,
+    1881,
+    []
    ],
    [
     "Michael",
     "Evans",
-    "Live-in Aide"
+    "Live-in Aide",
+    4450,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -5753,7 +6405,8 @@
     "80.39",
     "80.00",
     "80.39",
-    "verified"
+    "verified",
+    3464
    ],
    [
     "savings",
@@ -5761,7 +6414,8 @@
     "12.05",
     "12.00",
     null,
-    "verified"
+    "verified",
+    3463
    ]
   ],
   "cert_review": {
@@ -5780,14 +6434,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3994
    ]
   ],
   "members": [
    [
     "Curreva",
     "Barnes-Harris",
-    "Head of Household"
+    "Head of Household",
+    4451,
+    1882,
+    []
    ]
   ],
   "notes": [
@@ -5809,7 +6467,8 @@
     "1069.58",
     "468.00",
     "468.00",
-    "verified"
+    "verified",
+    3465
    ]
   ],
   "cert_review": {
@@ -5830,20 +6489,25 @@
     "pension",
     "verified",
     null,
-    "Franciscan Alliance Ch"
+    "Franciscan Alliance Ch",
+    3995
    ],
    [
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3996
    ]
   ],
   "members": [
    [
     "Christine",
     "Buck",
-    "Head of Household"
+    "Head of Household",
+    4452,
+    1883,
+    []
    ]
   ],
   "notes": [
@@ -5866,7 +6530,8 @@
     "1.73",
     "88.00",
     "87.80",
-    "verified"
+    "verified",
+    3466
    ],
    [
     "savings",
@@ -5874,7 +6539,8 @@
     null,
     "67.80",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ]
   ],
   "cert_review": {
@@ -5898,20 +6564,25 @@
     "other",
     "verified",
     null,
-    "Yvonne Pickett-Grant"
+    "Yvonne Pickett-Grant",
+    3997
    ],
    [
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    3998
    ]
   ],
   "members": [
    [
     "Bernard",
     "Grant",
-    "Head of Household"
+    "Head of Household",
+    4453,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -5933,7 +6604,8 @@
     "15760.23",
     "15521.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "cd",
@@ -5941,7 +6613,8 @@
     "7490.80",
     "7329.00",
     null,
-    "verified"
+    "verified",
+    3474
    ],
    [
     "checking",
@@ -5949,7 +6622,8 @@
     null,
     "33253.00",
     "33253.33",
-    "verified"
+    "verified",
+    3471
    ],
    [
     "other",
@@ -5957,7 +6631,8 @@
     "0.00",
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "other",
@@ -5965,7 +6640,8 @@
     null,
     "1627.00",
     null,
-    "declared_only"
+    "declared_only",
+    3473
    ],
    [
     "retirement",
@@ -5973,7 +6649,8 @@
     "12945.08",
     "12945.00",
     null,
-    "verified"
+    "verified",
+    3472
    ],
    [
     "savings",
@@ -5981,7 +6658,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -5989,7 +6667,8 @@
     "58020.67",
     "58021.00",
     null,
-    "verified"
+    "verified",
+    3470
    ]
   ],
   "cert_review": {
@@ -6014,14 +6693,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4000
    ]
   ],
   "members": [
    [
     "Carliss",
     "Clifton",
-    "Head of Household"
+    "Head of Household",
+    4454,
+    1884,
+    []
    ]
   ],
   "notes": [
@@ -6064,14 +6747,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4001
    ]
   ],
   "members": [
    [
     "C",
     "Hampton",
-    "Head of Household"
+    "Head of Household",
+    4455,
+    1885,
+    []
    ]
   ],
   "notes": [
@@ -6091,7 +6778,8 @@
     "1429.76",
     "1430.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -6099,7 +6787,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -6123,20 +6812,25 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ],
    [
     "social_security",
     "verified_not_declared",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4003
    ]
   ],
   "members": [
    [
     "Corletta",
     "Idehen",
-    "Head of Household"
+    "Head of Household",
+    4456,
+    1886,
+    []
    ]
   ],
   "notes": [
@@ -6158,7 +6852,8 @@
     null,
     "98.00",
     "98.23",
-    "verified"
+    "verified",
+    3482
    ]
   ],
   "cert_review": {
@@ -6180,20 +6875,27 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4009
    ],
    [
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4008
    ]
   ],
   "members": [
    [
     "Cornelius",
     "Johnson Jr.",
-    "Head of Household"
+    "Head of Household",
+    4457,
+    1887,
+    [
+     "Cornelius Johnson Jr."
+    ]
    ]
   ],
   "notes": [
@@ -6215,7 +6917,8 @@
     "425.24",
     "571.00",
     "571.00",
-    "verified"
+    "verified",
+    3485
    ]
   ],
   "cert_review": {
@@ -6237,14 +6940,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4012
    ]
   ],
   "members": [
    [
     "Carol",
     "Lira",
-    "Head of Household"
+    "Head of Household",
+    4458,
+    1888,
+    []
    ]
   ],
   "notes": [
@@ -6263,7 +6970,8 @@
     "5481.90",
     "12753.00",
     "6842.83",
-    "verified"
+    "verified",
+    3491
    ],
    [
     "whole_life_insurance",
@@ -6271,7 +6979,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    3490
    ]
   ],
   "cert_review": {
@@ -6295,14 +7004,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4014
    ]
   ],
   "members": [
    [
     "Cecil",
     "Matthews",
-    "Head of Household"
+    "Head of Household",
+    4459,
+    1889,
+    []
    ]
   ],
   "notes": [
@@ -6324,7 +7037,8 @@
     null,
     "135.00",
     null,
-    "declared_only"
+    "declared_only",
+    3492
    ],
    [
     "savings",
@@ -6332,7 +7046,8 @@
     null,
     "31.00",
     null,
-    "declared_only"
+    "declared_only",
+    3493
    ]
   ],
   "cert_review": {
@@ -6358,26 +7073,32 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4016
    ],
    [
     "wages_and_salaries",
     "verified",
     null,
-    "Kindness Home Care Inc."
+    "Kindness Home Care Inc.",
+    4015
    ],
    [
     "wages_and_salaries",
     "verified",
     null,
-    "Seniors Helping Seniors"
+    "Seniors Helping Seniors",
+    null
    ]
   ],
   "members": [
    [
     "Carol",
     "Person",
-    "Head of Household"
+    "Head of Household",
+    4460,
+    1890,
+    []
    ]
   ],
   "notes": [
@@ -6403,7 +7124,8 @@
     null,
     "135.00",
     null,
-    "declared_only"
+    "declared_only",
+    3496
    ],
    [
     "savings",
@@ -6411,7 +7133,8 @@
     null,
     "31.00",
     null,
-    "declared_only"
+    "declared_only",
+    3497
    ]
   ],
   "cert_review": {
@@ -6436,26 +7159,32 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4020
    ],
    [
     "wages_and_salaries",
     "verified",
     null,
-    "Kindness Home Care Inc."
+    "Kindness Home Care Inc.",
+    4021
    ],
    [
     "wages_and_salaries",
     "verified",
     null,
-    "Seniors Helping Seniors"
+    "Seniors Helping Seniors",
+    null
    ]
   ],
   "members": [
    [
     "Carol",
     "Person",
-    "Head of Household"
+    "Head of Household",
+    4461,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -6479,7 +7208,8 @@
     null,
     "668.00",
     "666.00",
-    "verified"
+    "verified",
+    3499
    ],
    [
     "savings",
@@ -6487,7 +7217,8 @@
     "11.74",
     "12.00",
     null,
-    "verified"
+    "verified",
+    3500
    ]
   ],
   "cert_review": {
@@ -6512,20 +7243,25 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4025
    ],
    [
     "wages_and_salaries",
     "verified",
     null,
-    "Addus Homecare"
+    "Addus Homecare",
+    4024
    ]
   ],
   "members": [
    [
     "Christina",
     "Smith",
-    "Head of Household"
+    "Head of Household",
+    4462,
+    1891,
+    []
    ]
   ],
   "notes": [
@@ -6547,7 +7283,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -6555,7 +7292,8 @@
     null,
     "424.00",
     null,
-    "declared_only"
+    "declared_only",
+    3506
    ]
   ],
   "cert_review": {
@@ -6579,20 +7317,25 @@
     "social_security",
     "declared_only",
     null,
-    "Social Security (declared)"
+    "Social Security (declared)",
+    null
    ],
    [
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4031
    ]
   ],
   "members": [
    [
     "Colleen",
     "Tamayo",
-    "Head of Household"
+    "Head of Household",
+    4463,
+    1892,
+    []
    ]
   ],
   "notes": [
@@ -6610,7 +7353,8 @@
     "52.88",
     "53.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "prepaid_debit_card",
@@ -6618,7 +7362,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -6641,14 +7386,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4036
    ]
   ],
   "members": [
    [
     "Colleen",
     "Tamayo",
-    "Head of Household"
+    "Head of Household",
+    4464,
+    1893,
+    []
    ]
   ],
   "notes": [
@@ -6669,7 +7418,8 @@
     "175.58",
     "176.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "checking",
@@ -6677,7 +7427,8 @@
     "30.74",
     "31.00",
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -6702,31 +7453,40 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4039
    ],
    [
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4041
    ],
    [
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4040
    ]
   ],
   "members": [
    [
     "Carl",
     "Upshaw",
-    "Head of Household"
+    "Head of Household",
+    4465,
+    1894,
+    []
    ],
    [
     "Toni",
     "Strong-Upshaw",
-    "Spouse"
+    "Spouse",
+    4466,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -6747,7 +7507,8 @@
     "23.74",
     "124.00",
     "123.92",
-    "verified"
+    "verified",
+    3522
    ],
    [
     "whole_life_insurance",
@@ -6755,7 +7516,8 @@
     null,
     "983.00",
     null,
-    "verified"
+    "verified",
+    3521
    ]
   ],
   "cert_review": {
@@ -6779,14 +7541,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4042
    ]
   ],
   "members": [
    [
     "Charles",
     "Westbrook",
-    "Head of Household"
+    "Head of Household",
+    4467,
+    1895,
+    []
    ]
   ],
   "notes": [
@@ -6823,20 +7589,25 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ],
    [
     "ssi",
     "verified_not_declared",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4043
    ]
   ],
   "members": [
    [
     "Cleveland",
     "White",
-    "Head of Household"
+    "Head of Household",
+    4468,
+    1896,
+    []
    ]
   ],
   "notes": [
@@ -6857,7 +7628,8 @@
     "470.46",
     "470.40",
     "375.00",
-    "verified"
+    "verified",
+    3525
    ],
    [
     "savings",
@@ -6865,7 +7637,8 @@
     "15.54",
     "15.54",
     null,
-    "verified"
+    "verified",
+    3523
    ],
    [
     "whole_life_insurance",
@@ -6873,7 +7646,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    3524
    ]
   ],
   "cert_review": {
@@ -6896,14 +7670,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4044
    ]
   ],
   "members": [
    [
     "Denise",
     "Bagby",
-    "Head of Household"
+    "Head of Household",
+    4469,
+    1897,
+    []
    ]
   ],
   "notes": [
@@ -6932,7 +7710,8 @@
     "2359.46",
     "3305.00",
     "3305.00",
-    "verified"
+    "verified",
+    3527
    ],
    [
     "other",
@@ -6940,7 +7719,8 @@
     null,
     "3455.52",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "savings",
@@ -6948,7 +7728,8 @@
     "345.55",
     "346.00",
     "462.50",
-    "verified"
+    "verified",
+    3526
    ]
   ],
   "cert_review": {
@@ -6971,14 +7752,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4045
    ]
   ],
   "members": [
    [
     "Deborah",
     "Bowman",
-    "Head of Household"
+    "Head of Household",
+    4470,
+    1898,
+    []
    ]
   ],
   "notes": [
@@ -6999,7 +7784,8 @@
     "1106.00",
     "552.00",
     "552.17",
-    "verified"
+    "verified",
+    3531
    ],
    [
     "other",
@@ -7007,7 +7793,8 @@
     null,
     "100.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "other",
@@ -7015,7 +7802,8 @@
     null,
     "2321.21",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "other",
@@ -7023,7 +7811,8 @@
     null,
     "7.81",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "other",
@@ -7031,7 +7820,8 @@
     null,
     "4268.32",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "other",
@@ -7039,7 +7829,8 @@
     null,
     "58628.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "savings",
@@ -7047,7 +7838,8 @@
     null,
     "1.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ]
   ],
   "cert_review": {
@@ -7070,14 +7862,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4047
    ]
   ],
   "members": [
    [
     "Dennis",
     "Cloud",
-    "Head of Household"
+    "Head of Household",
+    4471,
+    1899,
+    []
    ]
   ],
   "notes": [
@@ -7105,7 +7901,8 @@
     "0.00",
     "1614.00",
     "1613.50",
-    "verified"
+    "verified",
+    3534
    ]
   ],
   "cert_review": {
@@ -7129,14 +7926,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4048
    ]
   ],
   "members": [
    [
     "Debra",
     "Cole",
-    "Head of Household"
+    "Head of Household",
+    4472,
+    1900,
+    []
    ]
   ],
   "notes": [
@@ -7149,30 +7950,30 @@
   "score": 0.83,
   "warnings": []
  },
- "J-CCAC-07522@1791604356": {
+ "J-CCAC-07522@1791831552": {
   "assets": [
    [
     "checking",
     "JPMorgan Chase Bank, N.A.",
     "7941.22",
-    "3131.00",
     "3982.00",
-    "verified"
+    "3982.00",
+    "verified",
+    3910
    ]
   ],
   "cert_review": {
    "annual_assets": "7941.22",
-   "annual_income": "14628.00",
+   "annual_income": "15000.00",
    "cert_type": "annual",
-   "effective_date": "2025-10-01",
+   "effective_date": "2026-10-01",
    "gross_rent": "1088.00",
    "hh_size": 1,
    "tenant_rent": "314.00",
-   "utility_allowance": "46.00"
+   "utility_allowance": "41.00"
   },
   "codes": {
-   "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
-   "CERT_AMOUNT_UNACCOUNTED": 3,
+   "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
   },
@@ -7181,29 +7982,36 @@
     "pension",
     "verified",
     null,
-    "SEIU Local 4 Pension Fund"
+    "SEIU Local 4 Pension Fund",
+    4066
    ],
    [
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4067
    ]
   ],
   "members": [
    [
     "Deborah",
     "Dowdy",
-    "Head of Household"
+    "Head of Household",
+    4473,
+    1901,
+    []
    ]
   ],
   "notes": [
    "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
    "HUD 9887 must be signed by all adult household members; a signature co",
-   "Income source 'SEIU Local 4 Pension Fund' (Deborah Dowdy): voi-based c",
-   "Pages 6-7: 'HUD 50059 (Previous)' detected \u2014 excluded from data extrac"
+   "Pages 16-17: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr",
+   "Pages 3-4: 'Income Calculation Worksheet' detected \u2014 excluded from dat",
+   "Self-declared income amounts not extracted from questionnaire/applicat",
+   "Student status is null for all household members \u2014 verify against HUD "
   ],
-  "score": 0.86,
+  "score": 0.89,
   "warnings": []
  },
  "J-CCAC-07523@1791604414": {
@@ -7214,7 +8022,8 @@
     "746.64",
     "1055.00",
     "1055.17",
-    "verified"
+    "verified",
+    3538
    ],
    [
     "whole_life_insurance",
@@ -7222,7 +8031,8 @@
     null,
     "1448.00",
     null,
-    "verified"
+    "verified",
+    3539
    ]
   ],
   "cert_review": {
@@ -7245,14 +8055,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4053
    ]
   ],
   "members": [
    [
     "Derral",
     "Gordon",
-    "Head of Household"
+    "Head of Household",
+    4474,
+    1902,
+    []
    ]
   ],
   "notes": [
@@ -7277,7 +8091,8 @@
     null,
     "306.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "checking",
@@ -7285,7 +8100,8 @@
     "338.07",
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "checking",
@@ -7293,7 +8109,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    3542
    ],
    [
     "other",
@@ -7301,7 +8118,8 @@
     null,
     "10000.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "savings",
@@ -7309,7 +8127,8 @@
     "10.00",
     "10.00",
     null,
-    "verified"
+    "verified",
+    3543
    ]
   ],
   "cert_review": {
@@ -7333,14 +8152,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4057
    ]
   ],
   "members": [
    [
     "Darlene",
     "Gray",
-    "Head of Household"
+    "Head of Household",
+    4475,
+    1903,
+    []
    ]
   ],
   "notes": [
@@ -7363,7 +8186,8 @@
     null,
     "1834.00",
     "1833.83",
-    "verified"
+    "verified",
+    3547
    ],
    [
     "whole_life_insurance",
@@ -7371,7 +8195,8 @@
     null,
     "3152.00",
     null,
-    "verified"
+    "verified",
+    3546
    ],
    [
     "whole_life_insurance",
@@ -7379,7 +8204,8 @@
     null,
     "5182.00",
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -7401,14 +8227,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4061
    ]
   ],
   "members": [
    [
     "Danella",
     "Hardin",
-    "Head of Household"
+    "Head of Household",
+    4476,
+    1904,
+    []
    ]
   ],
   "notes": [
@@ -7433,7 +8263,8 @@
     "362.36",
     "362.00",
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -7456,14 +8287,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4062
    ]
   ],
   "members": [
    [
     "Dwayne",
     "Overton",
-    "Head of Household"
+    "Head of Household",
+    4477,
+    1905,
+    []
    ]
   ],
   "notes": [
@@ -7484,7 +8319,8 @@
     null,
     "3364.00",
     null,
-    "declared_only"
+    "declared_only",
+    3563
    ],
    [
     "checking",
@@ -7492,7 +8328,8 @@
     "4078.61",
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -7500,7 +8337,8 @@
     null,
     "1286.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -7508,7 +8346,8 @@
     null,
     "454.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -7516,7 +8355,8 @@
     null,
     "57.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -7524,7 +8364,8 @@
     null,
     "710.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -7532,7 +8373,8 @@
     null,
     "270.00",
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -7555,20 +8397,25 @@
     "pension",
     "verified",
     null,
-    "Central States Pension Fund"
+    "Central States Pension Fund",
+    4069
    ],
    [
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4068
    ]
   ],
   "members": [
    [
     "Dora",
     "Valentine",
-    "Head of Household"
+    "Head of Household",
+    4478,
+    1906,
+    []
    ]
   ],
   "notes": [
@@ -7595,7 +8442,8 @@
     "480.63",
     "234.00",
     "234.00",
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -7617,14 +8465,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4077
    ]
   ],
   "members": [
    [
     "Deborah",
     "Washington",
-    "Head of Household"
+    "Head of Household",
+    4479,
+    1907,
+    []
    ]
   ],
   "notes": [
@@ -7655,7 +8507,8 @@
     "768.11",
     "380.00",
     "380.33",
-    "verified"
+    "verified",
+    3570
    ],
    [
     "savings",
@@ -7663,7 +8516,8 @@
     "13.00",
     "13.00",
     "38.06",
-    "verified"
+    "verified",
+    3567
    ],
    [
     "whole_life_insurance",
@@ -7671,7 +8525,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    3568
    ],
    [
     "whole_life_insurance",
@@ -7679,7 +8534,8 @@
     null,
     "348.00",
     null,
-    "verified"
+    "verified",
+    3569
    ],
    [
     "whole_life_insurance",
@@ -7687,7 +8543,8 @@
     null,
     "802.00",
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -7710,14 +8567,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4078
    ]
   ],
   "members": [
    [
     "Deborah",
     "Wells",
-    "Head of Household"
+    "Head of Household",
+    4480,
+    1908,
+    []
    ]
   ],
   "notes": [
@@ -7743,7 +8604,8 @@
     "105.00",
     "105.00",
     "262.48",
-    "verified"
+    "verified",
+    3579
    ],
    [
     "whole_life_insurance",
@@ -7751,7 +8613,8 @@
     null,
     "144.00",
     null,
-    "verified"
+    "verified",
+    3578
    ],
    [
     "whole_life_insurance",
@@ -7759,7 +8622,8 @@
     null,
     "734.00",
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -7784,14 +8648,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4082
    ]
   ],
   "members": [
    [
     "Ernest",
     "Cochran",
-    "Head of Household"
+    "Head of Household",
+    4481,
+    1909,
+    []
    ]
   ],
   "notes": [
@@ -7818,7 +8686,8 @@
     null,
     "12.00",
     null,
-    "declared_only"
+    "declared_only",
+    3581
    ],
    [
     "checking",
@@ -7826,7 +8695,8 @@
     "22.59",
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "other",
@@ -7834,7 +8704,8 @@
     null,
     "5.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "savings",
@@ -7842,7 +8713,8 @@
     null,
     "23.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ]
   ],
   "cert_review": {
@@ -7863,14 +8735,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4083
    ]
   ],
   "members": [
    [
     "Evelyn",
     "Coleman",
-    "Head of Household"
+    "Head of Household",
+    4482,
+    1910,
+    []
    ]
   ],
   "notes": [
@@ -7889,7 +8765,8 @@
     "193.28",
     "193.00",
     null,
-    "verified"
+    "verified",
+    3582
    ],
    [
     "whole_life_insurance",
@@ -7897,7 +8774,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -7921,14 +8799,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4084
    ]
   ],
   "members": [
    [
     "Edna",
     "Lawhorn",
-    "Head of Household"
+    "Head of Household",
+    4483,
+    1911,
+    []
    ]
   ],
   "notes": [
@@ -7950,7 +8832,8 @@
     "88000.37",
     "82775.00",
     "82775.09",
-    "verified"
+    "verified",
+    3583
    ]
   ],
   "cert_review": {
@@ -7975,20 +8858,25 @@
     "pension",
     "verified",
     null,
-    "State Employees' Retirement Sy"
+    "State Employees' Retirement Sy",
+    4085
    ],
    [
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4086
    ]
   ],
   "members": [
    [
     "Edna",
     "Murray",
-    "Head of Household"
+    "Head of Household",
+    4484,
+    1912,
+    []
    ]
   ],
   "notes": [
@@ -8011,7 +8899,8 @@
     "2035.57",
     null,
     "3106.00",
-    "verified"
+    "verified",
+    3585
    ]
   ],
   "cert_review": {
@@ -8034,20 +8923,25 @@
     "pension",
     "verified",
     null,
-    "Corebridge Financial"
+    "Corebridge Financial",
+    4089
    ],
    [
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4088
    ]
   ],
   "members": [
    [
     "Elfreda",
     "Ng",
-    "Head of Household"
+    "Head of Household",
+    4485,
+    1913,
+    []
    ]
   ],
   "notes": [
@@ -8067,7 +8961,8 @@
     null,
     "102.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "checking",
@@ -8075,7 +8970,8 @@
     "0.00",
     null,
     "1.46",
-    "verified"
+    "verified",
+    3586
    ],
    [
     "checking",
@@ -8083,7 +8979,8 @@
     "9.13",
     null,
     "102.06",
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -8106,20 +9003,25 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4091
    ],
    [
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4090
    ]
   ],
   "members": [
    [
     "Coil",
     "Thomas",
-    "Head of Household"
+    "Head of Household",
+    4486,
+    1914,
+    []
    ]
   ],
   "notes": [
@@ -8139,7 +9041,8 @@
     "204.83",
     "182.00",
     "182.00",
-    "verified"
+    "verified",
+    3587
    ]
   ],
   "cert_review": {
@@ -8161,14 +9064,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4092
    ]
   ],
   "members": [
    [
     "Flora",
     "Fort",
-    "Head of Household"
+    "Head of Household",
+    4487,
+    1915,
+    []
    ]
   ],
   "notes": [
@@ -8190,7 +9097,8 @@
     null,
     "306.00",
     null,
-    "declared_only"
+    "declared_only",
+    3588
    ],
    [
     "checking",
@@ -8198,7 +9106,8 @@
     "52.49",
     null,
     "306.00",
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -8221,20 +9130,25 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4093
    ],
    [
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4094
    ]
   ],
   "members": [
    [
     "Gayle",
     "Atwater",
-    "Head of Household"
+    "Head of Household",
+    4488,
+    1916,
+    []
    ]
   ],
   "notes": [
@@ -8255,7 +9169,8 @@
     "1854.93",
     "1022.00",
     "1022.00",
-    "verified"
+    "verified",
+    3592
    ],
    [
     "whole_life_insurance",
@@ -8263,7 +9178,8 @@
     null,
     "2012.00",
     null,
-    "verified"
+    "verified",
+    3591
    ]
   ],
   "cert_review": {
@@ -8287,20 +9203,25 @@
     "pension",
     "verified",
     null,
-    "Metropolitan Life Insurance Co"
+    "Metropolitan Life Insurance Co",
+    null
    ],
    [
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4096
    ]
   ],
   "members": [
    [
     "Gloria",
     "Brown",
-    "Head of Household"
+    "Head of Household",
+    4489,
+    1917,
+    []
    ]
   ],
   "notes": [
@@ -8323,7 +9244,8 @@
     "1.03",
     "144.00",
     "144.00",
-    "verified"
+    "verified",
+    3598
    ],
    [
     "savings",
@@ -8331,7 +9253,8 @@
     null,
     "144.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ]
   ],
   "cert_review": {
@@ -8355,14 +9278,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4101
    ]
   ],
   "members": [
    [
     "Gregory",
     "Elmore",
-    "Head of Household"
+    "Head of Household",
+    4490,
+    1918,
+    []
    ]
   ],
   "notes": [
@@ -8382,7 +9309,8 @@
     "477.00",
     "477.00",
     null,
-    "verified"
+    "verified",
+    3602
    ]
   ],
   "cert_review": {
@@ -8407,14 +9335,18 @@
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4104
    ]
   ],
   "members": [
    [
     "Greta",
     "Gabrielyan",
-    "Head of Household"
+    "Head of Household",
+    4491,
+    1919,
+    []
    ]
   ],
   "notes": [
@@ -8427,6 +9359,7 @@
   ],
   "score": 0.8,
   "warnings": [
+   "household_members[0] 'Greta Gabrielyan' date of birth read as 1973-02-",
    "income_records[1]: 'Project Apollo LLC' is wage history only (not decl",
    "income_records[2]: 'Sangamon Syndicate LLC' is wage history only (not "
   ]
@@ -8439,7 +9372,8 @@
     null,
     "130.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "checking",
@@ -8447,7 +9381,8 @@
     "0.00",
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "checking",
@@ -8455,7 +9390,8 @@
     "11.34",
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "checking",
@@ -8463,7 +9399,8 @@
     "0.00",
     null,
     null,
-    "verified"
+    "verified",
+    3611
    ],
    [
     "savings",
@@ -8471,7 +9408,8 @@
     "20.02",
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -8479,7 +9417,8 @@
     "20.00",
     "20.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -8487,7 +9426,8 @@
     "5.00",
     "5.00",
     null,
-    "verified"
+    "verified",
+    3609
    ]
   ],
   "cert_review": {
@@ -8508,14 +9448,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4107
    ]
   ],
   "members": [
    [
     "Gregory",
     "Reynolds",
-    "Head of Household"
+    "Head of Household",
+    4492,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -8537,7 +9481,8 @@
     "279.82",
     "194.00",
     "193.79",
-    "verified"
+    "verified",
+    3614
    ],
    [
     "other",
@@ -8545,7 +9490,8 @@
     null,
     "4000.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "savings",
@@ -8553,7 +9499,8 @@
     "4.00",
     "4.00",
     "4.00",
-    "verified"
+    "verified",
+    3613
    ]
   ],
   "cert_review": {
@@ -8576,14 +9523,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4110
    ]
   ],
   "members": [
    [
     "Glenda",
     "Rhone",
-    "Head of Household"
+    "Head of Household",
+    4493,
+    1920,
+    []
    ]
   ],
   "notes": [
@@ -8603,7 +9554,8 @@
     "173.10",
     "65.00",
     "64.67",
-    "verified"
+    "verified",
+    3617
    ],
    [
     "savings",
@@ -8611,7 +9563,8 @@
     "4.00",
     "4.00",
     "3.26",
-    "verified"
+    "verified",
+    3618
    ]
   ],
   "cert_review": {
@@ -8633,14 +9586,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4113
    ]
   ],
   "members": [
    [
     "Glenda",
     "Rhone",
-    "Head of Household"
+    "Head of Household",
+    4494,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -8658,7 +9615,8 @@
     "234.01",
     "234.01",
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -8681,14 +9639,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4117
    ]
   ],
   "members": [
    [
     "Grace",
     "Tidwell",
-    "Head of Household"
+    "Head of Household",
+    4495,
+    1921,
+    []
    ]
   ],
   "notes": [
@@ -8707,7 +9669,8 @@
     null,
     "60935.00",
     "60934.54",
-    "verified"
+    "verified",
+    null
    ],
    [
     "checking",
@@ -8715,7 +9678,8 @@
     "62081.32",
     null,
     null,
-    "verified"
+    "verified",
+    3625
    ],
    [
     "savings",
@@ -8723,7 +9687,8 @@
     null,
     "1093.54",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "savings",
@@ -8731,7 +9696,8 @@
     "4516.62",
     "4517.00",
     null,
-    "verified"
+    "verified",
+    3624
    ]
   ],
   "cert_review": {
@@ -8759,20 +9725,25 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4119
    ],
    [
     "wages_and_salaries",
     "verified",
     null,
-    "S Cook County Mosquito Abateme"
+    "S Cook County Mosquito Abateme",
+    4118
    ]
   ],
   "members": [
    [
     "Herbert",
     "Garnes",
-    "Head of Household"
+    "Head of Household",
+    4496,
+    1922,
+    []
    ]
   ],
   "notes": [
@@ -8801,7 +9772,8 @@
     "920.31",
     "920.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "prepaid_debit_card",
@@ -8809,7 +9781,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -8817,7 +9790,8 @@
     null,
     "306.00",
     null,
-    "verified"
+    "verified",
+    3627
    ]
   ],
   "cert_review": {
@@ -8839,14 +9813,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4121
    ]
   ],
   "members": [
    [
     "Horace",
     "Williams",
-    "Head of Household"
+    "Head of Household",
+    4497,
+    1923,
+    []
    ]
   ],
   "notes": [
@@ -8866,7 +9844,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -8874,7 +9853,8 @@
     "20.66",
     "21.00",
     null,
-    "verified"
+    "verified",
+    3630
    ]
   ],
   "cert_review": {
@@ -8896,14 +9876,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4123
    ]
   ],
   "members": [
    [
     "Irene",
     "Moore",
-    "Head of Household"
+    "Head of Household",
+    4498,
+    1924,
+    []
    ]
   ],
   "notes": [
@@ -8923,7 +9907,8 @@
     "134.00",
     "140.00",
     null,
-    "verified"
+    "verified",
+    3631
    ],
    [
     "savings",
@@ -8931,7 +9916,8 @@
     null,
     "129.40",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ]
   ],
   "cert_review": {
@@ -8954,14 +9940,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4124
    ]
   ],
   "members": [
    [
     "Julia",
     "Barraza",
-    "Head of Household"
+    "Head of Household",
+    4499,
+    1925,
+    []
    ]
   ],
   "notes": [
@@ -8980,7 +9970,8 @@
     null,
     "129.00",
     "129.00",
-    "verified"
+    "verified",
+    null
    ],
    [
     "checking",
@@ -8988,7 +9979,8 @@
     null,
     "1853.00",
     "1853.00",
-    "verified"
+    "verified",
+    3636
    ],
    [
     "checking",
@@ -8996,7 +9988,8 @@
     null,
     "226.00",
     "226.00",
-    "verified"
+    "verified",
+    3633
    ],
    [
     "whole_life_insurance",
@@ -9004,7 +9997,8 @@
     null,
     "2110.00",
     null,
-    "verified"
+    "verified",
+    3635
    ]
   ],
   "cert_review": {
@@ -9027,20 +10021,25 @@
     "pension",
     "verified",
     null,
-    "Transamerica Retirement Soluti"
+    "Transamerica Retirement Soluti",
+    4127
    ],
    [
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4128
    ]
   ],
   "members": [
    [
     "Juanita",
     "Curtis",
-    "Head of Household"
+    "Head of Household",
+    4500,
+    1926,
+    []
    ]
   ],
   "notes": [
@@ -9062,7 +10061,8 @@
     null,
     "29.00",
     null,
-    "declared_only"
+    "declared_only",
+    3640
    ],
    [
     "checking",
@@ -9070,7 +10070,8 @@
     null,
     "526.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "checking",
@@ -9078,7 +10079,8 @@
     "10.32",
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "checking",
@@ -9086,7 +10088,8 @@
     "563.97",
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -9094,7 +10097,8 @@
     "0.25",
     null,
     null,
-    "verified"
+    "verified",
+    3643
    ],
    [
     "whole_life_insurance",
@@ -9102,7 +10106,8 @@
     null,
     "651.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "whole_life_insurance",
@@ -9110,7 +10115,8 @@
     null,
     "3168.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -9118,7 +10124,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -9126,7 +10133,8 @@
     null,
     "2274.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "whole_life_insurance",
@@ -9134,7 +10142,8 @@
     "2358.75",
     "2380.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -9142,7 +10151,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -9150,7 +10160,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -9174,14 +10185,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4130
    ]
   ],
   "members": [
    [
     "Joann",
     "Ellison",
-    "Head of Household"
+    "Head of Household",
+    4502,
+    1927,
+    []
    ]
   ],
   "notes": [
@@ -9208,7 +10223,8 @@
     null,
     "471.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "checking",
@@ -9216,7 +10232,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "checking",
@@ -9224,7 +10241,8 @@
     "1855.42",
     "3152.00",
     "471.00",
-    "verified"
+    "verified",
+    3638
    ]
   ],
   "cert_review": {
@@ -9250,14 +10268,18 @@
     "pension",
     "verified",
     null,
-    "Municipal Employees' Annuity &"
+    "Municipal Employees' Annuity &",
+    4129
    ]
   ],
   "members": [
    [
     "Jane",
     "Falls",
-    "Head of Household"
+    "Head of Household",
+    4501,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -9279,7 +10301,8 @@
     "465.04",
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -9287,7 +10310,8 @@
     null,
     "465.00",
     null,
-    "declared_only"
+    "declared_only",
+    3647
    ]
   ],
   "cert_review": {
@@ -9310,14 +10334,18 @@
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4134
    ]
   ],
   "members": [
    [
     "Joyce",
     "Hayward",
-    "Head of Household"
+    "Head of Household",
+    4503,
+    1928,
+    []
    ]
   ],
   "notes": [
@@ -9338,7 +10366,8 @@
     "0.00",
     "2246.00",
     "2245.83",
-    "verified"
+    "verified",
+    3653
    ]
   ],
   "cert_review": {
@@ -9362,14 +10391,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4137
    ]
   ],
   "members": [
    [
     "Jessie",
     "Mitchell",
-    "Head of Household"
+    "Head of Household",
+    4504,
+    1929,
+    []
    ]
   ],
   "notes": [
@@ -9391,7 +10424,8 @@
     null,
     "1780.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "checking",
@@ -9399,7 +10433,8 @@
     "11.84",
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "checking",
@@ -9407,7 +10442,8 @@
     "1024.77",
     null,
     "1780.00",
-    "verified"
+    "verified",
+    null
    ],
    [
     "checking",
@@ -9415,7 +10451,8 @@
     "58.69",
     "59.00",
     null,
-    "verified"
+    "verified",
+    3655
    ],
    [
     "prepaid_debit_card",
@@ -9423,7 +10460,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -9431,7 +10469,8 @@
     null,
     "12.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "savings",
@@ -9439,7 +10478,8 @@
     "6.00",
     "6.00",
     null,
-    "verified"
+    "verified",
+    3656
    ],
    [
     "whole_life_insurance",
@@ -9447,7 +10487,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -9470,14 +10511,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4138
    ]
   ],
   "members": [
    [
     "Juleo",
     "Reynolds",
-    "Head of Household"
+    "Head of Household",
+    4505,
+    1930,
+    []
    ]
   ],
   "notes": [
@@ -9498,7 +10543,8 @@
     "120.54",
     "1116.00",
     "1116.00",
-    "verified"
+    "verified",
+    3666
    ],
    [
     "whole_life_insurance",
@@ -9506,7 +10552,8 @@
     null,
     "2238.00",
     null,
-    "verified"
+    "verified",
+    3665
    ]
   ],
   "cert_review": {
@@ -9529,14 +10576,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4140
    ]
   ],
   "members": [
    [
     "Juanita",
     "Young",
-    "Head of Household"
+    "Head of Household",
+    4506,
+    1931,
+    []
    ]
   ],
   "notes": [
@@ -9559,7 +10610,8 @@
     "21.99",
     null,
     "167.57",
-    "verified"
+    "verified",
+    3667
    ],
    [
     "savings",
@@ -9567,7 +10619,8 @@
     "120.55",
     null,
     null,
-    "verified"
+    "verified",
+    3668
    ]
   ],
   "cert_review": {
@@ -9590,20 +10643,25 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4142
    ],
    [
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4141
    ]
   ],
   "members": [
    [
     "Karen",
     "Fawbush",
-    "Head of Household"
+    "Head of Household",
+    4507,
+    1932,
+    []
    ]
   ],
   "notes": [
@@ -9627,7 +10685,8 @@
     "8.53",
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -9635,7 +10694,8 @@
     null,
     "9.00",
     null,
-    "declared_only"
+    "declared_only",
+    3679
    ]
   ],
   "cert_review": {
@@ -9659,25 +10719,33 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ],
    [
     "ssi",
     "verified_not_declared",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4148
    ]
   ],
   "members": [
    [
     "Kallie",
     "McBride",
-    "Head of Household"
+    "Head of Household",
+    4511,
+    null,
+    []
    ],
    [
     "Carl",
     "Gunby",
-    "Live-in Aide"
+    "Live-in Aide",
+    4512,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -9701,7 +10769,8 @@
     "67.30",
     "109.00",
     "109.00",
-    "verified"
+    "verified",
+    3685
    ],
    [
     "savings",
@@ -9709,7 +10778,8 @@
     "1.00",
     "1.00",
     null,
-    "verified"
+    "verified",
+    3683
    ],
    [
     "whole_life_insurance",
@@ -9717,7 +10787,8 @@
     null,
     "1823.00",
     null,
-    "verified"
+    "verified",
+    3684
    ]
   ],
   "cert_review": {
@@ -9741,14 +10812,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4153
    ]
   ],
   "members": [
    [
     "Linda",
     "Bailey",
-    "Head of Household"
+    "Head of Household",
+    4514,
+    1936,
+    []
    ]
   ],
   "notes": [
@@ -9771,7 +10846,8 @@
     null,
     "408.00",
     null,
-    "declared_only"
+    "declared_only",
+    3686
    ]
   ],
   "cert_review": {
@@ -9792,14 +10868,18 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4154
    ]
   ],
   "members": [
    [
     "Lorraine",
     "Hughes",
-    "Head of Household"
+    "Head of Household",
+    4515,
+    1937,
+    []
    ]
   ],
   "notes": [
@@ -9822,7 +10902,8 @@
     "3275.12",
     "926.00",
     "926.00",
-    "verified"
+    "verified",
+    3905
    ],
    [
     "whole_life_insurance",
@@ -9830,7 +10911,8 @@
     null,
     "932.00",
     null,
-    "verified"
+    "verified",
+    3904
    ]
   ],
   "cert_review": {
@@ -9851,14 +10933,18 @@
     "ssi",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4329
    ]
   ],
   "members": [
    [
     "Valerie",
     "Thomas",
-    "Head of Household"
+    "Head of Household",
+    4629,
+    1981,
+    []
    ]
   ],
   "notes": [
@@ -9872,15 +10958,90 @@
    "asset_records[1]: balance arrived with no statement or verification of"
   ]
  },
- "J-CCAC-07616@1791813832": {
+ "J-CCAC-07615@1791833052": {
   "assets": [
    [
     "checking",
-    "Bank of America",
+    "JP Morgan Chase",
+    null,
+    "330.00",
+    null,
+    "declared_only",
+    3835
+   ],
+   [
+    "checking",
+    "JPMorgan Chase Bank, N.A.",
+    "177.00",
+    "330.00",
+    "330.00",
+    "verified",
+    null
+   ],
+   [
+    "whole_life_insurance",
+    "Senior Life Insurance Com",
+    "0.00",
+    null,
+    null,
+    "verified",
+    3863
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "507.00",
+   "annual_income": "12672.00",
+   "cert_type": "annual",
+   "effective_date": "2026-03-01",
+   "gross_rent": "1088.00",
+   "hh_size": 1,
+   "tenant_rent": "261.00",
+   "utility_allowance": "46.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 1,
+   "HUD_9887A_INCOMPLETE": 1,
+   "HUD_9887_INCOMPLETE": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "verified",
+    null,
+    "Social Security Administration",
+    4239
+   ]
+  ],
+  "members": [
+   [
+    "Yvonne",
+    "Mitchell",
+    "Head of Household",
+    4568,
+    1983,
+    []
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 14-17: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr",
+   "Pages 3-4: 'Income Calculation Worksheet' detected \u2014 excluded from dat",
+   "Self-declared income amounts not extracted from questionnaire/applicat",
+   "Student status is null for all household members \u2014 verify against HUD "
+  ],
+  "score": 0.88,
+  "warnings": []
+ },
+ "J-CCAC-07616@1791833451": {
+  "assets": [
+   [
+    "checking",
+    "Bank of America - USA",
     "885.46",
     "1057.00",
-    "1057.00",
-    "verified"
+    null,
+    "verified",
+    3913
    ]
   ],
   "cert_review": {
@@ -9894,29 +11055,39 @@
    "utility_allowance": "46.00"
   },
   "codes": {
+   "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "CERT_AMOUNT_UNACCOUNTED": 2,
-   "HUD_9887A_INCOMPLETE": 1
+   "HUD_9887A_INCOMPLETE": 1,
+   "HUD_9887_INCOMPLETE": 1
   },
   "income": [
    [
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    4344
    ]
   ],
   "members": [
    [
     "Yvonne",
     "Smith",
-    "Head of Household"
+    "Head of Household",
+    4627,
+    1984,
+    []
    ]
   ],
   "notes": [
+   "Acknowledgement of Receipt of HUD Forms must be signed by all adult me",
    "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
-   "Pages 11-12: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr"
+   "HUD 9887 must be signed by all adult household members; a signature co",
+   "Pages 15-16: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr",
+   "Pages 3-4: 'Income Calculation Worksheet' detected \u2014 excluded from dat",
+   "Self-declared income amounts not extracted from questionnaire/applicat"
   ],
-  "score": 0.93,
+  "score": 0.92,
   "warnings": []
  },
  "J-PORT-05318@1789391374": {
@@ -9927,7 +11098,8 @@
     "82.05",
     "82.05",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "checking",
@@ -9935,7 +11107,8 @@
     "0.00",
     "0.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "real_estate",
@@ -9943,7 +11116,8 @@
     "6294.74",
     "6294.14",
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -9973,53 +11147,70 @@
     "child_support",
     "verified",
     null,
-    "Oklahoma Child Support Service"
+    "Oklahoma Child Support Service",
+    null
    ],
    [
     "other",
     "declared_only",
     null,
-    "Other Income (declared)"
+    "Other Income (declared)",
+    null
    ],
    [
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ],
    [
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ],
    [
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Arnold",
     "Lyons",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ],
    [
     "Kyla",
     "Hamilton",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ],
    [
     "Kameryn",
     "Meely",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ],
    [
     "Traevon",
     "Lyons",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -10039,7 +11230,8 @@
     null,
     "556.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "savings",
@@ -10047,7 +11239,8 @@
     null,
     "886.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ]
   ],
   "cert_review": {
@@ -10069,14 +11262,18 @@
     "social_security",
     "declared_only",
     null,
-    "Soc. Sec."
+    "Soc. Sec.",
+    null
    ]
   ],
   "members": [
    [
     "Randy",
     "Buck",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -10094,7 +11291,8 @@
     null,
     "556.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "checking",
@@ -10102,7 +11300,8 @@
     null,
     null,
     "185.12",
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -10110,7 +11309,8 @@
     null,
     "886.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "savings",
@@ -10118,7 +11318,8 @@
     "1123.81",
     null,
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -10141,14 +11342,18 @@
     "social_security",
     "declared_only",
     null,
-    "Soc. Sec."
+    "Soc. Sec.",
+    null
    ]
   ],
   "members": [
    [
     "Randy",
     "Buck",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -10165,6 +11370,7 @@
     null,
     "20.00",
     null,
+    null,
     null
    ],
    [
@@ -10173,6 +11379,7 @@
     null,
     "50.00",
     null,
+    null,
     null
    ],
    [
@@ -10180,6 +11387,7 @@
     "Tbk",
     null,
     "600.00",
+    null,
     null,
     null
    ]
@@ -10205,20 +11413,25 @@
     "other",
     "verified",
     null,
-    "Selwyn Hospitality Durango, Ll"
+    "Selwyn Hospitality Durango, Ll",
+    null
    ],
    [
     "wages_and_salaries",
     null,
     null,
-    "Durango Lodge"
+    "Durango Lodge",
+    null
    ]
   ],
   "members": [
    [
     "Samantha",
     "Smith",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -10245,7 +11458,8 @@
     null,
     "100.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "savings",
@@ -10253,7 +11467,8 @@
     null,
     "100.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ]
   ],
   "cert_review": {
@@ -10278,58 +11493,78 @@
     "child_support",
     "verified",
     null,
-    "Oscar Alfredo Rangel Vela"
+    "Oscar Alfredo Rangel Vela",
+    null
    ],
    [
     "self_employment",
     "verified_not_declared",
     null,
-    ""
+    "",
+    null
    ],
    [
     "wages_and_salaries",
     "declared_only",
     null,
-    "Cno Hawaii Awa Rbq"
+    "Cno Hawaii Awa Rbq",
+    null
    ],
    [
     "wages_and_salaries",
     "declared_only",
     null,
-    "Guardians Tire"
+    "Guardians Tire",
+    null
    ],
    [
     "wages_and_salaries",
     "verified",
     null,
-    "Tft Design LLC"
+    "Tft Design LLC",
+    null
    ]
   ],
   "members": [
    [
     "Carlos",
     "Najarro Lemus",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ],
    [
     "Luz",
     "De la Torre Gonzalez",
-    "Adult Co-Tenant"
+    "Adult Co-Tenant",
+    null,
+    null,
+    []
    ],
    [
     "Diego",
     "Rangel de la Torre",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ],
    [
     "Andrea",
     "Rangel de la Torre",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ],
    [
     "Liam",
     "Najarro de la Torre",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -10351,7 +11586,8 @@
     null,
     "100.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "savings",
@@ -10359,7 +11595,8 @@
     null,
     "100.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ]
   ],
   "cert_review": {
@@ -10383,76 +11620,99 @@
     "child_support",
     "declared_only",
     null,
-    "Oscar A. Rangel Vela"
+    "Oscar A. Rangel Vela",
+    null
    ],
    [
     "child_support",
     "declared_only",
     null,
-    "Oscar Alfredo Rangel Vela"
+    "Oscar Alfredo Rangel Vela",
+    null
    ],
    [
     "other",
     "declared_only",
     null,
-    "Other Income (declared)"
+    "Other Income (declared)",
+    null
    ],
    [
     "self_employment",
     "verified",
     null,
-    "Self-Employment"
+    "Self-Employment",
+    null
    ],
    [
     "self_employment",
     "verified",
     null,
-    "Tft Design LLC"
+    "Tft Design LLC",
+    null
    ],
    [
     "wages_and_salaries",
     "declared_only",
     null,
-    "C No Hawaii Awa Bq"
+    "C No Hawaii Awa Bq",
+    null
    ],
    [
     "wages_and_salaries",
     "declared_only",
     null,
-    "Guardaips Tire"
+    "Guardaips Tire",
+    null
    ],
    [
     "wages_and_salaries",
     "verified",
     null,
-    "Tft Design LLC"
+    "Tft Design LLC",
+    null
    ]
   ],
   "members": [
    [
     "Carlos",
     "Najarro Lemus",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ],
    [
     "Luz",
     "De la Torre Gonzalez",
-    "Adult Co-Tenant"
+    "Adult Co-Tenant",
+    null,
+    null,
+    []
    ],
    [
     "Diego",
     "Rangel de la Torre",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ],
    [
     "Andrea",
     "Rangel de la Torre",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ],
    [
     "Liam",
     "Najarro de la Torre",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -10474,7 +11734,8 @@
     null,
     "0.94",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "checking",
@@ -10482,7 +11743,8 @@
     "0.94",
     "0.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "checking",
@@ -10490,7 +11752,8 @@
     "11.35",
     "11.35",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -10498,7 +11761,8 @@
     null,
     "0.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "savings",
@@ -10506,7 +11770,8 @@
     "307.09",
     "307.09",
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -10533,37 +11798,47 @@
     "self_employment",
     "verified_not_declared",
     null,
-    "City of Stamford Police Depart"
+    "City of Stamford Police Depart",
+    null
    ],
    [
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ],
    [
     "wages_and_salaries",
     "verified",
     null,
-    "Abilis"
+    "Abilis",
+    null
    ],
    [
     "wages_and_salaries",
     "verified",
     null,
-    "Beacon Communities Llc/ Southw"
+    "Beacon Communities Llc/ Southw",
+    null
    ]
   ],
   "members": [
    [
     "Juanita",
     "Manning",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ],
    [
     "Ashley",
     "Perry",
-    "Other Adult"
+    "Other Adult",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -10587,7 +11862,8 @@
     "0.00",
     "0.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "checking",
@@ -10595,7 +11871,8 @@
     null,
     "2.20",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "checking",
@@ -10603,7 +11880,8 @@
     null,
     null,
     "2507.85",
-    "verified"
+    "verified",
+    null
    ],
    [
     "checking",
@@ -10611,7 +11889,8 @@
     null,
     "64.51",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "checking",
@@ -10619,7 +11898,8 @@
     "0.14",
     null,
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -10640,25 +11920,33 @@
     "child_support",
     "verified",
     null,
-    "Colorado Division of Child Sup"
+    "Colorado Division of Child Sup",
+    null
    ],
    [
     "wages_and_salaries",
     "verified",
     null,
-    "Waste Connections US, Inc."
+    "Waste Connections US, Inc.",
+    null
    ]
   ],
   "members": [
    [
     "Juan",
     "Grijalva",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ],
    [
     "Christian",
     "Grijalva",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -10676,7 +11964,8 @@
     null,
     "0.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ]
   ],
   "cert_review": {
@@ -10701,32 +11990,39 @@
     "pension",
     "verified",
     null,
-    "Principal Pension Benefits"
+    "Principal Pension Benefits",
+    null
    ],
    [
     "self_employment",
     "verified",
     null,
-    "Field Inspector"
+    "Field Inspector",
+    null
    ],
    [
     "self_employment",
     "verified",
     null,
-    "Self-Employment"
+    "Self-Employment",
+    null
    ],
    [
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Jackie",
     "Wilson",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -10748,7 +12044,8 @@
     null,
     "0.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ]
   ],
   "cert_review": {
@@ -10769,14 +12066,18 @@
     "wages_and_salaries",
     "verified",
     null,
-    "Williams Maid Service"
+    "Williams Maid Service",
+    null
    ]
   ],
   "members": [
    [
     "Sunder",
     "Varala",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -10798,7 +12099,8 @@
     null,
     "200.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "savings",
@@ -10806,7 +12108,8 @@
     null,
     "50.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ]
   ],
   "cert_review": {
@@ -10829,19 +12132,26 @@
     "wages_and_salaries",
     "verified",
     null,
-    "Stevens Home Health Care"
+    "Stevens Home Health Care",
+    null
    ]
   ],
   "members": [
    [
     "Aaliyah",
     "Jones",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ],
    [
     "Kaleigh",
     "Smith",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -10863,7 +12173,8 @@
     null,
     "0.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "other",
@@ -10871,7 +12182,8 @@
     null,
     "0.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "other",
@@ -10879,7 +12191,8 @@
     null,
     "0.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "real_estate",
@@ -10887,7 +12200,8 @@
     null,
     "0.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "whole_life_insurance",
@@ -10895,7 +12209,8 @@
     null,
     "0.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ]
   ],
   "cert_review": {
@@ -10914,14 +12229,18 @@
     "other",
     "verified",
     null,
-    "Department of Veterans Affairs"
+    "Department of Veterans Affairs",
+    null
    ]
   ],
   "members": [
    [
     "Kobe",
     "Kuykendall",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -10943,7 +12262,8 @@
     null,
     "2266.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "checking",
@@ -10951,7 +12271,8 @@
     "39.48",
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "checking",
@@ -10959,7 +12280,8 @@
     null,
     "455.00",
     "98.65",
-    "verified"
+    "verified",
+    null
    ],
    [
     "other",
@@ -10967,7 +12289,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -10975,7 +12298,8 @@
     "70.67",
     "22.00",
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -11007,19 +12331,26 @@
     "social_security",
     "declared_only",
     null,
-    "SSA"
+    "SSA",
+    null
    ]
   ],
   "members": [
    [
     "Juan",
     "Garcia Ortega",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ],
    [
     "Maria",
     "Garcia",
-    "Other Adult"
+    "Other Adult",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -11046,7 +12377,8 @@
     "640.36",
     "1073.00",
     "1521.33",
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -11054,7 +12386,8 @@
     "87.58",
     "152.00",
     "172.17",
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -11080,41 +12413,56 @@
     "ssi",
     "declared_only",
     null,
-    "Supplemental Security Income ("
+    "Supplemental Security Income (",
+    null
    ],
    [
     "ssi",
     "declared_only",
     null,
-    "Supplemental Security Income ("
+    "Supplemental Security Income (",
+    null
    ],
    [
     "wages_and_salaries",
     "verified",
     null,
-    "Ralphs Grocery Company"
+    "Ralphs Grocery Company",
+    null
    ]
   ],
   "members": [
    [
     "Neftali",
     "Arredondo Mora",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ],
    [
     "Kendra",
     "Martinez",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ],
    [
     "Keilanie",
     "Martinez",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ],
    [
     "Fernando",
     "Vildros",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -11134,7 +12482,8 @@
     "172.31",
     "282.00",
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -11160,19 +12509,26 @@
     "ssi",
     "declared_only",
     null,
-    "Supplemental Security Income ("
+    "Supplemental Security Income (",
+    null
    ]
   ],
   "members": [
    [
     "Enrique",
     "Lomeli",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ],
    [
     "Eli",
     "Lomeli",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -11193,7 +12549,8 @@
     "65.54",
     "241.00",
     "240.98",
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -11222,31 +12579,40 @@
     "social_security",
     "declared_only",
     null,
-    "Social Security (declared)"
+    "Social Security (declared)",
+    null
    ],
    [
     "ssi",
     "declared_only",
     null,
-    "Supplemental Security Income ("
+    "Supplemental Security Income (",
+    null
    ],
    [
     "ssi",
     "declared_only",
     null,
-    "Supplemental Security Income ("
+    "Supplemental Security Income (",
+    null
    ]
   ],
   "members": [
    [
     "Eduardo",
     "Nava Lucero",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ],
    [
     "Jovita",
     "Nava",
-    "Spouse"
+    "Spouse",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -11267,7 +12633,8 @@
     null,
     "1555.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "checking",
@@ -11275,7 +12642,8 @@
     "336.71",
     "987.00",
     "986.96",
-    "verified"
+    "verified",
+    null
    ],
    [
     "checking",
@@ -11283,7 +12651,8 @@
     "716.87",
     null,
     "1555.44",
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -11307,35 +12676,49 @@
     "other",
     "verified",
     null,
-    ""
+    "",
+    null
    ],
    [
     "wages_and_salaries",
     "verified",
     null,
-    "Paloma Air Conditioning Corp."
+    "Paloma Air Conditioning Corp.",
+    null
    ]
   ],
   "members": [
    [
     "Beatriz",
     "Ibarra Almanza",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ],
    [
     "Alma",
     "Morales Ibarra",
-    "Other Adult"
+    "Other Adult",
+    null,
+    null,
+    []
    ],
    [
     "Fernanda",
     "Morales Ibarra",
-    "Other Adult"
+    "Other Adult",
+    null,
+    null,
+    []
    ],
    [
     "Pedro",
     "Morales Ibarra",
-    "Other Adult"
+    "Other Adult",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -11347,6 +12730,10 @@
   ],
   "score": 0.9,
   "warnings": [
+   "household_members[0] 'Beatriz Ibarra Almanza' matches none of the 3 me",
+   "household_members[1] 'Alma Morales Ibarra' matches none of the 3 membe",
+   "household_members[2] 'Fernanda Morales Ibarra' matches none of the 3 m",
+   "household_members[3] 'Pedro Morales Ibarra' matches none of the 3 memb",
    "income_records[0]: type 'Other Income' is not in the configured pickli"
   ]
  },
@@ -11358,7 +12745,8 @@
     "991.35",
     "1225.00",
     "1225.00",
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -11385,20 +12773,25 @@
     "social_security",
     "declared_only",
     null,
-    "Social Security (declared)"
+    "Social Security (declared)",
+    null
    ],
    [
     "ssi",
     "declared_only",
     null,
-    "Supplemental Security Income ("
+    "Supplemental Security Income (",
+    null
    ]
   ],
   "members": [
    [
     "Maria",
     "Caldera",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -11421,7 +12814,8 @@
     null,
     "9.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "checking",
@@ -11429,7 +12823,8 @@
     "7.70",
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "checking",
@@ -11437,7 +12832,8 @@
     "52.49",
     null,
     "9.00",
-    "verified"
+    "verified",
+    null
    ],
    [
     "other",
@@ -11445,7 +12841,8 @@
     null,
     "8.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ]
   ],
   "cert_review": {
@@ -11470,25 +12867,33 @@
     "child_support",
     "verified",
     null,
-    "Child Support"
+    "Child Support",
+    null
    ],
    [
     "public_assistance",
     "verified",
     null,
-    "Public Assistance"
+    "Public Assistance",
+    null
    ]
   ],
   "members": [
    [
     "Jennifer",
     "Luna",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ],
    [
     "Olivia",
     "Valencia",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -11508,7 +12913,8 @@
     "933.91",
     "419.00",
     "419.00",
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -11535,19 +12941,26 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ]
   ],
   "members": [
    [
     "Rene",
     "Herrera",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ],
    [
     "Mary",
     "Puz",
-    "Spouse"
+    "Spouse",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -11569,7 +12982,8 @@
     "1025.13",
     "247.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "other",
@@ -11577,7 +12991,8 @@
     null,
     "81.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "savings",
@@ -11585,7 +13000,8 @@
     null,
     "60.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ]
   ],
   "cert_review": {
@@ -11610,26 +13026,32 @@
     "child_support",
     "verified",
     null,
-    "Child Support"
+    "Child Support",
+    null
    ],
    [
     "public_assistance",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ],
    [
     "wages_and_salaries",
     "verified",
     null,
-    "Oscar Arias DDS Inc."
+    "Oscar Arias DDS Inc.",
+    null
    ]
   ],
   "members": [
    [
     "Maryle",
     "Mendoza",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -11652,7 +13074,8 @@
     "89.24",
     "222.00",
     "221.52",
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -11660,7 +13083,8 @@
     "5.00",
     "5.00",
     "5.00",
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -11684,14 +13108,18 @@
     "social_security",
     "declared_only",
     null,
-    "Social Security (declared)"
+    "Social Security (declared)",
+    null
    ]
   ],
   "members": [
    [
     "Maria",
     "Lara",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -11712,7 +13140,8 @@
     null,
     "4681.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "checking",
@@ -11720,7 +13149,8 @@
     "4521.32",
     null,
     "4687.29",
-    "verified"
+    "verified",
+    null
    ],
    [
     "checking",
@@ -11728,7 +13158,8 @@
     "6103.67",
     null,
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -11753,25 +13184,33 @@
     "pension",
     "verified",
     null,
-    "Merrill Lynch As Cus"
+    "Merrill Lynch As Cus",
+    null
    ],
    [
     "wages_and_salaries",
     "verified",
     null,
-    "Wal-Mart Associates Inc."
+    "Wal-Mart Associates Inc.",
+    null
    ]
   ],
   "members": [
    [
     "Aaron",
     "Isham",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ],
    [
     "Myah",
     "Isham",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -11793,7 +13232,8 @@
     null,
     "441.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ]
   ],
   "cert_review": {
@@ -11814,30 +13254,41 @@
     "wages_and_salaries",
     "verified",
     null,
-    ""
+    "",
+    null
    ],
    [
     "wages_and_salaries",
     "verified",
     null,
-    "Vpm Management, Inc."
+    "Vpm Management, Inc.",
+    null
    ]
   ],
   "members": [
    [
     "Monica",
     "Torres Faurrieta",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ],
    [
     "Jahaziel",
     "Nieto Torres",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ],
    [
     "Ximena",
     "Nieto Torres",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -11859,7 +13310,8 @@
     null,
     "279.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "checking",
@@ -11867,7 +13319,8 @@
     "135.06",
     null,
     "274.50",
-    "verified"
+    "verified",
+    null
    ],
    [
     "whole_life_insurance",
@@ -11875,7 +13328,8 @@
     null,
     "1431.00",
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -11898,19 +13352,26 @@
     "social_security",
     "declared_only",
     null,
-    "SSA"
+    "SSA",
+    null
    ]
   ],
   "members": [
    [
     "Graciela",
     "Gallegos",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ],
    [
     "Victor",
     "Gallegos",
-    "Other Adult"
+    "Other Adult",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -11932,7 +13393,8 @@
     null,
     "344.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "checking",
@@ -11940,7 +13402,8 @@
     "0.00",
     null,
     "294.50",
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -11973,14 +13436,18 @@
     "social_security",
     "declared_only",
     null,
-    "Social Security (declared)"
+    "Social Security (declared)",
+    null
    ]
   ],
   "members": [
    [
     "Gustavo",
     "Arellano-Gonzalez",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -12004,7 +13471,8 @@
     null,
     "462.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "checking",
@@ -12012,7 +13480,8 @@
     "320.83",
     null,
     "461.52",
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -12037,14 +13506,18 @@
     "social_security",
     "declared_only",
     null,
-    "Social Security (declared)"
+    "Social Security (declared)",
+    null
    ]
   ],
   "members": [
    [
     "Concepcion",
     "Guerra",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -12063,7 +13536,8 @@
     "0.00",
     "397.00",
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "checking",
@@ -12071,7 +13545,8 @@
     "1224.98",
     "734.00",
     "1979.50",
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -12079,7 +13554,8 @@
     "3000.00",
     "2000.00",
     "3000.00",
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -12104,24 +13580,34 @@
     "wages_and_salaries",
     "declared_only",
     null,
-    "Non-Federal Wage (declared)"
+    "Non-Federal Wage (declared)",
+    null
    ]
   ],
   "members": [
    [
     "Yolanda",
     "Bribiesca",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ],
    [
     "Jasmine",
     "Bribiesca",
-    "Other Adult"
+    "Other Adult",
+    null,
+    null,
+    []
    ],
    [
     "Sofia",
     "Bribiesca-Soto",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -12142,7 +13628,8 @@
     "89.37",
     "2738.00",
     "2737.67",
-    "verified"
+    "verified",
+    null
    ],
    [
     "retirement",
@@ -12150,7 +13637,8 @@
     "1197.66",
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -12158,7 +13646,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -12181,24 +13670,34 @@
     "wages_and_salaries",
     "verified",
     null,
-    "Desert VIP Urgent Care Young E"
+    "Desert VIP Urgent Care Young E",
+    null
    ]
   ],
   "members": [
    [
     "Bianca",
     "Avila",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ],
    [
     "Jesus",
     "Rodriguez Avila",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ],
    [
     "Angelo",
     "Rodriguez Avila",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -12218,7 +13717,8 @@
     "89.37",
     "2738.00",
     "2737.67",
-    "verified"
+    "verified",
+    null
    ],
    [
     "retirement",
@@ -12226,7 +13726,8 @@
     "1197.66",
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -12234,7 +13735,8 @@
     null,
     null,
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -12259,24 +13761,34 @@
     "wages_and_salaries",
     "verified",
     null,
-    "Desert VIP Urgent Care Young E"
+    "Desert VIP Urgent Care Young E",
+    null
    ]
   ],
   "members": [
    [
     "Bianca",
     "Avila",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ],
    [
     "Jesus",
     "Rodriguez Avila",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ],
    [
     "Angelo",
     "Rodriguez Avila",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -12296,7 +13808,8 @@
     "610.87",
     "60.00",
     "80.91",
-    "verified"
+    "verified",
+    null
    ],
    [
     "other",
@@ -12304,7 +13817,8 @@
     null,
     "2.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "savings",
@@ -12312,7 +13826,8 @@
     null,
     "5.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ]
   ],
   "cert_review": {
@@ -12338,25 +13853,33 @@
     "child_support",
     "verified",
     null,
-    "Luis A Torres"
+    "Luis A Torres",
+    null
    ],
    [
     "public_assistance",
     "verified",
     null,
-    "Social Services Department"
+    "Social Services Department",
+    null
    ]
   ],
   "members": [
    [
     "Jamie",
     "Alarcon",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ],
    [
     "Natalia",
     "Torres-Alarcon",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -12378,7 +13901,8 @@
     null,
     null,
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "checking",
@@ -12386,7 +13910,8 @@
     "1.11",
     "73.00",
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -12410,19 +13935,26 @@
     "ssi",
     "declared_only",
     null,
-    "SSI"
+    "SSI",
+    null
    ]
   ],
   "members": [
    [
     "Enrique",
     "Lomeli",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ],
    [
     "Eli",
     "Lomeli",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -12442,7 +13974,8 @@
     null,
     null,
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "checking",
@@ -12450,7 +13983,8 @@
     "991.35",
     "1225.00",
     "1225.00",
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -12476,14 +14010,18 @@
     "social_security",
     "declared_only",
     null,
-    "Social Security (declared)"
+    "Social Security (declared)",
+    null
    ]
   ],
   "members": [
    [
     "Maria",
     "Caldera",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -12501,7 +14039,8 @@
     "0.00",
     "331.00",
     "330.83",
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -12509,7 +14048,8 @@
     "0.01",
     null,
     "1025.13",
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -12536,35 +14076,49 @@
     "other",
     "verified",
     null,
-    "Oscar Arias DDS Inc."
+    "Oscar Arias DDS Inc.",
+    null
    ],
    [
     "wages_and_salaries",
     "verified",
     null,
-    "Osmar Arias 95"
+    "Osmar Arias 95",
+    null
    ]
   ],
   "members": [
    [
     "Maryle",
     "Mendoza",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ],
    [
     "Aleah",
     "Diaz",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ],
    [
     "Jaylah",
     "Diaz",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ],
    [
     "Julian",
     "Diaz Jr.",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -12589,7 +14143,8 @@
     null,
     "1919.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "checking",
@@ -12597,7 +14152,8 @@
     "0.00",
     null,
     null,
-    "verified"
+    "verified",
+    null
    ],
    [
     "checking",
@@ -12605,7 +14161,8 @@
     "1224.98",
     null,
     "1919.50",
-    "verified"
+    "verified",
+    null
    ],
    [
     "savings",
@@ -12613,7 +14170,8 @@
     "3000.00",
     "3000.00",
     "3000.00",
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -12636,24 +14194,34 @@
     "self_employment",
     "verified",
     null,
-    "Riverside County Office of Edu"
+    "Riverside County Office of Edu",
+    null
    ]
   ],
   "members": [
    [
     "Yolanda",
     "Bribiesca",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ],
    [
     "Jasmine",
     "Bribiesca",
-    "Other Adult"
+    "Other Adult",
+    null,
+    null,
+    []
    ],
    [
     "Sofia",
     "Bribiesca-Soto",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -12677,7 +14245,8 @@
     "320.83",
     "462.00",
     "461.52",
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -12701,20 +14270,25 @@
     "social_security",
     "verified",
     null,
-    "Social Security Administration"
+    "Social Security Administration",
+    null
    ],
    [
     "ssi",
     "declared_only",
     null,
-    "Supplemental Security Income ("
+    "Supplemental Security Income (",
+    null
    ]
   ],
   "members": [
    [
     "Concepcion",
     "Guerra",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -12734,7 +14308,8 @@
     "65.54",
     null,
     "240.98",
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -12762,25 +14337,33 @@
     "social_security",
     "declared_only",
     null,
-    "Social Security (declared)"
+    "Social Security (declared)",
+    null
    ],
    [
     "social_security",
     "declared_only",
     null,
-    "Social Security (declared)"
+    "Social Security (declared)",
+    null
    ]
   ],
   "members": [
    [
     "Eduardo",
     "Nava Lucero",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ],
    [
     "Jovita",
     "Garcia de Nava",
-    "Spouse"
+    "Spouse",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -12800,7 +14383,8 @@
     "65.54",
     "241.00",
     "240.98",
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -12829,31 +14413,40 @@
     "social_security",
     "declared_only",
     null,
-    "Social Security (declared)"
+    "Social Security (declared)",
+    null
    ],
    [
     "ssi",
     "declared_only",
     null,
-    "Supplemental Security Income ("
+    "Supplemental Security Income (",
+    null
    ],
    [
     "ssi",
     "declared_only",
     null,
-    "Supplemental Security Income ("
+    "Supplemental Security Income (",
+    null
    ]
   ],
   "members": [
    [
     "Eduardo",
     "Nava Lucero",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ],
    [
     "Jovita",
     "Garcia de Nava",
-    "Spouse"
+    "Spouse",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -12873,7 +14466,8 @@
     null,
     "25.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "other",
@@ -12881,7 +14475,8 @@
     null,
     "25.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ],
    [
     "prepaid_debit_card",
@@ -12889,7 +14484,8 @@
     null,
     "14400.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ]
   ],
   "cert_review": {
@@ -12912,14 +14508,18 @@
     "child_support",
     "verified",
     null,
-    "Keith A. Amos"
+    "Keith A. Amos",
+    null
    ]
   ],
   "members": [
    [
     "Tionna",
     "Simmons",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [],
@@ -12934,7 +14534,8 @@
     null,
     "0.00",
     null,
-    "verified"
+    "verified",
+    null
    ]
   ],
   "cert_review": {
@@ -12958,24 +14559,34 @@
     "social_security",
     "declared_only",
     null,
-    "Benefit letter"
+    "Benefit letter",
+    null
    ]
   ],
   "members": [
    [
     "Rebecca",
     "Knott",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ],
    [
     "Kyzer",
     "Sammons",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ],
    [
     "Colton",
     "Knott",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -12996,7 +14607,8 @@
     null,
     "0.43",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ]
   ],
   "cert_review": {
@@ -13021,40 +14633,57 @@
     "child_support",
     "verified",
     null,
-    "Butler County Child Support En"
+    "Butler County Child Support En",
+    null
    ],
    [
     "wages_and_salaries",
     "verified",
     null,
-    "Greg Martin Excavating Inc."
+    "Greg Martin Excavating Inc.",
+    null
    ]
   ],
   "members": [
    [
     "Samantha",
     "Turner",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ],
    [
     "Devonte",
     "Cornielies",
-    "Co-Head"
+    "Co-Head",
+    null,
+    null,
+    []
    ],
    [
     "Tyler",
     "Brewer",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ],
    [
     "Robert",
     "Turner",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ],
    [
     "Ezra",
     "Cornielies",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -13071,7 +14700,8 @@
     null,
     "223.00",
     null,
-    "declared_only"
+    "declared_only",
+    null
    ]
   ],
   "cert_review": {
@@ -13096,24 +14726,34 @@
     "wages_and_salaries",
     "verified",
     null,
-    "Staffink Investment LLC"
+    "Staffink Investment LLC",
+    null
    ]
   ],
   "members": [
    [
     "Aridia",
     "Perez Trinidad",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ],
    [
     "Mattwes",
     "Diaz",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ],
    [
     "Unborn",
     "Child",
-    "Unborn"
+    "Unborn",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [
@@ -13148,29 +14788,42 @@
     "wages_and_salaries",
     "verified",
     null,
-    "Bickford Senior Living, L.L.C."
+    "Bickford Senior Living, L.L.C.",
+    null
    ]
   ],
   "members": [
    [
     "Jessica",
     "Stamey",
-    "Head of Household"
+    "Head of Household",
+    null,
+    null,
+    []
    ],
    [
     "Alicea",
     "Stamey",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ],
    [
     "Aydin",
     "Stamey",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ],
    [
     "Raymond",
     "Anderson Jr.",
-    "Minor Child"
+    "Minor Child",
+    null,
+    null,
+    []
    ]
   ],
   "notes": [

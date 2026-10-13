@@ -39,7 +39,7 @@ def _db_path() -> Path:
 def load_cases(db_path: Path) -> list[dict]:
     c = sqlite3.connect(str(db_path)); c.row_factory = sqlite3.Row
     rows = c.execute(
-        "SELECT case_id, funding_program, cert_type, extracted_at, extraction_result FROM audit_jobs "
+        "SELECT case_id, funding_program, cert_type, extracted_at, extraction_result, cartograph_request FROM audit_jobs "
         "WHERE extraction_result IS NOT NULL ORDER BY case_id"
     ).fetchall()
     return [dict(r) for r in rows]
@@ -126,16 +126,23 @@ def replay_case(row: dict) -> dict:
         "finding_records": finding_records(deduped),
         "field_scores": score_summary,
     })
-    adapted = build_payload(replayed, Settings(), case_ref=row["case_id"])
+    try:
+        request = json.loads(row.get("cartograph_request") or "{}")
+    except ValueError:
+        request = {}
+    adapted = build_payload(
+        replayed, Settings(), case_ref=row["case_id"],
+        existing_records_manifest=(request or {}).get("existing_records_manifest"),
+    )
     p = adapted.payload
     cr = p.get("cert_review") or {}
     return {
         "codes": dict(sorted(Counter(f.code for f in replayed.finding_records).items())),
         "notes": sorted(t[:70] for t in replayed.findings if not t.startswith("[") and not any(t == f.text for f in replayed.finding_records)),
         "cert_review": {k: cr.get(k) for k in ("cert_type", "effective_date", "annual_income", "annual_assets", "tenant_rent", "gross_rent", "utility_allowance", "hh_size")},
-        "members": [(m.get("first_name"), m.get("last_name"), m.get("relationship")) for m in p.get("household_members", [])],
-        "income": _sorted_rows((r.get("income_type"), r.get("verification_status"), r.get("annual_amount"), (r.get("source_name") or "")[:30]) for r in p.get("income_records", [])),
-        "assets": _sorted_rows((r.get("asset_type"), (r.get("institution_name") or "")[:25], r.get("current_value"), r.get("manual_balance"), r.get("bank_stmt_avg_balance"), r.get("verification_status")) for r in p.get("asset_records", [])),
+        "members": [(m.get("first_name"), m.get("last_name"), m.get("relationship"), m.get("existing_member_id"), m.get("person_id"), tuple(m.get("aka_names") or [])) for m in p.get("household_members", [])],
+        "income": _sorted_rows((r.get("income_type"), r.get("verification_status"), r.get("annual_amount"), (r.get("source_name") or "")[:30], r.get("existing_record_id")) for r in p.get("income_records", [])),
+        "assets": _sorted_rows((r.get("asset_type"), (r.get("institution_name") or "")[:25], r.get("current_value"), r.get("manual_balance"), r.get("bank_stmt_avg_balance"), r.get("verification_status"), r.get("existing_record_id")) for r in p.get("asset_records", [])),
         "warnings": sorted(w[:70] for w in adapted.warnings),
         "score": round(score_summary.overall_composite, 2),
     }
