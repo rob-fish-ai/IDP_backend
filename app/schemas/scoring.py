@@ -198,6 +198,19 @@ class RecordScoreCard(BaseModel):
     verification_status: Optional[str] = None
     # What verified an income record (type_of_VOI); the rules read it here.
     voi_type: Optional[str] = None
+    # What the record's rate is per, and the figure the certification's own
+    # income table declares for it: the consistency rule reads both.
+    rate_unit: Optional[str] = None
+    declared_annual: Optional[str] = None
+    # Whether the record's own pages print any money figure at all. False
+    # for a verification request that was sent and never returned; None
+    # when source verification did not run.
+    source_prints_figures: Optional[bool] = None
+    # Why the record is left out of the overall score, when it is. A
+    # historical wage history is reported for the reviewer and must not
+    # count toward current income, so its empty amounts are not gaps in
+    # the extraction and must not read as them.
+    excluded: Optional[str] = None
     # Set when a finding names this record: the contradiction is about this
     # record specifically, so it cannot read as green however its other
     # fields score.
@@ -247,16 +260,21 @@ class ExtractionScoreSummary(BaseModel):
     yellow_fields: int = 0
     red_fields: int = 0
     na_fields: int = 0
+    # Records left out of the overall, by label, with the reason.
+    excluded_records: list[str] = []
 
     def recompute(self) -> None:
-        """Recalculate from all records (N/A excluded from composite)."""
-        all_fields = [f for r in self.records for f in r.fields]
+        """Recalculate from the counted records (N/A fields and excluded
+        records are left out of the composite)."""
+        counted = [r for r in self.records if not r.excluded]
+        self.excluded_records = [f"{r.record_label or r.record_type}: {r.excluded}" for r in self.records if r.excluded]
+        all_fields = [f for r in counted for f in r.fields]
         self.total_fields = len(all_fields)
         self.green_fields = sum(1 for f in all_fields if f.flag == ScoreFlag.GREEN)
         self.yellow_fields = sum(1 for f in all_fields if f.flag == ScoreFlag.YELLOW)
         self.red_fields = sum(1 for f in all_fields if f.flag == ScoreFlag.RED)
         self.na_fields = sum(1 for f in all_fields if f.flag == ScoreFlag.NA)
-        scored = [(r, f) for r in self.records for f in r.fields if f.flag != ScoreFlag.NA]
+        scored = [(r, f) for r in counted for f in r.fields if f.flag != ScoreFlag.NA]
         if scored:
             weights = [HEADLINE_WEIGHT if (r.record_type, f.field_name) in HEADLINE_FIELDS else 1.0 for r, f in scored]
             self.field_composite = sum(f.composite * w for (_, f), w in zip(scored, weights)) / sum(weights)
@@ -277,7 +295,7 @@ class ExtractionScoreSummary(BaseModel):
         # flagged green, because the two asset records and the member record
         # were fine and there was no income record left to be wrong.
         disputed = [
-            r for r in self.records
+            r for r in counted
             if any(s.stage == "finding" for f in r.fields for s in f.stages)
         ]
         if disputed:
@@ -292,6 +310,6 @@ class ExtractionScoreSummary(BaseModel):
         # (On a self-certification the same records carry status
         # "self_certified" and do not bound the flag.)
         if any(r.record_type == "income" and r.verification_status == "declared_only"
-               for r in self.records):
+               for r in counted):
             if _FLAG_SEVERITY[ScoreFlag.YELLOW] > _FLAG_SEVERITY[self.overall_flag]:
                 self.overall_flag = ScoreFlag.YELLOW

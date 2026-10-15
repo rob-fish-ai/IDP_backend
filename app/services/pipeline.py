@@ -550,6 +550,7 @@ def run_extraction_pipeline(
     score_summary = _score_and_note(
         findings, household=household, certification_info=certification_info, income=income, assets=assets,
         document_groups=document_groups, ocr_quality=ocr_quality, cert_groups=cert_groups, ctx=ctx,
+        income_calculations=income_calculations,
     )
     elapsed = time.perf_counter() - start
     logger.info("Extraction pipeline complete in %.2fs", elapsed)
@@ -2933,7 +2934,8 @@ def _calculation_and_compliance_findings(findings: list, income_calculations: li
 
 
 
-def _score_and_note(findings: list, *, household, certification_info, income, assets, document_groups, ocr_quality, cert_groups, ctx):
+def _score_and_note(findings: list, *, household, certification_info, income, assets, document_groups, ocr_quality, cert_groups, ctx,
+                    income_calculations: list | None = None):
     """Field-level scoring and the per-field review notes. Moved out of
     the run function unchanged so the replay harness runs the same code.
     Returns the score summary; appends the notes to `findings`.
@@ -2941,7 +2943,9 @@ def _score_and_note(findings: list, *, household, certification_info, income, as
     # Step 6: Multi-stage field-level scoring
     # Score from FINAL data objects after all merging/validation.
     logger.info("Step 6/6: Running field-level scoring pipeline")
-    from app.services.field_scorer import score_pydantic_records, score_source_verification
+    from app.services.field_scorer import (
+        exclude_historical_records, score_pydantic_records, score_source_verification,
+    )
 
     # Stage 1: Extraction presence (populated vs null)
     score_cards = score_pydantic_records(
@@ -2962,8 +2966,12 @@ def _score_and_note(findings: list, *, household, certification_info, income, as
         (g.document_type for g in cert_groups if is_current_certification_form(g.document_type)),
         None,
     )
+    cert_text = "\n".join(
+        g.combined_text or "" for g in cert_groups if is_current_certification_form(g.document_type)
+    )
     score_business_rules(
         score_cards, certification_type=ctx.certification_type, cert_form_type=cert_form_type,
+        cert_text=cert_text, household_income=getattr(certification_info, "householdIncome", None),
     )
 
     # Stage 4: the audit's own findings. Every stage above asks a question of
@@ -2974,6 +2982,10 @@ def _score_and_note(findings: list, *, household, certification_info, income, as
     # Dedupe first: a finding raised once per source document would otherwise
     # be counted once per copy against the same field.
     score_findings(score_cards, dedupe_findings(findings))
+
+    # A wage history the calculator set aside as historical is reported,
+    # not counted: its empty amounts are not gaps in the reading.
+    exclude_historical_records(score_cards, income_calculations or [])
 
     # Build summary and surface red/yellow fields as findings.
     # Suppress field-level duplicates of facts the business rules already
@@ -2992,6 +3004,8 @@ def _score_and_note(findings: list, *, household, certification_info, income, as
     score_summary = build_score_summary(score_cards, dedupe_findings(findings))
     findings.extend(_unverifiable_income_amounts(score_cards))
     for card in score_cards:
+        if card.excluded:
+            continue
         for fs in card.flagged_fields:
             if (card.record_type, fs.field_name) in _BUSINESS_RULE_COVERED:
                 continue

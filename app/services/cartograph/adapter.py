@@ -1402,7 +1402,10 @@ def _confidence_of(card) -> dict:
         {"field": f.field_name, "flag": f.flag.value, "reason": f.flag_message}
         for f in card.fields if f.flag.value in ("yellow", "red")
     ]
-    return {"score": round(card.composite, 3), "flag": card.flag.value, "review": review}
+    out = {"score": round(card.composite, 3), "flag": card.flag.value, "review": review}
+    if getattr(card, "excluded", None):
+        out["not_counted"] = card.excluded
+    return out
 
 
 def attach_confidence(payload: dict, extraction: ExtractionResult) -> None:

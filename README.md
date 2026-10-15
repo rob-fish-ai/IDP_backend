@@ -86,6 +86,28 @@ runs on Sonnet 4.6 (`claude-sonnet-4-6`); classification runs on Haiku 4.5
 (`claude-haiku-4-5-20251001`) — a separate capacity pool, cheaper for a
 constrained labeling task.
 
+### Extraction score
+
+The score on a delivered case (`field_scores.overall_composite`, 0–1) measures
+how reliably the figures were *read*, not how complete the packet is. Each
+extracted field is scored by stage — populated, found on its own pages,
+consistent across documents, passing a business rule, not disputed by a
+finding — and the case is the weighted mean of its fields (the figures a
+reviewer acts on weigh 3×), times a coverage factor that drops for each
+income amount the audit says was missed. So that the score tracks accuracy:
+
+- A record's own figures must agree: a self-declared amount may be the
+  per-period share of the certified annual figure, never a decimal away from
+  it; a rate × unit a period or a decimal off the declared figure is red on
+  whichever side the certified total says is misread.
+- A wage history the calculator marked `[historical]` is left out of the
+  score entirely (`not_counted` on its payload confidence): it is reported
+  for the reviewer, and its empty amounts are not gaps in the reading.
+- A null that the document could not have filled is N/A, not red: a student
+  or disability flag on a print with no such column, the balance fields of
+  a verification request that was never returned, a source named after its
+  income type because the household gave no payer.
+
 ### How documents are filtered
 
 Filtering is layered. Only the outermost layer looks at page count and title;

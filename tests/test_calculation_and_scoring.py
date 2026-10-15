@@ -532,3 +532,155 @@ def test_the_forms_own_outgoings_and_citations_are_not_unaccounted_amounts():
         assert not _NOT_HOUSEHOLD_RE.search(label), label
     assert not _amounts_in("This information is authorized by 24 CFR 5.657, 880.603, 884.218, 886.324, 891.410 and 891.750")
     assert dict(_amounts_in("103. Medical Expense: $7,617 104. Medical Deduction: $6,522 | SS - Social Security $11,928")) == {11928.0: 1}
+
+
+# ---------------------------------------------------------------------------
+# The score reflects what was read wrongly, not what the packet lacks
+# ---------------------------------------------------------------------------
+
+def _scored_income(**fields):
+    """An income card after extraction and a clean source verification."""
+    from app.schemas.extraction import IncomeExtraction, SourceIncome
+    from app.services.field_scorer import score_pydantic_records
+    entry = VerificationIncomeEntry(memberName="Willie Jackson", **fields)
+    cards = score_pydantic_records(income=IncomeExtraction(sourceIncome=SourceIncome(verificationIncome=[entry])))
+    for f in cards[0].fields:
+        if f.value is not None:
+            f.stages.append(StageScore(stage="source_verification", score=1.0, reason="Verified in source document"))
+            f.recompute()
+    return cards[0]
+
+
+def _field(card, name):
+    return next(f for f in card.fields if f.field_name == name)
+
+
+def test_an_income_records_own_figures_must_agree_with_each_other():
+    """A pension printed as $1,031 was delivered as $103,100 with every
+    field green: populated, on the page, a valid amount. The figures one
+    record carries describe one income, so a decimal apart one is wrong."""
+    from app.services.field_scorer import score_business_rules
+    shifted = _scored_income(sourceName="UFCW Midwest Pension Plan", incomeType="Pension",
+                             rateOfPay="85.93", rateUnit="monthly", selfDeclaredAmount="103100.00",
+                             declaredAnnualAmount="1031.00")
+    score_business_rules([shifted], household_income="14171.00")
+    sda = _field(shifted, "selfDeclaredAmount")
+    assert sda.flag.value == "red" and "100× off" in sda.flag_message and "decimal shift" in sda.flag_message
+    assert _field(shifted, "rateOfPay").flag.value == "green"
+
+    # The household's monthly figure beside the certification's annual one is
+    # the same income stated per period, not a disagreement.
+    monthly = _scored_income(sourceName="Social Security Administration", incomeType="Social Security",
+                             rateOfPay="1475.00", rateUnit="monthly", selfDeclaredAmount="1475.00",
+                             declaredAnnualAmount="17700.00")
+    score_business_rules([monthly], household_income="17700.00")
+    assert _field(monthly, "selfDeclaredAmount").flag.value == "green"
+    assert _field(monthly, "rateOfPay").flag.value == "green"
+
+
+def test_the_certified_total_says_which_side_of_a_disagreement_is_misread():
+    """The EIV rate times twelve equals the certified total; the questionnaire
+    figure is four times it. The declaration is what was misread, so the
+    rate stays green and the declared amount goes red — and the other way
+    round when it is the rate that cannot fit the total."""
+    from app.services.field_scorer import score_business_rules
+    bad_declaration = _scored_income(sourceName="Social Security Administration", incomeType="Social Security",
+                                     rateOfPay="1124.00", rateUnit="monthly", selfDeclaredAmount="4124.00",
+                                     declaredAnnualAmount="49488.00")
+    score_business_rules([bad_declaration], household_income="13491.00")
+    assert _field(bad_declaration, "rateOfPay").flag.value == "green"
+    sda = _field(bad_declaration, "selfDeclaredAmount")
+    assert sda.flag.value == "red" and "fits the certified total" in sda.flag_message
+
+    bad_rate = _scored_income(sourceName="Social Security Administration", incomeType="Social Security",
+                              rateOfPay="13488.00", rateUnit="monthly", selfDeclaredAmount="13488.00",
+                              declaredAnnualAmount="13488.00")
+    score_business_rules([bad_rate], household_income="13491.00")
+    rate = _field(bad_rate, "rateOfPay")
+    assert rate.flag.value == "red" and "verify the rate" in rate.flag_message
+    assert _field(bad_rate, "selfDeclaredAmount").flag.value == "green"
+
+    # With no total to arbitrate, the rate carries the doubt and the message blames neither.
+    unknown = _scored_income(sourceName="Acme", incomeType="Non-Federal Wage",
+                             rateOfPay="2000.00", rateUnit="monthly", declaredAnnualAmount="2000.00")
+    score_business_rules([unknown])
+    assert _field(unknown, "rateOfPay").flag.value == "red" and "verify both" in _field(unknown, "rateOfPay").flag_message
+
+
+def test_a_historical_wage_history_is_reported_but_not_counted():
+    """An EIV quarter from 2021 has no rate and no amount; it is kept for the
+    reviewer to confirm the job ended. Three empty headline fields on it
+    scored a case with every current figure right at 0.80."""
+    from app.schemas.extraction import IncomeCalculationResult
+    from app.services.field_scorer import exclude_historical_records
+    current = _scored_income(sourceName="Social Security Administration", incomeType="Social Security",
+                             rateOfPay="1329.00", rateUnit="monthly", declaredAnnualAmount="15948.00")
+    history = _scored_income(sourceName="Matteson School District 162 Inc.", incomeType="Non-Federal Wage")
+    history.record_label = "Barbara Taylor — Matteson School District 162 Inc."
+    calcs = [
+        IncomeCalculationResult(memberName="Barbara Taylor", sourceName="Social Security Administration", annualIncome="15948.00", details="1329.00 monthly × 12"),
+        IncomeCalculationResult(memberName="Barbara Taylor", sourceName="Matteson School District 162, Inc", annualIncome="4018.67",
+                                details="[historical] latest pay date 2021-06-30 is 55 months before effective date 2026-01-01 — wage history appears historical; sum of quarters"),
+    ]
+    exclude_historical_records([current, history], calcs)
+    assert current.excluded is None and history.excluded and "not counted" in history.excluded
+    with_history = build_score_summary([current, history]); alone = build_score_summary([current])
+    assert with_history.overall_composite == alone.overall_composite
+    assert with_history.excluded_records == [f"{history.record_label}: {history.excluded}"]
+    assert with_history.total_fields == alone.total_fields
+
+
+def test_a_member_flag_is_not_missing_when_the_print_has_no_column():
+    """A management system's print of the 50059 lists the household with no
+    student or special-status column; the official form prints both."""
+    from app.services.field_scorer import score_pydantic_records, score_business_rules
+    def member_card():
+        return score_pydantic_records(household=HouseholdDemographics(houseHold=[
+            HouseholdMember(FirstName="Lester", LastName="Whisby", DOB="1950-01-01", relationship="Head of household")]))[0]
+    system_print = "<tr><th>Relationship</th><th>Demographics</th><th>Verified until</th><th>Screened</th></tr><tr><td>Lester Whisby</td><td>Head of household</td><td>Elderly</td></tr>"
+    card = member_card()
+    score_business_rules([card], cert_form_type="HUD 50059", cert_text=system_print)
+    assert _field(card, "student").flag.value == "na" and "no student column" in _field(card, "student").flag_message
+    assert _field(card, "disabled").flag.value == "na"
+    official = "<th>41. Birth Date</th><th>42. Special Status</th><th>43. Stdnt Stat.</th><th>44. ID Code (SSN)</th>"
+    card = member_card()
+    score_business_rules([card], cert_form_type="HUD 50059", cert_text=official)
+    assert _field(card, "student").flag.value == "red" and _field(card, "disabled").flag.value == "red"
+    # A line about disability expenses is not a disability column.
+    card = member_card()
+    score_business_rules([card], cert_form_type="HUD 50059", cert_text="101. Disability Expenses $0 ... Relationship Demographics")
+    assert _field(card, "disabled").flag.value == "na"
+
+
+def test_a_verification_request_never_returned_has_nothing_to_read():
+    """A blank asset verification names the account and prints no figure.
+    The three empty amounts are the file's gap, not the reading's — but a
+    returned verification with figures on the page and none extracted is."""
+    from app.schemas.extraction import AssetExtraction
+    from app.services.field_scorer import score_pydantic_records, score_source_verification, score_business_rules
+    def asset_card(page_text):
+        cards = score_pydantic_records(assets=AssetExtraction(assetInformation=[
+            AssetEntry(assetOwner="Elroy Nichols", accountType="Checking", sourceName="Fifth Third Bank",
+                       accountNumber="7489", documentType="Verification of Assets", sourcePages=[39], verificationStatus="verified")]))
+        groups = [DocumentGroup(document_type="Verification of Assets (VOA)", category="financial", pages=[39], page_range="39", combined_text=page_text)]
+        score_source_verification(cards, groups, {39: {"text": page_text, "flag": "green"}})
+        score_business_rules(cards)
+        return cards[0]
+    blank = asset_card("ASSET VERIFICATION Date: 06/01/2026 To: Fifth Third Bank. Assets under $5,000. Checking account number 7489. Phone (708) 389-1570")
+    assert blank.source_prints_figures is False
+    assert all(_field(blank, f).flag.value == "na" for f in ("currentBalance", "selfDeclaredAmount", "incomeAmount"))
+    returned = asset_card("ASSET VERIFICATION To: Fifth Third Bank. Checking account 7489 current balance $1,372.88 average balance 1,354.10")
+    assert returned.source_prints_figures is True
+    assert _field(returned, "currentBalance").flag.value == "red"
+
+
+def test_a_source_named_after_its_income_type_is_not_a_misread_name():
+    from app.services.field_scorer import score_business_rules
+    card = _scored_income(sourceName="Social Security (declared)", incomeType="Social Security", selfDeclaredAmount="547.00")
+    _field(card, "sourceName").stages.append(StageScore(stage="source_verification", score=0.30, ceiling=0.49, reason="Not found in source text — verify manually"))
+    _field(card, "sourceName").recompute()
+    score_business_rules([card])
+    assert _field(card, "sourceName").flag.value == "na"
+    named = _scored_income(sourceName="Acme Staffing", incomeType="Non-Federal Wage", selfDeclaredAmount="547.00")
+    score_business_rules([named])
+    assert _field(named, "sourceName").flag.value != "na"

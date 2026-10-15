@@ -34,7 +34,7 @@ from app.services.members import is_unborn
 from app.services.findings import dispute_strength, slug
 # The scorer's bounds and the annualizer's arithmetic have to agree about
 # how long a pay period is, so both read the same multiplier table.
-from app.services.income_calculator import get_frequency_multiplier
+from app.services.income_calculator import get_frequency_multiplier, normalize_rate_unit
 
 logger = logging.getLogger(__name__)
 
@@ -178,6 +178,8 @@ def score_pydantic_records(
             # What verified the record decides which fields it should carry;
             # the rules read it off the card, not off a scored field.
             card.voi_type = getattr(vi, "type_of_VOI", None)
+            card.rate_unit = getattr(vi, "rateUnit", None)
+            card.declared_annual = getattr(vi, "declaredAnnualAmount", None)
             _mark_redacted(card, getattr(vi, "evidence", None))
             cards.append(card)
 
@@ -302,6 +304,8 @@ def score_source_verification(
                 own_flag = f
         declared_only = card.verification_status == "declared_only"
         own_texts = _texts(own)
+        if card.record_type in ("income", "asset") and card.source_pages:
+            card.source_prints_figures = any(_MONEY_RE.search(t) for t in own_texts)
 
         for fs in card.fields:
             if fs.value is None:
@@ -360,6 +364,10 @@ def score_source_verification(
 
 
 _PAGE_MARK_RE = re.compile(r"--- Page (\d+) ---\n?")
+# A money figure as a bank or an employer prints one, with cents: "$1,234.56",
+# "87.50". A blank verification request mentions "$5,000" in its own text,
+# so a round figure does not count.
+_MONEY_RE = re.compile(r"\$?\s?\b\d{1,3}(?:,\d{3})*\.\d{2}\b")
 
 
 def _split_group_pages(group) -> dict[int, str]:
@@ -971,26 +979,40 @@ def score_business_rules(
     cards: list[RecordScoreCard],
     certification_type: str | None = None,
     cert_form_type: str | None = None,
+    cert_text: str | None = None,
+    household_income: str | None = None,
 ) -> None:
     """Apply business rule checks to field values.
 
-    cert_form_type: the current certification form's document type, so a
-    member field the form does not print is N/A rather than red.
+    cert_form_type: the current certification form's document type, and
+    cert_text its text, so a member field the form does not print is N/A
+    rather than red. household_income: the certification's total, which
+    arbitrates when an income record's own figures disagree.
     """
     for card in cards:
         if card.record_type == "income":
-            _score_income_rules(card, certification_type)
+            _score_income_rules(card, certification_type, household_income)
         elif card.record_type == "asset":
             _score_asset_rules(card)
         elif card.record_type == "household_member":
-            _score_member_rules(card, cert_form_type)
+            _score_member_rules(card, cert_form_type, cert_text)
         elif card.record_type == "certification":
             _score_certification_rules(card, certification_type)
         card.recompute()
 
 
-def _score_income_rules(card: RecordScoreCard, cert_type: str | None) -> None:
+def _score_income_rules(card: RecordScoreCard, cert_type: str | None,
+                        household_income: str | None = None) -> None:
     vals = {f.field_name: f.value for f in card.fields}
+
+    # A declared-only record whose source the household never named is
+    # labelled after its income type ("Social Security (declared)"). The
+    # label is the engine's, printed on no page; it is not a misread name.
+    if _is_synthetic_source(vals.get("sourceName")):
+        for fs in card.fields:
+            if fs.field_name == "sourceName":
+                fs.mark_na("Source named after the income type — the household gave no payer")
+        vals["sourceName"] = None
 
     # sourceName / memberName: basic name validation (pushes names to GREEN)
     for field_name in ("sourceName", "memberName"):
@@ -1041,6 +1063,8 @@ def _score_income_rules(card: RecordScoreCard, cert_type: str | None) -> None:
         except ValueError:
             update_field_score(card, "selfDeclaredAmount", stage="business_rule",
                                score=0.30, reason="Not a valid number")
+
+    _score_income_consistency(card, vals, household_income)
 
     # AR-SC: TIC is the source of truth, no VOI/paystubs expected.
     # Mark wage-verification fields as N/A when null instead of RED.
@@ -1198,8 +1222,175 @@ def _score_income_rules(card: RecordScoreCard, cert_type: str | None) -> None:
                            score=0.20, reason="Start date after end date")
 
 
+_SYNTHETIC_SOURCE_RE = re.compile(r"\(declared\)\s*$|^self[- ]declaration$|^self[- ]declared$", re.I)
+
+
+def _is_synthetic_source(name: str | None) -> bool:
+    return bool(name) and bool(_SYNTHETIC_SOURCE_RE.search(name.strip()))
+
+
+# The figures one income record carries must describe the same income. A
+# self-declared amount may be the per-period figure of the certification's
+# annual one (1,475 a month against 17,700 a year); it may not be a hundred
+# times it. A pension printed as $1,031 was delivered as $103,100 with every
+# field green, because each stage asked its question of one value alone:
+# populated, printed on the page, a valid amount. This stage asks whether
+# the values agree with each other.
+# The pay-period multipliers a figure can legitimately be stated per.
+_PERIOD_FACTORS = (12.0, 24.0, 26.0, 52.0, 4.0)
+_DECIMAL_FACTORS = (10.0, 100.0, 1000.0)
+_AGREEMENT_TOLERANCE = 0.10
+_INCONSISTENT_CEILING = NOT_ON_PAGE_CEILING
+
+
+def _money(value: str | None) -> float | None:
+    if not value:
+        return None
+    try:
+        amount = float(str(value).replace(",", "").replace("$", "").strip())
+    except ValueError:
+        return None
+    return amount if amount > 0 else None
+
+
+def _relation(value: float, reference: float) -> tuple[str, float]:
+    """How `value` stands to `reference`: ("same", 1), ("period", k) when
+    one is the other's per-period figure, ("decimal", k) when one is the
+    other shifted by k, or ("other", ratio)."""
+    ratio = value / reference
+    close = lambda r: abs(r - 1.0) <= _AGREEMENT_TOLERANCE
+    if close(ratio):
+        return "same", 1.0
+    for k in _PERIOD_FACTORS:
+        if close(ratio * k) or close(ratio / k):
+            return "period", k
+    for k in _DECIMAL_FACTORS:
+        if close(ratio * k) or close(ratio / k):
+            return "decimal", k
+    return "other", ratio
+
+
+def _annual_from_rate(vals: dict, card: RecordScoreCard) -> tuple[float | None, str | None]:
+    """The annual figure the record's rate implies, with the unit it was
+    taken per, or (None, None) when the rate needs hours or has no unit."""
+    rate = _money(vals.get("rateOfPay"))
+    if rate is None:
+        return None, None
+    unit = normalize_rate_unit(card.rate_unit) or normalize_rate_unit(vals.get("frequencyOfPay"))
+    if unit in (None, "hourly", "daily", "per_period") or vals.get("hoursPerPayPeriod"):
+        return None, None
+    multiplier = get_frequency_multiplier(unit)
+    if not multiplier:
+        return None, None
+    return rate * multiplier, unit
+
+
+def _cap_field(card: RecordScoreCard, field_name: str, score: float, reason: str) -> None:
+    for fs in card.fields:
+        if fs.field_name == field_name and fs.value is not None and fs.flag != ScoreFlag.NA:
+            fs.stages.append(StageScore(stage="business_rule", score=score, reason=reason,
+                                        ceiling=_INCONSISTENT_CEILING))
+            fs.recompute()
+            return
+
+
+def _fits_total(figure: float, other: float, total: float | None) -> bool:
+    """Whether `figure` can be this source's annual income given the
+    household's certified total, while `other` cannot: it is the total
+    itself, or it is within the total when the other figure exceeds it."""
+    if not total:
+        return False
+    tol = _AGREEMENT_TOLERANCE
+    if abs(figure / total - 1.0) <= tol:
+        return True
+    return figure <= total * (1.0 + tol) < other
+
+
+def _score_income_consistency(card: RecordScoreCard, vals: dict, household_income: str | None = None) -> None:
+    declared = _money(card.declared_annual)
+    from_rate, unit = _annual_from_rate(vals, card)
+    self_declared = _money(vals.get("selfDeclaredAmount"))
+    total = _money(household_income)
+    reference = declared or from_rate
+
+    # The rate against the figure declared for this source. When they are a
+    # period or a decimal apart, one of them is misread; the household's
+    # certified total says which, when it can.
+    if declared and from_rate:
+        kind, k = _relation(from_rate, declared)
+        if kind == "same":
+            update_field_score(card, "rateOfPay", stage="business_rule", score=1.0,
+                               reason="Rate × unit agrees with the declared figure")
+        elif kind in ("period", "decimal"):
+            how = "the rate unit is likely wrong" if kind == "period" else "a decimal shift"
+            if _fits_total(from_rate, declared, total) and not _fits_total(declared, from_rate, total):
+                reference = from_rate
+                _cap_field(card, "selfDeclaredAmount", 0.05,
+                           f"The declared figure (${declared:,.2f}) is {k:g}× off the rate × {unit} "
+                           f"(${from_rate:,.2f}), which fits the certified total ${total:,.2f} — {how} in the declaration, verify")
+            elif _fits_total(declared, from_rate, total):
+                reference = declared
+                _cap_field(card, "rateOfPay", 0.05,
+                           f"Rate × {unit} (${from_rate:,.2f}) is {k:g}× off the declared ${declared:,.2f}, "
+                           f"which fits the certified total ${total:,.2f} — {how}, verify the rate")
+            else:
+                _cap_field(card, "rateOfPay", 0.10,
+                           f"Rate × {unit} (${from_rate:,.2f}) and the declared ${declared:,.2f} are {k:g}× apart — "
+                           f"{how} on one side, verify both")
+        # "other": the certification and the verification disagree, which the
+        # cross-document finding reports in plain language.
+
+    # The household's own figure against the best annual reference: it may
+    # be that figure or its per-period share; a decimal away it is misread.
+    if self_declared and reference:
+        kind, k = _relation(self_declared, reference)
+        if kind in ("same", "period"):
+            update_field_score(card, "selfDeclaredAmount", stage="business_rule", score=1.0,
+                               reason="Agrees with the verified or certified figure")
+        elif kind == "decimal":
+            _cap_field(card, "selfDeclaredAmount", 0.05,
+                       f"${self_declared:,.2f} is {k:g}× off the certified or verified ${reference:,.2f} — a decimal shift, verify the figure")
+
+
+def exclude_historical_records(cards: list[RecordScoreCard], income_calculations: list) -> None:
+    """Leave a historical wage history out of the overall score.
+
+    An EIV or Work Number report lists what past employers paid, by
+    quarter, years ago. The calculator marks such a source "[historical]"
+    and counts nothing from it; the record is kept so the reviewer can
+    confirm the job ended. Scoring it as current income — no rate, no
+    amount, an employer name the report abbreviates — put three red
+    headline fields on a case whose every current figure was right.
+    """
+    historical = {
+        (slug(c.memberName), slug(c.sourceName))
+        for c in income_calculations or []
+        if (c.details or "").startswith("[historical]")
+    }
+    if not historical:
+        return
+    for card in cards:
+        if card.record_type != "income" or card.excluded:
+            continue
+        parts = [p.strip() for p in (card.record_label or "").split("—")]
+        key = (slug(parts[0]) if parts else "", slug(parts[1]) if len(parts) > 1 else "")
+        if key in historical:
+            card.excluded = "Historical wage history — reported for review, not counted as current income"
+
+
 def _score_asset_rules(card: RecordScoreCard) -> None:
     vals = {f.field_name: f.value for f in card.fields}
+
+    # A verification request that was sent and never returned names the
+    # account and prints no figure. The extraction found nothing because
+    # there is nothing; the gap is in the file, which the document findings
+    # report, not in the reading of it.
+    if not any(vals.get(f) for f in ("currentBalance", "selfDeclaredAmount", "incomeAmount")) \
+            and card.source_prints_figures is False:
+        for fs in card.fields:
+            if fs.field_name in ("currentBalance", "selfDeclaredAmount", "incomeAmount") and fs.value is None:
+                fs.mark_na("The verification carries no figures (not returned) — nothing to read")
+        return
 
     # Self-certified assets store the amount in selfDeclaredAmount, not
     # currentBalance — the comparator already reads both (mirroring
@@ -1276,7 +1467,31 @@ def _score_asset_rules(card: RecordScoreCard) -> None:
                                score=0.60, reason=f"Uncommon type '{atype}'")
 
 
-def _score_member_rules(card: RecordScoreCard, cert_form_type: str | None = None) -> None:
+# What a certification print shows when it carries a student or a
+# disability column: the HUD 50059's "Stdnt" and "Spec. Stat." headings, a
+# TIC's "F/T Student", or a table cell holding the word. A management
+# system's own print of the 50059 lists the household with neither, and a
+# member's blank flag there is what the form says, not a missed field.
+_COLUMN_MARKS = {
+    "student": re.compile(
+        r"\bstdnt\b|\bstudent\s+status\b|\bf/?t\s*student\b|\bfull[- ]time\s+student\b"
+        r"|<t[hd][^>]*>\s*(?:f/?t\s*)?student\s*</t[hd]>", re.I),
+    "disabled": re.compile(
+        r"\bspec(?:ial)?\.?\s*stat(?:us)?\b|\bdisabled\b|\bdisab\.|\bhandicap"
+        r"|<t[hd][^>]*>\s*disab\w*\s*</t[hd]>", re.I),
+}
+
+
+def _form_prints_column(cert_text: str | None, field_name: str) -> bool | None:
+    """Whether the certification's text shows the column; None without text."""
+    if not cert_text:
+        return None
+    mark = _COLUMN_MARKS.get(field_name)
+    return bool(mark and mark.search(cert_text))
+
+
+def _score_member_rules(card: RecordScoreCard, cert_form_type: str | None = None,
+                        cert_text: str | None = None) -> None:
     vals = {f.field_name: f.value for f in card.fields}
     form_fields = _FORM_MEMBER_FIELDS.get(cert_form_type or "")
 
@@ -1342,6 +1557,10 @@ def _score_member_rules(card: RecordScoreCard, cert_form_type: str | None = None
                 for fs in card.fields:
                     if fs.field_name == field_name:
                         fs.mark_na(f"Not a field on the {cert_form_type}")
+            elif _form_prints_column(cert_text, field_name) is False:
+                for fs in card.fields:
+                    if fs.field_name == field_name:
+                        fs.mark_na(f"This print of the {cert_form_type or 'certification'} has no {field_name} column")
             else:
                 update_field_score(card, field_name, stage="business_rule",
                                    score=0.30, reason="Missing — verify against cert form")
