@@ -191,7 +191,11 @@ def _decl(owner, kind, amount, page=2, doc="HUD 50059", number=None, income=None
 def test_only_declared_account_of_a_kind_merges_into_the_only_verified_one():
     recs = [_asset("Randy Buck", "Savings", "1123.81", "3000008685")]
     _reconcile_assets(recs, [_decl("Randy Buck", "Savings", "886.00", income="3.00")])
-    assert len(recs) == 1 and recs[0]["selfDeclaredAmount"] == "886.00" and recs[0]["incomeAmount"] == "3.00"
+    assert len(recs) == 1 and recs[0]["selfDeclaredAmount"] == "886.00"
+    # The 50059's line is the certified figure, kept on its own fields; the
+    # form's income line is not the asset's incomeAmount.
+    assert recs[0]["certificationCashValue"] == "886.00" and recs[0]["certificationIncome"] == "3.00"
+    assert recs[0]["certificationForm"] == "HUD 50059" and "incomeAmount" not in recs[0]
 
 
 def test_two_declared_accounts_of_a_kind_do_not_merge_into_one_verified():
@@ -656,7 +660,10 @@ def test_an_overdrawn_account_is_a_finding_and_is_delivered_as_zero():
     assert r["current_value"] == "0.00"
     assert r["voa"]["reported_value"] == "0.00"
     assert r["bank_statements"][0]["balance"] == "0.00"
-    assert r["manual_balance"] == "331.00"          # the resident's own figure is untouched
+    # The figure was read off the 50059: it is the certified cash value, not
+    # the resident's own statement, and it is sent as such.
+    assert r["manual_balance"] is None and r["source_of_declaration"] is None
+    assert r["certification_form"] == "HUD-50059" and r["certification_cash_value"] == "331.00"
     assert r["bank_stmt_avg_balance"] == "330.83"   # a positive average stays as printed
     assert records[1]["current_value"] == "0.01"
     assert [w for w in warnings if "overdrawn" in w] and all("-93.30" in w or "-12.00" in w
@@ -1070,3 +1077,100 @@ def test_a_second_certification_line_beside_a_verified_benefit_that_has_its_own_
                 "frequencyOfPay": "annually", "verificationStatus": "declared_only",
                 "declaredAnnualAmount": "3000.00", "declaredSource": "TIC", "sourcePages": [2], "evidence": {}}
     assert _merge_same_benefit_records([ss, ssi_line]) == [ss, ssi_line]
+
+
+# ---------------------------------------------------------------------------
+# The certification's own figures, apart from the household's statement
+# ---------------------------------------------------------------------------
+
+def test_the_certification_line_is_the_certified_amount_and_the_application_is_the_self_declaration():
+    """The 50059 prints $12,000 for the benefit; the questionnaire says
+    $1,000 a month. The form's line is the certified amount, the
+    household's own figure is the self-declaration — whichever the read
+    returned first."""
+    vi = [_record("A B", "Social Security Administration", "Social Security", rateOfPay="1000.00", frequencyOfPay="monthly")]
+    form_line = _line("12000.00", 2, doc="HUD 50059")
+    own_line = dict(_line("1000.00", 11, doc="Application / Housing Questionnaire"), amountPeriod="monthly")
+    _reconcile_income(vi, [form_line, own_line], "AR")
+    assert len(vi) == 1
+    assert vi[0]["certificationAmount"] == "12000.00" and vi[0]["certificationForm"] == "HUD 50059"
+    assert vi[0]["selfDeclaredAmount"] == "1000.00" and vi[0]["selfDeclaredSource"] == "Application / Housing Questionnaire"
+
+    vi = [_record("A B", "Social Security Administration", "Social Security", rateOfPay="1000.00", frequencyOfPay="monthly")]
+    _reconcile_income(vi, [dict(own_line), dict(form_line)], "AR")
+    assert vi[0]["certificationAmount"] == "12000.00" and vi[0]["selfDeclaredAmount"] == "1000.00"
+
+
+def test_a_certification_line_nothing_verifies_is_a_record_carrying_the_certified_amount():
+    """A second source the form lists and the packet does not verify is its
+    own record, so Cartograph has a row to attach the certified figure to."""
+    vi: list[dict] = []
+    _reconcile_income(vi, [_line("8736.00", 2, itype="Pension", doc="Tenant Income Certification (TIC)")], "AR")
+    assert len(vi) == 1 and vi[0]["verificationStatus"] == "declared_only"
+    assert vi[0]["certificationAmount"] == "8736.00" and vi[0]["certificationForm"] == "Tenant Income Certification (TIC)"
+
+
+def test_a_declared_asset_line_on_the_certification_keeps_its_cash_value_and_income_apart():
+    recs: list[dict] = []
+    _reconcile_assets(recs, [_decl("A B", "Checking", "483.00", income="0")])
+    assert len(recs) == 1
+    assert recs[0]["certificationCashValue"] == "483.00" and recs[0]["certificationIncome"] == "0"
+    assert recs[0]["certificationForm"] == "HUD 50059" and recs[0]["incomeAmount"] is None
+    # A self-certification is the household's own form: its income figure is the asset's.
+    recs = []
+    _reconcile_assets(recs, [_decl("A B", "Savings", "1500.00", doc="Asset Self-Certification", income="12.00")])
+    assert recs[0]["incomeAmount"] == "12.00" and recs[0].get("certificationCashValue") is None
+
+
+def test_certified_figures_are_delivered_on_their_own_fields_never_as_self_declared():
+    """Cartograph compares the form's figure with its own calculation, so the
+    form's line goes out as certification_amount under the form's name;
+    self_declared_amount is only what the household wrote itself."""
+    from types import SimpleNamespace
+    from app.core.config import Settings
+    from app.schemas.extraction import (AssetEntry, AssetExtraction, CertificationInfo, HouseholdDemographics,
+                                        HouseholdMember, IncomeExtraction, SourceIncome, VerificationIncomeEntry)
+    from app.services.cartograph.adapter import build_asset_records, build_household_members, build_income_records
+
+    hh = HouseholdDemographics(houseHold=[HouseholdMember(FirstName="Cleveland", LastName="White", relationship="Head", head="H")])
+    both = VerificationIncomeEntry(memberName="Cleveland White", sourceName="Social Security Administration", incomeType="Social Security",
+                                   rateOfPay="994.00", rateUnit="monthly", frequencyOfPay="monthly", verificationStatus="verified",
+                                   selfDeclaredAmount="994.00", selfDeclaredSource="Application / Housing Questionnaire",
+                                   certificationAmount="11928.00", certificationForm="HUD 50059", sourcePages=[22])
+    # Reconciled before the field existed: the form's line sits on the declared fields.
+    older = VerificationIncomeEntry(memberName="Cleveland White", sourceName="Pension (declared)", incomeType="Pension",
+                                    selfDeclaredAmount="21720.00", selfDeclaredSource="HUD 50059", frequencyOfPay="annually",
+                                    declaredAnnualAmount="21720.00", declaredSource="HUD 50059",
+                                    verificationStatus="declared_only", sourcePages=[2])
+    rd = VerificationIncomeEntry(memberName="Cleveland White", sourceName="ACME", incomeType="Non-Federal Wage",
+                                 rateOfPay="15.00", rateUnit="hourly", verificationStatus="verified",
+                                 certificationAmount="31200.00", certificationForm="HUD 3560 Form", sourcePages=[30])
+    ex = SimpleNamespace(household_demographics=hh, certification_info=CertificationInfo(effectiveDate="2026-12-01"),
+                         income=IncomeExtraction(sourceIncome=SourceIncome(verificationIncome=[both, older, rd])),
+                         income_calculations=[])
+    warnings: list[str] = []
+    members = build_household_members(ex, warnings)
+    records = build_income_records(ex, members, Settings(cartograph_income_types=["social_security", "pension", "wages_and_salaries"]), warnings)
+    by_source = {r["source_name"]: r for r in records}
+    r = by_source["Social Security Administration"]
+    assert r["self_declared_amount"] == "994.00" and r["source_of_declaration"] == "Application / Housing Questionnaire"
+    assert r["certification_form"] == "HUD-50059" and r["certification_amount"] == "11928.00"
+    r = by_source["Pension (declared)"]
+    assert r["self_declared_amount"] is None and r["source_of_declaration"] is None
+    assert r["certification_form"] == "HUD-50059" and r["certification_amount"] == "21720.00"
+    # A form Cartograph does not recognise carries no certified figure.
+    r = by_source["ACME"]
+    assert r["certification_form"] is None and r["certification_amount"] is None
+
+    assets = AssetExtraction(assetInformation=[
+        AssetEntry(assetOwner="Cleveland White", accountType="Checking", sourceName="Altura Credit Union",
+                   currentBalance="556.00", verificationStatus="verified", sourcePages=[19],
+                   selfDeclaredAmount="600.00", selfDeclaredSource="Asset Self-Certification",
+                   certificationCashValue="483.00", certificationIncome="0", certificationForm="HUD 50059"),
+    ])
+    ex = SimpleNamespace(assets=assets)
+    records = build_asset_records(ex, members, Settings(cartograph_asset_types=["checking"]), warnings)
+    r = records[0]
+    assert r["manual_balance"] == "600.00" and r["source_of_declaration"] == "Asset Self-Certification"
+    assert r["certification_form"] == "HUD-50059" and r["certification_cash_value"] == "483.00"
+    assert r["certification_income"] == "0.00" and r["annual_income_from_assets"] is None

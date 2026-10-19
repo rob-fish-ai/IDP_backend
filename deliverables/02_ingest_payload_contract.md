@@ -166,8 +166,10 @@ One object per **(member, source)** pair. The engine's flat per-paystub output i
   "date_received":         "2026-06-18",
   "employment_start_date": "2019-04-01",
   "employer_address":      "1400 Depot Rd, Salem, OR 97301",
-  "self_declared_amount":  "45900.00",
+  "self_declared_amount":  "45900.00",            // the household's own figure
   "source_of_declaration": "Application",
+  "certification_form":    "HUD-50059",           // what the certification itself states
+  "certification_amount":  "45900.00",            // for this source, annual; or null
 
   "paystubs": [
     { "pay_date": "2026-06-05", "gross_pay": "1742.10",
@@ -209,6 +211,8 @@ certification year. `amount` is the periodic figure in force with its
 data, or a denied or terminated claim with no current amount, is not
 income and produces no record.
 
+**The certification's figure is not a self-declaration.** `self_declared_amount` is what the household wrote on its own application, questionnaire or affidavit, with `source_of_declaration` naming the form. What the certification form itself prints for the source goes out on `certification_amount`, annual, under `certification_form` (`HUD-50059` or `TIC`); Cartograph compares it with its own calculation and raises an issue when they differ. A figure read off the certification is never sent as self-declared. A source the form lists and nothing in the packet verifies is its own record (`verification_status: declared_only`) carrying the certified amount, so there is a row to attach it to. A certification Cartograph does not recognise by name (RD 3560-8) carries no certified figures.
+
 **Zero income is a child, not a type.** `zero_income` is not a valid `income_type` and fails validation. Set the parent to `other` and attach a `zero_income` object with `affidavit_date`, `signed`, `notes`.
 
 ---
@@ -223,7 +227,11 @@ income and produces no record.
   "institution_name":          "Cascade Credit Union",
   "current_value":             "3234.11",
   "bank_stmt_avg_balance":     "2988.40",
+  "manual_balance":            null,             // the household's own figure, when it wrote one
   "annual_income_from_assets": "12.40",
+  "certification_form":        "HUD-50059",      // what the certification itself states
+  "certification_cash_value":  "3234.11",        // for this asset: cash value and
+  "certification_income":      "0.00",           // annual income (a printed 0 is sent)
   "interest_rate":             "0.004000",
   "percentage_of_ownership":   "100",
   "verification_status":       "received",

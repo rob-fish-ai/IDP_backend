@@ -174,6 +174,12 @@ class VerificationIncomeEntry(BaseModel):
     programName: Optional[str] = None
     selfDeclaredAmount: Optional[str] = None
     selfDeclaredSource: Optional[str] = None  # Questionnaire, Application, Self-Certification TIC, Resident Affidavit/Certification, Asset Under 5,000 or 50,000 Form, Other
+    # What the certification form itself (the 50059 or TIC being audited)
+    # states for this source: its annual figure and the form it is printed
+    # on. The property's certified figure, not the household's own
+    # statement; Cartograph compares it with its own calculation.
+    certificationAmount: Optional[str] = None
+    certificationForm: Optional[str] = None
     rateOfPay: Optional[str] = None
     # What rateOfPay is per: hourly | daily | weekly | bi-weekly | semi-monthly |
     # monthly | quarterly | annually | per_period. Hours multiply only an
@@ -330,6 +336,11 @@ class AssetEntry(BaseModel):
     sourceName: Optional[str] = None
     selfDeclaredAmount: Optional[str] = None
     selfDeclaredSource: Optional[str] = None  # Same picklist as VerificationIncomeEntry
+    # The certification form's own line for this asset: the cash value and
+    # the annual income it prints (a printed 0 is kept), and the form.
+    certificationCashValue: Optional[str] = None
+    certificationIncome: Optional[str] = None
+    certificationForm: Optional[str] = None
     accountType: Optional[str] = None
     accountNumber: Optional[str] = None
     currentBalance: Optional[str] = None

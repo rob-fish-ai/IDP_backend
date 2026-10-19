@@ -296,7 +296,7 @@ def _extracted_amounts(extraction: ExtractionResult) -> tuple[Counter, set[float
             entry.selfDeclaredAmount, entry.rateOfPay, entry.ytdAmount,
             entry.overtimeRate, entry.hoursPerPayPeriod,
             # the certification's own row for this source, once reconciled
-            entry.declaredAnnualAmount,
+            entry.declaredAnnualAmount, entry.certificationAmount,
         )
     for stub in extraction.income.sourceIncome.payStub:
         record(stub.grossPay, stub.ytdGross)
@@ -305,6 +305,7 @@ def _extracted_amounts(extraction: ExtractionResult) -> tuple[Counter, set[float
         values = [
             asset.currentBalance, asset.selfDeclaredAmount,
             asset.averageSixMonthBalance, asset.incomeAmount,
+            asset.certificationCashValue, asset.certificationIncome,
         ]
         values += [st.balance for st in asset.bankStatment]
         if asset.verificationOfAsset is not None:

@@ -1622,6 +1622,7 @@ def _deduplicate_assets(asset_records: list) -> list:
                 "percentageOfOwnership", "dateReceived", "sourceName",
                 "assetOwner", "socialSecurityNumber", "accountType",
                 "selfDeclaredSource", "address",
+                "certificationCashValue", "certificationIncome", "certificationForm",
             ):
                 if not getattr(base, f, None) and getattr(other, f, None):
                     setattr(base, f, getattr(other, f))
@@ -1698,7 +1699,8 @@ def _deduplicate_assets(asset_records: list) -> list:
             twin.selfDeclaredSource = twin.selfDeclaredSource or rec.selfDeclaredSource
         elif not twin.selfDeclaredAmount and rec.currentBalance and twin.currentBalance != rec.currentBalance:
             twin.selfDeclaredAmount = rec.currentBalance
-        for f in ("accountNumber", "incomeAmount", "interestType", "percentageOfOwnership", "dateReceived", "sourceName"):
+        for f in ("accountNumber", "incomeAmount", "interestType", "percentageOfOwnership", "dateReceived", "sourceName",
+                  "certificationCashValue", "certificationIncome", "certificationForm"):
             if not getattr(twin, f, None) and getattr(rec, f, None):
                 setattr(twin, f, getattr(rec, f))
         logger.info(
@@ -1844,7 +1846,8 @@ def _resolve_duplicate_self_declarations(vi_entries: list) -> list:
         # Fill the keeper's gaps from the copies it displaces.
         for other in entries[1:]:
             for f in ("selfDeclaredAmount", "selfDeclaredSource", "declaredAnnualAmount",
-                      "declaredSource", "dateReceived", "hireDate", "programName"):
+                      "declaredSource", "certificationAmount", "certificationForm",
+                      "dateReceived", "hireDate", "programName"):
                 if not getattr(keeper, f, None) and getattr(other, f, None):
                     setattr(keeper, f, getattr(other, f))
         logger.info(
@@ -1919,7 +1922,8 @@ def _merge_household_level_sources(vi_entries: list) -> list:
                 continue  # two payers, each with its own ledger
             keeper.sourcePages = sorted(set(keeper.sourcePages or []) | set(other.sourcePages or []))
             for f in ("selfDeclaredAmount", "selfDeclaredSource", "declaredAnnualAmount",
-                      "declaredSource", "rateOfPay", "rateUnit", "frequencyOfPay", "programName", "dateReceived"):
+                      "declaredSource", "certificationAmount", "certificationForm",
+                      "rateOfPay", "rateUnit", "frequencyOfPay", "programName", "dateReceived"):
                 if not getattr(keeper, f, None) and getattr(other, f, None):
                     setattr(keeper, f, getattr(other, f))
             if _generic_source(keeper) and not _generic_source(other):

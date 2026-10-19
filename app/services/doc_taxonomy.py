@@ -26,6 +26,7 @@ contains the certification's whole name and is not the certification;
 from __future__ import annotations
 
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -386,3 +387,23 @@ def is_previous_certification(document_type: str | None) -> bool:
 def is_current_certification_form(document_type: str | None) -> bool:
     """The certification being audited: a certification form, not a prior copy."""
     return is_certification_form(document_type) and not is_previous_certification(document_type)
+
+
+_CERTIFICATION_SOURCE_RE = re.compile(r"50059|\btic\b|tenant income certification", re.I)
+
+
+def is_certification_source(label: str | None) -> bool:
+    """Whether a declared figure's source is the certification form itself.
+
+    A figure read off the 50059 or the TIC is what the property certified,
+    not what the household wrote on its application, questionnaire or
+    affidavit — the two are kept apart on delivery. The label is a taxonomy
+    type or the extractor's own source word ("Self-Certification TIC"); a
+    household form that merely has "certification" in its name (an asset
+    self-certification, a resident affidavit) is not the certification.
+    """
+    if not label:
+        return False
+    if is_current_certification_form(label):
+        return True
+    return bool(_CERTIFICATION_SOURCE_RE.search(label))

@@ -11,7 +11,9 @@ from app.schemas.extraction import (
     HouseholdDemographics,
     IncomeExtraction,
 )
-from app.services.doc_taxonomy import assert_known, is_countersigned_confirmation, is_current_certification_form
+from app.services.doc_taxonomy import (
+    assert_known, is_certification_source, is_countersigned_confirmation, is_current_certification_form,
+)
 from app.services.llm_service import call_llm_json
 from app.services import validation
 from app.services.members import is_unborn
@@ -2589,6 +2591,9 @@ def _fold_benefit(keep: dict, other: dict, *, corroborated: bool) -> None:
         if annual and not keep.get("declaredAnnualAmount"):
             keep["declaredAnnualAmount"] = annual
             keep["declaredSource"] = other.get("declaredSource") or other.get("selfDeclaredSource")
+        for f in ("certificationAmount", "certificationForm"):
+            if other.get(f) and not keep.get(f):
+                keep[f] = other[f]
         if other.get("selfDeclaredAmount") and not keep.get("selfDeclaredAmount") and (
             not keep.get("frequencyOfPay") or other.get("frequencyOfPay") in (None, keep.get("frequencyOfPay"))
         ):
@@ -3001,6 +3006,31 @@ def _repair_verified_magnitudes(vi_entries: list[dict], declared: list[dict], re
             vi["incomeType"] = declared_type
 
 
+def _note_certification_line(rec: dict, d: dict, annual=None, *, cash_value: bool = False) -> None:
+    """Record what the certification form itself prints for a record.
+
+    The property's certified figure is kept apart from the household's own
+    statement: Cartograph compares it with its own calculation and raises
+    an issue when the two differ, which it cannot do with a figure that may
+    be the applicant's. The first line the form prints for the record is
+    the one kept; a figure is annual on the form, so the annualised value
+    stands in when the read gave a period.
+    """
+    if not is_certification_source(d.get("documentType")):
+        return
+    if cash_value:
+        if rec.get("certificationCashValue") is None and d.get("amount") is not None:
+            rec["certificationCashValue"] = d["amount"]
+        if rec.get("certificationIncome") is None and d.get("incomeAmount") is not None:
+            rec["certificationIncome"] = d["incomeAmount"]
+    elif not rec.get("certificationAmount"):
+        figure = f"{annual:.2f}" if annual is not None else d.get("amount")
+        if not figure:
+            return
+        rec["certificationAmount"] = figure
+    rec["certificationForm"] = rec.get("certificationForm") or d.get("documentType")
+
+
 def _reconcile_income(vi_entries: list[dict], declared: list[dict], certification_type: str | None,
                       ps_entries: list[dict] | None = None, declared_total=None) -> None:
     """Annotate verified records with what the household declared for them;
@@ -3138,8 +3168,17 @@ def _reconcile_income(vi_entries: list[dict], declared: list[dict], certificatio
             if annual_d is not None and not vi.get("declaredAnnualAmount"):
                 vi["declaredAnnualAmount"] = f"{annual_d:.2f}"
                 vi["declaredSource"] = d.get("documentType")
+            _note_certification_line(vi, d, annual_d)
             period_freq = _PERIOD_TO_FREQUENCY.get((d.get("amountPeriod") or "").lower())
-            if not vi.get("selfDeclaredAmount") and d.get("amount") and (
+            # The household's own statement outranks the certification's
+            # line as the self-declared figure: the line is kept as the
+            # certified amount, so an application figure read after it
+            # takes the slot the line had filled.
+            own_statement = (
+                is_certification_source(vi.get("selfDeclaredSource"))
+                and not is_certification_source(d.get("documentType"))
+            )
+            if (not vi.get("selfDeclaredAmount") or own_statement) and d.get("amount") and (
                 not vi.get("frequencyOfPay") or period_freq in (None, vi.get("frequencyOfPay"))
             ):
                 vi["selfDeclaredAmount"] = d["amount"]
@@ -3175,6 +3214,7 @@ def _reconcile_income(vi_entries: list[dict], declared: list[dict], certificatio
                 "declaredAnnualAmount": f"{annual_d:.2f}" if annual_d is not None else None,
                 "declaredSource": d.get("documentType"),
             })
+            _note_certification_line(vi_entries[-1], d, annual_d)
             stub_sources.remove(stub_match)
             continue
         # Nothing in the packet verifies this declaration: keep it as the
@@ -3197,6 +3237,7 @@ def _reconcile_income(vi_entries: list[dict], declared: list[dict], certificatio
             "declaredAnnualAmount": f"{annual_d:.2f}" if annual_d is not None else None,
             "declaredSource": d.get("documentType"),
         })
+        _note_certification_line(vi_entries[-1], d, annual_d)
         d["matched"] = True
 
     declared_real = [d for d in declared if d.get("incomeType") != "Zero Income"]
@@ -3618,12 +3659,20 @@ def _reconcile_assets(records: list[dict], declared: list[dict]) -> None:
                         same_kind[0].get("currentBalance") or same_kind[0].get("averageSixMonthBalance"),
                     )
                     best = same_kind[0]
+        from_certification = is_certification_source(d.get("documentType"))
         if best is not None:
             d["matched"] = True
-            if not best.get("selfDeclaredAmount") and d.get("amount") is not None:
+            _note_certification_line(best, d, cash_value=True)
+            # The household's own statement outranks the certification's
+            # line as the self-declared balance (see _reconcile_income).
+            own_statement = is_certification_source(best.get("selfDeclaredSource")) and not from_certification
+            if (not best.get("selfDeclaredAmount") or own_statement) and d.get("amount") is not None:
                 best["selfDeclaredAmount"] = d["amount"]
                 best["selfDeclaredSource"] = d.get("documentType")
-            if not best.get("incomeAmount") and d.get("incomeAmount") is not None:
+            # The certification's income line is the certified figure, kept
+            # on its own field; incomeAmount is what a verification or the
+            # household's own form states.
+            if not best.get("incomeAmount") and d.get("incomeAmount") is not None and not from_certification:
                 best["incomeAmount"] = d["incomeAmount"]
             if not best.get("sourceName") and d.get("sourceName"):
                 best["sourceName"] = d["sourceName"]
@@ -3636,11 +3685,12 @@ def _reconcile_assets(records: list[dict], declared: list[dict]) -> None:
             "selfDeclaredSource": d.get("documentType"),
             "accountType": d.get("accountType"),
             "accountNumber": d.get("accountNumber"),
-            "incomeAmount": d.get("incomeAmount"),
+            "incomeAmount": None if from_certification else d.get("incomeAmount"),
             "sourcePages": [d["page"]] if d.get("page") else [],
             "evidence": {"selfDeclaredAmount": d["quote"]} if d.get("quote") else {},
             "verificationStatus": "declared_only",
         })
+        _note_certification_line(records[-1], d, cash_value=True)
         d["matched"] = True
 
 

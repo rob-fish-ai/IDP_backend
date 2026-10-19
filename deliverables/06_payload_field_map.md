@@ -123,8 +123,10 @@ One per income source. Paystubs arrive nested underneath rather than as a flat l
 | `employment_start_date` | `null` | ISO |
 | `employment_status` | `Active` | `Active`, `Terminated`, `On Leave`, or null. **Needs a column** |
 | `termination_date` | `null` | ISO. **Needs a column** |
-| `self_declared_amount` | `812.50` | The resident's own figure, distinct from anything verified |
+| `self_declared_amount` | `812.50` | The resident's own figure, from the application, questionnaire or an affidavit, distinct from anything verified. Never a figure read off the certification form |
 | `source_of_declaration` | `Application` | Where the self-declared figure came from |
+| `certification_form` | `HUD-50059` | The certification form the next field was read from: `HUD-50059` or `TIC`. Null when the form is one Cartograph does not take by name (RD 3560-8), and the figure is withheld with it |
+| `certification_amount` | `9750.00` | The annual figure the certification itself prints for this source. Cartograph compares it with its own calculation. A source the form lists and nothing verifies arrives as its own `declared_only` record carrying this figure, so there is a row to attach it to |
 | `verification_status` | `verified` | `verified` (read from a third-party document), `declared_only` (the household declared it and nothing in the packet backs it), `verified_not_declared` (a document carries it and the certification does not), `self_certified` (AR-SC) |
 | `pages` | `[20, 21]` | Packet pages this record was read from. Positions in the file Cartograph sent; a reviewer opens the same file and lands on the page |
 | `confidence` | `{score, flag, review[]}` | The engine's confidence in this record: `score` 0 to 1, `flag` green / yellow / red, and `review`, the fields a reviewer should look at with `field`, `flag` and `reason`. See section 8a |
@@ -147,12 +149,15 @@ A source can arrive with paystubs and no verification entry. That is not an erro
 | `asset_type` | `checking` | From the supplied picklist. `other` means no match |
 | `institution_name` | `Meridian Savings Bank` | Bank or source |
 | `current_value` | `4830.00` | **Verified** balance. Present only with a statement or a VOA behind it. See section 1 |
-| `manual_balance` | `915.00` | **Self-declared** balance |
+| `manual_balance` | `915.00` | **Self-declared** balance: the resident's own figure from a self-certification or questionnaire. Never a figure read off the certification form |
 | `bank_stmt_avg_balance` | `null` | Six-month average where stated, or the mean of the VOA's monthly balances when those were sent instead |
 | `annual_income_from_assets` | `0.00` | |
 | `interest_type` | `Percentage` | **Needs a column** |
 | `percentage_of_ownership` | `100` | Joint ownership share |
 | `source_of_declaration` | `null` | |
+| `certification_form` | `HUD-50059` | As on income records |
+| `certification_cash_value` | `483.00` | The cash value the certification itself prints for this asset |
+| `certification_income` | `0.00` | The annual income from the asset the certification prints; a printed 0 is sent as `0.00`. `annual_income_from_assets` stays what a verification or the household's own form states, never the certification's line |
 | `verification_status` | `verified` | Same values as on income records |
 | `pages` | `[13]` | Packet pages this record was read from |
 | `confidence` | `{score, flag, review[]}` | As on income records |

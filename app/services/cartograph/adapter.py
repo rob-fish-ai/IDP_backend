@@ -52,6 +52,7 @@ from app.services.cartograph.checklist import match_checklist
 from app.services.income_calculator import match_paystubs_to_sources, normalize_rate_unit
 from app.services.members import is_unborn
 from app.services.cartograph.manifest import link_payload
+from app.services.doc_taxonomy import is_certification_source
 from app.services.name_reconciler import _name_similarity
 
 logger = logging.getLogger(__name__)
@@ -399,6 +400,69 @@ def _cert_type_out(value: str | None, warnings: list[str]) -> str | None:
     return None
 
 
+# The certification forms Cartograph compares against its own calculation,
+# by the name it knows them under. A figure read off any other form is kept
+# on the engine's record and not sent as a certified amount: an amount
+# without a recognisable form is dropped with a warning on import.
+_CERTIFICATION_FORM_RE = (
+    (re.compile(r"50059", re.I), "HUD-50059"),
+    (re.compile(r"\btic\b|tenant income certification", re.I), "TIC"),
+)
+
+
+def _certification_form_out(label: str | None) -> str | None:
+    for pattern, name in _CERTIFICATION_FORM_RE:
+        if label and pattern.search(label):
+            return name
+    return None
+
+
+def _certified(form: str | None, *figures: str | None, context: str) -> tuple:
+    """(form name, figures...) as Cartograph takes them, or Nones when the
+    form is not one it recognises."""
+    name = _certification_form_out(form)
+    if name is None:
+        if form and any(f is not None for f in figures):
+            logger.info("%s: certification figures read off the %s are not sent — Cartograph "
+                        "recognises HUD-50059 and TIC", context, form)
+        return (None,) + (None,) * len(figures)
+    return (name,) + tuple(_money(f) for f in figures)
+
+
+def _certified_income(entry) -> tuple[str | None, str | None]:
+    """(form, annual figure) the certification states for an income record.
+
+    From the field reconciled for it; failing that, from a declared figure
+    whose source is the certification form — a record reconciled before
+    the field existed carries the form's line that way."""
+    if entry.certificationAmount:
+        return entry.certificationForm, entry.certificationAmount
+    if is_certification_source(getattr(entry, "declaredSource", None)) and entry.declaredAnnualAmount:
+        return entry.declaredSource, entry.declaredAnnualAmount
+    if is_certification_source(entry.selfDeclaredSource) and entry.selfDeclaredAmount:
+        return entry.selfDeclaredSource, entry.selfDeclaredAmount
+    return entry.certificationForm, None
+
+
+def _certified_asset(asset) -> tuple[str | None, str | None, str | None]:
+    """(form, cash value, annual income) the certification states for an
+    asset, on the same fallback as income for the cash value. The income
+    line has no fallback: incomeAmount carries no provenance."""
+    form, cash = asset.certificationForm, asset.certificationCashValue
+    if cash is None and is_certification_source(asset.selfDeclaredSource) and asset.selfDeclaredAmount is not None:
+        form, cash = asset.selfDeclaredSource, asset.selfDeclaredAmount
+    return form, cash, asset.certificationIncome
+
+
+def _own_statement(amount: str | None, source: str | None) -> tuple[str | None, str | None]:
+    """The household's own figure and where it wrote it, or Nones when the
+    figure was read off the certification form: that one is the certified
+    amount, sent as such, never as a self-declaration."""
+    if is_certification_source(source):
+        return None, None
+    return amount, source
+
+
 def _money(value: str | None) -> str | None:
     """Normalize a money string to plain digits, or None if unparseable.
 
@@ -661,7 +725,8 @@ def build_cert_review(
     # anyway; this is here so the two can be compared.
     asset_total = 0.0
     for record in asset_records:
-        value = record.get("current_value") or record.get("manual_balance")
+        value = (record.get("current_value") or record.get("manual_balance")
+                 or record.get("certification_cash_value"))
         if value:
             asset_total += float(value)
 
@@ -1072,6 +1137,8 @@ def build_income_records(
                 "employment_start_date": _iso_date(entry.hireDate),
             })
 
+        own_amount, own_source = _own_statement(entry.selfDeclaredAmount, entry.selfDeclaredSource)
+        cert_form, cert_amount = _certified(*_certified_income(entry), context=context)
         records.append({
             "member_ref": member_ref,
             "income_type": _map_vocabulary(
@@ -1087,8 +1154,10 @@ def build_income_records(
                 entry.employmentStatus, warnings, context,
             ),
             "termination_date": _iso_date(entry.terminationDate),
-            "self_declared_amount": _money(entry.selfDeclaredAmount),
-            "source_of_declaration": entry.selfDeclaredSource,
+            "self_declared_amount": _money(own_amount),
+            "source_of_declaration": own_source,
+            "certification_form": cert_form,
+            "certification_amount": cert_amount,
             "verification_status": entry.verificationStatus,
             "pages": _pages_of(entry),
             "annual_income": calc["annual_income"] if calc else None,
@@ -1156,6 +1225,8 @@ def build_income_records(
                 "termination_date": None,
                 "self_declared_amount": None,
                 "source_of_declaration": None,
+                "certification_form": None,
+                "certification_amount": None,
                 "verification_status": "verified",
                 "pages": sorted({p for s in stubs for p in _pages_of(s)}),
                 "rate_unit": None,
@@ -1241,6 +1312,8 @@ def build_asset_records(
         # spelling rather than on whether anyone actually verified anything.
         verified = bool(asset.bankStatment or asset.verificationOfAsset)
         current_value = _balance(asset.currentBalance, warnings, context) if verified else None
+        own_balance, own_source = _own_statement(asset.selfDeclaredAmount, asset.selfDeclaredSource)
+        cert_form, cert_cash_value, cert_income = _certified(*_certified_asset(asset), context=context)
         if asset.currentBalance and not verified:
             warnings.append(
                 f"{context}: balance arrived with no statement or "
@@ -1259,8 +1332,11 @@ def build_asset_records(
             # The resident's own figure, from a self-certification or the
             # certification's asset table. Never a copy of the verified
             # balance: a field on the wire does not borrow another's value.
-            "manual_balance": _balance(asset.selfDeclaredAmount, warnings, f"{context}.manual_balance"),
-            "source_of_declaration": asset.selfDeclaredSource,
+            "manual_balance": _balance(own_balance, warnings, f"{context}.manual_balance"),
+            "source_of_declaration": own_source,
+            "certification_form": cert_form,
+            "certification_cash_value": cert_cash_value,
+            "certification_income": cert_income,
             # The six-month average as the form printed it, or, when the VOA
             # listed monthly balances instead, the mean of those.
             "bank_stmt_avg_balance": _balance(
@@ -1442,7 +1518,9 @@ def attach_confidence(payload: dict, extraction: ExtractionResult) -> None:
     _assign(members, by_type.get("household_member", []),
             lambda m: " ".join(p for p in (m.get("first_name"), m.get("last_name")) if p))
     ref_name = {m.get("ref"): " ".join(p for p in (m.get("first_name"), m.get("last_name")) if p) for m in members}
-    income = [r for r in (payload.get("income_records") or []) if r.get("vois") or r.get("self_declared_amount") is not None or not r.get("paystubs")]
+    income = [r for r in (payload.get("income_records") or [])
+              if r.get("vois") or r.get("self_declared_amount") is not None
+              or r.get("certification_amount") is not None or not r.get("paystubs")]
     _assign(income, by_type.get("income", []),
             lambda r: f"{ref_name.get(r.get('member_ref'), '')} — {r.get('source_name') or ''}".strip(" —"))
     _assign(payload.get("asset_records") or [], by_type.get("asset", []),
