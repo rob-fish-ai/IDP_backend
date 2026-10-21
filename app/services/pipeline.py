@@ -1618,7 +1618,7 @@ def _deduplicate_assets(asset_records: list) -> list:
         for other in recs_sorted[1:]:
             for f in (
                 "accountNumber", "currentBalance", "averageSixMonthBalance",
-                "selfDeclaredAmount", "incomeAmount", "interestType",
+                "selfDeclaredAmount", "incomeAmount", "interestType", "interestRate",
                 "percentageOfOwnership", "dateReceived", "sourceName",
                 "assetOwner", "socialSecurityNumber", "accountType",
                 "selfDeclaredSource", "address",
@@ -1699,7 +1699,8 @@ def _deduplicate_assets(asset_records: list) -> list:
             twin.selfDeclaredSource = twin.selfDeclaredSource or rec.selfDeclaredSource
         elif not twin.selfDeclaredAmount and rec.currentBalance and twin.currentBalance != rec.currentBalance:
             twin.selfDeclaredAmount = rec.currentBalance
-        for f in ("accountNumber", "incomeAmount", "interestType", "percentageOfOwnership", "dateReceived", "sourceName",
+        for f in ("accountNumber", "incomeAmount", "interestType", "interestRate", "percentageOfOwnership",
+                  "dateReceived", "sourceName",
                   "certificationCashValue", "certificationIncome", "certificationForm"):
             if not getattr(twin, f, None) and getattr(rec, f, None):
                 setattr(twin, f, getattr(rec, f))

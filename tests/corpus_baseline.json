@@ -60,7 +60,12 @@
     null,
     null,
     null,
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -71,7 +76,12 @@
     null,
     null,
     null,
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -235,7 +245,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -246,7 +261,12 @@
     "verified",
     null,
     "774.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -257,7 +277,12 @@
     "verified",
     null,
     "1614.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -331,7 +356,12 @@
     "verified",
     null,
     "19.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -342,7 +372,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -353,7 +388,12 @@
     "verified",
     null,
     "1503.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -412,7 +452,12 @@
     "verified",
     null,
     "3.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -477,7 +522,18 @@
     "verified",
     null,
     "387.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "prepaid_debit_card",
@@ -488,7 +544,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -562,7 +623,12 @@
     "declared_only",
     null,
     "7.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -573,7 +639,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.001",
+    null,
+    []
    ],
    [
     "checking",
@@ -584,7 +655,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "savings",
@@ -595,7 +671,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.995",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -658,7 +739,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.01",
+    null,
+    []
    ],
    [
     "checking",
@@ -669,7 +755,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -680,7 +771,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.01",
+    null,
+    []
    ],
    [
     "savings",
@@ -691,7 +787,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -765,7 +866,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "prepaid_debit_card",
@@ -776,7 +882,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -787,7 +898,18 @@
     "verified",
     null,
     "268.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ]
   ],
   "cert_review": {
@@ -856,7 +978,12 @@
     "declared_only",
     null,
     "8298.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -867,7 +994,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -878,7 +1010,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.05",
+    null,
+    []
    ],
    [
     "savings",
@@ -889,7 +1026,12 @@
     "verified",
     null,
     "1132.00",
-    null
+    null,
+    "3.00",
+    null,
+    "0.25",
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -900,7 +1042,12 @@
     "verified",
     null,
     "3426.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -911,7 +1058,12 @@
     "verified",
     null,
     "1123.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -922,7 +1074,12 @@
     "verified",
     null,
     "891.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -986,7 +1143,12 @@
     "declared_only",
     null,
     "117.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -997,7 +1159,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -1008,7 +1175,12 @@
     "verified",
     null,
     "62.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.01",
+    null,
+    []
    ],
    [
     "savings",
@@ -1019,7 +1191,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.25",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -1094,7 +1271,12 @@
     "declared_only",
     null,
     "190.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -1105,7 +1287,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -1116,7 +1303,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -1127,7 +1319,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -1138,7 +1335,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -1149,7 +1351,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -1160,7 +1367,12 @@
     "verified",
     null,
     "661.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -1218,7 +1430,12 @@
     "verified",
     null,
     "504.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -1229,7 +1446,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -1295,7 +1517,12 @@
     "declared_only",
     null,
     "117.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -1306,7 +1533,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -1317,7 +1549,12 @@
     "verified",
     null,
     "62.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.01",
+    null,
+    []
    ],
    [
     "savings",
@@ -1328,7 +1565,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.25",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -1396,7 +1638,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "prepaid_debit_card",
@@ -1407,7 +1654,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -1418,7 +1670,12 @@
     "verified",
     null,
     "126.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -1488,7 +1745,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -1499,7 +1761,28 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "other",
@@ -1510,7 +1793,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -1521,7 +1809,18 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      "0.81",
+      "0.03",
+      null
+     ]
+    ]
    ]
   ],
   "cert_review": {
@@ -1584,7 +1883,12 @@
     "verified",
     null,
     "21.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -1645,7 +1949,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -1656,7 +1965,12 @@
     "verified",
     null,
     "2640.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -1667,7 +1981,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -1678,7 +1997,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -1689,7 +2013,12 @@
     "verified",
     null,
     "1662.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -1700,7 +2029,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -1711,7 +2045,12 @@
     "verified",
     null,
     "1737.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -1722,7 +2061,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    "0.00",
+    null,
+    "3.00",
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -1733,7 +2077,12 @@
     "declared_only",
     null,
     "231.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -1744,7 +2093,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -1755,7 +2109,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -1766,7 +2125,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -1777,7 +2141,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -1788,7 +2157,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -1799,7 +2173,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -1810,7 +2189,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -1821,7 +2205,12 @@
     "verified",
     null,
     "1336.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -1832,7 +2221,12 @@
     "verified",
     null,
     "849.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -1843,7 +2237,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -1917,7 +2316,18 @@
     "verified",
     null,
     "72.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ]
   ],
   "cert_review": {
@@ -2031,7 +2441,18 @@
     "verified",
     null,
     "72.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ]
   ],
   "cert_review": {
@@ -2101,7 +2522,12 @@
     "verified",
     null,
     "416.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "retirement",
@@ -2112,7 +2538,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -2123,7 +2554,12 @@
     "verified",
     null,
     "50.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.01",
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -2134,7 +2570,12 @@
     "verified",
     null,
     "5149.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -2199,7 +2640,18 @@
     "verified",
     null,
     "72.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ]
   ],
   "cert_review": {
@@ -2256,7 +2708,12 @@
     "declared_only",
     null,
     "391.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -2267,7 +2724,12 @@
     "verified",
     3132,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.00",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -2328,7 +2790,18 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "savings",
@@ -2339,7 +2812,12 @@
     "verified",
     3133,
     "1.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -2397,7 +2875,18 @@
     "verified",
     3138,
     "183.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ]
   ],
   "cert_review": {
@@ -2464,7 +2953,12 @@
     "declared_only",
     3139,
     "2988.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -2475,7 +2969,18 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      "0.03",
+      "0.01",
+      null
+     ]
+    ]
    ],
    [
     "checking",
@@ -2486,7 +2991,18 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      "0.68",
+      "0.01",
+      null
+     ]
+    ]
    ]
   ],
   "cert_review": {
@@ -2548,7 +3064,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -2559,7 +3080,12 @@
     "declared_only",
     3149,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -2643,7 +3169,43 @@
     "verified",
     3152,
     "1300.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ]
   ],
   "cert_review": {
@@ -2703,7 +3265,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -2714,7 +3281,12 @@
     "declared_only",
     3153,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -2798,7 +3370,43 @@
     "verified",
     null,
     "2217.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ]
   ],
   "cert_review": {
@@ -2858,7 +3466,18 @@
     "verified",
     3158,
     "780.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "savings",
@@ -2869,7 +3488,18 @@
     "verified",
     3157,
     "192.00",
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      "11.67",
+      null,
+      null
+     ]
+    ]
    ],
    [
     "whole_life_insurance",
@@ -2880,7 +3510,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -2891,7 +3526,12 @@
     "verified",
     null,
     "23.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -2952,7 +3592,12 @@
     "declared_only",
     3159,
     "1443.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -2963,7 +3608,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -3024,7 +3674,12 @@
     "verified",
     null,
     "182.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -3094,7 +3749,18 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ]
   ],
   "cert_review": {
@@ -3151,7 +3817,18 @@
     "verified",
     3167,
     "25.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "whole_life_insurance",
@@ -3162,7 +3839,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -3173,7 +3855,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -3184,7 +3871,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -3255,7 +3947,12 @@
     "declared_only",
     null,
     "242.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -3266,7 +3963,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "checking",
@@ -3277,7 +3979,12 @@
     "verified",
     3172,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -3288,7 +3995,12 @@
     "verified",
     3171,
     "571.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -3348,7 +4060,12 @@
     "declared_only",
     null,
     "2894.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -3406,7 +4123,12 @@
     "declared_only",
     3182,
     "4187.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -3417,7 +4139,12 @@
     "verified",
     null,
     "13113.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -3428,7 +4155,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "other",
@@ -3439,7 +4171,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -3450,7 +4187,12 @@
     "verified",
     3183,
     "18600.00",
-    null
+    null,
+    "2.00",
+    null,
+    "0.01",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -3521,7 +4263,12 @@
     "declared_only",
     null,
     "230.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -3593,7 +4340,12 @@
     "verified",
     null,
     "181.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.01",
+    null,
+    []
    ],
    [
     "savings",
@@ -3604,7 +4356,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -3615,7 +4372,12 @@
     "declared_only",
     null,
     "1508.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -3626,7 +4388,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -3637,7 +4404,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -3732,7 +4504,12 @@
     "declared_only",
     3190,
     "814.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -3743,7 +4520,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -3805,7 +4587,12 @@
     "verified",
     3192,
     "392.00",
-    null
+    null,
+    "0.00",
+    null,
+    "10.00",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -3864,7 +4651,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.02",
+    null,
+    []
    ],
    [
     "checking",
@@ -3875,7 +4667,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.01",
+    null,
+    []
    ],
    [
     "other",
@@ -3886,7 +4683,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    "148.99",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -3897,7 +4699,12 @@
     "verified",
     3199,
     "6.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.25",
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -3908,7 +4715,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -3984,7 +4796,12 @@
     "declared_only",
     3200,
     "615.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -3995,7 +4812,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -4006,7 +4828,12 @@
     "verified",
     null,
     "832.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -4076,7 +4903,12 @@
     "verified",
     3203,
     "2192.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.00",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -4144,7 +4976,12 @@
     "declared_only",
     null,
     "168.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -4155,7 +4992,12 @@
     "verified",
     3209,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -4166,7 +5008,12 @@
     "verified",
     null,
     "103.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -4177,7 +5024,12 @@
     "verified",
     null,
     "133.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -4258,7 +5110,12 @@
     "verified",
     3213,
     "33.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.00",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -4316,7 +5173,12 @@
     "verified",
     null,
     "1215.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -4377,7 +5239,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -4388,7 +5255,12 @@
     "declared_only",
     null,
     "19.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -4447,7 +5319,18 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "savings",
@@ -4458,7 +5341,12 @@
     "declared_only",
     null,
     "623.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -4548,7 +5436,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -4620,7 +5513,12 @@
     "verified",
     null,
     "74.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "savings",
@@ -4631,7 +5529,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -4642,7 +5545,12 @@
     "verified",
     null,
     "760.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -4709,7 +5617,12 @@
     "declared_only",
     null,
     "422.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -4720,7 +5633,12 @@
     "verified",
     3233,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -4731,7 +5649,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -4742,7 +5665,12 @@
     "declared_only",
     3231,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -4753,7 +5681,12 @@
     "verified",
     null,
     "41.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -4764,7 +5697,12 @@
     "verified",
     null,
     "2157.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -4836,7 +5774,12 @@
     "verified",
     3235,
     "422.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -4892,7 +5835,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -4903,7 +5851,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -4960,7 +5913,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "prepaid_debit_card",
@@ -4971,7 +5929,12 @@
     "verified",
     null,
     "332.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "prepaid_debit_card",
@@ -4982,7 +5945,12 @@
     "verified",
     null,
     "708.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -5079,7 +6047,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -5143,7 +6116,12 @@
     "verified",
     null,
     "434.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.01",
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -5154,7 +6132,12 @@
     "declared_only",
     null,
     "2287.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -5165,7 +6148,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -5220,7 +6208,12 @@
     "verified",
     3246,
     "170.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "other",
@@ -5231,7 +6224,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "prepaid_debit_card",
@@ -5242,7 +6240,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "prepaid_debit_card",
@@ -5253,7 +6256,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -5264,7 +6272,12 @@
     "declared_only",
     3247,
     "6.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -5326,7 +6339,12 @@
     "verified",
     3250,
     "1147.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -5337,7 +6355,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -5395,7 +6418,18 @@
     "verified",
     null,
     "10268.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "whole_life_insurance",
@@ -5406,7 +6440,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -5417,7 +6456,12 @@
     "verified",
     null,
     "307.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -5476,7 +6520,18 @@
     "verified",
     null,
     "66.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "savings",
@@ -5487,7 +6542,12 @@
     "verified",
     3269,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -5556,7 +6616,12 @@
     "verified",
     null,
     "382.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -5620,7 +6685,12 @@
     "declared_only",
     null,
     "3478.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -5631,7 +6701,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -5642,7 +6717,12 @@
     "declared_only",
     null,
     "203.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -5709,7 +6789,12 @@
     "verified",
     null,
     "803.00",
-    null
+    null,
+    "1.00",
+    null,
+    "0.09",
+    null,
+    []
    ],
    [
     "checking",
@@ -5720,7 +6805,28 @@
     "verified",
     3272,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      "0.03",
+      "0.11",
+      null
+     ],
+     [
+      "0.13",
+      "0.07",
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ]
   ],
   "cert_review": {
@@ -5779,7 +6885,12 @@
     "declared_only",
     3279,
     "780.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -5790,7 +6901,38 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "savings",
@@ -5801,7 +6943,18 @@
     "verified",
     3280,
     "5109.00",
-    null
+    null,
+    null,
+    null,
+    "3.01",
+    null,
+    [
+     [
+      "14.67",
+      "3.01",
+      null
+     ]
+    ]
    ],
    [
     "whole_life_insurance",
@@ -5812,7 +6965,12 @@
     "declared_only",
     null,
     "23.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -5823,7 +6981,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -5885,7 +7048,12 @@
     "verified",
     3408,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "savings",
@@ -5896,7 +7064,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.25",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -5962,7 +7135,12 @@
     "verified",
     3411,
     "453.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "savings",
@@ -5973,7 +7151,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.25",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -6040,7 +7223,18 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "savings",
@@ -6051,7 +7245,12 @@
     "declared_only",
     null,
     "927.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -6062,7 +7261,12 @@
     "declared_only",
     null,
     "1817.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -6073,7 +7277,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -6135,7 +7344,12 @@
     "verified",
     3415,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.01",
+    null,
+    []
    ],
    [
     "checking",
@@ -6146,7 +7360,12 @@
     "declared_only",
     null,
     "1207.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -6157,7 +7376,12 @@
     "verified",
     3417,
     "415.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.01",
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -6168,7 +7392,12 @@
     "verified",
     null,
     "2379.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -6179,7 +7408,12 @@
     "verified",
     3414,
     "624.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -6252,7 +7486,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -6263,7 +7502,12 @@
     "verified",
     3428,
     "452.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "prepaid_debit_card",
@@ -6274,7 +7518,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -6285,7 +7534,12 @@
     "declared_only",
     null,
     "1.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -6296,7 +7550,12 @@
     "declared_only",
     3430,
     "2.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -6307,7 +7566,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -6318,7 +7582,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -6395,7 +7664,12 @@
     "verified",
     3441,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -6406,7 +7680,12 @@
     "verified",
     3442,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.01",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -6477,7 +7756,12 @@
     "verified",
     3445,
     "441.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -6488,7 +7772,12 @@
     "declared_only",
     null,
     "1129.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -6499,7 +7788,12 @@
     "verified",
     null,
     "830.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -6570,7 +7864,12 @@
     "verified",
     3448,
     "62.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.00",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -6642,7 +7941,12 @@
     "verified",
     3453,
     "88.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "savings",
@@ -6653,7 +7957,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -6724,7 +8033,12 @@
     "verified",
     3454,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "checking",
@@ -6735,7 +8049,23 @@
     "verified",
     null,
     "23444.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "other",
@@ -6746,7 +8076,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "other",
@@ -6757,7 +8092,12 @@
     "declared_only",
     null,
     "85.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "other",
@@ -6768,7 +8108,12 @@
     "verified",
     null,
     "2312.00",
-    null
+    null,
+    "62.12",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -6834,7 +8179,12 @@
     "declared_only",
     null,
     "1354.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -6845,7 +8195,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "checking",
@@ -6856,7 +8211,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -6867,7 +8227,12 @@
     "verified",
     4292,
     "9264.00",
-    null
+    null,
+    "417.00",
+    null,
+    "4.50",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -6932,7 +8297,12 @@
     "verified",
     3462,
     "90.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "savings",
@@ -6943,7 +8313,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -6954,7 +8329,12 @@
     "verified",
     3461,
     "12318.00",
-    null
+    null,
+    "493.00",
+    null,
+    "4.00",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -7021,7 +8401,23 @@
     "verified",
     3464,
     "80.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.00",
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "savings",
@@ -7032,7 +8428,12 @@
     "verified",
     3463,
     "12.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.00",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -7089,7 +8490,12 @@
     "verified",
     3465,
     "468.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -7158,7 +8564,12 @@
     "verified",
     3466,
     "88.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "savings",
@@ -7169,7 +8580,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -7240,7 +8656,12 @@
     "verified",
     null,
     "15521.00",
-    null
+    null,
+    "489.00",
+    null,
+    "3.102",
+    null,
+    []
    ],
    [
     "cd",
@@ -7251,7 +8672,12 @@
     "verified",
     3474,
     "7329.00",
-    null
+    null,
+    "340.00",
+    null,
+    "4.545",
+    null,
+    []
    ],
    [
     "checking",
@@ -7262,7 +8688,12 @@
     "verified",
     3471,
     "33253.00",
-    null
+    null,
+    "3.00",
+    null,
+    "0.01",
+    null,
+    []
    ],
    [
     "other",
@@ -7273,7 +8704,18 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "other",
@@ -7284,7 +8726,12 @@
     "declared_only",
     3473,
     "1627.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "retirement",
@@ -7295,7 +8742,18 @@
     "verified",
     3472,
     "12945.00",
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      "16.66",
+      null,
+      null
+     ]
+    ]
    ],
    [
     "savings",
@@ -7306,7 +8764,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -7317,7 +8780,12 @@
     "verified",
     3470,
     "58021.00",
-    null
+    null,
+    "75.00",
+    null,
+    "0.13",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -7433,7 +8901,18 @@
     "verified",
     null,
     "1430.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "whole_life_insurance",
@@ -7444,7 +8923,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -7503,7 +8987,12 @@
     "verified",
     3482,
     "98.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -7573,7 +9062,12 @@
     "verified",
     3485,
     "571.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -7630,7 +9124,12 @@
     "verified",
     3491,
     "12753.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -7641,7 +9140,12 @@
     "verified",
     3490,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -7702,7 +9206,12 @@
     "declared_only",
     3492,
     "135.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -7713,7 +9222,12 @@
     "declared_only",
     3493,
     "31.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -7798,7 +9312,12 @@
     "declared_only",
     3496,
     "135.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -7809,7 +9328,12 @@
     "declared_only",
     3497,
     "31.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -7892,7 +9416,12 @@
     "verified",
     3499,
     "668.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.02",
+    null,
+    []
    ],
    [
     "savings",
@@ -7903,7 +9432,12 @@
     "verified",
     3500,
     "12.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.01",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -7974,7 +9508,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -7985,7 +9524,12 @@
     "declared_only",
     3506,
     "424.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -8052,7 +9596,18 @@
     "verified",
     null,
     "53.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "prepaid_debit_card",
@@ -8063,7 +9618,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -8123,7 +9683,18 @@
     "verified",
     null,
     "176.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "checking",
@@ -8134,7 +9705,18 @@
     "verified",
     null,
     "31.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ]
   ],
   "cert_review": {
@@ -8222,7 +9804,12 @@
     "verified",
     3917,
     "124.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -8233,7 +9820,12 @@
     "verified",
     3541,
     "983.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -8342,7 +9934,12 @@
     "verified",
     3525,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "savings",
@@ -8353,7 +9950,12 @@
     "verified",
     3523,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.01",
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -8364,7 +9966,12 @@
     "verified",
     3524,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -8432,7 +10039,12 @@
     "verified",
     3527,
     "3305.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.01",
+    null,
+    []
    ],
    [
     "other",
@@ -8443,7 +10055,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -8454,7 +10071,12 @@
     "verified",
     3526,
     "346.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.01",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -8513,7 +10135,12 @@
     "verified",
     3531,
     "552.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "other",
@@ -8524,7 +10151,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "other",
@@ -8535,7 +10167,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    "6.52",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "other",
@@ -8546,7 +10183,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "other",
@@ -8557,7 +10199,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "other",
@@ -8568,7 +10215,12 @@
     "declared_only",
     null,
     "58628.00",
-    null
+    null,
+    "12.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -8579,7 +10231,12 @@
     "declared_only",
     null,
     "1.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -8645,7 +10302,12 @@
     "verified",
     3534,
     "1614.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -8706,7 +10368,12 @@
     "verified",
     3910,
     "3982.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.00",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -8775,7 +10442,12 @@
     "verified",
     3538,
     "1055.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -8786,7 +10458,12 @@
     "verified",
     3539,
     "1448.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -8849,7 +10526,12 @@
     "declared_only",
     null,
     "306.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -8860,7 +10542,23 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "checking",
@@ -8871,7 +10569,12 @@
     "verified",
     3542,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "other",
@@ -8882,7 +10585,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -8893,7 +10601,12 @@
     "verified",
     3543,
     "10.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.00",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -8956,7 +10669,12 @@
     "verified",
     3547,
     "1834.00",
-    null
+    null,
+    "2.00",
+    null,
+    "0.10",
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -8967,7 +10685,12 @@
     "verified",
     null,
     "5182.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -8978,7 +10701,12 @@
     "verified",
     3546,
     "3152.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -9041,7 +10769,18 @@
     "verified",
     null,
     "362.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ]
   ],
   "cert_review": {
@@ -9101,7 +10840,12 @@
     "declared_only",
     3563,
     "3364.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -9112,7 +10856,23 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "whole_life_insurance",
@@ -9123,7 +10883,12 @@
     "verified",
     null,
     "1286.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -9134,7 +10899,12 @@
     "verified",
     null,
     "454.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -9145,7 +10915,12 @@
     "verified",
     null,
     "57.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -9156,7 +10931,12 @@
     "verified",
     null,
     "710.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -9167,7 +10947,12 @@
     "verified",
     null,
     "270.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -9242,7 +11027,12 @@
     "verified",
     null,
     "234.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.00",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -9311,7 +11101,12 @@
     "verified",
     3570,
     "380.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "savings",
@@ -9322,7 +11117,12 @@
     "verified",
     3567,
     "13.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -9333,7 +11133,12 @@
     "verified",
     null,
     "802.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -9344,7 +11149,12 @@
     "verified",
     3568,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -9355,7 +11165,12 @@
     "verified",
     3569,
     "348.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -9419,7 +11234,12 @@
     "verified",
     3579,
     "105.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.01",
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -9430,7 +11250,12 @@
     "verified",
     null,
     "734.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -9441,7 +11266,12 @@
     "verified",
     3578,
     "144.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -9509,7 +11339,12 @@
     "declared_only",
     3606,
     "12.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -9520,7 +11355,28 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "other",
@@ -9531,7 +11387,12 @@
     "declared_only",
     3608,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -9542,7 +11403,12 @@
     "verified",
     3607,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -9598,7 +11464,18 @@
     "verified",
     3582,
     "193.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "whole_life_insurance",
@@ -9609,7 +11486,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -9670,7 +11552,12 @@
     "verified",
     3583,
     "82775.00",
-    null
+    null,
+    null,
+    null,
+    "0.005",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -9742,7 +11629,12 @@
     "verified",
     3585,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -9810,7 +11702,12 @@
     "declared_only",
     null,
     "102.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -9821,7 +11718,12 @@
     "verified",
     3586,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "checking",
@@ -9832,7 +11734,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.00",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -9900,7 +11807,12 @@
     "verified",
     3587,
     "182.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.01",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -9960,7 +11872,12 @@
     "declared_only",
     3588,
     "306.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -9971,7 +11888,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.00",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -10040,7 +11962,12 @@
     "verified",
     3592,
     "1022.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -10051,7 +11978,12 @@
     "verified",
     3591,
     "2012.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -10123,7 +12055,12 @@
     "verified",
     3598,
     "144.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "savings",
@@ -10134,7 +12071,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -10194,7 +12136,18 @@
     "verified",
     3602,
     "477.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ]
   ],
   "cert_review": {
@@ -10261,7 +12214,12 @@
     "declared_only",
     null,
     "130.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -10272,7 +12230,18 @@
     "verified",
     null,
     null,
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "checking",
@@ -10283,7 +12252,33 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      "0.00",
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "checking",
@@ -10294,7 +12289,18 @@
     "verified",
     3611,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "savings",
@@ -10305,7 +12311,18 @@
     "verified",
     null,
     null,
-    null
+    null,
+    "0.03",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "savings",
@@ -10316,7 +12333,23 @@
     "verified",
     null,
     "20.00",
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      "0.03",
+      null,
+      null
+     ],
+     [
+      "0.03",
+      null,
+      null
+     ]
+    ]
    ],
    [
     "savings",
@@ -10327,7 +12360,18 @@
     "verified",
     3609,
     "5.00",
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      "0.03",
+      null,
+      null
+     ]
+    ]
    ]
   ],
   "cert_review": {
@@ -10386,7 +12430,12 @@
     "verified",
     3941,
     "194.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.001",
+    null,
+    []
    ],
    [
     "other",
@@ -10397,7 +12446,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -10408,7 +12462,12 @@
     "verified",
     3942,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.9996",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -10470,7 +12529,12 @@
     "verified",
     3617,
     "65.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.001",
+    null,
+    []
    ],
    [
     "savings",
@@ -10481,7 +12545,12 @@
     "verified",
     3618,
     "4.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.999",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -10536,7 +12605,18 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ]
   ],
   "cert_review": {
@@ -10593,7 +12673,12 @@
     "verified",
     null,
     "60935.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -10604,7 +12689,23 @@
     "verified",
     3625,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "savings",
@@ -10615,7 +12716,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -10626,7 +12732,28 @@
     "verified",
     3624,
     "4517.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.0104",
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ]
   ],
   "cert_review": {
@@ -10708,7 +12835,18 @@
     "verified",
     null,
     "920.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "prepaid_debit_card",
@@ -10719,7 +12857,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -10730,7 +12873,12 @@
     "verified",
     3627,
     "306.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -10788,7 +12936,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -10799,7 +12952,18 @@
     "verified",
     3630,
     "21.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ]
   ],
   "cert_review": {
@@ -10857,7 +13021,43 @@
     "verified",
     3631,
     "140.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "savings",
@@ -10868,7 +13068,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -10925,7 +13130,12 @@
     "verified",
     null,
     "129.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -10936,7 +13146,12 @@
     "verified",
     3636,
     "1853.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -10947,7 +13162,12 @@
     "verified",
     3633,
     "226.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -10958,7 +13178,12 @@
     "verified",
     3635,
     "2110.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -11028,7 +13253,12 @@
     "declared_only",
     3640,
     "29.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -11039,7 +13269,12 @@
     "declared_only",
     null,
     "526.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -11050,7 +13285,18 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "checking",
@@ -11061,7 +13307,18 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "savings",
@@ -11072,7 +13329,18 @@
     "verified",
     3643,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.00",
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "whole_life_insurance",
@@ -11083,7 +13351,12 @@
     "declared_only",
     null,
     "651.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -11094,7 +13367,12 @@
     "verified",
     null,
     "3168.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -11105,7 +13383,12 @@
     "declared_only",
     null,
     "2274.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -11116,7 +13399,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -11127,7 +13415,12 @@
     "verified",
     null,
     "2380.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -11138,7 +13431,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -11149,7 +13447,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -11216,7 +13519,12 @@
     "declared_only",
     null,
     "471.00",
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -11227,7 +13535,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -11238,7 +13551,12 @@
     "verified",
     3638,
     "3152.00",
-    null
+    null,
+    null,
+    null,
+    "0.00",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -11302,7 +13620,18 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "savings",
@@ -11313,7 +13642,12 @@
     "declared_only",
     3647,
     "465.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -11373,7 +13707,12 @@
     "verified",
     3653,
     "2246.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -11434,7 +13773,12 @@
     "declared_only",
     null,
     "1780.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -11445,7 +13789,18 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "checking",
@@ -11456,7 +13811,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "checking",
@@ -11467,7 +13827,23 @@
     "verified",
     3655,
     "59.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "prepaid_debit_card",
@@ -11478,7 +13854,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -11489,7 +13870,12 @@
     "declared_only",
     null,
     "12.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -11500,7 +13886,18 @@
     "verified",
     3656,
     "6.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "whole_life_insurance",
@@ -11511,7 +13908,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -11570,7 +13972,12 @@
     "verified",
     3666,
     "1116.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -11581,7 +13988,12 @@
     "verified",
     3665,
     "2238.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -11643,7 +14055,12 @@
     "verified",
     3667,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "savings",
@@ -11654,7 +14071,12 @@
     "verified",
     3668,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.01",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -11726,7 +14148,18 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "savings",
@@ -11737,7 +14170,12 @@
     "declared_only",
     3679,
     "9.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -11807,7 +14245,12 @@
     "verified",
     3685,
     "109.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "savings",
@@ -11818,7 +14261,12 @@
     "verified",
     3683,
     "1.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.01",
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -11829,7 +14277,12 @@
     "verified",
     3684,
     "1823.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -11891,7 +14344,12 @@
     "declared_only",
     3686,
     "408.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -11951,7 +14409,12 @@
     "verified",
     3905,
     "926.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -11962,7 +14425,12 @@
     "verified",
     3904,
     "932.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -12019,7 +14487,12 @@
     "verified",
     3929,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -12030,7 +14503,12 @@
     "verified",
     3930,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -12090,7 +14568,12 @@
     "declared_only",
     3835,
     "330.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -12101,7 +14584,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -12112,7 +14600,12 @@
     "verified",
     3863,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -12171,7 +14664,12 @@
     "verified",
     3913,
     "1057.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -12232,7 +14730,18 @@
     "verified",
     null,
     "230.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ]
   ],
   "cert_review": {
@@ -12285,7 +14794,12 @@
     "declared_only",
     3946,
     "576.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -12351,7 +14865,12 @@
     "verified",
     3948,
     "317.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -12404,7 +14923,12 @@
     "verified",
     3949,
     "179.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.01",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -12469,7 +14993,12 @@
     "declared_only",
     3950,
     "566.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -12527,7 +15056,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -12538,7 +15072,12 @@
     "verified",
     3951,
     "490.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -12598,7 +15137,12 @@
     "verified",
     null,
     "1.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.0005",
+    null,
+    []
    ],
    [
     "savings",
@@ -12609,7 +15153,12 @@
     "verified",
     3954,
     "5137.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -12620,7 +15169,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -12631,7 +15185,12 @@
     "verified",
     3953,
     "555.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -12642,7 +15201,12 @@
     "verified",
     null,
     "1227.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -12733,7 +15297,12 @@
     "declared_only",
     null,
     "184.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -12744,7 +15313,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -12801,7 +15375,12 @@
     "declared_only",
     null,
     "5855.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -12812,7 +15391,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.00",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -12873,7 +15457,12 @@
     "verified",
     3957,
     "550.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -12884,7 +15473,12 @@
     "verified",
     3958,
     "3413.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -12957,7 +15551,12 @@
     "verified",
     3960,
     "350.00",
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -13024,7 +15623,12 @@
     "verified",
     null,
     "202.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.01",
+    null,
+    []
    ],
    [
     "savings",
@@ -13035,7 +15639,12 @@
     "verified",
     4332,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.00",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -13104,7 +15713,12 @@
     "verified",
     3962,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -13115,7 +15729,12 @@
     "verified",
     3963,
     "245.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.07",
+    null,
+    []
    ],
    [
     "savings",
@@ -13126,7 +15745,12 @@
     "verified",
     null,
     "5.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -13137,7 +15761,12 @@
     "declared_only",
     null,
     "1858.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -13148,7 +15777,12 @@
     "verified",
     3964,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -13212,7 +15846,43 @@
     "verified",
     null,
     "55.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "checking",
@@ -13223,7 +15893,12 @@
     "verified",
     3965,
     "697.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.00",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -13296,7 +15971,18 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "checking",
@@ -13307,7 +15993,33 @@
     "verified",
     3968,
     "1270.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "savings",
@@ -13318,7 +16030,18 @@
     "verified",
     3966,
     "25.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "savings",
@@ -13329,7 +16052,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -13340,7 +16068,12 @@
     "verified",
     null,
     "3020.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -13351,7 +16084,12 @@
     "verified",
     3967,
     "708.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -13412,7 +16150,12 @@
     "declared_only",
     3996,
     "311.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -13490,7 +16233,12 @@
     "verified",
     null,
     "498.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -13501,7 +16249,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -13575,7 +16328,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -13586,7 +16344,12 @@
     "declared_only",
     null,
     "15.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -13660,7 +16423,12 @@
     "declared_only",
     null,
     "621.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -13671,7 +16439,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.005",
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -13682,7 +16455,12 @@
     "verified",
     null,
     "1051.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -13693,7 +16471,12 @@
     "verified",
     null,
     "1579.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -13704,7 +16487,12 @@
     "verified",
     null,
     "2940.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -13775,7 +16563,12 @@
     "verified",
     3997,
     "77.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -13786,7 +16579,12 @@
     "verified",
     3998,
     "1114.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -13843,7 +16641,12 @@
     "declared_only",
     4002,
     "311.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -13914,7 +16717,12 @@
     "verified",
     null,
     "232.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.10",
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -13925,7 +16733,12 @@
     "verified",
     null,
     "2904.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -13984,7 +16797,12 @@
     "declared_only",
     null,
     "908.00",
-    null
+    null,
+    "1.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -13995,7 +16813,18 @@
     "verified",
     4003,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      "0.02",
+      null,
+      null
+     ]
+    ]
    ],
    [
     "retirement",
@@ -14006,7 +16835,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -14017,7 +16851,12 @@
     "declared_only",
     null,
     "12.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -14028,7 +16867,18 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      "0.00",
+      null,
+      null
+     ]
+    ]
    ],
    [
     "savings",
@@ -14039,7 +16889,18 @@
     "verified",
     4004,
     null,
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "whole_life_insurance",
@@ -14050,7 +16911,12 @@
     "declared_only",
     null,
     "99.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -14061,7 +16927,12 @@
     "verified",
     4005,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -14120,7 +16991,12 @@
     "verified",
     null,
     "249.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.00",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -14184,7 +17060,12 @@
     "declared_only",
     null,
     "703.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -14195,7 +17076,12 @@
     "verified",
     4017,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "prepaid_debit_card",
@@ -14206,7 +17092,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -14217,7 +17108,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -14272,7 +17168,12 @@
     "declared_only",
     4018,
     "1782.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -14283,7 +17184,12 @@
     "declared_only",
     4019,
     "250.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -14294,7 +17200,12 @@
     "declared_only",
     4020,
     "733.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -14406,7 +17317,12 @@
     "declared_only",
     null,
     "1038.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -14417,7 +17333,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "other",
@@ -14428,7 +17349,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -14439,7 +17365,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -14450,7 +17381,12 @@
     "verified",
     null,
     "13671.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -14519,7 +17455,12 @@
     "declared_only",
     null,
     "176.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -14530,7 +17471,12 @@
     "verified",
     4028,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "prepaid_debit_card",
@@ -14541,7 +17487,18 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "savings",
@@ -14552,7 +17509,12 @@
     "verified",
     4030,
     "3.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -14563,7 +17525,12 @@
     "verified",
     4029,
     "676.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -14620,7 +17587,12 @@
     "verified",
     4038,
     "943.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -14631,7 +17603,12 @@
     "verified",
     4039,
     "6870.00",
-    null
+    null,
+    "3.00",
+    null,
+    "0.025",
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -14642,7 +17619,12 @@
     "verified",
     4040,
     "3706.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -14709,7 +17691,12 @@
     "declared_only",
     null,
     "439.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -14720,7 +17707,18 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "checking",
@@ -14731,7 +17729,18 @@
     "verified",
     4051,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "checking",
@@ -14742,7 +17751,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -14813,7 +17827,12 @@
     "verified",
     4052,
     "371.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -14866,7 +17885,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "prepaid_debit_card",
@@ -14877,7 +17901,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "prepaid_debit_card",
@@ -14888,7 +17917,12 @@
     "verified",
     null,
     "7.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -14899,7 +17933,12 @@
     "declared_only",
     null,
     "1.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -14910,7 +17949,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -14921,7 +17965,12 @@
     "verified",
     4053,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -14932,7 +17981,12 @@
     "declared_only",
     null,
     "391.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -14943,7 +17997,12 @@
     "verified",
     4054,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -15012,7 +18071,12 @@
     "verified",
     4055,
     "857.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.00",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -15069,7 +18133,12 @@
     "verified",
     4059,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -15080,7 +18149,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -15091,7 +18165,12 @@
     "verified",
     4060,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -15151,7 +18230,12 @@
     "verified",
     null,
     "2019.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -15162,7 +18246,12 @@
     "verified",
     4078,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "retirement",
@@ -15173,7 +18262,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -15184,7 +18278,12 @@
     "verified",
     null,
     "1130.68",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -15195,7 +18294,12 @@
     "verified",
     4079,
     "3354.04",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -15274,7 +18378,18 @@
     "verified",
     null,
     "174.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "prepaid_debit_card",
@@ -15285,7 +18400,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -15340,7 +18460,12 @@
     "verified",
     4085,
     "311.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.00",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -15406,7 +18531,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -15460,7 +18590,12 @@
     "declared_only",
     null,
     "1.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -15471,7 +18606,12 @@
     "declared_only",
     null,
     "391.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -15547,7 +18687,12 @@
     "declared_only",
     null,
     "696.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -15558,7 +18703,18 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.00",
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "savings",
@@ -15569,7 +18725,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -15580,7 +18741,12 @@
     "verified",
     null,
     "1491.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -15638,7 +18804,18 @@
     "verified",
     null,
     "5273.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "savings",
@@ -15649,7 +18826,12 @@
     "declared_only",
     null,
     "3945.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -15660,7 +18842,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -15716,7 +18903,12 @@
     "verified",
     4091,
     "7592.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -15727,7 +18919,12 @@
     "declared_only",
     4092,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -15738,7 +18935,12 @@
     "verified",
     null,
     "2545.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.01",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -15799,7 +19001,28 @@
     "verified",
     4094,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "checking",
@@ -15810,7 +19033,12 @@
     "verified",
     null,
     "540.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -15821,7 +19049,12 @@
     "verified",
     4095,
     "2889.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -15893,7 +19126,12 @@
     "verified",
     4097,
     "3063.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -15904,7 +19142,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -15963,7 +19206,12 @@
     "declared_only",
     4098,
     "1265.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -15974,7 +19222,12 @@
     "declared_only",
     4099,
     "757.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -16044,7 +19297,18 @@
     "verified",
     null,
     "102.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "whole_life_insurance",
@@ -16055,7 +19319,12 @@
     "verified",
     null,
     "1992.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -16114,7 +19383,12 @@
     "declared_only",
     null,
     "2465.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -16125,7 +19399,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -16136,7 +19415,12 @@
     "verified",
     null,
     "919.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -16230,7 +19514,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -16241,7 +19530,12 @@
     "declared_only",
     4102,
     "1.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -16252,7 +19546,12 @@
     "verified",
     4101,
     "382.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -16263,7 +19562,12 @@
     "verified",
     null,
     "283.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -16324,7 +19628,12 @@
     "declared_only",
     null,
     "498.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -16335,7 +19644,12 @@
     "verified",
     4103,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -16346,7 +19660,12 @@
     "verified",
     null,
     "923.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -16357,7 +19676,12 @@
     "verified",
     4104,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -16368,7 +19692,12 @@
     "verified",
     null,
     "2466.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -16436,7 +19765,12 @@
     "verified",
     null,
     "765.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -16447,7 +19781,12 @@
     "verified",
     4105,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -16458,7 +19797,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -16469,7 +19813,12 @@
     "verified",
     null,
     "1825.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -16480,7 +19829,12 @@
     "verified",
     null,
     "3095.00",
-    null
+    null,
+    "97.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -16491,7 +19845,12 @@
     "verified",
     4106,
     "438.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -16560,7 +19919,18 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "whole_life_insurance",
@@ -16571,7 +19941,12 @@
     "declared_only",
     null,
     "319.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -16582,7 +19957,12 @@
     "verified",
     4107,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -16642,7 +20022,12 @@
     "verified",
     4112,
     "309.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -16699,7 +20084,12 @@
     "verified",
     4116,
     "3848.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "other",
@@ -16710,7 +20100,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -16721,7 +20116,12 @@
     "verified",
     4117,
     "7500.00",
-    null
+    null,
+    "1.00",
+    null,
+    "0.01",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -16785,7 +20185,12 @@
     "declared_only",
     null,
     "2014.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -16796,7 +20201,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -16807,7 +20217,12 @@
     "verified",
     null,
     "990.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -16862,7 +20277,12 @@
     "verified",
     null,
     "375.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.01",
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -16873,7 +20293,12 @@
     "verified",
     null,
     "3659.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -16939,7 +20364,12 @@
     "verified",
     4119,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.00",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -17014,7 +20444,12 @@
     "declared_only",
     4120,
     "790.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -17025,7 +20460,18 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "checking",
@@ -17036,7 +20482,23 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "checking",
@@ -17047,7 +20509,23 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "whole_life_insurance",
@@ -17058,7 +20536,12 @@
     "declared_only",
     null,
     "3780.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -17069,7 +20552,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -17181,7 +20669,12 @@
     "declared_only",
     null,
     "564.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -17192,7 +20685,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -17203,7 +20701,12 @@
     "verified",
     null,
     "509.00",
-    null
+    null,
+    "8.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -17214,7 +20717,12 @@
     "verified",
     null,
     "1437.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -17225,7 +20733,12 @@
     "verified",
     null,
     "3258.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -17292,7 +20805,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -17359,7 +20877,12 @@
     "declared_only",
     4123,
     "209.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -17427,7 +20950,18 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "whole_life_insurance",
@@ -17438,7 +20972,12 @@
     "verified",
     4124,
     "319.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -17496,7 +21035,12 @@
     "declared_only",
     null,
     "820.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -17507,7 +21051,12 @@
     "verified",
     4125,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -17518,7 +21067,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -17529,7 +21083,12 @@
     "verified",
     4126,
     "5768.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -17592,7 +21151,12 @@
     "declared_only",
     null,
     "510.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -17603,7 +21167,12 @@
     "verified",
     4127,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -17614,7 +21183,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -17625,7 +21199,12 @@
     "verified",
     4128,
     "3312.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -17694,7 +21273,12 @@
     "verified",
     4129,
     "200.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -17795,7 +21379,12 @@
     "verified",
     4132,
     "124.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -17806,7 +21395,12 @@
     "verified",
     4133,
     "563.00",
-    null
+    null,
+    "1.00",
+    null,
+    "0.10",
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -17817,7 +21411,12 @@
     "verified",
     4134,
     "4250.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -17875,7 +21474,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -17886,7 +21490,12 @@
     "verified",
     4138,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -17897,7 +21506,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -17963,7 +21577,18 @@
     "verified",
     null,
     "19.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ]
   ],
   "cert_review": {
@@ -18029,7 +21654,12 @@
     "verified",
     4143,
     "178.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "savings",
@@ -18040,7 +21670,12 @@
     "declared_only",
     null,
     "582.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -18051,7 +21686,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -18062,7 +21702,12 @@
     "verified",
     4142,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -18160,7 +21805,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "prepaid_debit_card",
@@ -18171,7 +21821,12 @@
     "verified",
     null,
     "103.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -18230,7 +21885,12 @@
     "verified",
     4326,
     "292.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -18281,6 +21941,71 @@
    "income_records[1]: 'Blue Islnd Ctzns Devpmntl Dis Inc.' is wage histor"
   ]
  },
+ "J-CCAC-07951@1792599820": {
+  "assets": [
+   [
+    "checking",
+    "Old National Bank",
+    "229.53",
+    "229.53",
+    null,
+    "verified",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "229.53",
+   "annual_income": "13968.00",
+   "cert_type": "annual",
+   "effective_date": "2026-08-01",
+   "gross_rent": "1455.00",
+   "hh_size": 1,
+   "tenant_rent": "293.00",
+   "utility_allowance": "46.00"
+  },
+  "codes": {},
+  "income": [
+   [
+    "social_security",
+    "verified",
+    null,
+    "Social Security Administration",
+    4892,
+    null,
+    null
+   ]
+  ],
+  "members": [
+   [
+    "Jerald",
+    "Nesbit",
+    "Head of Household",
+    5058,
+    3434,
+    []
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 5-6: 'HUD 50059 (Previous)' detected \u2014 excluded from data extrac",
+   "Self-declared income amounts not extracted from questionnaire/applicat"
+  ],
+  "score": 0.93,
+  "warnings": []
+ },
  "J-CCAC-08020@1792110404": {
   "assets": [
    [
@@ -18292,7 +22017,12 @@
     "declared_only",
     null,
     "152.00",
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -18303,7 +22033,12 @@
     "verified",
     4391,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -18358,7 +22093,18 @@
     "verified",
     null,
     null,
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "checking",
@@ -18369,7 +22115,18 @@
     "verified",
     null,
     null,
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "real_estate",
@@ -18380,7 +22137,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -18506,7 +22268,12 @@
     "declared_only",
     null,
     "556.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -18517,7 +22284,12 @@
     "declared_only",
     null,
     "886.00",
-    null
+    null,
+    "3.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -18573,7 +22345,12 @@
     "declared_only",
     null,
     "556.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -18584,7 +22361,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "savings",
@@ -18595,7 +22377,12 @@
     "declared_only",
     null,
     "886.00",
-    null
+    null,
+    "3.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -18606,7 +22393,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.30",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -18662,7 +22454,12 @@
     null,
     null,
     null,
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -18673,7 +22470,12 @@
     null,
     null,
     null,
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -18684,7 +22486,12 @@
     null,
     null,
     null,
-    null
+    null,
+    "40.55",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -18760,7 +22567,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -18771,7 +22583,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -18902,7 +22719,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -18913,7 +22735,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -19070,7 +22897,12 @@
     "declared_only",
     null,
     "0.94",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -19081,7 +22913,23 @@
     "verified",
     null,
     "0.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "checking",
@@ -19092,7 +22940,18 @@
     "verified",
     null,
     "11.35",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "savings",
@@ -19103,7 +22962,12 @@
     "declared_only",
     null,
     "0.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -19114,7 +22978,18 @@
     "verified",
     null,
     "307.09",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ]
   ],
   "cert_review": {
@@ -19216,7 +23091,18 @@
     "verified",
     null,
     null,
-    null
+    null,
+    "0.02",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "checking",
@@ -19227,7 +23113,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -19238,7 +23129,43 @@
     "verified",
     null,
     null,
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      "0.00",
+      null
+     ],
+     [
+      null,
+      "0.00",
+      null
+     ],
+     [
+      null,
+      "0.00",
+      null
+     ],
+     [
+      null,
+      "0.00",
+      null
+     ],
+     [
+      null,
+      "0.00",
+      null
+     ],
+     [
+      null,
+      "0.00",
+      null
+     ]
+    ]
    ],
    [
     "checking",
@@ -19249,7 +23176,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -19260,7 +23192,18 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ]
   ],
   "cert_review": {
@@ -19332,7 +23275,12 @@
     "declared_only",
     null,
     "0.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -19422,7 +23370,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -19481,7 +23434,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -19492,7 +23450,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    "1.38",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -19561,7 +23524,12 @@
     "declared_only",
     null,
     "0.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "other",
@@ -19572,7 +23540,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "other",
@@ -19583,7 +23556,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "real_estate",
@@ -19594,7 +23572,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -19605,7 +23588,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -19662,7 +23650,12 @@
     "declared_only",
     null,
     "2266.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -19673,7 +23666,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -19684,7 +23682,43 @@
     "verified",
     null,
     "455.00",
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      "0.00",
+      null,
+      null
+     ],
+     [
+      "0.00",
+      null,
+      null
+     ],
+     [
+      "0.00",
+      null,
+      null
+     ],
+     [
+      "0.00",
+      null,
+      null
+     ],
+     [
+      "0.00",
+      null,
+      null
+     ],
+     [
+      "0.01",
+      null,
+      null
+     ]
+    ]
    ],
    [
     "other",
@@ -19695,7 +23729,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    "1732.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -19706,7 +23745,43 @@
     "verified",
     null,
     "22.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ]
   ],
   "cert_review": {
@@ -19788,7 +23863,12 @@
     "verified",
     null,
     "1073.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -19799,7 +23879,12 @@
     "verified",
     null,
     "152.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.01",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -19903,7 +23988,43 @@
     "verified",
     null,
     "282.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ]
   ],
   "cert_review": {
@@ -19974,7 +24095,12 @@
     "verified",
     null,
     "241.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -20066,7 +24192,12 @@
     "declared_only",
     null,
     "1555.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -20077,7 +24208,12 @@
     "verified",
     null,
     "987.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -20088,7 +24224,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -20187,7 +24328,12 @@
     "verified",
     null,
     "1225.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.00",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -20261,7 +24407,12 @@
     "declared_only",
     null,
     "9.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -20272,7 +24423,18 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ],
    [
     "checking",
@@ -20283,7 +24445,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "other",
@@ -20294,7 +24461,12 @@
     "declared_only",
     null,
     "8.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -20372,7 +24544,12 @@
     "verified",
     null,
     "419.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.00",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -20445,7 +24622,12 @@
     "verified",
     null,
     "247.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "other",
@@ -20456,7 +24638,12 @@
     "declared_only",
     null,
     "81.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -20467,7 +24654,12 @@
     "declared_only",
     null,
     "60.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -20549,7 +24741,12 @@
     "verified",
     null,
     "222.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.01",
+    null,
+    []
    ],
    [
     "savings",
@@ -20560,7 +24757,12 @@
     "verified",
     null,
     "5.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.25",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -20620,7 +24822,12 @@
     "declared_only",
     null,
     "4681.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -20631,7 +24838,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "checking",
@@ -20642,7 +24854,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -20722,7 +24939,12 @@
     "declared_only",
     null,
     "441.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -20806,7 +25028,12 @@
     "declared_only",
     null,
     "279.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -20817,7 +25044,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "whole_life_insurance",
@@ -20828,7 +25060,12 @@
     "verified",
     null,
     "1431.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -20897,7 +25134,12 @@
     "declared_only",
     null,
     "344.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -20908,7 +25150,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -20981,7 +25228,12 @@
     "declared_only",
     null,
     "462.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -20992,7 +25244,43 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      "0.00",
+      null
+     ],
+     [
+      null,
+      "0.00",
+      null
+     ],
+     [
+      null,
+      "0.00",
+      null
+     ],
+     [
+      null,
+      "0.00",
+      null
+     ],
+     [
+      null,
+      "0.00",
+      null
+     ],
+     [
+      null,
+      "0.00",
+      null
+     ]
+    ]
    ]
   ],
   "cert_review": {
@@ -21052,7 +25340,12 @@
     "verified",
     null,
     "397.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -21063,7 +25356,12 @@
     "verified",
     null,
     "734.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -21074,7 +25372,12 @@
     "verified",
     null,
     "2000.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.04",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -21152,7 +25455,12 @@
     "verified",
     null,
     "2738.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "retirement",
@@ -21163,7 +25471,18 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      "145.30",
+      null,
+      null
+     ]
+    ]
    ],
    [
     "savings",
@@ -21174,7 +25493,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -21249,7 +25573,12 @@
     "verified",
     null,
     "2738.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "retirement",
@@ -21260,7 +25589,18 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      "145.30",
+      null,
+      null
+     ]
+    ]
    ],
    [
     "savings",
@@ -21271,7 +25611,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -21348,7 +25693,12 @@
     "verified",
     null,
     "60.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "other",
@@ -21359,7 +25709,12 @@
     "declared_only",
     null,
     "2.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -21370,7 +25725,12 @@
     "declared_only",
     null,
     "5.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -21450,7 +25810,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -21461,7 +25826,43 @@
     "verified",
     null,
     "73.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
    ]
   ],
   "cert_review": {
@@ -21529,7 +25930,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -21540,7 +25946,12 @@
     "verified",
     null,
     "1225.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.00",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -21600,7 +26011,12 @@
     "verified",
     null,
     "331.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.00",
+    null,
+    []
    ],
    [
     "savings",
@@ -21611,7 +26027,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    "0.00",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -21711,7 +26132,12 @@
     "declared_only",
     null,
     "1919.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -21722,7 +26148,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "checking",
@@ -21733,7 +26164,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "savings",
@@ -21744,7 +26180,12 @@
     "verified",
     null,
     "3000.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.04",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -21823,7 +26264,12 @@
     "verified",
     null,
     "462.00",
-    null
+    null,
+    "0.00",
+    null,
+    "0.00",
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -21892,7 +26338,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -21973,7 +26424,12 @@
     "verified",
     null,
     "241.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -22063,7 +26519,12 @@
     "declared_only",
     null,
     "25.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ],
    [
     "other",
@@ -22074,7 +26535,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ],
    [
     "prepaid_debit_card",
@@ -22085,7 +26551,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -22139,7 +26610,12 @@
     "verified",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -22216,7 +26692,12 @@
     "declared_only",
     null,
     null,
-    null
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {
@@ -22315,7 +26796,12 @@
     "declared_only",
     null,
     "223.00",
-    null
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
    ]
   ],
   "cert_review": {

@@ -386,6 +386,51 @@ def _is_valid_date(year: int, month: int, day: int) -> bool:
 _MONEY_NUMBER_RE = re.compile(r"\d+(?:\.\d+)?")
 
 
+def normalize_rate(value, field: str | None = None) -> str | None:
+    """Normalize an interest rate to a percent figure with no sign: "0.03%",
+    "3.01", ".30 %" and a bare float all become "0.03", "3.01", "0.30".
+
+    A rate is a percent, so normalize_money's refusal of "%" would drop
+    every rate a statement or VOA prints with the sign. Returns None for
+    anything that is not one number, and for a rate outside 0..100, which
+    is not a rate of interest on a deposit.
+    """
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        number = float(value)
+    else:
+        text = str(value).strip()
+        if not text or text.lower() in _NOT_A_VALUE:
+            return None
+        text = re.sub(r"\s*(%|percent|apy|apr)\s*$", "", text, flags=re.I).strip()
+        try:
+            number = float(text)
+        except ValueError:
+            logger.warning("normalize_rate%s: %r is not a rate — dropped", f"[{field}]" if field else "", value)
+            return None
+    if not 0 <= number <= 100:
+        logger.warning("normalize_rate%s: %r is outside 0..100 — dropped", f"[{field}]" if field else "", value)
+        return None
+    text = f"{number:.4f}".rstrip("0")
+    whole, _, frac = text.partition(".")
+    return f"{whole}.{frac.ljust(2, '0')}"
+
+
+def normalize_months(value) -> str | None:
+    """The number of months a statement covers, as a whole number 1..12
+    in a string, or None when the text is not one ("3 months" is 3)."""
+    if value is None or isinstance(value, bool):
+        return None
+    m = re.search(r"\d+(?:\.\d+)?", str(value))
+    if not m:
+        return None
+    number = float(m.group())
+    if number != int(number) or not 1 <= number <= 12:
+        return None
+    return str(int(number))
+
+
 def normalize_money(value, field: str | None = None) -> str | None:
     """Normalize a monetary amount to a string with two decimals, no symbols.
 
@@ -647,6 +692,7 @@ def validate_assets(data: dict) -> dict:
         asset["averageSixMonthBalance"] = normalize_money(asset.get("averageSixMonthBalance"))
         asset["selfDeclaredAmount"] = normalize_money(asset.get("selfDeclaredAmount"))
         asset["incomeAmount"] = normalize_money(asset.get("incomeAmount"))
+        asset["interestRate"] = normalize_rate(asset.get("interestRate"), "asset.interestRate")
         asset["dateReceived"] = normalize_date(asset.get("dateReceived"))
 
         for bs in asset.get("bankStatment", []):
@@ -656,7 +702,8 @@ def validate_assets(data: dict) -> dict:
             bs["income"] = normalize_money(bs.get("income"))
             bs["incomeFixedValue"] = normalize_money(bs.get("incomeFixedValue"))
             bs["incomeFromAsset"] = normalize_money(bs.get("incomeFromAsset"))
-            bs["interestRate"] = normalize_money(bs.get("interestRate"))
+            bs["interestRate"] = normalize_rate(bs.get("interestRate"), "bankStatment.interestRate")
+            bs["monthsCovered"] = normalize_months(bs.get("monthsCovered"))
             bs["netValueRealEstate"] = normalize_money(bs.get("netValueRealEstate"))
             bs["realEstateCurrentMarketValue"] = normalize_money(bs.get("realEstateCurrentMarketValue"))
             bs["totalClosingCosts"] = normalize_money(bs.get("totalClosingCosts"))
@@ -666,6 +713,7 @@ def validate_assets(data: dict) -> dict:
             voa["currentBalance"] = normalize_money(voa.get("currentBalance"))
             voa["averageSixMonthBalance"] = normalize_money(voa.get("averageSixMonthBalance"))
             voa["incomeAmount"] = normalize_money(voa.get("incomeAmount"))
+            voa["interestRate"] = normalize_rate(voa.get("interestRate"), "verificationOfAsset.interestRate")
             voa["dateReceived"] = normalize_date(voa.get("dateReceived"))
             for mb in voa.get("monthlyBalances") or []:
                 if isinstance(mb, dict):

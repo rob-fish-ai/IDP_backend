@@ -142,7 +142,7 @@ def replay_case(row: dict) -> dict:
         "cert_review": {k: cr.get(k) for k in ("cert_type", "effective_date", "annual_income", "annual_assets", "tenant_rent", "gross_rent", "utility_allowance", "hh_size")},
         "members": [(m.get("first_name"), m.get("last_name"), m.get("relationship"), m.get("existing_member_id"), m.get("person_id"), tuple(m.get("aka_names") or [])) for m in p.get("household_members", [])],
         "income": _sorted_rows((r.get("income_type"), r.get("verification_status"), r.get("annual_amount"), (r.get("source_name") or "")[:30], r.get("existing_record_id"), r.get("self_declared_amount"), r.get("certification_amount")) for r in p.get("income_records", [])),
-        "assets": _sorted_rows((r.get("asset_type"), (r.get("institution_name") or "")[:25], r.get("current_value"), r.get("manual_balance"), r.get("bank_stmt_avg_balance"), r.get("verification_status"), r.get("existing_record_id"), r.get("certification_cash_value"), r.get("certification_income")) for r in p.get("asset_records", [])),
+        "assets": _sorted_rows((r.get("asset_type"), (r.get("institution_name") or "")[:25], r.get("current_value"), r.get("manual_balance"), r.get("bank_stmt_avg_balance"), r.get("verification_status"), r.get("existing_record_id"), r.get("certification_cash_value"), r.get("certification_income"), r.get("annual_income_from_assets"), r.get("interest_rate"), (r.get("voa") or {}).get("interest_rate"), (r.get("voa") or {}).get("interest_income"), tuple((s.get("interest_earned"), s.get("interest_rate"), s.get("months_covered")) for s in r.get("bank_statements", []))) for r in p.get("asset_records", [])),
         "warnings": sorted(w[:70] for w in adapted.warnings),
         "score": round(score_summary.overall_composite, 2),
     }

@@ -273,8 +273,9 @@ class BankStatementEntry(BaseModel):
     currentMortgageBalance: Optional[str] = None
     income: Optional[str] = None
     incomeFixedValue: Optional[str] = None
-    incomeFromAsset: Optional[str] = None
-    interestRate: Optional[str] = None
+    incomeFromAsset: Optional[str] = None   # interest or dividends the statement shows for its period
+    interestRate: Optional[str] = None      # the rate the statement prints, as a percent
+    monthsCovered: Optional[str] = None     # months the statement period spans ("1" for a monthly statement)
     netValueRealEstate: Optional[str] = None
     percentageOfOwnership: Optional[str] = None
     realEstateCurrentMarketValue: Optional[str] = None
@@ -346,8 +347,9 @@ class AssetEntry(BaseModel):
     currentBalance: Optional[str] = None
     averageSixMonthBalance: Optional[str] = None
     dateReceived: Optional[str] = None
-    incomeAmount: Optional[str] = None
+    incomeAmount: Optional[str] = None      # annual income only when a document states a yearly figure
     interestType: Optional[str] = None
+    interestRate: Optional[str] = None      # the rate the household itself wrote for the account, as a percent
     percentageOfOwnership: Optional[str] = None
     address: Optional[Address] = None
     bankStatment: list[BankStatementEntry] = []
@@ -372,13 +374,14 @@ class DeclaredAsset(BaseModel):
     accountNumber: Optional[str] = None
     amount: Optional[str] = None
     incomeAmount: Optional[str] = None
+    interestRate: Optional[str] = None   # the rate the household wrote, as a percent
     kind: Optional[str] = None           # asset | no_assets | disposal
     page: Optional[int] = None
     quote: Optional[str] = None
     documentType: Optional[str] = None
     matched: bool = False
 
-    @field_validator("accountNumber", "amount", "incomeAmount", mode="before")
+    @field_validator("accountNumber", "amount", "incomeAmount", "interestRate", mode="before")
     @classmethod
     def coerce_to_str(cls, v):
         if v is not None and not isinstance(v, str):

@@ -151,8 +151,9 @@ A source can arrive with paystubs and no verification entry. That is not an erro
 | `current_value` | `4830.00` | **Verified** balance. Present only with a statement or a VOA behind it. See section 1 |
 | `manual_balance` | `915.00` | **Self-declared** balance: the resident's own figure from a self-certification or questionnaire. Never a figure read off the certification form |
 | `bank_stmt_avg_balance` | `null` | Six-month average where stated, or the mean of the VOA's monthly balances when those were sent instead |
-| `annual_income_from_assets` | `0.00` | |
+| `annual_income_from_assets` | `0.00` | Only when a document states the annual figure outright. A statement's period interest is sent on the statement row instead, never as this total |
 | `interest_type` | `Percentage` | **Needs a column** |
+| `interest_rate` | `0.50` | The rate the household itself wrote for the account on its self-certification or application, as a percent (`2.50` = 2.5%). Never a rate a bank printed; that travels on the statement or VOA row |
 | `percentage_of_ownership` | `100` | Joint ownership share |
 | `source_of_declaration` | `null` | |
 | `certification_form` | `HUD-50059` | As on income records |
@@ -161,9 +162,9 @@ A source can arrive with paystubs and no verification entry. That is not an erro
 | `verification_status` | `verified` | Same values as on income records |
 | `pages` | `[13]` | Packet pages this record was read from |
 | `confidence` | `{score, flag, review[]}` | As on income records |
-| `bank_statements[]` | | `statement_date`, `balance`. Only statements carrying at least one of the two are sent |
+| `bank_statements[]` | | `statement_date`, `balance`, and the income the statement shows: `interest_earned` (interest or dividends for its period, in dollars; never deposits), `interest_rate` (the rate it prints, as a percent), `months_covered` (whole months the period spans, 1 for a monthly statement). Only statements carrying a date or a balance are sent; a rate outside 0 to 100 or a loss is withheld with a warning |
 | `eivs[]` | | One row per benefit section of an EIV income report, attached to that benefit's income record: `benefit_type` (`social_security`, `ssi`, `dual_entitlement`, `employment_wages`, `unemployment_benefits`, `other`), `source_name`, `report_date` (the report's own date), `amount` + `frequency` (the figure in force), `annual_amount` (only when the report states one), `payment_status` as printed, `notes`, `pages`. An EIV report is never sent as a `vois` row |
-| `voa` | `null` | `voa_date`, `reported_value`, `source`, and `month_1_balance`…`month_6_balance` (oldest first) when the VOA lists monthly balances instead of an average |
+| `voa` | `null` | `voa_date`, `reported_value`, `source`, `interest_income` (the annual interest the institution states, in dollars), `interest_rate` (the rate it states, as a percent), and `month_1_balance`…`month_6_balance` (oldest first) when the VOA lists monthly balances instead of an average |
 
 ---
 

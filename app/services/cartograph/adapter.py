@@ -41,7 +41,7 @@ import hashlib
 import logging
 import re
 
-from app.services.validation import normalize_date
+from app.services.validation import normalize_date, normalize_months, normalize_rate
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -497,6 +497,68 @@ def _balance(value: str | None, warnings: list[str], context: str) -> str | None
         )
         return "0.00"
     return money
+
+
+def _percent(value: str | None, warnings: list[str], context: str) -> str | None:
+    """An interest rate for Cartograph: a percent figure between 0 and 100.
+
+    Cartograph drops a rate outside that range and reports it in the import
+    warnings; dropping it here keeps the rest of the row intact and names
+    the field in our own warnings instead.
+    """
+    if value is None or str(value).strip() == "":
+        return None
+    rate = normalize_rate(value, context)
+    if rate is None and re.search(r"\d", str(value)):
+        # "N/A" on the form is no rate and needs no warning; a figure that
+        # is not a rate between 0 and 100 does.
+        warnings.append(f"{context}: interest rate {value!r} is not a rate between 0 and 100; not sent")
+    return rate
+
+
+def _interest_dollars(value: str | None, warnings: list[str], context: str) -> str | None:
+    """Interest or dividends in dollars. A negative figure is an investment
+    loss, not interest, and Cartograph validates asset values as >= 0."""
+    money = _money(value)
+    if money is not None and money.startswith("-"):
+        warnings.append(f"{context}: {money} is a loss, not interest earned; not sent")
+        return None
+    return money
+
+
+def _months_covered(value: str | None, warnings: list[str], context: str) -> int | None:
+    if value is None or str(value).strip() == "":
+        return None
+    months = normalize_months(value)
+    if months is None:
+        warnings.append(f"{context}: months covered {value!r} is not a whole number of months; not sent")
+        return None
+    return int(months)
+
+
+def _annual_income_from_assets(asset, statements: list[dict], voa: dict | None) -> str | None:
+    """The annual income from the asset, only when a document states it as
+    an annual figure.
+
+    Cartograph works the income out itself from the dollars or the rate on
+    each statement or VOA, so it asks for the annual figure only when a
+    document states one outright. incomeAmount is often the interest a
+    single statement showed for its period (which the statement row now
+    carries) or the institution's annual figure (which the VOA row carries).
+    A figure that one of those rows already carries is that row's figure,
+    not an annual total, and is not sent twice.
+    """
+    income = _money(asset.incomeAmount)
+    if income is None:
+        return None
+    period_figures = {s.get("interest_earned") for s in statements} - {None}
+    if income in period_figures:
+        return None
+    if period_figures and income == f"{sum(float(f) for f in period_figures):.2f}":
+        return None
+    if voa and voa.get("interest_income") == income:
+        return None
+    return income
 
 
 _MONTH_FORMATS = ("%Y-%m", "%Y-%m-%d", "%m/%Y", "%m/%d/%Y", "%m/%d/%y", "%B %Y", "%b %Y",
@@ -1275,10 +1337,17 @@ def build_asset_records(
                 {
                     "statement_date": _iso_date(s.statementDate),
                     "balance": _balance(s.balance, warnings, f"{context}.bank_statements"),
+                    # The interest the statement shows for its period, in
+                    # dollars or as the rate it prints, and the months the
+                    # period spans. Cartograph annualises the dollars over
+                    # the months and keeps the dollars when both arrive.
+                    "interest_earned": _interest_dollars(s.incomeFromAsset, warnings, f"{context}.bank_statements.interest_earned"),
+                    "interest_rate": _percent(s.interestRate, warnings, f"{context}.bank_statements.interest_rate"),
+                    "months_covered": _months_covered(s.monthsCovered, warnings, f"{context}.bank_statements.months_covered"),
                 }
                 for s in asset.bankStatment
             )
-            if any(entry.values())
+            if entry["statement_date"] or entry["balance"]
         ]
 
         voa = None
@@ -1289,6 +1358,10 @@ def build_asset_records(
                 "voa_date": _iso_date(v.dateReceived),
                 "reported_value": _balance(v.currentBalance, warnings, f"{context}.voa"),
                 "source": asset.sourceName,
+                # What the institution states about income: annual dollars,
+                # or the rate, each only as printed.
+                "interest_income": _interest_dollars(v.incomeAmount, warnings, f"{context}.voa.interest_income"),
+                "interest_rate": _percent(v.interestRate, warnings, f"{context}.voa.interest_rate"),
             }
             months = _monthly_balances(v.monthlyBalances, warnings, f"{context}.voa")
             if months:
@@ -1342,8 +1415,10 @@ def build_asset_records(
             "bank_stmt_avg_balance": _balance(
                 asset.averageSixMonthBalance, warnings, f"{context}.bank_stmt_avg_balance"
             ) or computed_average,
-            "annual_income_from_assets": _money(asset.incomeAmount),
+            "annual_income_from_assets": _annual_income_from_assets(asset, statements, voa),
             "interest_type": asset.interestType,
+            # The rate the household itself wrote for the account.
+            "interest_rate": _percent(asset.interestRate, warnings, f"{context}.interest_rate"),
             "percentage_of_ownership": asset.percentageOfOwnership,
             "verification_status": asset.verificationStatus,
             "pages": _pages_of(asset),

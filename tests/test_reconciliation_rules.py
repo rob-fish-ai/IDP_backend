@@ -1174,3 +1174,98 @@ def test_certified_figures_are_delivered_on_their_own_fields_never_as_self_decla
     assert r["manual_balance"] == "600.00" and r["source_of_declaration"] == "Asset Self-Certification"
     assert r["certification_form"] == "HUD-50059" and r["certification_cash_value"] == "483.00"
     assert r["certification_income"] == "0.00" and r["annual_income_from_assets"] is None
+
+
+# ---------------------------------------------------------------------------
+# Income from assets: dollars or a rate, never a period figure as annual
+# ---------------------------------------------------------------------------
+
+def test_a_rate_is_a_percent_figure_and_a_period_is_whole_months():
+    from app.services.validation import normalize_months, normalize_rate
+
+    assert normalize_rate("0.03%") == "0.03" and normalize_rate(".30 %") == "0.30"
+    assert normalize_rate("2.5") == "2.50" and normalize_rate("1.25 APY") == "1.25"
+    assert normalize_rate("0") == "0.00" and normalize_rate(0.004) == "0.004"
+    # Not a rate of interest on a deposit: dropped, never clipped.
+    assert normalize_rate("150") is None and normalize_rate("-1") is None and normalize_rate("n/a") is None
+    assert normalize_months("1") == "1" and normalize_months("3 months") == "3" and normalize_months(2.0) == "2"
+    assert normalize_months("0") is None and normalize_months("quarterly") is None and normalize_months("13") is None
+
+
+def test_the_household_rate_comes_from_its_own_form_never_the_certification():
+    recs = [_asset("Randy Buck", "Savings", "1123.81", "3000008685")]
+    cert_line = _decl("Randy Buck", "Savings", "886.00", income="3.00")
+    cert_line["interestRate"] = "0.25"
+    own_line = _decl("Randy Buck", "Savings", "1100.00", page=40, doc="Asset Self-Certification")
+    own_line["interestRate"] = "0.50"
+    _reconcile_assets(recs, [cert_line, own_line])
+    assert len(recs) == 1 and recs[0]["interestRate"] == "0.50"
+    assert recs[0]["certificationCashValue"] == "886.00"
+
+    recs = []
+    alone = _decl("Randy Buck", "Checking", "300.00", page=40, doc="Asset Self-Certification", number="4471")
+    alone["interestRate"] = "0.00"
+    _reconcile_assets(recs, [alone])
+    assert len(recs) == 1 and recs[0]["verificationStatus"] == "declared_only" and recs[0]["interestRate"] == "0.00"
+
+
+def test_statement_and_voa_interest_travel_on_their_own_rows():
+    from types import SimpleNamespace
+    from app.core.config import Settings
+    from app.schemas.extraction import AssetEntry, AssetExtraction, BankStatementEntry, VerificationOfAsset
+    from app.services.cartograph.adapter import build_asset_records
+
+    members = [{"ref": "m01", "first_name": "Randy", "last_name": "Buck"}]
+    savings = AssetEntry(
+        assetOwner="Randy Buck", accountType="Savings", sourceName="Altura Credit Union",
+        currentBalance="33013.20", incomeAmount="0.81", interestType="Dollar Amount", interestRate="2.5",
+        verificationStatus="verified", sourcePages=[19],
+        bankStatment=[
+            BankStatementEntry(statementDate="2026-05-11", balance="33013.20", incomeFromAsset="0.81", interestRate="0.03%", monthsCovered="1"),
+            # A rate no deposit pays and a loss: neither is interest.
+            BankStatementEntry(statementDate="2026-02-11", balance="32900.00", incomeFromAsset="-45.00", interestRate="150", monthsCovered="3 months"),
+            # Nothing but interest fields: not a statement at all.
+            BankStatementEntry(incomeFromAsset="0.10"),
+        ],
+        verificationOfAsset=VerificationOfAsset(currentBalance="33013.20", dateReceived="2026-06-01", incomeAmount="12.40", interestRate=".25"),
+    )
+    warnings: list[str] = []
+    records = build_asset_records(SimpleNamespace(assets=AssetExtraction(assetInformation=[savings])), members,
+                                  Settings(cartograph_asset_types=["savings"]), warnings)
+    r = records[0]
+    assert r["interest_rate"] == "2.50"
+    assert [s["statement_date"] for s in r["bank_statements"]] == ["2026-05-11", "2026-02-11"]
+    first, second = r["bank_statements"]
+    assert (first["interest_earned"], first["interest_rate"], first["months_covered"]) == ("0.81", "0.03", 1)
+    assert (second["interest_earned"], second["interest_rate"], second["months_covered"]) == (None, None, 3)
+    assert r["voa"]["interest_income"] == "12.40" and r["voa"]["interest_rate"] == "0.25"
+    # The statement's period figure is the statement row's; it is not an annual total.
+    assert r["annual_income_from_assets"] is None
+    assert any("150" in w for w in warnings) and any("loss" in w for w in warnings)
+
+
+def test_annual_income_is_sent_only_when_a_document_states_it_outright():
+    from types import SimpleNamespace
+    from app.core.config import Settings
+    from app.schemas.extraction import AssetEntry, AssetExtraction, BankStatementEntry, VerificationOfAsset
+    from app.services.cartograph.adapter import build_asset_records
+
+    members = [{"ref": "m01", "first_name": "Randy", "last_name": "Buck"}]
+    stated = AssetEntry(assetOwner="Randy Buck", accountType="Investment", sourceName="Vanguard",
+                        currentBalance="106195.56", incomeAmount="1732.00", verificationStatus="verified",
+                        bankStatment=[BankStatementEntry(statementDate="2026-06-30", balance="106195.56")])
+    on_voa = AssetEntry(assetOwner="Randy Buck", accountType="Savings", sourceName="Chase",
+                        currentBalance="5000.00", incomeAmount="12.40", verificationStatus="verified",
+                        verificationOfAsset=VerificationOfAsset(currentBalance="5000.00", incomeAmount="12.40"))
+    summed = AssetEntry(assetOwner="Randy Buck", accountType="Checking", sourceName="Chase",
+                        currentBalance="900.00", incomeAmount="0.16", verificationStatus="verified",
+                        bankStatment=[BankStatementEntry(statementDate="2026-01-31", balance="901.09", incomeFromAsset="0.03"),
+                                      BankStatementEntry(statementDate="2025-10-31", balance="505.47", incomeFromAsset="0.13")])
+    warnings: list[str] = []
+    records = build_asset_records(SimpleNamespace(assets=AssetExtraction(assetInformation=[stated, on_voa, summed])), members,
+                                  Settings(cartograph_asset_types=["investment", "savings", "checking"]), warnings)
+    by_type = {r["asset_type"]: r for r in records}
+    assert by_type["investment"]["annual_income_from_assets"] == "1732.00"
+    assert by_type["savings"]["annual_income_from_assets"] is None and by_type["savings"]["voa"]["interest_income"] == "12.40"
+    assert by_type["checking"]["annual_income_from_assets"] is None
+    assert [s["interest_earned"] for s in by_type["checking"]["bank_statements"]] == ["0.03", "0.13"]

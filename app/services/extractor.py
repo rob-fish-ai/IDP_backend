@@ -488,17 +488,33 @@ FIELDS:
 - accountNumber: as shown on document
 - currentBalance, averageSixMonthBalance: numeric string, 2 decimals
 - dateReceived: YYYY-MM-DD
-- incomeAmount: income from asset
-- interestType: "Dollar Amount" or "Percentage"
+- incomeAmount: ANNUAL income from the asset, only when a document states a
+  yearly figure outright (annual interest or dividends on a VOA or investment
+  summary, a self-certification's "annual income" column, a real estate
+  worksheet's net annual income). Interest a bank statement shows for its
+  period is NOT annual: it goes in that statement's incomeFromAsset, never here.
+- interestType: "Dollar Amount" when the document gives the income in dollars,
+  "Percentage" when it gives a rate
+- interestRate: the rate the HOUSEHOLD wrote for the account on a
+  self-certification or application, as a percent ("2.5" = 2.5%). Null when
+  no rate is written; a rate a bank prints belongs on the statement or VOA.
 - percentageOfOwnership: numeric string (e.g., "100", "50")
 - address: {street, city, state, zip} or null
 
 NESTED OBJECTS:
 - bankStatment: array of bank statement entries. Each entry has:
-  {statementDate, balance, accountNumber, currentMortgageBalance, income, incomeFixedValue, incomeFromAsset, interestRate, netValueRealEstate, percentageOfOwnership, realEstateCurrentMarketValue, totalClosingCosts}
+  {statementDate, balance, accountNumber, currentMortgageBalance, income, incomeFixedValue, incomeFromAsset, interestRate, monthsCovered, netValueRealEstate, percentageOfOwnership, realEstateCurrentMarketValue, totalClosingCosts}
   All monetary fields are numeric strings with 2 decimals. Empty [] if no statements.
+  incomeFromAsset: the interest or dividends the statement shows for ITS period
+  ("Interest Paid This Period", "Dividends Paid"). NEVER total deposits,
+  "income received", credits or transfers. Null when the statement shows none.
+  interestRate: the rate the statement prints (APY / "Interest Rate"), as a
+  percent, null when none is printed. monthsCovered: whole number of months the
+  statement period spans ("1" for a monthly statement, "3" for a quarterly).
 - verificationOfAsset: {accountNumber, currentBalance, averageSixMonthBalance, monthlyBalances, dateReceived, incomeAmount, interestType, interestRate, percentageOfOwnership}. null if no VOA.
   monthlyBalances: array of {month, balance}, one per month the VOA lists, in the order printed. Empty [] when the VOA gives only an average.
+  incomeAmount: the ANNUAL interest or dividend income the institution states, in
+  dollars; interestRate: the rate it states, as a percent. Each only as printed.
 
 SPECIAL RULES:
 - A line with several amounts is several records: balances separated by "/", commas
@@ -3269,8 +3285,8 @@ These are DECLARATIONS, not statements from a bank or a verifier.
 
 Return every asset declared, one entry per row or line:
 {"declared": [{"assetOwner": ..., "accountType": ..., "sourceName": ...,
-  "accountNumber": ..., "amount": ..., "incomeAmount": ..., "kind": ...,
-  "page": N, "quote": "..."}]}
+  "accountNumber": ..., "amount": ..., "incomeAmount": ..., "interestRate": ...,
+  "kind": ..., "page": N, "quote": "..."}]}
 
 Rules:
 - assetOwner: the household member, as the household composition on the
@@ -3283,6 +3299,8 @@ Rules:
 - accountNumber: as printed (last four is fine); null when absent.
 - amount: the cash value / balance exactly as printed, numeric string, no $
   or commas. incomeAmount: the yearly income from the asset if printed.
+  interestRate: the interest rate the household wrote for the account, as a
+  percent ("2.5" = 2.5%), if printed; null otherwise.
 - kind: "asset" for a declared holding, "no_assets" for a certification that
   the household holds no assets, "disposal" for an asset disposed of.
 - page / quote: the "--- Page N ---" the line is on and at most 40
@@ -3390,6 +3408,7 @@ def _read_declared_assets(prompt: str, settings: Settings, page_texts: dict[int,
             continue
         amount = validation.normalize_money(str(r.get("amount"))) if r.get("amount") not in (None, "", "null") else None
         income = validation.normalize_money(str(r.get("incomeAmount"))) if r.get("incomeAmount") not in (None, "", "null") else None
+        rate = validation.normalize_rate(r.get("interestRate"), "declared.interestRate") if r.get("interestRate") not in (None, "", "null") else None
         try:
             page = int(r.get("page")) if r.get("page") not in (None, "", "null") else None
         except (TypeError, ValueError):
@@ -3410,6 +3429,7 @@ def _read_declared_assets(prompt: str, settings: Settings, page_texts: dict[int,
             "accountNumber": str(r.get("accountNumber")) if r.get("accountNumber") not in (None, "", "null") else None,
             "amount": amount,
             "incomeAmount": income,
+            "interestRate": rate,
             "kind": (r.get("kind") or "asset").lower(),
             "page": page,
             "quote": (str(r.get("quote"))[:80] if r.get("quote") else None),
@@ -3674,6 +3694,10 @@ def _reconcile_assets(records: list[dict], declared: list[dict]) -> None:
             # household's own form states.
             if not best.get("incomeAmount") and d.get("incomeAmount") is not None and not from_certification:
                 best["incomeAmount"] = d["incomeAmount"]
+            # The rate the household wrote is its own figure; a certification
+            # form prints no rate of its own.
+            if not best.get("interestRate") and d.get("interestRate") is not None and not from_certification:
+                best["interestRate"] = d["interestRate"]
             if not best.get("sourceName") and d.get("sourceName"):
                 best["sourceName"] = d["sourceName"]
             continue
@@ -3686,6 +3710,7 @@ def _reconcile_assets(records: list[dict], declared: list[dict]) -> None:
             "accountType": d.get("accountType"),
             "accountNumber": d.get("accountNumber"),
             "incomeAmount": None if from_certification else d.get("incomeAmount"),
+            "interestRate": None if from_certification else d.get("interestRate"),
             "sourcePages": [d["page"]] if d.get("page") else [],
             "evidence": {"selfDeclaredAmount": d["quote"]} if d.get("quote") else {},
             "verificationStatus": "declared_only",

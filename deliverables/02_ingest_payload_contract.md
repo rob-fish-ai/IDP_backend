@@ -232,21 +232,27 @@ income and produces no record.
   "certification_form":        "HUD-50059",      // what the certification itself states
   "certification_cash_value":  "3234.11",        // for this asset: cash value and
   "certification_income":      "0.00",           // annual income (a printed 0 is sent)
-  "interest_rate":             "0.004000",
+  "interest_rate":             "0.50",           // the rate the household itself wrote, percent
   "percentage_of_ownership":   "100",
   "verification_status":       "received",
 
   "bank_statements": [
     { "statement_date": "2026-05-31", "balance": "3104.02",
-      "source_label": "May statement" }
+      "interest_earned": "1.03",                   // interest for the statement's period, dollars
+      "interest_rate": null,                       // or the rate it prints, percent
+      "months_covered": 1 }                        // months the period spans
   ],
   "voa": { "voa_date": "2026-06-11", "reported_value": "3234.11",
            "source": "Cascade Credit Union",
+           "interest_income": "12.40",             // annual interest the institution states, dollars
+           "interest_rate": "0.40",                // or the rate it states, percent
            "month_1_balance": "2910.00", "month_2_balance": "3050.40",   // only when the VOA
            "month_3_balance": "2875.12", "month_4_balance": "3104.02",   // lists monthly balances
            "month_5_balance": "2990.00", "month_6_balance": "3234.11" }  // month 1 = oldest
 }
 ```
+
+**Income from an asset is sent as dollars or as a rate, on the row that states it.** Each bank statement carries `interest_earned` (the interest or dividends shown for its period, never deposits or "income received"), or `interest_rate` (the rate the statement prints, as a percent), and `months_covered` (the whole number of months the period spans; a monthly statement is 1). The VOA carries `interest_income` (the annual figure the institution states, in dollars) or `interest_rate`. The asset's own `interest_rate` is the rate the household wrote on its self-certification or application. Where both dollars and a rate arrive on one row, Cartograph keeps the dollars. A rate is between 0 and 100; anything else is withheld with a warning. `annual_income_from_assets` is sent only when a document states the annual figure outright (a self-certification's annual income column, an investment summary's annual dividends, a real estate worksheet's net income); the interest a single statement showed for its period is that statement's figure and is never sent as the annual total.
 
 `month_1_balance` … `month_6_balance` are sent only when the verification of assets lists individual monthly balances instead of a six-month average (Chase and some others). Month 1 is the oldest; fewer than six months fills from month 1; more than six sends the most recent six. When they are sent, `bank_stmt_avg_balance` carries the mean of the months sent, so it agrees with the average Cartograph computes from them.
 
