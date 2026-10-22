@@ -528,6 +528,16 @@ def classify_and_group(
                 pc.category = new_category
                 pc.notes = "Split by post-group date/income check"
 
+    # The form with the later effective date is the current certification,
+    # whichever label the model gave it.
+    document_groups, order_updates = _order_certifications(document_groups, text_map)
+    for page_num, new_type, new_category in order_updates:
+        for pc in classification_pages:
+            if pc.page == page_num:
+                pc.document_type = new_type
+                pc.category = new_category
+                pc.notes = "Current and previous certification labels swapped by effective date"
+
     # A page whose printed heading names another taxonomy label, while
     # nothing on the page names the label it was given, carries that label.
     document_groups, relabel_updates = _post_group_title_relabel(document_groups, text_map)
@@ -936,6 +946,120 @@ def _build_unknown_fallback(
     return pages, groups
 
 
+_CERTIFICATION_TYPES = {
+    "HUD 50059",
+    "Tenant Income Certification (TIC)",
+    "HUD 3560 Form",
+}
+
+
+def _cert_page_data(pn: int, raw: str) -> dict:
+    """What one certification page states: its effective date, its total
+    income and its tenant rent, each None when the page does not print it."""
+    from app.services.validation import normalize_date, normalize_money
+
+    clean = re.sub(r"<[^>]+>", " ", raw)
+    clean = re.sub(r"\\+[()]", "", clean)
+
+    eff_date = None
+    for pat in [
+        r"[Ee]ffective\s*(?:[Dd]ate)?[:\s]*(\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4})",
+        r"[Cc]ertification\s*[Dd]ate[:\s]*(\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4})",
+        r"[Ee]ffective\s*[Dd]ate[:\s]*(\d{4}[/\-]\d{1,2}[/\-]\d{1,2})",
+        # Table-linearized fallback: OCR flattens form tables
+        # row-major, so labels and values separate ("12. Effective
+        # Date 13. Anticipated Voucher Date 14. Next Recert Date
+        # 08/01/2025 10/01/2025 ..."). The FIRST full date within
+        # a short window after the label is the effective date,
+        # because values appear in the same order as their labels.
+        # The window must be able to cross other field NUMBERS
+        # ("13.", "14.") — only a complete date pattern stops it.
+        r"[Ee]ffective\s*[Dd]ate[\s\S]{0,80}?(\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4})",
+    ]:
+        m = re.search(pat, clean)
+        if m:
+            eff_date = normalize_date(m.group(1))
+            break
+
+    income_total = None
+    # Amounts must look like real dollar figures (4+ digit chars or
+    # cents) — a bare short number is more likely the NEXT field's
+    # label number ("Total Annual Income 87. Low Income Limit")
+    # than a household income, and a wrongly-captured value here
+    # causes false previous-cert splits.
+    for pat in [
+        r"(?:86\.?\s*)?Total\s*(?:Annual\s*)?Income[:\s]*\$?\s*([\d,]{4,}(?:\.\d{2})?|\d+\.\d{2})",
+        r"TOTAL\s*INCOME\s*\(E\)[:\s]*\$?\s*([\d,]{4,}(?:\.\d{2})?|\d+\.\d{2})",
+        r"Total\s*Income[:\s]*\$\s*([\d,]+\.\d{2})",
+        # Table-linearized fallback (see effective-date comment).
+        # The amount must look like a real dollar figure (4+ digit
+        # chars or cents) so an intervening field number ("87.")
+        # can never be captured; fails safe to None otherwise.
+        r"Total\s*Annual\s*Income[^0-9]{0,40}?([\d,]{4,}(?:\.\d{2})?|\d+\.\d{2})",
+    ]:
+        m = re.search(pat, clean, re.IGNORECASE)
+        if m:
+            income_total = normalize_money(m.group(1))
+            break
+
+    tenant_rent = None
+    m = re.search(r"Tenant\s*Rent[:\s]*\$?\s*([\d,]+\.?\d*)", clean, re.IGNORECASE)
+    if m:
+        tenant_rent = normalize_money(m.group(1))
+
+    return {"page": pn, "eff_date": eff_date, "income": income_total, "tenant_rent": tenant_rent}
+
+
+def _order_certifications(
+    groups: list[DocumentGroup],
+    text_map: dict[int, str],
+) -> tuple[list[DocumentGroup], list[tuple[int, str, str]]]:
+    """The certification with the later effective date is the current one.
+
+    The classifier labels a packet's two certifications current and
+    previous itself, and on the same file it can label them either way
+    round. The split above checks the dates only when both forms land in
+    one group. When the model separates them, nothing verified that the
+    form it called current carried the later date, and a packet whose
+    2025 certification was labelled current sent the old form's figures
+    as the certified values. Applies to every certification family with
+    a previous variant: HUD 50059, TIC and RD 3560-8.
+    """
+    updates: list[tuple[int, str, str]] = []
+    for base in _CERTIFICATION_TYPES:
+        prev_type = f"{base} (Previous)"
+        current = [g for g in groups if g.document_type == base]
+        previous = [g for g in groups if g.document_type == prev_type]
+        if len(current) != 1 or not previous:
+            continue
+        cur = current[0]
+
+        def _date_of(g: DocumentGroup) -> str | None:
+            dates = [_cert_page_data(pn, text_map.get(pn, ""))["eff_date"] for pn in g.pages]
+            return max((d for d in dates if d), default=None)
+
+        cur_date = _date_of(cur)
+        if cur_date is None:
+            continue
+        later = [(d, g) for g in previous if (d := _date_of(g)) is not None and d > cur_date]
+        if not later:
+            continue
+        later.sort(key=lambda dg: dg[0], reverse=True)
+        newest_date, newest = later[0]
+        logger.warning(
+            "Classification: %s pages %s labelled previous is effective %s, later than the %s "
+            "labelled current (pages %s, effective %s) — labels swapped",
+            base, newest.pages, newest_date, base, cur.pages, cur_date,
+        )
+        newest.document_type, cur.document_type = base, prev_type
+        newest.category, cur.category = cur.category, "ignore"
+        newest.notes = f"Current cert: later effective date ({newest_date}) than the form labelled current"
+        cur.notes = f"Previous cert: effective {cur_date}, earlier than pages {newest.pages}"
+        updates += [(pn, base, newest.category) for pn in newest.pages]
+        updates += [(pn, prev_type, "ignore") for pn in cur.pages]
+    return groups, updates
+
+
 # ---------------------------------------------------------------------------
 # Post-group split (deterministic current vs previous cert detection)
 # ---------------------------------------------------------------------------
@@ -950,79 +1074,15 @@ def _post_group_split(
     - Extract effective date and income total per page
     - If pages have different dates or incomes → split into current + previous
     """
-    from app.services.validation import normalize_date, normalize_money
-
-    _SPLITTABLE_TYPES = {
-        "HUD 50059",
-        "Tenant Income Certification (TIC)",
-        "HUD 3560 Form",
-    }
     updated: list[DocumentGroup] = []
     classification_updates: list[tuple[int, str, str]] = []
 
     for g in groups:
-        if g.document_type not in _SPLITTABLE_TYPES or len(g.pages) < 2:
+        if g.document_type not in _CERTIFICATION_TYPES or len(g.pages) < 2:
             updated.append(g)
             continue
 
-        page_data: list[dict] = []
-        for pn in g.pages:
-            raw = text_map.get(pn, "")
-            clean = re.sub(r"<[^>]+>", " ", raw)
-            clean = re.sub(r"\\+[()]", "", clean)
-
-            eff_date = None
-            for pat in [
-                r"[Ee]ffective\s*(?:[Dd]ate)?[:\s]*(\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4})",
-                r"[Cc]ertification\s*[Dd]ate[:\s]*(\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4})",
-                r"[Ee]ffective\s*[Dd]ate[:\s]*(\d{4}[/\-]\d{1,2}[/\-]\d{1,2})",
-                # Table-linearized fallback: OCR flattens form tables
-                # row-major, so labels and values separate ("12. Effective
-                # Date 13. Anticipated Voucher Date 14. Next Recert Date
-                # 08/01/2025 10/01/2025 ..."). The FIRST full date within
-                # a short window after the label is the effective date,
-                # because values appear in the same order as their labels.
-                # The window must be able to cross other field NUMBERS
-                # ("13.", "14.") — only a complete date pattern stops it.
-                r"[Ee]ffective\s*[Dd]ate[\s\S]{0,80}?(\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4})",
-            ]:
-                m = re.search(pat, clean)
-                if m:
-                    eff_date = normalize_date(m.group(1))
-                    break
-
-            income_total = None
-            # Amounts must look like real dollar figures (4+ digit chars or
-            # cents) — a bare short number is more likely the NEXT field's
-            # label number ("Total Annual Income 87. Low Income Limit")
-            # than a household income, and a wrongly-captured value here
-            # causes false previous-cert splits.
-            for pat in [
-                r"(?:86\.?\s*)?Total\s*(?:Annual\s*)?Income[:\s]*\$?\s*([\d,]{4,}(?:\.\d{2})?|\d+\.\d{2})",
-                r"TOTAL\s*INCOME\s*\(E\)[:\s]*\$?\s*([\d,]{4,}(?:\.\d{2})?|\d+\.\d{2})",
-                r"Total\s*Income[:\s]*\$\s*([\d,]+\.\d{2})",
-                # Table-linearized fallback (see effective-date comment).
-                # The amount must look like a real dollar figure (4+ digit
-                # chars or cents) so an intervening field number ("87.")
-                # can never be captured; fails safe to None otherwise.
-                r"Total\s*Annual\s*Income[^0-9]{0,40}?([\d,]{4,}(?:\.\d{2})?|\d+\.\d{2})",
-            ]:
-                m = re.search(pat, clean, re.IGNORECASE)
-                if m:
-                    income_total = normalize_money(m.group(1))
-                    break
-
-            tenant_rent = None
-            m = re.search(r"Tenant\s*Rent[:\s]*\$?\s*([\d,]+\.?\d*)", clean, re.IGNORECASE)
-            if m:
-                tenant_rent = normalize_money(m.group(1))
-
-            page_data.append({
-                "page": pn,
-                "eff_date": eff_date,
-                "income": income_total,
-                "tenant_rent": tenant_rent,
-            })
+        page_data: list[dict] = [_cert_page_data(pn, text_map.get(pn, "")) for pn in g.pages]
 
         dates = {d["eff_date"] for d in page_data if d["eff_date"]}
         incomes = {d["income"] for d in page_data if d["income"]}
