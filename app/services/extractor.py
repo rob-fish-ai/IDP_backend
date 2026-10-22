@@ -3900,6 +3900,23 @@ def extract_income(
     return IncomeExtraction.model_validate(result)
 
 
+# The second read of an asset document that prints dollar figures but
+# produced nothing. It names what an account looks like instead of asking
+# the model to "extract only what the document actually shows": that
+# wording, on a borderline document such as an ATM receipt carrying the
+# account balance, made the model return an empty list every time, so the
+# re-read could never recover the account the first read had missed.
+_ASSET_REREAD_INTRO = (
+    "This document was read once and produced no asset record, yet it prints dollar "
+    "figures. Read it again. A balance printed on a bank or credit-union statement, an "
+    "ATM or teller receipt, a card or account summary, a verification form, or an "
+    "investment or insurance statement is an account: return it with the balance as "
+    "printed, the institution, and the account number if one is shown. Return an empty "
+    "list only when none of the figures is an account balance or asset value (for "
+    "example a letter that states only income, or a form left blank):"
+)
+
+
 def extract_assets(
     groups: list[DocumentGroup],
     settings: Settings,
@@ -3930,12 +3947,15 @@ def extract_assets(
         if not recs and _document_amounts(g):
             logger.info("Assets: '%s' pages %s prints dollar figures but produced no record — reading it once more",
                         g.document_type, g.pages)
-            recs = _read(
-                g,
-                "This document was read once and produced no asset record. Read it again and "
-                "extract only the accounts or property it actually shows; if it shows none, "
-                "return an empty list:",
-            )
+            recs = _read(g, _ASSET_REREAD_INTRO)
+            # The re-read exists to recover a balance the first read
+            # missed. A record it returns without any figure is the blank
+            # request form read as an account, not a recovery: dropped.
+            blank = [r for r in recs if not _asset_has_figures(r)]
+            if blank:
+                logger.info("Assets: '%s' pages %s re-read produced %d record(s) with no figure — not kept",
+                            g.document_type, g.pages, len(blank))
+                recs = [r for r in recs if _asset_has_figures(r)]
         return recs
 
     records: list[dict] = []
