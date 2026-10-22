@@ -86,6 +86,34 @@ def test_reread_record_without_a_figure_is_not_kept(monkeypatch):
     assert result.assetInformation == []
 
 
+def test_blank_request_form_does_not_verify_a_declared_line():
+    # The packet holds the bank's reply for the checking account and an
+    # unanswered verification request for a savings account. The household
+    # declares savings of 67.80 on its questionnaire. The request form names
+    # the kind but verifies nothing, so the declared line stays a claim of
+    # the household's and is not delivered as a verified 67.80 balance.
+    chase = dict(CHASE_RECORD)
+    blank = {
+        "documentType": "Verification of Assets", "assetOwner": "Lawrence Lindsey",
+        "sourceName": None, "accountType": "Savings", "currentBalance": None,
+        "verificationOfAsset": {"accountNumber": None, "currentBalance": None,
+                                "averageSixMonthBalance": None, "monthlyBalances": []},
+        "sourcePages": [17, 18],
+    }
+    records = [chase, blank]
+    declared = [
+        {"assetOwner": "Lawrence Lindsey", "accountType": "Savings", "amount": "668.00",
+         "kind": "asset", "page": 5, "documentType": "HUD 50059"},
+        {"assetOwner": "Lawrence Lindsey", "accountType": "Savings", "amount": "67.80",
+         "kind": "asset", "page": 13, "documentType": "Application / Housing Questionnaire"},
+    ]
+    ex._reconcile_assets(records, declared)
+    assert chase["selfDeclaredAmount"] == "668.00"          # 668 is the Chase balance, declared as savings
+    assert blank.get("selfDeclaredAmount") is None          # the blank form verifies nothing
+    claims = [r for r in records if r.get("verificationStatus") == "declared_only"]
+    assert [(r["accountType"], r["selfDeclaredAmount"]) for r in claims] == [("Savings", "67.80")]
+
+
 def test_no_reread_when_the_document_prints_no_figures(monkeypatch):
     prompts = _stub(monkeypatch, [{"assetInformation": []}])
     g = _group()

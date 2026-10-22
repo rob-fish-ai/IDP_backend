@@ -3660,9 +3660,15 @@ def _reconcile_assets(records: list[dict], declared: list[dict]) -> None:
                 def _owners_ok(rec):
                     return (not d.get("assetOwner") or not rec.get("assetOwner")
                             or _same_member(rec.get("assetOwner"), d.get("assetOwner")))
+                # Only a record that carries a figure counts as verified
+                # here: a request form the bank never answered names an
+                # account of the kind but verifies nothing, and pairing the
+                # declared line with it would deliver the household's own
+                # figure as a verified balance.
                 same_kind = [
                     rec for rec in records
                     if rec.get("verificationStatus") != "declared_only"
+                    and _asset_has_figures(rec)
                     and _asset_kind(rec.get("accountType")) == kind and _owners_ok(rec)
                 ]
                 declared_same = [
