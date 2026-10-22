@@ -1002,8 +1002,34 @@ def _eiv_section_status(text: str, benefit_type: str) -> str | None:
     return None
 
 
-def _calc_key(member: str | None, source: str | None) -> tuple[str, str]:
-    return ((member or "").strip().lower(), (source or "").strip().lower())
+def _calc_key(member: str | None, source: str | None, income_type: str | None = None) -> tuple[str, str, str]:
+    return ((member or "").strip().lower(), (source or "").strip().lower(), (income_type or "").strip().lower())
+
+
+def _calc_for(calculations: dict, member: str | None, source: str | None, income_type: str | None) -> dict | None:
+    """The calculation for one income record.
+
+    One payer can pay a member two incomes: the Social Security
+    Administration pays retirement and SSI, each its own record with its
+    own figure. Keyed on member and payer alone, both records carried the
+    first calculation, so an SSI record arrived with the retirement figure
+    as its annual income. The record's own type picks its calculation;
+    with one calculation under the payer, or one whose type means the
+    same thing, that one is it.
+    """
+    exact = calculations.get(_calc_key(member, source, income_type))
+    if exact is not None:
+        return exact
+    m, s, _ = _calc_key(member, source)
+    under_payer = {t: c for (cm, cs, t), c in calculations.items() if cm == m and cs == s}
+    if len(under_payer) == 1:
+        return next(iter(under_payer.values()))
+    if income_type and under_payer:
+        from app.services.extractor import _same_income_type
+        alike = [c for t, c in under_payer.items() if _same_income_type(t, income_type)]
+        if len(alike) == 1:
+            return alike[0]
+    return None
 
 
 _PAY_FREQUENCIES = ("weekly", "bi-weekly", "semi-monthly", "monthly", "quarterly")
@@ -1043,10 +1069,10 @@ def _is_history_only(entry, calc: dict | None) -> bool:
                 or entry.ytdAmount or getattr(entry, "paymentHistory", None))
 
 
-def _calculations_by_source(extraction: ExtractionResult) -> dict[tuple[str, str], dict]:
+def _calculations_by_source(extraction: ExtractionResult) -> dict[tuple[str, str, str], dict]:
     """The engine's annual figure per source, with how it was reached.
 
-    One primary row per (member, source): the method that produced the
+    One primary row per (member, source, income type): the method that produced the
     figure and its arithmetic in words. The audit rows (a year-to-date
     projection beside a stub average) and rejected attempts travel as
     alternatives, each stating why it did not stand, so a reviewer sees the
@@ -1054,7 +1080,7 @@ def _calculations_by_source(extraction: ExtractionResult) -> dict[tuple[str, str
     """
     out: dict[tuple[str, str], dict] = {}
     for calc in extraction.income_calculations or []:
-        key = _calc_key(calc.memberName, calc.sourceName)
+        key = _calc_key(calc.memberName, calc.sourceName, calc.incomeType)
         details = calc.details or ""
         status = ("audit" if details.startswith("[audit]") else
                   "rejected" if details.startswith("[rejected]") else
@@ -1149,7 +1175,7 @@ def build_income_records(
         member_ref = _resolve_member_ref(
             entry.memberName, members, warnings, context,
         )
-        calc = calculations.get(_calc_key(entry.memberName, entry.sourceName))
+        calc = _calc_for(calculations, entry.memberName, entry.sourceName, entry.incomeType)
         if _is_history_only(entry, calc):
             # Prior employment the audit reports as a finding. Cartograph
             # totals what it receives, so a past employer sent as a record
@@ -1262,7 +1288,7 @@ def build_income_records(
                 f"{len(stubs)} paystub(s) but no verification entry; record "
                 f"reconstructed from the paystubs"
             )
-            calc = calculations.get(_calc_key(member_name, source_name))
+            calc = _calc_for(calculations, member_name, source_name, None)
             records.append({
                 "member_ref": _resolve_member_ref(
                     member_name, members, warnings, context,
@@ -1313,6 +1339,20 @@ def build_income_records(
     return records
 
 
+def _asset_states_nothing(asset) -> bool:
+    """True when no document gives the asset a figure of any kind: no
+    balance, no average, no declared or certified value, no income, no
+    statement with a balance, and a VOA with nothing filled in."""
+    voa = asset.verificationOfAsset
+    figures = [asset.currentBalance, asset.averageSixMonthBalance, asset.selfDeclaredAmount,
+               asset.certificationCashValue, asset.incomeAmount]
+    figures += [s.balance for s in asset.bankStatment]
+    if voa is not None:
+        figures += [voa.currentBalance, voa.averageSixMonthBalance, voa.incomeAmount]
+        figures += [m.balance for m in voa.monthlyBalances]
+    return all(_money(f) is None for f in figures)
+
+
 def build_asset_records(
     extraction: ExtractionResult,
     members: list[dict],
@@ -1322,8 +1362,27 @@ def build_asset_records(
     """Map assets, with statements and the verification of assets nested."""
     records: list[dict] = []
 
-    for index, asset in enumerate(extraction.assets.assetInformation):
-        context = f"asset_records[{index}]"
+    for asset in extraction.assets.assetInformation:
+        context = f"asset_records[{len(records)}]"
+        # A verification request the bank has not answered names an owner,
+        # a bank and an account and verifies nothing. Sent as a record it
+        # arrives as a verified account with an empty VOA row, and the
+        # checklist item asking whether a verification was obtained reads
+        # as satisfied. The audit reports the unanswered request as a
+        # finding; the account is not an asset record until a document
+        # gives it a figure. The same holds for a life insurance policy
+        # whose verification states no cash value. A declared account with
+        # no figure is still the household's statement that the account
+        # exists, and is sent.
+        if asset.verificationStatus != "declared_only" and _asset_states_nothing(asset):
+            account = f" (account {asset.accountNumber})" if asset.accountNumber else ""
+            warnings.append(
+                f"{context}: {asset.assetOwner or 'unnamed owner'} {asset.accountType or 'asset'}"
+                f" at {asset.sourceName or 'an unnamed institution'}{account} carries no figure from"
+                f" any document (an unanswered verification request, or a policy with no cash value"
+                f" stated); not sent as an asset record"
+            )
+            continue
         member_ref = _resolve_member_ref(
             asset.assetOwner, members, warnings, context,
         )

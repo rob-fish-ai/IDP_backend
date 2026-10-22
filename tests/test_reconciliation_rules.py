@@ -1269,3 +1269,65 @@ def test_annual_income_is_sent_only_when_a_document_states_it_outright():
     assert by_type["savings"]["annual_income_from_assets"] is None and by_type["savings"]["voa"]["interest_income"] == "12.40"
     assert by_type["checking"]["annual_income_from_assets"] is None
     assert [s["interest_earned"] for s in by_type["checking"]["bank_statements"]] == ["0.03", "0.13"]
+
+
+# ---------------------------------------------------------------------------
+# One payer, two incomes: each record carries its own calculation
+# ---------------------------------------------------------------------------
+
+def test_two_benefits_from_one_payer_each_carry_their_own_calculation():
+    from types import SimpleNamespace
+    from app.core.config import Settings
+    from app.schemas.extraction import (CertificationInfo, IncomeCalculationResult, IncomeExtraction, SourceIncome,
+                                        VerificationIncomeEntry)
+    from app.services.cartograph.adapter import build_income_records
+
+    members = [{"ref": "m01", "first_name": "Lawrence", "last_name": "Lindsey"}]
+    ss = VerificationIncomeEntry(memberName="Lawrence Lindsey", sourceName="Social Security Administration", incomeType="Social Security",
+                                 rateOfPay="1003.00", rateUnit="monthly", frequencyOfPay="monthly", verificationStatus="verified", sourcePages=[6])
+    ssi = VerificationIncomeEntry(memberName="Lawrence Lindsey", sourceName="Social Security Administration", incomeType="Supplemental Security Income",
+                                  rateOfPay="11.00", rateUnit="monthly", frequencyOfPay="monthly", verificationStatus="verified", sourcePages=[6])
+    calcs = [
+        IncomeCalculationResult(memberName="Lawrence Lindsey", sourceName="Social Security Administration", incomeType="Social Security",
+                                method="voi-based", annualIncome="12036.00", details="1003.00 monthly × 12 = 12036.00"),
+        IncomeCalculationResult(memberName="Lawrence Lindsey", sourceName="Social Security Administration", incomeType="Supplemental Security Income",
+                                method="voi-based", annualIncome="132.00", details="11.00 monthly × 12 = 132.00"),
+    ]
+    ex = SimpleNamespace(certification_info=CertificationInfo(effectiveDate="2026-08-01"),
+                         income=IncomeExtraction(sourceIncome=SourceIncome(verificationIncome=[ss, ssi])), income_calculations=calcs)
+    warnings: list[str] = []
+    records = build_income_records(ex, members, Settings(cartograph_income_types=["social_security", "ssi"]), warnings)
+    by_type = {r["income_type"]: r for r in records}
+    assert by_type["social_security"]["calculation"]["annual_income"] == "12036.00"
+    assert by_type["ssi"]["calculation"]["annual_income"] == "132.00"
+    assert by_type["ssi"]["calculation"]["alternatives"] == []
+
+    # One calculation under the payer, typed differently from the record: still its own.
+    ex.income_calculations = [IncomeCalculationResult(memberName="Lawrence Lindsey", sourceName="Social Security Administration",
+                                                      incomeType="SSA Retirement", method="voi-based", annualIncome="12036.00", details="x")]
+    ex.income.sourceIncome.verificationIncome = [ss]
+    records = build_income_records(ex, members, Settings(cartograph_income_types=["social_security"]), [])
+    assert records[0]["calculation"]["annual_income"] == "12036.00"
+
+
+def test_a_verification_request_with_no_reply_is_not_sent_as_an_asset():
+    from types import SimpleNamespace
+    from app.core.config import Settings
+    from app.schemas.extraction import AssetEntry, AssetExtraction, VerificationOfAsset
+    from app.services.cartograph.adapter import build_asset_records
+
+    members = [{"ref": "m01", "first_name": "Lawrence", "last_name": "Lindsey"}]
+    unanswered = AssetEntry(documentType="Verification of Assets", assetOwner="Lawrence Lindsey", accountType="Savings",
+                            accountNumber="#7468", verificationStatus="verified", sourcePages=[17, 18],
+                            verificationOfAsset=VerificationOfAsset(accountNumber="#7468"))
+    answered = AssetEntry(documentType="Verification of Assets", assetOwner="Lawrence Lindsey", accountType="Checking", sourceName="Chase",
+                          currentBalance="667.82", verificationStatus="verified", sourcePages=[19],
+                          verificationOfAsset=VerificationOfAsset(currentBalance="667.82", dateReceived="2026-04-06"))
+    declared_blank = AssetEntry(documentType="Application / Housing Questionnaire", assetOwner="Lawrence Lindsey", accountType="Checking",
+                                sourceName="Wells Fargo", selfDeclaredSource="Application / Housing Questionnaire",
+                                verificationStatus="declared_only", sourcePages=[12])
+    warnings: list[str] = []
+    records = build_asset_records(SimpleNamespace(assets=AssetExtraction(assetInformation=[unanswered, answered, declared_blank])), members,
+                                  Settings(cartograph_asset_types=["checking", "savings"]), warnings)
+    assert [(r["asset_type"], r["institution_name"]) for r in records] == [("checking", "Chase"), ("checking", "Wells Fargo")]
+    assert any("#7468" in w and "no figure" in w for w in warnings)

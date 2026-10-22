@@ -534,22 +534,6 @@
       null
      ]
     ]
-   ],
-   [
-    "prepaid_debit_card",
-    "Direct Express",
-    null,
-    null,
-    null,
-    "verified",
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    []
    ]
   ],
   "cert_review": {
@@ -609,6 +593,7 @@
   ],
   "score": 0.81,
   "warnings": [
+   "asset_records[1]: Joyce Perkins Direct Express at Direct Express (acco",
    "household_members[0] 'Joyce Perkins' date of birth read as 1956-02-13;"
   ]
  },
@@ -874,22 +859,6 @@
     []
    ],
    [
-    "prepaid_debit_card",
-    "Direct Express",
-    null,
-    null,
-    null,
-    "verified",
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    []
-   ],
-   [
     "savings",
     "111Th Super Save",
     "267.88",
@@ -965,7 +934,9 @@
    "Student status is null for all household members \u2014 verify against HUD "
   ],
   "score": 0.74,
-  "warnings": []
+  "warnings": [
+   "asset_records[1]: Patric O Connor Direct Express at Direct Express (ac"
+  ]
  },
  "J-CCAC-06740@1790651684": {
   "assets": [
@@ -1646,22 +1617,6 @@
     []
    ],
    [
-    "prepaid_debit_card",
-    "Direct Express",
-    null,
-    null,
-    null,
-    "verified",
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    []
-   ],
-   [
     "savings",
     "",
     "125000.00",
@@ -1731,6 +1686,7 @@
   ],
   "score": 0.7,
   "warnings": [
+   "asset_records[1]: David Alston Direct Express at Direct Express (accou",
    "income_records[1]: type 'Other Income' is not in the configured pickli"
   ]
  },
@@ -1979,22 +1935,6 @@
     "1439.57",
     null,
     "declared_only",
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    []
-   ],
-   [
-    "whole_life_insurance",
-    "",
-    null,
-    null,
-    null,
-    "verified",
     null,
     null,
     null,
@@ -2295,6 +2235,7 @@
    "asset_records[12]: 'Devonte L Davis' did not match any household membe",
    "asset_records[12]: balance arrived with no statement or verification o",
    "asset_records[13]: balance arrived with no statement or verification o",
+   "asset_records[16]: Lela Anderson Life Insurance at an unnamed institut",
    "asset_records[2]: balance arrived with no statement or verification of",
    "asset_records[3]: balance arrived with no statement or verification of",
    "asset_records[4]: balance arrived with no statement or verification of",
@@ -3845,38 +3786,6 @@
     null,
     null,
     []
-   ],
-   [
-    "whole_life_insurance",
-    "Policy Service Department",
-    null,
-    null,
-    null,
-    "verified",
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    []
-   ],
-   [
-    "whole_life_insurance",
-    "Policy Service Department",
-    null,
-    null,
-    null,
-    "verified",
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    []
    ]
   ],
   "cert_review": {
@@ -3933,6 +3842,8 @@
   ],
   "score": 0.86,
   "warnings": [
+   "asset_records[1]: James Smith Life Insurance at Policy Service Departm",
+   "asset_records[1]: James Smith Life Insurance at Policy Service Departm",
    "household_members[0] 'James Smith' date of birth read as 1953-07-01; C"
   ]
  },
@@ -5231,22 +5142,6 @@
  "J-CCAC-07098@1791261019": {
   "assets": [
    [
-    "prepaid_debit_card",
-    "Direct Express",
-    null,
-    null,
-    null,
-    "verified",
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    []
-   ],
-   [
     "savings",
     "",
     null,
@@ -5306,7 +5201,9 @@
    "Self-declared income amounts not extracted from questionnaire/applicat"
   ],
   "score": 0.76,
-  "warnings": []
+  "warnings": [
+   "asset_records[1]: Debra Williams Direct Express at Direct Express (acc"
+  ]
  },
  "J-CCAC-07099@1791261232": {
   "assets": [
@@ -5827,22 +5724,6 @@
  "J-CCAC-07104@1791261807": {
   "assets": [
    [
-    "prepaid_debit_card",
-    "",
-    null,
-    null,
-    null,
-    "verified",
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    []
-   ],
-   [
     "savings",
     "Direct Express",
     null,
@@ -5900,26 +5781,12 @@
    "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir"
   ],
   "score": 0.85,
-  "warnings": []
+  "warnings": [
+   "asset_records[1]: Tina Lofton Direct Express at an unnamed institution"
+  ]
  },
  "J-CCAC-07105@1791262287": {
   "assets": [
-   [
-    "prepaid_debit_card",
-    "",
-    null,
-    null,
-    null,
-    "verified",
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    []
-   ],
    [
     "prepaid_debit_card",
     "Direct Express",
@@ -6033,30 +5900,14 @@
   "score": 0.82,
   "warnings": [
    "asset_records[0]: balance arrived with no statement or verification of",
-   "asset_records[1]: balance arrived with no statement or verification of"
+   "asset_records[1]: balance arrived with no statement or verification of",
+   "asset_records[2]: Charles Garner Direct Express at an unnamed institut"
   ]
  },
  "J-CCAC-07106@1791262109": {
-  "assets": [
-   [
-    "prepaid_debit_card",
-    "Direct Express",
-    null,
-    null,
-    null,
-    "verified",
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    []
-   ]
-  ],
+  "assets": [],
   "cert_review": {
-   "annual_assets": "0.00",
+   "annual_assets": null,
    "annual_income": "12168.00",
    "cert_type": "annual",
    "effective_date": "2026-06-01",
@@ -6103,7 +5954,9 @@
    "Pages 4-5: 'HUD 50059 (Previous)' detected \u2014 excluded from data extrac"
   ],
   "score": 0.88,
-  "warnings": []
+  "warnings": [
+   "asset_records[0]: Terence Barnes Direct Express at Direct Express (acc"
+  ]
  },
  "J-CCAC-07107@1791262217": {
   "assets": [
@@ -6134,22 +5987,6 @@
     "2287.00",
     null,
     "0.00",
-    null,
-    null,
-    null,
-    []
-   ],
-   [
-    "whole_life_insurance",
-    "Kemper Life",
-    null,
-    null,
-    null,
-    "verified",
-    null,
-    null,
-    null,
-    null,
     null,
     null,
     null,
@@ -6195,7 +6032,9 @@
    "Pages 4-5: 'HUD 50059 (Previous)' detected \u2014 excluded from data extrac"
   ],
   "score": 0.76,
-  "warnings": []
+  "warnings": [
+   "asset_records[1]: Mae Dotson Life Insurance at Kemper Life (account 60"
+  ]
  },
  "J-CCAC-07108@1791262263": {
   "assets": [
@@ -6222,22 +6061,6 @@
     "94300.00",
     null,
     "declared_only",
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    []
-   ],
-   [
-    "prepaid_debit_card",
-    "",
-    null,
-    null,
-    null,
-    "verified",
     null,
     null,
     null,
@@ -6324,7 +6147,8 @@
   "score": 0.87,
   "warnings": [
    "asset_records[1]: balance arrived with no statement or verification of",
-   "asset_records[4]: type 'Investment' is not in the configured picklist;",
+   "asset_records[3]: Anthony Nightengale Direct Express at an unnamed ins",
+   "asset_records[3]: type 'Investment' is not in the configured picklist;",
    "household_members[0] 'Anthony Nightengale' date of birth read as 1948-"
   ]
  },
@@ -6532,22 +6356,6 @@
       null
      ]
     ]
-   ],
-   [
-    "savings",
-    "",
-    null,
-    null,
-    null,
-    "verified",
-    3269,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    []
    ]
   ],
   "cert_review": {
@@ -6603,7 +6411,9 @@
    "Pages 4-5: 'HUD 50059 (Previous)' detected \u2014 excluded from data extrac"
   ],
   "score": 0.9,
-  "warnings": []
+  "warnings": [
+   "asset_records[1]: Gearldine Roberts Savings at an unnamed institution "
+  ]
  },
  "J-CCAC-07112@1791262962": {
   "assets": [
@@ -7572,22 +7382,6 @@
     null,
     null,
     []
-   ],
-   [
-    "whole_life_insurance",
-    "Office of Personnel Manag",
-    null,
-    null,
-    null,
-    "verified",
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    []
    ]
   ],
   "cert_review": {
@@ -7650,6 +7444,7 @@
   "score": 0.78,
   "warnings": [
    "asset_records[1]: balance arrived with no statement or verification of",
+   "asset_records[2]: Alfrieda Parham Life Insurance at Office of Personne",
    "income_records[2]: type 'Other Income' is not in the configured pickli"
   ]
  },
@@ -9500,22 +9295,6 @@
  "J-CCAC-07513@1791603682": {
   "assets": [
    [
-    "prepaid_debit_card",
-    "Direct Express",
-    null,
-    null,
-    null,
-    "verified",
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    []
-   ],
-   [
     "savings",
     "",
     null,
@@ -9583,7 +9362,9 @@
    "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir"
   ],
   "score": 0.82,
-  "warnings": []
+  "warnings": [
+   "asset_records[1]: Colleen Tamayo Direct Express at Direct Express (acc"
+  ]
  },
  "J-CCAC-07514@1791603493": {
   "assets": [
@@ -9608,22 +9389,6 @@
       null
      ]
     ]
-   ],
-   [
-    "prepaid_debit_card",
-    "Direct Express",
-    null,
-    null,
-    null,
-    "verified",
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    []
    ]
   ],
   "cert_review": {
@@ -9670,7 +9435,9 @@
    "Self-declared income amounts not extracted from questionnaire/applicat"
   ],
   "score": 0.92,
-  "warnings": []
+  "warnings": [
+   "asset_records[1]: Colleen Tamayo Direct Express at Direct Express (acc"
+  ]
  },
  "J-CCAC-07515@1791603981": {
   "assets": [
@@ -10540,7 +10307,7 @@
     null,
     null,
     "verified",
-    null,
+    3542,
     null,
     null,
     null,
@@ -10559,22 +10326,6 @@
       null
      ]
     ]
-   ],
-   [
-    "checking",
-    "Fifth Third Bank",
-    null,
-    null,
-    null,
-    "verified",
-    3542,
-    null,
-    null,
-    null,
-    null,
-    "0.00",
-    null,
-    []
    ],
    [
     "other",
@@ -10655,7 +10406,8 @@
   ],
   "score": 0.75,
   "warnings": [
-   "asset_records[4]: type 'Investment' is not in the configured picklist;"
+   "asset_records[1]: Darlene Gray Checking at Fifth Third Bank (account 7",
+   "asset_records[3]: type 'Investment' is not in the configured picklist;"
   ]
  },
  "J-CCAC-07525@1791605213": {
@@ -12849,22 +12601,6 @@
     ]
    ],
    [
-    "prepaid_debit_card",
-    "Direct Express",
-    null,
-    null,
-    null,
-    "verified",
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    []
-   ],
-   [
     "whole_life_insurance",
     "Lincoln Heritage Life Ins",
     null,
@@ -12922,27 +12658,12 @@
   ],
   "score": 0.91,
   "warnings": [
-   "asset_records[0]: balance arrived with no statement or verification of"
+   "asset_records[0]: balance arrived with no statement or verification of",
+   "asset_records[2]: Horace Williams Direct Express at Direct Express (ac"
   ]
  },
  "J-CCAC-07547@1791607944": {
   "assets": [
-   [
-    "prepaid_debit_card",
-    "Direct Express",
-    null,
-    null,
-    null,
-    "verified",
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    []
-   ],
    [
     "savings",
     "Olympia Field ATM",
@@ -13008,7 +12729,9 @@
    "Self-declared income amounts not extracted from questionnaire/applicat"
   ],
   "score": 0.91,
-  "warnings": []
+  "warnings": [
+   "asset_records[1]: Irene Moore Direct Express at Direct Express (accoun"
+  ]
  },
  "J-CCAC-07548@1791608847": {
   "assets": [
@@ -13528,22 +13251,6 @@
    ],
    [
     "checking",
-    "Bank of America - USA",
-    null,
-    null,
-    null,
-    "verified",
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    []
-   ],
-   [
-    "checking",
     "Chase",
     "1855.42",
     null,
@@ -13607,7 +13314,9 @@
    "Student status is null for all household members \u2014 verify against HUD "
   ],
   "score": 0.92,
-  "warnings": []
+  "warnings": [
+   "asset_records[1]: Jane Falls Checking at Bank of America - USA (accoun"
+  ]
  },
  "J-CCAC-07552@1791608660": {
   "assets": [
@@ -13846,22 +13555,6 @@
     ]
    ],
    [
-    "prepaid_debit_card",
-    "Direct Express",
-    null,
-    null,
-    null,
-    "verified",
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    []
-   ],
-   [
     "savings",
     "",
     null,
@@ -13898,22 +13591,6 @@
       null
      ]
     ]
-   ],
-   [
-    "whole_life_insurance",
-    "Metropolitan Life Insuran",
-    null,
-    null,
-    null,
-    "verified",
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    []
    ]
   ],
   "cert_review": {
@@ -13959,7 +13636,10 @@
    "Self-declared income amounts not extracted from questionnaire/applicat"
   ],
   "score": 0.9,
-  "warnings": []
+  "warnings": [
+   "asset_records[4]: Juleo Reynolds Life Insurance at Metropolitan Life I",
+   "asset_records[6]: Juleo Reynolds Direct Express at Direct Express (acc"
+  ]
  },
  "J-CCAC-07555@1791608680": {
   "assets": [
@@ -17741,22 +17421,6 @@
       null
      ]
     ]
-   ],
-   [
-    "checking",
-    "Fifth Third Bank",
-    null,
-    null,
-    null,
-    "verified",
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    []
    ]
   ],
   "cert_review": {
@@ -17812,6 +17476,7 @@
   ],
   "score": 0.76,
   "warnings": [
+   "asset_records[0]: Elroy Nichols Checking at Fifth Third Bank (account ",
    "income_records[2]: 'Midwest Folding Products Corp.' is wage history on",
    "income_records[3]: 'Associated Labor of America Inc.' is wage history "
   ]
@@ -17878,22 +17543,6 @@
   "assets": [
    [
     "prepaid_debit_card",
-    "",
-    null,
-    null,
-    null,
-    "verified",
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    []
-   ],
-   [
-    "prepaid_debit_card",
     "CashApp",
     null,
     "1.27",
@@ -17931,42 +17580,10 @@
     null,
     null,
     "declared_only",
-    null,
+    4053,
     "1.00",
     null,
     "0.00",
-    null,
-    null,
-    null,
-    []
-   ],
-   [
-    "savings",
-    "",
-    null,
-    null,
-    null,
-    "verified",
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    []
-   ],
-   [
-    "savings",
-    "Cash App",
-    null,
-    null,
-    null,
-    "verified",
-    4053,
-    null,
-    null,
-    null,
     null,
     null,
     null,
@@ -18057,7 +17674,10 @@
   "score": 0.85,
   "warnings": [
    "asset_records[0]: balance arrived with no statement or verification of",
-   "asset_records[1]: balance arrived with no statement or verification of"
+   "asset_records[1]: balance arrived with no statement or verification of",
+   "asset_records[5]: LaDonna Lymon Direct Express at an unnamed instituti",
+   "asset_records[5]: LaDonna Lymon Savings at Cash App (account *1860) ca",
+   "asset_records[5]: LaDonna Lymon Savings at an unnamed institution (acc"
   ]
  },
  "J-CCAC-07890@1791907640": {
@@ -18390,22 +18010,6 @@
       null
      ]
     ]
-   ],
-   [
-    "prepaid_debit_card",
-    "",
-    null,
-    null,
-    null,
-    "verified",
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    []
    ]
   ],
   "cert_review": {
@@ -18447,7 +18051,9 @@
    "Student status is null for all household members \u2014 verify against HUD "
   ],
   "score": 0.9,
-  "warnings": []
+  "warnings": [
+   "asset_records[1]: Doris Mabins Direct Express at an unnamed institutio"
+  ]
  },
  "J-CCAC-07894@1791908787": {
   "assets": [
@@ -18521,26 +18127,9 @@
   "warnings": []
  },
  "J-CCAC-07895@1791908881": {
-  "assets": [
-   [
-    "savings",
-    "Chime",
-    null,
-    null,
-    null,
-    "verified",
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    []
-   ]
-  ],
+  "assets": [],
   "cert_review": {
-   "annual_assets": "0.00",
+   "annual_assets": null,
    "annual_income": "14918.00",
    "cert_type": "annual",
    "effective_date": "2026-07-10",
@@ -18577,7 +18166,9 @@
    "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir"
   ],
   "score": 0.94,
-  "warnings": []
+  "warnings": [
+   "asset_records[0]: Brenda Lumpkin Savings at Chime (account 4651) carri"
+  ]
  },
  "J-CCAC-07896@1791909011": {
   "assets": [
@@ -18832,22 +18423,6 @@
     null,
     null,
     []
-   ],
-   [
-    "savings",
-    "",
-    null,
-    null,
-    null,
-    "verified",
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    []
    ]
   ],
   "cert_review": {
@@ -18890,7 +18465,9 @@
    "Pages 6: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti"
   ],
   "score": 0.79,
-  "warnings": []
+  "warnings": [
+   "asset_records[2]: Kim Glover Savings at an unnamed institution (accoun"
+  ]
  },
  "J-CCAC-07899@1791909597": {
   "assets": [
@@ -19773,22 +19350,6 @@
     []
    ],
    [
-    "savings",
-    "Direct Express Services",
-    null,
-    null,
-    null,
-    "verified",
-    4105,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    []
-   ],
-   [
     "whole_life_insurance",
     "",
     null,
@@ -19905,7 +19466,8 @@
    "asset_records[0]: balance arrived with no statement or verification of",
    "asset_records[1]: balance arrived with no statement or verification of",
    "asset_records[2]: balance arrived with no statement or verification of",
-   "asset_records[3]: balance arrived with no statement or verification of"
+   "asset_records[3]: balance arrived with no statement or verification of",
+   "asset_records[4]: Bertha Griffin Savings at Direct Express Services (a"
   ]
  },
  "J-CCAC-07908@1791924248": {
@@ -20795,26 +20357,9 @@
   ]
  },
  "J-CCAC-07918@1791925977": {
-  "assets": [
-   [
-    "checking",
-    "Chase Bank",
-    null,
-    null,
-    null,
-    "verified",
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    []
-   ]
-  ],
+  "assets": [],
   "cert_review": {
-   "annual_assets": "0.00",
+   "annual_assets": null,
    "annual_income": "14482.00",
    "cert_type": "annual",
    "effective_date": "2026-02-01",
@@ -20864,7 +20409,9 @@
    "Student status is null for all household members \u2014 verify against HUD "
   ],
   "score": 0.64,
-  "warnings": []
+  "warnings": [
+   "asset_records[0]: Duane Crockett Checking at Chase Bank (account 6330)"
+  ]
  },
  "J-CCAC-07919@1791925874": {
   "assets": [
@@ -21684,22 +21231,6 @@
     null,
     null,
     "verified",
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    []
-   ],
-   [
-    "savings",
-    "St Peter Claver Courts",
-    null,
-    null,
-    null,
-    "verified",
     4142,
     null,
     null,
@@ -21789,6 +21320,7 @@
   ],
   "score": 0.65,
   "warnings": [
+   "asset_records[3]: Angela Sephus Savings at St Peter Claver Courts (acc",
    "income_records[3]: 'Aerotek Inc.' is wage history only (not declared, ",
    "income_records[4]: 'St. Coletta's of Illinois' is wage history only (n",
    "income_records[6]: 'Department of Human Services' is wage history only"
@@ -21796,22 +21328,6 @@
  },
  "J-CCAC-07929@1791927861": {
   "assets": [
-   [
-    "prepaid_debit_card",
-    "",
-    null,
-    null,
-    null,
-    "verified",
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    []
-   ],
    [
     "prepaid_debit_card",
     "Direct Express",
@@ -21871,7 +21387,8 @@
   ],
   "score": 0.88,
   "warnings": [
-   "asset_records[0]: balance arrived with no statement or verification of"
+   "asset_records[0]: balance arrived with no statement or verification of",
+   "asset_records[1]: Doris Mabins Direct Express at an unnamed institutio"
   ]
  },
  "J-CCAC-07933@1792021274": {
@@ -21939,6 +21456,82 @@
   "warnings": [
    "asset_records[0]: balance arrived with no statement or verification of",
    "income_records[1]: 'Blue Islnd Ctzns Devpmntl Dis Inc.' is wage histor"
+  ]
+ },
+ "J-CCAC-07949@1792631688": {
+  "assets": [
+   [
+    "checking",
+    "Chase",
+    "667.82",
+    null,
+    null,
+    "verified",
+    null,
+    "668.00",
+    "0.00",
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "667.82",
+   "annual_income": "12168.00",
+   "cert_type": "annual",
+   "effective_date": "2026-08-01",
+   "gross_rent": "1455.00",
+   "hh_size": 1,
+   "tenant_rent": "248.00",
+   "utility_allowance": "46.00"
+  },
+  "codes": {},
+  "income": [
+   [
+    "social_security",
+    "verified",
+    null,
+    "Social Security Administration",
+    null,
+    null,
+    "12036.00"
+   ],
+   [
+    "ssi",
+    "verified",
+    null,
+    "Social Security Administration",
+    null,
+    null,
+    "132.00"
+   ]
+  ],
+  "members": [
+   [
+    "Lawrence",
+    "Lindsey",
+    "Head of Household",
+    5060,
+    3706,
+    []
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 6-7: 'HUD 50059 (Previous)' detected \u2014 excluded from data extrac",
+   "Self-declared income amounts not extracted from questionnaire/applicat"
+  ],
+  "score": 0.91,
+  "warnings": [
+   "asset_records[1]: Lawrence Lindsey Savings at an unnamed institution ("
   ]
  },
  "J-CCAC-07951@1792599820": {
@@ -25483,22 +25076,6 @@
       null
      ]
     ]
-   ],
-   [
-    "savings",
-    "Bank of America - USA",
-    null,
-    null,
-    null,
-    "verified",
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    []
    ]
   ],
   "cert_review": {
@@ -25560,7 +25137,9 @@
    "Self-declared income amounts not extracted from questionnaire/applicat"
   ],
   "score": 0.8,
-  "warnings": []
+  "warnings": [
+   "asset_records[2]: Bianca Avila Savings at Bank of America - USA (accou"
+  ]
  },
  "J-VIV-06637@1790547014": {
   "assets": [
@@ -25601,22 +25180,6 @@
       null
      ]
     ]
-   ],
-   [
-    "savings",
-    "Bank of America - USA",
-    null,
-    null,
-    null,
-    "verified",
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    []
    ]
   ],
   "cert_review": {
@@ -25680,7 +25243,9 @@
    "Self-declared income amounts not extracted from questionnaire/applicat"
   ],
   "score": 0.8,
-  "warnings": []
+  "warnings": [
+   "asset_records[2]: Bianca Avila Savings at Bank of America - USA (accou"
+  ]
  },
  "J-VIV-06638@1790629851": {
   "assets": [
