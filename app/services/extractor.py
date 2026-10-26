@@ -2419,7 +2419,121 @@ def _extract_declared_income(groups: list[DocumentGroup], settings: Settings,
             "documentType": doc_type,
             "matched": False,
         })
+    out.extend(_certification_table_lines(groups, page_texts, out))
     return out
+
+
+# The certification's income table, read by column. A TIC's Part III keys
+# each row by member number under typed amount columns; the member's name
+# is in Part II under the same number.
+_TABLE_ROW_RE = re.compile(r"<tr>(.*?)</tr>", re.IGNORECASE | re.DOTALL)
+_TABLE_CELL_RE = re.compile(r"<t[dh][^>]*>(.*?)</t[dh]>", re.IGNORECASE | re.DOTALL)
+_MBR_HEADER_RE = re.compile(r"\bmbr\b|member\s*(?:#|no|number)", re.IGNORECASE)
+_INCOME_COLUMN_TYPES = (
+    (re.compile(r"employment|wages|salar", re.IGNORECASE), "Non-Federal Wage"),
+    (re.compile(r"social\s*security|pension", re.IGNORECASE), "Social Security"),
+    (re.compile(r"public\s*assistance|tanf|welfare", re.IGNORECASE), "Temporary Assistance"),
+    (re.compile(r"other", re.IGNORECASE), "Other Income"),
+)
+
+
+def _table_cells(row_html: str) -> list[str]:
+    return [re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", c)).strip() for c in _TABLE_CELL_RE.findall(row_html)]
+
+
+def _certification_table_lines(groups: list[DocumentGroup], page_texts: dict[int, str],
+                               existing: list[dict]) -> list[dict]:
+    """Income lines the certification form's own table prints, by member
+    number, that the model's read of the form did not return.
+
+    A TIC's Part III row "1 | 12,480.00 | 0.00 | 0.00 | 0.00" is the
+    household's declared wage for member 1, whose name Part II prints
+    under the same number. The model returned the questionnaires' lines
+    and not these, so the records went out with the questionnaires'
+    12,000 as self-declared and no certification amount, and the consumer
+    compared its own copy of the form's figures against ours and warned.
+    The table is fixed in shape; it is read in code. A row the model did
+    return (same page and amount, or same member number on that page) is
+    not added again.
+    """
+    lines: list[dict] = []
+    for g in groups:
+        if not is_current_certification_form(g.document_type):
+            continue
+        names: dict[str, str] = {}
+        for pn in g.pages:
+            text = page_texts.get(pn) or ""
+            number_col = last_col = first_col = name_col = None
+            income_cols: dict[int, str] = {}
+            for row in _TABLE_ROW_RE.finditer(text):
+                cells = _table_cells(row.group(0))
+                if not cells:
+                    continue
+                low = [c.lower() for c in cells]
+                if any(_MBR_HEADER_RE.search(c) for c in cells) and not any(re.fullmatch(r"\d{1,2}", c) for c in cells):
+                    # A header row: the composition table names the name
+                    # columns, the income table the typed amount columns.
+                    number_col = next(i for i, c in enumerate(cells) if _MBR_HEADER_RE.search(c))
+                    last_col = next((i for i, c in enumerate(low) if "last name" in c), None)
+                    first_col = next((i for i, c in enumerate(low) if "first name" in c), None)
+                    name_col = next((i for i, c in enumerate(low) if re.fullmatch(r"(?:household |member )?name", c)), None) if last_col is None else None
+                    income_cols = {}
+                    for i, c in enumerate(cells):
+                        if i == number_col:
+                            continue
+                        for rx, kind in _INCOME_COLUMN_TYPES:
+                            if rx.search(c):
+                                income_cols[i] = kind
+                                break
+                    continue
+                if number_col is None or number_col >= len(cells) or not re.fullmatch(r"\d{1,2}", cells[number_col]):
+                    continue
+                number = str(int(cells[number_col]))
+                if last_col is not None and last_col < len(cells) and cells[last_col]:
+                    first = cells[first_col] if first_col is not None and first_col < len(cells) else ""
+                    names[number] = validation.to_title_case(f"{first} {cells[last_col]}".strip())
+                    continue
+                if name_col is not None and name_col < len(cells) and cells[name_col]:
+                    printed = cells[name_col]
+                    if "," in printed:
+                        last, first = printed.split(",", 1)
+                        printed = f"{first.strip()} {last.strip()}"
+                    names[number] = validation.to_title_case(printed)
+                    continue
+                if not income_cols:
+                    continue
+                for col, kind in income_cols.items():
+                    if col >= len(cells):
+                        continue
+                    amount = validation.normalize_money(cells[col]) if re.search(r"\d", cells[col]) else None
+                    if amount is None or float(amount) <= 0:
+                        continue
+                    already = any(
+                        d.get("page") == pn and (
+                            (d.get("amount") and _amounts_equal(d["amount"], amount))
+                            or (d.get("memberNumber") == number)
+                        )
+                        for d in (*existing, *lines)
+                    )
+                    if already:
+                        continue
+                    lines.append({
+                        "memberName": names.get(number),
+                        "memberNumber": number,
+                        "sourceName": None,
+                        "incomeType": kind,
+                        "amount": amount,
+                        "amountPeriod": "annual",
+                        "page": pn,
+                        "quote": f"{cells[number_col]} | {cells[col]}"[:80],
+                        "documentType": g.document_type,
+                        "matched": False,
+                    })
+                    logger.info(
+                        "Declared income: the certification's table prints %s %s for member %s (%s) on page %s "
+                        "— read from the form", kind, amount, number, names.get(number) or "name not resolved", pn,
+                    )
+    return lines
 
 
 _PERIOD_TO_FREQUENCY = {
@@ -4060,6 +4174,16 @@ def extract_assets(
         recs = [r for r in (result.get("assetInformation") or []) if isinstance(r, dict)]
         _enforce_provenance(recs, _ASSET_AMOUNT_FIELDS, g, "Assets")
         _note_redactions(recs, ("currentBalance", "averageSixMonthBalance", "incomeAmount"), g)
+        # A statement names its holder in a header the OCR may lose. The
+        # classifier has attributed the document to a household member; a
+        # record read from it with no owner is that member's. Unowned, the
+        # consumer could match it to nobody and skipped it.
+        if g.person_name:
+            for rec in recs:
+                if not (rec.get("assetOwner") or "").strip():
+                    rec["assetOwner"] = g.person_name
+                    logger.info("Assets: '%s' pages %s record without an owner attributed to %s, "
+                                "whom the document is about", g.document_type, g.pages, g.person_name)
         return recs
 
     def _one(g: DocumentGroup) -> list[dict]:

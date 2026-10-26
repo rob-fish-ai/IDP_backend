@@ -680,6 +680,12 @@ _CERT_FINGERPRINTS = {
         "tenant income certification", "hh meets income restriction", "income equates to", "amgi",
         "part ii - household composition", "part iii - income other than assets",
         "income from assets (use annual amounts)", "unit meets rent restriction",
+        # Nevada's alternate certification (NHD exhibit NV-1c) prints no
+        # "tenant income certification" title; it carries the student
+        # questions on its one page, and on those alone it was relabelled
+        # a student certification, so the packet had no certification form.
+        "alternate certification", "certification effective date", "gross household income",
+        "household income at move-in", "max income limit", "low income housing tax credit program",
     ),
     "HUD 50059": (
         "50059", "owner's certification of compliance", "tracs", "hud's tenant eligibility",
