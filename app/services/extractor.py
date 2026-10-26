@@ -1052,7 +1052,9 @@ def _date_on_text(iso: str, text: str) -> bool:
     yy = y[2:]
     name = _MONTH_NAMES[mo - 1]
     month_rx = rf"(?:{name}|{name[:3]}\.?)"
-    sep = r"\s*[/.\-]\s*"
+    # A separator, or bare space: the OCR renders a form's boxed
+    # "MM DD YYYY" cell as "08 06 1988".
+    sep = r"(?:\s*[/.\-]\s*|\s+)"
     year_rx = rf"(?:{y}|{yy})"
     patterns = (
         rf"(?<!\d){mo:02d}{sep}{d:02d}{sep}{year_rx}(?!\d)",

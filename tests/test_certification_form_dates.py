@@ -102,3 +102,45 @@ def test_recovered_form_date_is_kept_only_when_the_transcript_prints_it():
     assert pipeline._recovered_cert_value("tenantRent", "$1,314.00", transcript) == "1314.00"
     assert pipeline._recovered_cert_value("unitNumber", " 11-281 ", transcript) == "11-281"
     assert pipeline._recovered_cert_value("signatureDate", None, transcript) is None
+
+
+# --- identity resolution: the form's date cell must be read as a date -------
+# J-PACI-08384: the TIC's boxed "MM DD YYYY" cell comes through OCR as
+# "08 06 1988". Unread as a date, the form made no claim, the questionnaire's
+# handwritten "8/10/88" was the top claim, and the delivered date of birth
+# changed from the form's to the questionnaire's.
+
+def _tic_group(pages, text):
+    return DocumentGroup(document_type="Tenant Income Certification (TIC)", category="include",
+                         pages=pages, page_range="-".join(str(p) for p in pages), combined_text=text)
+
+
+def _questionnaire_group(page, text, person):
+    return DocumentGroup(document_type="Application / Housing Questionnaire", category="include",
+                         pages=[page], page_range=str(page), combined_text=text, person_name=person)
+
+
+def test_identity_reads_the_forms_boxed_date_cell_and_keeps_it_over_the_questionnaire():
+    from app.schemas.extraction import HouseholdDemographics, HouseholdMember
+    from app.services.identity import resolve_identities
+    tic = ("<table><tr><th>HH Mbr #</th><th>Last Name</th><th>First Name & Middle Initial</th>"
+           "<th>Relationship to Head of Household</th><th>Date of Birth (MM DD YYYY)</th></tr>"
+           "<tr><td>1</td><td>Johnson</td><td>Samantha Caroline</td><td>HEAD</td><td>08 06 1988</td></tr></table>")
+    questionnaire = "Name Samantha Johnson\nDate of Birth 8/10/88 Social Security # 0880 Marital Status Single"
+    hh = HouseholdDemographics(houseHold=[HouseholdMember(FirstName="Samantha", LastName="Johnson", DOB="1988-08-06", relationship="Head")])
+    groups = [_tic_group([1], tic), _questionnaire_group(4, questionnaire, "Samantha Johnson")]
+    findings = resolve_identities(hh, groups, {1: tic, 4: questionnaire})
+    assert hh.houseHold[0].DOB == "1988-08-06"
+    assert [f.code for f in findings] == ["MEMBER_IDENTITY_CONFLICT"]
+
+
+def test_identity_reads_a_year_first_date_cell_with_single_digit_parts():
+    from app.schemas.extraction import HouseholdDemographics, HouseholdMember
+    from app.services.identity import resolve_identities
+    tic = ("<table><tr><th>Household Member Name</th><th>Birth of Date</th><th>Full-time Student Y/N</th></tr>"
+           "<tr><td>Hernandez Arevalo, Dulce A</td><td>1984/5/8</td><td>No</td></tr></table>")
+    questionnaire = "Name Dulce Hernandez\nDate of Birth 05/08/1988 Social Security # 6335"
+    hh = HouseholdDemographics(houseHold=[HouseholdMember(FirstName="Dulce", LastName="Hernandez Arevalo", DOB="1988-05-08", relationship="Head")])
+    groups = [_tic_group([2], tic), _questionnaire_group(3, questionnaire, "Dulce Hernandez")]
+    resolve_identities(hh, groups, {2: tic, 3: questionnaire})
+    assert hh.houseHold[0].DOB == "1984-05-08"

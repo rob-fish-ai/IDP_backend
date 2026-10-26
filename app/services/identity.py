@@ -49,7 +49,17 @@ _AUTHORITY_NAMES = {
 _SSN_RE = re.compile(
     r"(?<![\d*X])(\d{3}|\*{3}|X{3}|x{3})\s?-\s?(\d{2}|\*{2}|X{2}|x{2})\s?-\s?(\d{4})(?!\d)"
 )
-_DATE_RE = re.compile(r"(?<![\d/])(\d{1,3})[/-](\d{1,3})[/-](\d{2,4})(?![\d/])|(?<!\d)(\d{4})-(\d{2})-(\d{2})(?!\d)")
+# Month-first with / or -; year-first with / or - and parts of one or two
+# digits (a Nevada TIC prints "1984/5/8"); and month, day and year as three
+# space-separated groups, which is how the OCR renders a form's boxed
+# "MM DD YYYY" cell ("08 06 1988"). A date the pattern misses is no claim,
+# and the certification form's own cell then loses to a handwritten
+# questionnaire by default.
+_DATE_RE = re.compile(
+    r"(?<![\d/])(\d{1,3})[/-](\d{1,3})[/-](\d{2,4})(?![\d/])"
+    r"|(?<!\d)(\d{4})[/-](\d{1,2})[/-](\d{1,2})(?!\d)"
+    r"|(?<!\d)(\d{2}) (\d{2}) (\d{4})(?!\d)"
+)
 _DOB_LABEL_RE = re.compile(r"date\s*of\s*birth|\bd\.?o\.?b\.?\b|birth\s*date|\bbirthdate\b", re.IGNORECASE)
 _ROW_RE = re.compile(r"<tr>(.*?)</tr>", re.IGNORECASE | re.DOTALL)
 _NAME_WINDOW = 400
@@ -149,10 +159,14 @@ def _nearest_member(text_before: str, members, person_name: str | None):
 def _normalize_dob(raw: str) -> str | None:
     """A date as printed, tolerating one OCR-inserted digit in a part
     ("071/15/1949" for 07/15/1949)."""
+    raw = raw.strip()
+    spaced = re.fullmatch(r"(\d{2}) (\d{2}) (\d{4})", raw)
+    if spaced:
+        raw = "/".join(spaced.groups())
     iso = normalize_date(raw)
     if iso:
         return iso
-    m = re.fullmatch(r"(\d{1,3})[/-](\d{1,3})[/-](\d{2,4})", raw.strip())
+    m = re.fullmatch(r"(\d{1,3})[/-](\d{1,3})[/-](\d{2,4})", raw)
     if not m:
         return None
     parts = list(m.groups())
