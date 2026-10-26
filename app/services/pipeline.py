@@ -50,9 +50,12 @@ from app.services.cross_doc_validator import (
 )
 from app.services.extractor import (
     CRITICAL_CERT_FIELDS,
+    _FORM_DATE_FIELDS,
     _amount_on_pages,
+    _date_on_text,
     source_names_overlap,
     build_group_texts,
+    dobs_from_certification_form,
     extract_assets,
     extract_certification_info,
     extract_demographics,
@@ -1153,6 +1156,31 @@ def _image_page_reader(page_texts: list[dict], ocr_quality: dict[int, dict], gro
     return _read
 
 
+def _recovered_cert_value(field: str, raw, transcript: str) -> str | None:
+    """Normalise a certification value re-read from the transcribed form.
+
+    A date is kept only when the transcript prints it: the retry sees the
+    form's pages alone, but the model can still answer with a date from
+    memory of the request, and a signature date must be the form's own.
+    """
+    from app.services.validation import normalize_date, normalize_money
+
+    if raw in (None, "", "null"):
+        return None
+    if field in _MONEY_CERT_FIELDS:
+        return normalize_money(str(raw)) or None
+    if field in _FORM_DATE_FIELDS:
+        val = normalize_date(str(raw))
+        if val and not _date_on_text(val, transcript):
+            logger.info(
+                "Required-field recovery: %s=%s is not printed on the transcribed cert page(s) — not kept",
+                field, val,
+            )
+            return None
+        return val or None
+    return str(raw).strip() or None
+
+
 def _recover_required_fields_from_images(
     household,
     certification_info,
@@ -1288,24 +1316,27 @@ def _recover_required_fields_from_images(
                 setattr(certification_info, f, None)
                 gaps["cert"].append(f)
 
-    # Certification cells
-    if gaps["cert"] and certification_info:
+    # Certification cells. The dates the form prints in its header and
+    # beside its signatures are not must-exist cells (a form may be
+    # undated) and never trigger the transcription; once it has happened,
+    # an empty one is read from the transcript in the same call and kept
+    # only when the transcript prints it. A TIC's "Date: 10/23/26" beside
+    # both signatures went unread from the OCR text, and the audit reported
+    # the certification undated.
+    date_gaps = [
+        f for f in _FORM_DATE_FIELDS
+        if certification_info and not getattr(certification_info, f, None) and f not in gaps["cert"]
+    ]
+    if (gaps["cert"] or date_gaps) and certification_info:
         known = {
             k: v for k, v in certification_info.model_dump().items()
             if v not in (None, "", [], "null")
         }
-        retry = retry_cert_info_fields(texts, gaps["cert"], known, certification_type, settings)
+        asked = gaps["cert"] + date_gaps
+        retry = retry_cert_info_fields(texts, asked, known, certification_type, settings)
         recovered: list[str] = []
-        for f in gaps["cert"]:
-            raw = retry.get(f)
-            if raw in (None, "", "null"):
-                continue
-            if f in _MONEY_CERT_FIELDS:
-                val = normalize_money(str(raw))
-            elif f == "effectiveDate":
-                val = normalize_date(str(raw))
-            else:
-                val = str(raw).strip() or None
+        for f in asked:
+            val = _recovered_cert_value(f, retry.get(f), transcript_all)
             if val:
                 setattr(certification_info, f, val)
                 recovered.append(f)
@@ -1316,6 +1347,15 @@ def _recover_required_fields_from_images(
         )
         for f in still:
             findings.append(_required_cert_field_finding(f, transcript_all, group.pages))
+
+    # A member's date of birth that the transcribed form does not print is
+    # re-read from the form's row (see dobs_from_certification_form); the
+    # first read of the OCR text may have taken it from a neighbouring
+    # form or misread the cell.
+    if household and household.houseHold:
+        member_dicts = [m.model_dump() for m in household.houseHold]
+        if dobs_from_certification_form(member_dicts, texts, transcript_all, certification_type, settings):
+            household.houseHold = [HouseholdMember.model_validate(d) for d in member_dicts]
 
     # Member cells
     if gaps["members"] or gaps["shortfall"]:

@@ -681,8 +681,65 @@ def extract_demographics(
 
     _retry_if_incomplete("Demographics", gate=_gate, fill=_fill)
 
+    form_groups = [g for g in groups if is_current_certification_form(g.document_type)]
+    if form_groups:
+        dobs_from_certification_form(
+            members, cert_texts,
+            strip_html("\n".join(g.combined_text or "" for g in form_groups)),
+            certification_type, settings,
+        )
+
     logger.info("Extracted %d household members", len(members))
     return HouseholdDemographics.model_validate(result)
+
+
+def dobs_from_certification_form(
+    members: list[dict],
+    cert_texts: list[str],
+    form_text: str,
+    certification_type: str | None,
+    settings: Settings,
+) -> list[str]:
+    """Make each member's date of birth the one the certification form prints.
+
+    The demographics read sees the certification form beside the household's
+    own forms, and a date of birth can come back from the wrong one: a
+    questionnaire's handwritten "05/08/1988" was delivered for a head of
+    household whose TIC prints "1984/5/8". The form is the certified record
+    of the household. A date of birth the form does not print anywhere is
+    re-read from the form's own row, and the re-read value replaces it only
+    when the form prints that one. Nothing is dropped: a member whose row
+    the form garbled keeps the first read. Returns "Name: old -> new" for
+    each replacement.
+    """
+    unprinted = [
+        m for m in members
+        if m.get("DOB") and not is_unborn(m) and _member_name_key(m)
+        and not _date_on_text(str(m["DOB"]), form_text)
+    ]
+    if not unprinted:
+        return []
+    gaps = [{"name": _member_name_key(m), "missing": ["DOB"]} for m in unprinted]
+    rows = retry_member_fields(cert_texts, gaps, 0, certification_type, settings)
+    exact = {_member_name_key(r): r for r in rows}
+    loose = {_loose_name_key(r): r for r in rows}
+    replaced: list[str] = []
+    for m in unprinted:
+        row = exact.get(_member_name_key(m)) or loose.get(_loose_name_key(m))
+        new = (row or {}).get("DOB")
+        if new and new != m["DOB"] and _date_on_text(str(new), form_text):
+            logger.warning(
+                "Demographics: %s DOB %s is not printed on the certification form; the form's row "
+                "prints %s — replaced", _member_name_key(m).title(), m["DOB"], new,
+            )
+            replaced.append(f"{_member_name_key(m).title()}: {m['DOB']} -> {new}")
+            m["DOB"] = new
+        else:
+            logger.info(
+                "Demographics: %s DOB %s is not printed on the certification form and no printed "
+                "date was read from its row — kept", _member_name_key(m).title(), m["DOB"],
+            )
+    return replaced
 
 
 def extract_certification_info(
@@ -985,8 +1042,9 @@ _MONTH_NAMES = ("january", "february", "march", "april", "may", "june", "july", 
 
 def _date_on_text(iso: str, text: str) -> bool:
     """Whether an ISO date is printed on the text in any of the ways a form
-    prints dates: 08/12/2026, 8/12/26, 08-12-2026, 2026-08-12, August 12,
-    2026, 12 Aug 2026 — with the spaces OCR drops around separators."""
+    prints dates: 08/12/2026, 8/12/26, 08-12-2026, 2026-08-12, 2026/8/12,
+    August 12, 2026, 12 Aug 2026 — with the spaces OCR drops around
+    separators."""
     m = re.fullmatch(r"(\d{4})-(\d{2})-(\d{2})", iso.strip())
     if not m:
         return False
@@ -1001,7 +1059,9 @@ def _date_on_text(iso: str, text: str) -> bool:
         rf"(?<!\d){mo}{sep}{d}{sep}{year_rx}(?!\d)",
         rf"(?<!\d){mo:02d}{sep}{d}{sep}{year_rx}(?!\d)",
         rf"(?<!\d){mo}{sep}{d:02d}{sep}{year_rx}(?!\d)",
-        rf"(?<!\d){y}\s*-\s*{mo:02d}\s*-\s*{d:02d}(?!\d)",
+        # Year first, any separator, with or without zero padding: a
+        # Nevada TIC prints "2026/11/1".
+        rf"(?<!\d){y}{sep}0?{mo}{sep}0?{d}(?!\d)",
         rf"{month_rx}\s+{d}(?:st|nd|rd|th)?\s*,?\s+{y}",
         rf"(?<!\d){d}\s*{month_rx}\s*,?\s*{y}",
     )
