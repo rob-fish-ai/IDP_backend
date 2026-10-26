@@ -415,7 +415,7 @@ def run_extraction_pipeline(
                         memberName=head_name,
                         selfDeclaredAmount=f"{tic_total:.2f}",
                         selfDeclaredSource="AR-SC TIC",
-                        incomeType="Self-Declared",
+                        incomeType=_self_declared_income_type(income),
                         type_of_VOI="Self-Declaration",
                     )
                 ]
@@ -1154,6 +1154,27 @@ def _image_page_reader(page_texts: list[dict], ocr_quality: dict[int, dict], gro
         return got
 
     return _read
+
+
+def _self_declared_income_type(income) -> str:
+    """The type of a self-certified household's income, for the record
+    seeded from the certification's total.
+
+    The form states a total, not a type. When the household's own
+    declarations (questionnaire, self-certification lines) name exactly one
+    kind of income with an amount, the total is that kind; otherwise the
+    record keeps the generic label, which the consumer maps to "other".
+    """
+    kinds: set[str] = set()
+    for d in getattr(income, "declared", None) or []:
+        kind = (getattr(d, "incomeType", None) or "").strip()
+        try:
+            amount = float(str(getattr(d, "amount", None) or "0").replace(",", ""))
+        except ValueError:
+            amount = 0.0
+        if amount > 0 and kind and kind.lower() not in ("zero income", "self-declared", "other"):
+            kinds.add(kind)
+    return next(iter(kinds)) if len(kinds) == 1 else "Self-Declared"
 
 
 def _recovered_cert_value(field: str, raw, transcript: str) -> str | None:

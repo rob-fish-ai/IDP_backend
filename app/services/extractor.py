@@ -210,13 +210,13 @@ FIELDS TO EXTRACT:
   different things to the audit.
 - householdIncome: Total annual household income. Numeric string with 2 decimals.
 - householdSize: Number of household members. Integer as string.
-- unitNumber: Unit number or apartment number.
+- unitNumber: Unit number or apartment number exactly as the form prints it, including any building or wing prefix ("06-147" stays "06-147").
 - signatureDate: Date the form was signed. YYYY-MM-DD.
 - isSigned: "Yes" if signature is present, "No" if signature line is blank.
 - applicationSignDate: Application sign date if present. YYYY-MM-DD.
 
 DOCUMENT-SPECIFIC GUIDANCE:
-- TIC Form: Cert type is in the header area (checkboxes for Initial/Annual/Interim/Other). Effective date is labeled "Effective Date" — the adjacent "Move-in Date" line is a DIFFERENT field; do not confuse them (on recertifications they differ by one or more years). Income is in Part III "Income". Rent fields are in Part IV "Rent".
+- TIC Form: Cert type is in the header area (checkboxes for Initial/Annual/Interim/Other). Effective date is labeled "Effective Date" — the adjacent "Move-in Date" line is a DIFFERENT field; do not confuse them (on recertifications they differ by one or more years). Income is in Part III "Income"; on an alternate certification it is the "Gross Household Income" / "Total Household Income" line — "Household Income at move-in" is the move-in year's figure and is NEVER householdIncome. Rent fields are in Part IV "Rent".
 - HUD 50059: Cert type is field 2b "Type of Action" (1=Initial, 2=Annual, 3=Interim, etc.). Effective date is field 2a. Field 29 = Contract Rent (= contractRent), Field 30 = Utility Allowance, Field 31 = Gross Rent (this is the true grossRent, NOT field 29). Field 110 = Tenant Rent. Field 86 = Total Annual Income.
 - HUD 3560 (RD 3560-8 / USDA): Line 30.a = Note Rate Rent (= contractRent), Line 30.b = Utility Allowance, Line 30.c = Gross Note Rate Rent (use as grossRent). Line 33 = Final NTC (Net Tenant Contribution = tenantRent). Line 18.f = Monthly Income, Line 20 = Adjusted Annual Income.
 - HUD Model Lease: Gross Rent = Contract Rent + Utility Allowance. "Contract Rent" = contractRent. Record grossRent from the "Gross Rent" line if shown, otherwise compute Contract Rent + UA. "Tenant Rent" / tenant's portion = tenantRent. "Utility Allowance" = utilityAllowance. "Unit" / dwelling unit number = unitNumber. Lease commencement date = effectiveDate. Signature date on the lease = signatureDate.
@@ -905,7 +905,13 @@ _CERT_LABELS = {
     "grossRent": r"\bgross\s+rent\b",
     "contractRent": r"\b(?:contract|note\s+rate)\s+rent\b",
     "federalRentAssistance": r"\bassistance\s+payment\b",
-    "householdIncome": r"\btotal\s+annual\s+income\b",
+    # The current certification's income line. A Nevada alternate TIC
+    # prints "Household Income at move-in" above "Gross Household Income";
+    # the move-in figure is the move-in year's and is never this field. A
+    # self-certification with "$0.00" on its income line went out with the
+    # move-in year's 18,635.21 because only "Total Annual Income" was a
+    # label and the model's read stood.
+    "householdIncome": r"\b(?:total\s+annual\s+income|gross\s+household\s+income|total\s+household\s+income)\b(?!\s+(?:at|from)\s+move)",
 }
 # Labelled figures read only to settle an ambiguous one by arithmetic; they
 # are not certification fields and are never delivered.
@@ -1112,8 +1118,9 @@ Field meanings:
   Line 30.b, TIC Part IV "Utility Allowance".
 - householdIncome: Total annual household income (numeric). HUD 50059 field 86, TIC
   Part III "Total Income (E)", RD 3560-8 Line 18.f × 12 or Line 20.
-- unitNumber: Unit number or apartment number. Strip any building prefix
-  (e.g., "Bldg 2 Unit 27" → "27", "2 27" → "27").
+- unitNumber: Unit number or apartment number exactly as the form prints it,
+  including any building or wing prefix ("06-147" stays "06-147"; "Bldg 2
+  Unit 27" → "2-27"). The consumer matches it against its own unit list.
 - householdSize: Number of household members (integer as string)
 - numberOfBedrooms: Number of bedrooms (numeric string)
 
@@ -1787,15 +1794,48 @@ def _labelled_total(value, page_texts: dict[int, str], pages: list[int]) -> bool
     return False
 
 
+def _whole_digits(value) -> str | None:
+    """The digits of a whole-dollar amount ("30000" for 30000.00), or None
+    when the amount carries cents or is too short to be distinctive."""
+    try:
+        f = float(str(value).replace("$", "").replace(",", "").strip())
+    except ValueError:
+        return None
+    if f != int(f) or f < 1000:
+        return None
+    return str(int(f))
+
+
+def _whole_amount_printed(digits: str, plain: str) -> bool:
+    """Whether the page prints these digits as one figure with a space,
+    period or comma between any two of them — "30 000", "7.200", "7,200" —
+    as OCR renders a thousands separator. Not "12.00" for 1200: a figure
+    whose only separator precedes exactly two final digits is dollars and
+    cents, not thousands."""
+    rx = r"(?<![\d.,])" + r"[\s.,]?".join(digits) + r"(?![\d])(?![.,]\d)"
+    for m in re.finditer(rx, plain):
+        if not re.fullmatch(r"\d+[.,]\d{2}", m.group(0)):
+            return True
+    return False
+
+
 def _amount_on_pages(value, page_texts: dict[int, str], pages: list[int]) -> bool:
     forms, digits = _value_forms(value)
     if not digits:
         return False
+    whole = _whole_digits(value)
     for pn in pages:
-        keys, stream = _page_number_keys(page_texts.get(pn, ""))
+        text = page_texts.get(pn, "")
+        keys, stream = _page_number_keys(text)
         if forms & keys:
             return True
         if len(digits) >= 3 and digits in stream:
+            return True
+        # A whole amount the OCR printed with a space or period for the
+        # thousands separator: a questionnaire's "$ 30 000", an employer
+        # form's "7.200". Neither is a number token, and the digit stream
+        # carries the cents the page does not print.
+        if whole and _whole_amount_printed(whole, strip_html(text)):
             return True
     return False
 
@@ -3843,6 +3883,18 @@ def extract_income(
         _note_redactions(vis, ("rateOfPay", "ytdAmount", "overtimeRate"), g)
         _prune_payment_history(vis, g, "Income")
         _enforce_provenance(pss, _PAYSTUB_AMOUNT_FIELDS, g, "Income")
+        # A verification form names the person in a field the OCR may
+        # garble (an employer form's employee-name line came through as
+        # "2- 2- 2- 2-"). The classifier has already attributed the
+        # document to a household member; a record read from it with no
+        # name is that member's, not nobody's — unnamed, the record was
+        # dropped and the packet's only wage went out as "no income".
+        if g.person_name:
+            for rec in (*vis, *pss):
+                if not (rec.get("memberName") or "").strip():
+                    rec["memberName"] = g.person_name
+                    logger.info("Income: '%s' pages %s record without a member name attributed to %s, "
+                                "whom the document is about", g.document_type, g.pages, g.person_name)
         # A program line reading $0.00 (the retirement letter that also says
         # the SSI payment is $0.00) is not income and never owes a record.
         kept = []
