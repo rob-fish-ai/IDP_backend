@@ -66,6 +66,7 @@ from app.services.extractor import (
     retry_member_fields,
 )
 from app.services.income_calculator import PAYSTUB_GUIDANCE_COUNT, calculate_all_methods, match_paystubs_to_sources
+from app.services.race_ethnicity import read_race_and_ethnicity
 from app.services.inventory_builder import build_financial_inventory, build_hud_inventory
 from app.services.parsers.questionnaire_parser import parse_questionnaire
 from app.services.questionnaire_extractor import (
@@ -235,6 +236,25 @@ def run_extraction_pipeline(
         )
     except Exception:
         logger.exception("Required-field recovery failed — keeping first-pass values")
+
+    # The household's own Race and Ethnic Data Forms, read from the page
+    # images: the ticks are handwritten and OCR drops them. Sets race and
+    # ethnicity on the members they name; the HUD 50059's Section C codes,
+    # read with the demographics, stand where the packet has no form.
+    try:
+        for note in read_race_and_ethnicity(household, document_groups, page_texts, settings):
+            required_field_findings.append(make_finding(
+                note["code"], note["text"],
+                label=f"Race and Ethnic Data Form: {note['name']}",
+                category=CATEGORY_MEMBER, subject_type="household_member",
+                subject_ref={"member_name": note["name"], "field": "race"},
+                result="na", assignment=ASSIGN_INTERNAL,
+                correction_required="Confirm which household member the form belongs to and enter "
+                                    "race and ethnicity by hand",
+                resolution_type=RESOLVE_PRESENCE, pages=note["pages"],
+            ))
+    except Exception:
+        logger.exception("Race/ethnicity reading failed — keeping the certification's values")
 
     # Vision-verify the signature verdict in BOTH directions. Handwriting
     # does not survive OCR, so a wet-signed form and a blank one produce the

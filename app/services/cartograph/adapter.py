@@ -54,6 +54,7 @@ from app.services.members import is_unborn
 from app.services.cartograph.manifest import link_payload
 from app.services.doc_taxonomy import is_certification_source
 from app.services.name_reconciler import _name_similarity
+from app.services.race_ethnicity import ethnicity_out, race_out
 
 logger = logging.getLogger(__name__)
 
@@ -146,6 +147,24 @@ def _tri_state(value: str | None) -> bool | None:
         return True
     if normalized in (_NO, "NO", "FALSE"):
         return False
+    return None
+
+
+def _yes_no_out(value: str | None) -> str | None:
+    """The consumer's string form of a Y/N cell ("Yes" / "No"), null when
+    the packet never said. "Decline to Answer" passes through as such."""
+    flag = _tri_state(value)
+    if flag is None:
+        return "Decline to Answer" if str(value or "").strip().lower().startswith("decline") else None
+    return "Yes" if flag else "No"
+
+
+def _gender_out(value: str | None) -> str | None:
+    key = str(value or "").strip().upper()
+    if key in ("M", "MALE"):
+        return "Male"
+    if key in ("F", "FEMALE"):
+        return "Female"
     return None
 
 
@@ -295,7 +314,11 @@ def build_household_members(
             "date_of_birth": dob,
             "is_hoh": is_hoh,
             "is_disabled": _tri_state(member.disabled),
+            "disability": _yes_no_out(member.disabled),
             "full_time_student": _tri_state(member.student),
+            "gender": _gender_out(member.gender),
+            "race": race_out(member.race),
+            "ethnicity": ethnicity_out(member.ethnicity),
             "ssn_last4": _ssn_last4(member.socialSecurityNumber),
             "email": member.email,
             "cell_phone": member.phone,

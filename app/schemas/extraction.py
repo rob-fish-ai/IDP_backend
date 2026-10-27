@@ -67,6 +67,12 @@ class HouseholdMember(BaseModel):
     student: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
+    # What the household's Race and Ethnic Data Form (or the HUD 50059's
+    # Section C) states, in the consumer's vocabulary
+    # (app.services.race_ethnicity): the ticked race categories, and the
+    # one ethnicity. None when no document states them — never inferred.
+    race: Optional[list[str]] = None
+    ethnicity: Optional[str] = None
 
 
 class HouseholdDemographics(BaseModel):

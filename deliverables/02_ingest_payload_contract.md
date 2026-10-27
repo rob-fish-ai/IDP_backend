@@ -138,8 +138,12 @@ separate fields can route the figure without guessing from the form type.
   "date_of_birth":     "1974-11-02",     // ISO; parsed engine-side
   "relationship":      "Head of Household",
   "is_hoh":            true,
-  "is_disabled":       false,
+  "is_disabled":       false,                // older boolean, kept
+  "disability":        "No",                 // "Yes" | "No" | "Decline to Answer" | null
   "full_time_student": false,
+  "gender":            "Male",               // "Male" | "Female" | null
+  "race":              "Black/African American",   // one of Cartograph's 23 race strings, or null
+  "ethnicity":         "Not Hispanic or Latino",    // "Hispanic or Latino" | "Not Hispanic or Latino" | "Decline to Answer" | null
   "ssn_last4":         "3168",           // last four only, see Section 13
   "email":             "m.halvorsen@example.com",
   "cell_phone":        "555-0142",
@@ -147,7 +151,9 @@ separate fields can route the figure without guessing from the form type.
 }
 ```
 
-The engine does not extract relationship-to-head. It sends `"Head of Household"` where the head flag is set and omits the key otherwise, leaving the field unset rather than inferring a value.
+`relationship` is the certification's relationship column mapped onto Cartograph's vocabulary; `relationship_as_printed` keeps the form's own word. Head of household is asserted from the roster.
+
+`race`, `ethnicity`, `gender` and `disability` come from the household's own Race and Ethnic Data Form (HUD-27061-H or a state grid such as Nevada's Exhibit G), read from the page image, with the HUD 50059's Section C codes (fields 38–40) as the fallback when the packet has no form. A box that is not ticked is sent as null; nothing is ever inferred. Several ticked races fold into Cartograph's one string: a single category or sub-category as itself, two categories as the named pair where one exists ("Asian & White", …), anything else as "Other Multi-Racial". "Decline to Answer" is sent only when that box is ticked. A form naming a person who matches no roster member is not applied and raises a `RACE_FORM_MEMBER_UNMATCHED` finding; two forms disagreeing on one member raise `RACE_FORM_CONFLICT` and the first in page order is used.
 
 ---
 

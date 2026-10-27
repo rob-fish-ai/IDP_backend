@@ -90,6 +90,16 @@ EXTRACTION RULES:
 - socialSecurityNumber: exactly as printed (full NNN-NN-NNNN or masked ***-**-XXXX). null if not found.
 - DOB: YYYY-MM-DD format. "01/15/1990" → "1990-01-15". If no day, default DD to 01.
 - gender: "M" or "F" when a document states it — HUD 50059 field 38 "Sex", Race and Ethnic Data forms, ID documents. null when no document states it (do NOT infer from names).
+- race: the race categories a form states for the member, as a list of labels from:
+  "American Indian/Alaska Native", "Asian", "Black/African American",
+  "Native Hawaiian/Other Pacific Islander", "White", "Other", "Decline to Answer".
+  HUD 50059 field 39 "Race" prints codes — expand them: 1=American Indian/Alaska Native,
+  2=Asian, 3=Black/African American, 4=Native Hawaiian/Other Pacific Islander, 5=White
+  (several digits = several races; some software prints W/B/A/I/P instead). null when
+  no document states it. NEVER infer race from a name, a photo or a language.
+- ethnicity: "Hispanic or Latino", "Not Hispanic or Latino" or "Decline to Answer" when a
+  form states it. HUD 50059 field 40 "Ethnic": 1=Hispanic or Latino, 2=Not Hispanic or
+  Latino. null when no document states it. NEVER infer it.
 - SOURCE PRIORITY for DOB and SSN: printed identity documents (driver
   license, state ID, Social Security card pages) are AUTHORITATIVE — when
   an Identity Document page shows a member's DOB or SSN, use that value

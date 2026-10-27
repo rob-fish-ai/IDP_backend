@@ -506,6 +506,10 @@ def validate_household(data: dict) -> dict:
         member["socialSecurityNumber"] = normalize_ssn(member.get("socialSecurityNumber"))
         member["DOB"] = normalize_date(member.get("DOB"))
         member["phone"] = normalize_phone(member.get("phone"))
+        if "race" in member or "ethnicity" in member:
+            from app.services.race_ethnicity import normalize_ethnicity, normalize_races
+            member["race"] = normalize_races(member.get("race"))
+            member["ethnicity"] = normalize_ethnicity(member.get("ethnicity"))
 
         # Ensure head is only "H" or null
         head = member.get("head")
