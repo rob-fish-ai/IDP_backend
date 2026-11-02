@@ -25,7 +25,9 @@ Two rules the mapping follows, both of which matter more than they look:
     "Y", "N", or None, where None means the packet never said. Sending false
     for None would assert something the audit does not know, and "disability
     field null when a cert doc exists" is one of the pipeline's own findings.
-    Unknown is transmitted as null.
+    Unknown is transmitted as null. A disability box ticked "decline to
+    answer" is the one exception: Cartograph stores disability as yes or no
+    and asked for a decline to arrive as "No".
 
   - **SSNs leave as last four digits only.** CertHouseholdMember#ssn is a
     plaintext column on Cartograph with no `encrypts` declaration, so writing
@@ -150,13 +152,24 @@ def _tri_state(value: str | None) -> bool | None:
     return None
 
 
-def _yes_no_out(value: str | None) -> str | None:
-    """The consumer's string form of a Y/N cell ("Yes" / "No"), null when
-    the packet never said. "Decline to Answer" passes through as such."""
+def _declined(value: str | None) -> bool:
+    return str(value or "").strip().lower().startswith("decline")
+
+
+def _disability_out(value: str | None) -> tuple[bool | None, str | None]:
+    """(is_disabled, disability) for the consumer. "Yes"/true or "No"/false
+    from a Y/N cell; null/null when the packet never said.
+
+    A member who declined to answer goes out as "No"/false: Cartograph holds
+    disability as a yes-or-no (their request, 2026-10-29), and a declined
+    box is not a claim of disability. The engine's own record keeps the
+    decline, so the distinction is not lost, only not sent."""
     flag = _tri_state(value)
+    if flag is None and _declined(value):
+        flag = False
     if flag is None:
-        return "Decline to Answer" if str(value or "").strip().lower().startswith("decline") else None
-    return "Yes" if flag else "No"
+        return None, None
+    return flag, ("Yes" if flag else "No")
 
 
 def _gender_out(value: str | None) -> str | None:
@@ -305,6 +318,7 @@ def build_household_members(
             )
 
         is_hoh = (member.head or "").strip().upper() == _HEAD_OF_HOUSEHOLD
+        is_disabled, disability = _disability_out(member.disabled)
 
         record = {
             "ref": _member_ref(index),
@@ -313,8 +327,8 @@ def build_household_members(
             "middle_name": member.MiddleName,
             "date_of_birth": dob,
             "is_hoh": is_hoh,
-            "is_disabled": _tri_state(member.disabled),
-            "disability": _yes_no_out(member.disabled),
+            "is_disabled": is_disabled,
+            "disability": disability,
             "full_time_student": _tri_state(member.student),
             "gender": _gender_out(member.gender),
             "race": race_out(member.race),

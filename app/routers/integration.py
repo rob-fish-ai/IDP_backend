@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -79,6 +80,47 @@ class AuditRequest(BaseModel):
     rent_extraction_contract: dict | None = None
 
 
+def _document_keys(documents: list | None) -> list[tuple]:
+    """What identifies a case's documents across two notifications. The
+    presigned URL is minted afresh for every send, so it is left out."""
+    keys = []
+    for d in documents or []:
+        if not isinstance(d, dict):
+            continue
+        keys.append((d.get("job_document_id"), d.get("filename"), d.get("document_class")))
+    return sorted(keys, key=repr)
+
+
+def repeat_of_delivered(job: dict | None, documents: list[dict], window_seconds: int,
+                        now: float | None = None) -> int | None:
+    """Seconds since the case was delivered, when this notification repeats
+    the one already audited; None when it should be audited.
+
+    A repeat is a notification for a case in the `done` state, delivered
+    within `window_seconds`, naming the same documents as the request that
+    was audited. Anything else — a different document list, a case that
+    failed, a delivery older than the window, a job with no stored request
+    to compare against — is treated as new work.
+    """
+    if not job or window_seconds <= 0 or job.get("state") != "done":
+        return None
+    completed = job.get("completed_at")
+    if not completed:
+        return None
+    age = int((now if now is not None else time.time()) - float(completed))
+    if age < 0 or age > window_seconds:
+        return None
+    try:
+        stored = json.loads(job.get("cartograph_request") or "")
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(stored, dict):
+        return None
+    if _document_keys(stored.get("documents")) != _document_keys(documents):
+        return None
+    return age
+
+
 @router.post(
     "/case",
     status_code=202,
@@ -105,6 +147,21 @@ async def receive_case(
     # Cartograph is expected to retry, and a retry is indistinguishable from
     # a replay — both should cost one audit, not two.
     store = get_job_store(settings.audit_job_db)
+    repeat = repeat_of_delivered(
+        store.get(payload.case_ref),
+        [d.model_dump() for d in payload.documents],
+        settings.cartograph_repost_window_seconds,
+    )
+    if repeat is not None:
+        logger.info(
+            "Case %s delivered %d s ago with the same documents — ignoring repeat notification",
+            payload.case_ref, repeat,
+        )
+        return {
+            "status": "already_delivered",
+            "case_ref": payload.case_ref,
+            "delivered_seconds_ago": repeat,
+        }
     upsert = store.upsert_pending(
         case_id=payload.case_ref,
         case_number=payload.case_ref,

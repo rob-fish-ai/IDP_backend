@@ -232,6 +232,14 @@ class Settings(BaseSettings):
     cartograph_type_aliases: dict[str, str] = {}
     # Bound the outbound POST so a stalled connection cannot wedge a worker.
     cartograph_timeout_seconds: float = 30.0
+    # A notification for a case the engine delivered within this many seconds,
+    # naming the same documents, is a repeat and is not audited again. During
+    # the 2026-10-29 batch Cartograph re-sent 29 of 61 cases between seconds
+    # and 94 minutes after accepting their results; each repeat cost a full
+    # OCR and model run and a second import of the same figures. A request
+    # with a different document list, or one arriving after the window, is
+    # a deliberate re-run and is audited as before. 0 turns the guard off.
+    cartograph_repost_window_seconds: int = 7200       # 2 hours
     # Whether a packet is expected to carry the prior year's certification.
     # Cartograph's cases hold one certification plus continuation pages and
     # the prior year lives on its own record, so a missing previous cert is

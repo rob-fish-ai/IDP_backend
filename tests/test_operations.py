@@ -446,3 +446,32 @@ def test_the_intake_audits_a_few_cases_at_once_and_keeps_the_waiting_ones_alive(
     assert sorted(started) == [f"J-{i}" for i in range(5)]
     assert intake.running() == [] and intake.waiting() == []
     intake.shutdown()
+
+
+def test_a_notification_repeating_a_delivered_case_is_not_audited_again(tmp_path):
+    """During the 2026-10-29 batch Cartograph re-sent 29 of 61 cases within
+    minutes of accepting their results, and each was audited and imported
+    again. A notification for a case delivered inside the window, naming the
+    same documents, is a repeat; a different document list, a failed case or
+    an old delivery is new work."""
+    import json
+    from app.routers.integration import repeat_of_delivered
+    from app.services.audit.job_store import JobStore
+    docs = [{"url": "https://s3/a?sig=1", "filename": "packet.pdf", "job_document_id": 7, "document_class": "scan"}]
+    store = JobStore(tmp_path / "jobs.db")
+    store.upsert_pending("J-R", "J-R", "annual", "LIHTC", None, source="cartograph", claimed=True)
+    store.record_request("J-R", json.dumps({"case_ref": "J-R", "documents": docs}), [])
+    store.mark_extracting("J-R")
+    store.mark_done("J-R", findings_text="", confidence=0.9)
+    job = store.get("J-R")
+    done_at = job["completed_at"]
+
+    resent = [{**docs[0], "url": "https://s3/a?sig=2"}]          # fresh presigned link, same file
+    assert repeat_of_delivered(job, resent, 7200, now=done_at + 300) == 300
+    assert repeat_of_delivered(job, resent, 0, now=done_at + 300) is None          # guard off
+    assert repeat_of_delivered(job, resent, 7200, now=done_at + 7201) is None      # outside the window
+    assert repeat_of_delivered(job, resent + [{"url": "u", "filename": "voa.pdf"}], 7200, now=done_at + 300) is None
+    assert repeat_of_delivered(None, resent, 7200) is None
+
+    store.mark_extraction_failed("J-R", "boom")
+    assert repeat_of_delivered(store.get("J-R"), resent, 7200, now=done_at + 300) is None

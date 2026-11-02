@@ -195,7 +195,10 @@ def test_payload_members_carry_the_consumers_strings_and_null_where_nothing_was_
     members = build_household_members(extraction, [])
     assert [(m["race"], m["ethnicity"], m["gender"], m["disability"]) for m in members] == [
         ("Black/African American", "Not Hispanic or Latino", "Male", "No"),
-        ("Asian & White", "Hispanic or Latino", "Female", "Decline to Answer"),
+        ("Asian & White", "Hispanic or Latino", "Female", "No"),
         (None, None, None, None),
     ]
-    assert members[0]["is_disabled"] is False and members[1]["is_disabled"] is None
+    # A declined disability box is sent as "No": Cartograph holds the field as
+    # yes or no and asked for it that way (2026-10-29).
+    assert members[0]["is_disabled"] is False and members[1]["is_disabled"] is False
+    assert members[2]["is_disabled"] is None

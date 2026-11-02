@@ -139,7 +139,7 @@ separate fields can route the figure without guessing from the form type.
   "relationship":      "Head of Household",
   "is_hoh":            true,
   "is_disabled":       false,                // older boolean, kept
-  "disability":        "No",                 // "Yes" | "No" | "Decline to Answer" | null
+  "disability":        "No",                 // "Yes" | "No" | null  (a declined box is sent as "No")
   "full_time_student": false,
   "gender":            "Male",               // "Male" | "Female" | null
   "race":              "Black/African American",   // one of Cartograph's 23 race strings, or null
