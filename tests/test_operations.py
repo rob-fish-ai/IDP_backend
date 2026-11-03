@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from app.core.exceptions import ExtractionUnavailableError
-from app.services.audit.jobs import is_retryable_error
+from app.services.cartograph.maintenance import is_retryable_error
 from app.services.cartograph.tasks import keep_packet, prune_packets, run_with_retry
 
 
@@ -351,7 +351,7 @@ def test_cases_in_flight_at_the_last_stop_are_claimed_and_audited_again(monkeypa
     (tmp_path / "pdfs" / "J-A_20261010-052947.pdf").write_bytes(b"%PDF-new")
     in_flight("J-B", state="queued", request={"case_ref": "J-B", "documents": [{"url": "https://x/b.pdf"}]})
     in_flight("J-C")                                   # no request kept
-    in_flight("500Rb00001", source="salesforce")       # the poller's, not ours
+    in_flight("500Rb00001", source="salesforce")       # a row left by the retired Salesforce path
     store.upsert_pending("J-D", "J-D", "annual", "HUD", None, source="cartograph", claimed=True)
     store.mark_done("J-D", findings_text="", confidence=1.0)
 
@@ -475,3 +475,47 @@ def test_a_notification_repeating_a_delivered_case_is_not_audited_again(tmp_path
 
     store.mark_extraction_failed("J-R", "boom")
     assert repeat_of_delivered(store.get("J-R"), resent, 7200, now=done_at + 300) is None
+
+
+def test_the_watchdog_fails_a_row_whose_worker_died_and_retention_prunes_old_rows(monkeypatch, tmp_path):
+    """A row still extracting with no heartbeat for longer than the
+    watchdog's patience belongs to a worker that died while the process
+    lived on. It is failed and Cartograph is told to re-notify; a row from
+    the retired Salesforce path is failed without a call. Terminal rows
+    older than the retention window are deleted; in-flight ones never."""
+    import httpx
+    from types import SimpleNamespace
+    from app.services.audit.job_store import JobStore
+    from app.services.cartograph import maintenance
+    store = JobStore(tmp_path / "jobs.db")
+    monkeypatch.setattr(maintenance, "get_job_store", lambda _p: store)
+    settings = SimpleNamespace(audit_job_db=tmp_path / "jobs.db", audit_watchdog_seconds=1800, audit_retention_days=7)
+
+    def row(case, source="cartograph", age=0):
+        store.upsert_pending(case, case, "annual", "HUD", None, source=source, claimed=True)
+        store.mark_extracting(case)
+        with store._connect() as conn:
+            conn.execute("UPDATE audit_jobs SET updated_at = ? WHERE case_id = ?", (time.time() - age, case))
+    row("J-DEAD", age=4000)
+    row("500Rb00001", source="salesforce", age=4000)
+    row("J-SLOW", age=600)                                   # heartbeat 10 minutes ago: still working
+    store.upsert_pending("J-OLD", "J-OLD", "annual", "HUD", None, claimed=True)
+    store.mark_done("J-OLD", findings_text="", confidence=1.0)
+    with store._connect() as conn:
+        conn.execute("UPDATE audit_jobs SET updated_at = ? WHERE case_id = 'J-OLD'", (time.time() - 10 * 86400,))
+
+    posted: list = []
+    monkeypatch.setattr("app.services.cartograph.client.post_failure",
+                        lambda case_ref, reason, settings, **kw: posted.append((case_ref, kw.get("error_code"))))
+    assert maintenance.watchdog_sweep(settings) == 2
+    assert store.get("J-DEAD")["state"] == "extraction_failed" and "re-notify" in store.get("J-DEAD")["error"]
+    assert store.get("500Rb00001")["state"] == "extraction_failed"
+    assert store.get("J-SLOW")["state"] == "extracting"
+    assert posted == [("J-DEAD", "engine_error")]
+
+    assert maintenance.retention_sweep(settings) == 1
+    assert store.get("J-OLD") is None and store.get("J-DEAD") is not None
+
+    assert maintenance.is_retryable_error(httpx.ReadTimeout("read timed out"))
+    assert maintenance.is_retryable_error(RuntimeError("cannot schedule new futures after interpreter shutdown"))
+    assert not maintenance.is_retryable_error(ValueError("source or target not a PDF"))

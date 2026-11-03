@@ -4,7 +4,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_prefix="IDP_")
+    # extra="ignore": a .env still carrying a setting of the retired
+    # Salesforce path (IDP_SF_*, IDP_AUDIT_MODE, IDP_WEBHOOK_AUTH_TOKEN, …)
+    # must not stop the engine from starting.
+    model_config = SettingsConfigDict(env_file=".env", env_prefix="IDP_", extra="ignore")
 
     app_name: str = "IDP - Intelligent Document Processing"
     app_version: str = "1.0.0"
@@ -97,66 +100,9 @@ class Settings(BaseSettings):
     funding_program: str = ""  # LIHTC, HUD, USDA, RAD, Public Housing
     certification_type_override: str = ""  # MI, AR, AR-SC, IR
 
-    # Upload validation
-    allowed_content_types: list[str] = [
-        "application/pdf",
-        "application/octet-stream",
-    ]
-    # PDFs below this page count are rejected as non-source documents.
-    # Real recertification packets always contain at minimum a HUD 50059
-    # or TIC plus supporting verifications — they don't exist in 1-3 pages.
-    # Anything smaller is almost always a coversheet, stray attachment,
-    # partial upload, or a non-source doc the title denylist missed.
-    min_pdf_pages: int = 4
-
-    # AR-SC self-certification packets are legitimately tiny — a complete
-    # OHCS/NY self-cert is 2-3 pages (resident page + owner determination).
-    # The global gate would reject them all; 2 still blocks 1-page strays.
-    min_pdf_pages_self_cert: int = 2
-
-    # Cap on the total page count when merging all of a case's source
-    # PDFs into one packet. Files are merged newest-first; candidates
-    # that would push past the cap are skipped (and logged), so the
-    # newest packet always gets in whole.
-    max_merged_pages: int = 150
-
-    # ------------------------------------------------------------------
-    # Salesforce integration
-    # ------------------------------------------------------------------
-    sf_username: str = ""
-    sf_password: str = ""
-    sf_token: str = ""
-    sf_domain: str = "us-hc.my"
-
-    # Webhook authentication — Salesforce includes this token in the
-    # Authorization header. Reject any webhook without a matching token.
-    webhook_auth_token: str = ""
-    # Set IDP_DEV_MODE=true ONLY for local development to bypass webhook
-    # auth. In production this MUST be false (the default) so missing
-    # tokens fail closed instead of accepting unauthenticated webhooks.
-    dev_mode: bool = False
-
-    # Salesforce HTTP timeout (seconds) for both SOQL queries and binary
-    # downloads. A hung Salesforce response would otherwise block the
-    # worker indefinitely.
-    sf_request_timeout: int = 30
-
-    # Integration mode:
-    #   "webhook" — Salesforce pushes signals via /webhook/pdf-attached and
-    #               /webhook/mulesoft-done. Default. Lower latency, requires
-    #               Salesforce-side Apex triggers + named credentials.
-    #   "poll"    — IDP polls Salesforce on a fixed interval to find ready
-    #               cases. No Salesforce-side setup required. Higher latency
-    #               and SF API load. Webhooks return 503 in this mode.
-    #   "both"    — Both webhook and poller active. Useful during transition.
-    audit_mode: str = "webhook"
-
-    # Poller settings (only used when audit_mode in {"poll", "both"})
-    audit_poll_interval_seconds: int = 60
-    audit_poll_batch_size: int = 5
-
-    # Cases audited at once — in a poll batch, through the Cartograph
-    # intake, and when interrupted cases are run again at start. Each
+    # --- Audit jobs ---------------------------------------------------------
+    # Cases audited at once — through the Cartograph intake, and when
+    # interrupted cases are run again at start. Each
     # case's OCR is external HTTP and LLM calls are network-bound, so 3
     # concurrent pipelines roughly triple throughput; one 70-page merge no
     # longer blocks the rest. Job state transitions are claim-based and page
@@ -169,19 +115,13 @@ class Settings(BaseSettings):
     # Audit job storage (SQLite). Persists case state across restarts.
     audit_job_db: Path = Path("output/audit_jobs.db")
 
-    # When MuleSoft webhook arrives but IDP extraction is still running,
-    # the comparison job polls every N seconds until extraction completes
-    # or the timeout fires.
-    audit_extraction_wait_seconds: int = 600    # 10 minutes
-    audit_extraction_poll_seconds: int = 15
-
-    # Watchdog — recovers cases stuck in extracting/extracted/comparing
-    # after a worker died mid-flight (deploy, OOM, crash). On every poll
-    # cycle the watchdog scans for rows older than `watchdog_seconds`
-    # and re-queues them up to `watchdog_max_retries` times. Permanent
-    # failure marker after the cap so they drop out of the queue.
+    # Watchdog — a row still queued or extracting whose heartbeat has not
+    # moved for this long belongs to a worker that died (OOM, crash) while
+    # the process lived on. The maintenance sweep fails it and tells
+    # Cartograph to re-notify. The intake's waiting rows and the running
+    # audits both keep the heartbeat moving, so a slow packet is never
+    # mistaken for a dead one.
     audit_watchdog_seconds: int = 1800           # 30 minutes
-    audit_watchdog_max_retries: int = 5
 
     # A Cartograph case that was mid-audit when the engine stopped (a pod
     # restart, a deploy, a crash) is run again at the next start, from the
@@ -193,14 +133,11 @@ class Settings(BaseSettings):
     audit_resume_on_start: bool = True
     audit_resume_delay_seconds: float = 10.0
 
-    # Retention — terminal rows (done / *_failed / mulesoft_timeout) older
-    # than this are deleted by the periodic maintenance sweep. Keeps the
-    # SQLite DB from growing unbounded while still leaving the dashboard a
-    # rolling window of recent audits to inspect. Set to 0 to disable.
+    # Retention — terminal rows (done / *_failed) older than this are
+    # deleted by the periodic maintenance sweep, so the job store does not
+    # grow without bound. Set to 0 to disable.
     audit_retention_days: int = 7
     # How often the maintenance thread runs retention + watchdog (seconds).
-    # Independent of audit_mode — runs even in pure webhook deployments
-    # where the poller itself is idle.
     audit_maintenance_interval_seconds: int = 3600   # 1 hour
 
     # --- Cartograph integration -------------------------------------------

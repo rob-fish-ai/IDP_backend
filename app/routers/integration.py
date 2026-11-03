@@ -1,10 +1,5 @@
-"""Cartograph-facing endpoints.
-
-Separate from the Salesforce webhook router on purpose. Salesforce and
-MuleSoft retire at the end of 2026, and when they do, `webhook.py` deletes
-almost entirely while this file stands alone unchanged. Keeping the two
-integrations in one module would make that a surgical edit instead of a
-deletion.
+"""Cartograph-facing endpoints — the engine's only inbound surface since
+the Salesforce path was removed (2026-11-02).
 
 Two endpoints, one per direction:
 

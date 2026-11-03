@@ -6,12 +6,8 @@ payload adapter, and the signed outbound client.
 
 The notification that starts this returned 202 long before any of it runs.
 Cartograph holds no connection open; the result reaches it later as a signed
-POST to its ingest endpoint.
-
-Deliberately no Salesforce anywhere in this path. The equivalent chain in
-`audit/jobs.py` downloads from Salesforce, compares against MuleSoft, and
-carries a decade of Salesforce-shaped assumptions. This one starts from a
-URL and ends at an HTTP POST, and it is what survives the migration.
+POST to its ingest endpoint. The chain starts from a URL and ends at an
+HTTP POST; nothing in it knows about any other system.
 """
 
 import logging
@@ -30,7 +26,7 @@ from app.services.cartograph.client import (
 )
 from app.services.cartograph.documents import DocumentUnavailable, fetch_packet
 from app.services.pdf_service import process_pdf_full
-from app.services.audit.jobs import is_retryable_error
+from app.services.cartograph.maintenance import is_retryable_error
 
 logger = logging.getLogger(__name__)
 

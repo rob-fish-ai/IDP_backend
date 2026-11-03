@@ -1,99 +1,224 @@
 # IDP — Intelligent Document Processing for Affordable-Housing Certifications
 
-IDP is a FastAPI service that audits affordable-housing tenant certifications
-(LIHTC / HUD 50059 / TIC / RD 3560-8). It performs a second, independent
-extraction of a certification packet and **reconciles it against the MuleSoft
-data already in Salesforce**, then writes a per-case audit report back to the
-Case record for a human analyst to review.
+IDP is a FastAPI service that audits affordable-housing tenant certification
+packets (LIHTC TIC, HUD 50059, RD 3560-8, HUD Section 8 MI/AR/AR-SC/IR) for
+one consumer, **Cartograph**. Cartograph notifies the engine when a case is
+ready; the engine fetches the packet, reads every page with OCR and Claude,
+extracts the household, income, assets and certification figures, compiles
+compliance findings, answers the case's checklist rows, and delivers the
+result as a signed JSON payload to Cartograph's ingest endpoint. Reviewers
+judge the findings in Cartograph and their verdicts come back to the engine.
 
 ---
 
 ## 1. Why this exists
 
-When a tenant certification packet (often 50–60+ scanned pages) is uploaded,
-**MuleSoft** extracts structured data from it into Salesforce. MuleSoft misses
-and mislabels things. IDP is a **peer extractor**: it independently extracts the
-same packet with OCR + LLMs, runs document-level compliance checks, and then
-diffs its result against MuleSoft's.
+A certification packet is often 50–60+ scanned pages: the certification
+form, verifications of income and assets, paystubs, bank statements, the
+questionnaire, the HUD race/ethnicity form, signatures. Cartograph holds the
+case record and a checklist built from the community's template, but not
+what the packet says. The engine is an independent reader: it extracts the
+figures with their page provenance, scores how reliably each was read, flags
+what is missing, unsigned, inconsistent or stale, and hands the structured
+result to Cartograph so staff review a populated record instead of
+transcribing the packet. Nothing is inferred: an unticked box is delivered
+as `null`, never a guess; SSNs leave as last four digits only; anything the
+payload cannot carry is reported as a warning rather than dropped.
 
-Neither side is treated as ground truth — they **supplement each other**:
+---
 
-| | MuleSoft | IDP |
+## 2. End-to-end flow
+
+```
+   Cartograph                                 IDP engine (FastAPI, one process)
+   ──────────                                 ────────────────────────────────
+   POST /integration/case  ────────────────►  verify HMAC, dedupe, store request,
+   (case_ref, presigned document URLs,        put the case in the intake line, answer 202
+    cert_type, program, checklist, manifest)        │
+                                                    ▼  at most IDP_AUDIT_PIPELINE_CONCURRENCY at a time
+                                              1. fetch documents (presigned URLs) → one PDF
+                                              2. keep the packet under output/pdfs
+                                              3. render → preprocess → OCR (DeepSeek, GLM, Claude vision)
+                                              4. extraction pipeline (classify → extract → findings → score)
+                                              5. payload adapter (Cartograph vocabulary, finding keys,
+                                                 checklist matches, manifest links)
+   POST /webhooks/runpod_ocr_results ◄──────  6. signed POST to IDP_CARTOGRAPH_INGEST_URL
+   POST /integration/import_result ────────►  stored on the job row
+   POST /integration/findings_feedback ────►  reviewer verdicts stored per finding key
+```
+
+The notification returns **202 Accepted** without doing anything expensive;
+the result reaches Cartograph minutes later as a signed POST, and the
+outcome of its import arrives separately on the callback. Every failure on
+the way (document unavailable, extraction error, delivery rejected, worker
+died) is recorded on the job row **and** reported to Cartograph as a
+`status: failed` payload with an `error_code`, so a case never stops silently.
+
+### Job lifecycle
+
+State is persisted in a SQLite job store (`IDP_AUDIT_JOB_DB`, default
+`output/audit_jobs.db`, table `audit_jobs`).
+
+| State | Meaning |
+|---|---|
+| `queued` | Accepted and handed to the intake, waiting for a worker |
+| `extracting` | The audit is running (fetch, OCR, extraction) |
+| `extracted` | Extraction stored, payload being built and delivered |
+| `done` | Delivered to Cartograph; `confidence` and `findings_text` on the row |
+| `extraction_failed` | The audit errored, a document could not be fetched, or the worker died (watchdog) |
+| `comparison_failed` | Delivery failed, was rejected by the ingest, or delivery is not configured |
+
+A row in `queued`/`extracting`/`extracted` is *owned*; a second notification
+for the same case while owned is answered `already_in_progress`. The intake
+keeps a heartbeat on waiting rows and the audit touches the row as it works,
+so the watchdog measures time since the last sign of life, not time since
+the case started. The legacy constants `pending`, `comparing` and
+`mulesoft_timeout` remain only so old rows are still recognised and pruned.
+
+Three background threads run inside the one uvicorn process
+(`app/main.py` lifespan): the **intake** (`cartograph/intake.py`, a bounded
+worker pool; cases beyond the bound wait in arrival order), the **resume**
+thread (`cartograph/resume.py`: at start every owned Cartograph row is
+claimed and run again from the stored request, the packet kept under
+`output/pdfs` standing in when the presigned URLs have expired), and
+**maintenance** (`cartograph/maintenance.py`: every
+`IDP_AUDIT_MAINTENANCE_INTERVAL_SECONDS` a retention sweep deletes terminal
+rows older than `IDP_AUDIT_RETENTION_DAYS` and a watchdog fails owned rows
+whose heartbeat has not moved for `IDP_AUDIT_WATCHDOG_SECONDS`, telling
+Cartograph to re-notify).
+
+---
+
+## 3. HTTP API
+
+| Method & path | Auth | Purpose |
 |---|---|---|
-| Strength | Often complete coverage | Correct member identity, document compliance |
-| Weakness | Mislabels (e.g. funding-program names in the member field), duplicates | Can drop a source, OCR errors |
+| `GET /health` | none | `{"status": "ok", "version": ...}` |
+| `POST /integration/case` | HMAC | Cartograph signals a case is ready. Returns 202. |
+| `POST /integration/import_result` | HMAC | Cartograph reports how its import went. Returns 200. |
+| `POST /integration/findings_feedback` | HMAC | Reviewer verdicts on delivered findings, plus findings added by hand. Returns 200. |
 
-The audit's value is the **asymmetric findings** (one side has something the
-other doesn't) plus the **compliance gates** (unsigned forms, missing Race/
-Ethnic data form, etc.) — surfaced to an analyst with a confidence score.
+Interactive docs (`/docs`, `/redoc`, `/openapi.json`) are served only when
+`IDP_DEBUG=true`. The wire contract is in
+[`deliverables/01_endpoints_and_auth.md`](deliverables/01_endpoints_and_auth.md)
+and [`deliverables/02_ingest_payload_contract.md`](deliverables/02_ingest_payload_contract.md);
+this README does not duplicate them.
+
+### Authentication
+
+Both directions use HMAC-SHA256 over the raw body
+(`app/services/cartograph/signing.py`, enforced by `app/core/auth.py`):
+
+```
+signed      = "{timestamp}.{raw_body}"
+X-Timestamp = unix seconds
+X-Signature = HMAC_SHA256(secret, signed).hexdigest()     # hex, no prefix
+```
+
+Inbound requests are verified against `IDP_CARTOGRAPH_CALLBACK_SECRET`;
+outbound deliveries are signed with `IDP_CARTOGRAPH_INGEST_SECRET` — one
+secret per direction. Fail closed: an unset inbound secret, missing headers,
+a timestamp more than 300 s from now, or a mismatch all return **401**. The
+signature covers the exact bytes sent.
+
+### `POST /integration/case`
+
+Body fields the engine reads (`AuditRequest` in `app/routers/integration.py`):
+`case_ref` (required), `documents[]` (required; each a presigned `url` with
+optional `filename`, `job_document_id`, `document_class`), `cert_type`,
+`program`, `job_id`, `community_id`, `unit_number`, `effective_date`,
+`requirements` / `checklist_rows`, `existing_records_manifest`,
+`rent_extraction_contract`. Unknown top-level keys are logged, never
+rejected. The raw request is stored on the job row (`cartograph_request`)
+with the checklist rows read out of it. Cartograph's cert types (`initial`,
+`annual`, `interim`, `ar_self_cert`) are translated to the engine's (`MI`,
+`AR`, `IR`, `AR-SC`); an unrecognised value is ignored and the type is read
+from the documents.
+
+Responses (all HTTP 202):
+
+| `status` | When |
+|---|---|
+| `accepted` | The case joined the intake line |
+| `already_in_progress` | A row for `case_ref` is already owned (`state` included) |
+| `already_delivered` | The repeat guard fired (`delivered_seconds_ago` included) |
+
+**Repeat guard** (`repeat_of_delivered`): a notification for a case already
+`done`, completed within `IDP_CARTOGRAPH_REPOST_WINDOW_SECONDS` (default
+7200), naming the same documents as the request that was audited — compared
+on `job_document_id`, `filename` and `document_class`, since the presigned
+URL is minted afresh on every send — is not audited again. A different
+document list, a failed case, or a delivery older than the window is a
+deliberate re-run. `0` turns the guard off.
+
+### The two callbacks
+
+`/import_result` is stored verbatim on the job row
+(`cartograph_import_result`, `cartograph_import_at`); a body carrying
+`event_type: findings_feedback` is routed to the feedback handler instead.
+`/findings_feedback` accepts one case (`case_ref`, `scan_id`, `verdicts[]`,
+`manual_findings[]`) or Cartograph's nightly batch envelope (`cases[]`, with
+`finding_verdicts` / `missed_findings` mapped onto the documented names);
+rows land in the `finding_feedback` table keyed on (case, source, finding
+key, description), a later verdict on the same key replacing the earlier one.
 
 ---
 
-## 2. High-level flow
-
-```
-                Salesforce (Case + MuleSoft Certification Review)
-                                  │  webhook: case ready for audit
-                                  ▼
-   ┌──────────────────────────────────────────────────────────────┐
-   │  IDP service (FastAPI)                                         │
-   │                                                                │
-   │  1. Download PDF from Salesforce (ContentDocument)             │
-   │  2. IDP extraction pipeline   (OCR → classify → extract)       │
-   │  3. Pull MuleSoft data        (Salesforce SOQL)                │
-   │  4. Reconcile IDP vs MuleSoft (comparator)                     │
-   │  5. Format findings + confidence                               │
-   │  6. Write back to Case.IDP_Testing_Results__c                  │
-   └──────────────────────────────────────────────────────────────┘
-                                  │
-                                  ▼
-                  Analyst reviews findings in Salesforce / dashboard
-```
-
-Each webhook returns **202 Accepted** immediately and runs the heavy work in a
-background task. State is persisted in a local SQLite **JobStore** so repeated
-signals for the same case are de-duplicated and crashed jobs can be recovered.
-
----
-
-## 3. The IDP extraction pipeline
+## 4. The extraction pipeline
 
 Entry point: `app/services/pdf_service.py::process_pdf_full` →
 `app/services/pipeline.py::run_extraction_pipeline`.
 
-```
-PDF
- └─ render pages (PyMuPDF @ 200 DPI)
-     └─ preprocess images (OpenCV → 1280×1920)
-         └─ OCR (external OCR service; Claude Vision fallback for low-quality pages)
-             └─ page_texts ──► run_extraction_pipeline:
-                 1. Classify + group pages           (single Haiku call, no keyword rules)
-                 2. Route document groups by category (demographics / cert / income / asset)
-                 3. LLM extraction (one call per schema):
-                      • household demographics
-                      • certification info (effective date, rent, totals, signatures…)
-                      • income sources
-                      • assets
-                 4. Income calculations (annualize each source, Section 9)
-                 5. Build document inventories (HUD forms, financial docs)
-                 6. Questionnaire disclosures + name reconciliation
-                 7. Compile compliance findings (signatures, required forms, special scenarios)
-                 8. Multi-stage field-level scoring → extraction confidence
-```
+### 4.1 Pages to text (`pdf_service.py`)
 
-LLM calls go through `app/services/llm_service.py` (Anthropic Claude). Extraction
-runs on Sonnet 4.6 (`claude-sonnet-4-6`); classification runs on Haiku 4.5
-(`claude-haiku-4-5-20251001`) — a separate capacity pool, cheaper for a
-constrained labeling task.
+1. **Render** each page with PyMuPDF at `IDP_RENDER_DPI` (200). The colour
+   render is kept for vision reads; the PDF's own text layer is kept when it
+   has one (and discarded when it is a scanner's own OCR).
+2. **Preprocess** with OpenCV to 1280×1920 in parallel
+   (`IDP_PREPROCESS_CONCURRENCY`).
+3. **OCR tier 1** — DeepSeek-OCR at `IDP_OCR_SERVICE_URL`,
+   `IDP_OCR_CONCURRENCY` pages at a time.
+4. **Rotation probe** — pages whose content looks landscape and read badly
+   are re-rendered at 90°/270°; the orientation that scores decisively best
+   replaces the page image.
+5. **OCR tier 2** — GLM-OCR at `IDP_OCR_FALLBACK_URL` for pages still
+   unreadable after rotation; the better of the two reads is kept.
+6. **Claude vision** — a page is re-read from its image when its composite
+   score is below `IDP_OCR_VISION_THRESHOLD` (0.5), when the OCR service
+   flags its own output, when the text is a decoder loop or mostly a
+   repeated short pattern (a barcode read as characters), or when ink
+   density implies far more text than OCR returned.
+
+Per-page quality (score, flags, fallback provenance) is carried into the
+extraction result as `page_ocr`.
+
+### 4.2 Text to structured result (`pipeline.py`)
+
+| Step | What happens |
+|---|---|
+| 1–2 | Classify and group pages in one LLM call (no keyword rules): every live page gets a canonical `document_type` and a category (`include` / `compliance` / `ignore`); multi-page forms are grouped; cert forms carrying two effective dates are force-split and the older marked `(Previous)`. A packet holding only the prior year's form promotes it to form of record with a finding. |
+| 3 | Routed LLM extraction, one call per schema: household demographics, certification info, income (paystubs and verification records), assets. Each extractor sees only the document types it needs. The previous certification is read separately for interim deltas. |
+| — | Signature vision check: when the text says the cert is unsigned, one image call on the signature page distinguishes wet-signed, blank and draft watermark. |
+| — | Race and ethnicity per member, read from the HUD-27061-H form image (winning over the 50059's columns); unticked is `null`. |
+| 4 / 4b | Deterministic document inventories; questionnaire disclosures (LLM-first) and affirmative-response validation. |
+| 4f | Income calculations: source-of-truth routing (paystub average / VOI rate×frequency / fixed monthly ×12 / self-declared × frequency), YTD cross-checks, stale-wage guard (`[historical]`). |
+| 5 | Findings: missing compliance documents, signature requirements, cross-document consistency (TIC totals vs source sums), special scenarios, cert-type rules. Each finding has a stable `finding_key` (code + subject) so a re-audit updates in place. |
+| 6 | Field-level scoring → `field_scores.overall_composite`. |
+
+LLM calls go through `app/services/llm_service.py` (Anthropic SDK, one
+retry policy). Extraction runs on `IDP_LLM_MODEL` and classification on
+`IDP_LLM_CLASSIFY_MODEL`, both `claude-sonnet-5` by default. A truncated or
+non-JSON response is an `ExtractionUnavailableError`, which the job layer
+retries (`IDP_CARTOGRAPH_EXTRACT_ATTEMPTS`) rather than shipping as a result.
 
 ### Extraction score
 
-The score on a delivered case (`field_scores.overall_composite`, 0–1) measures
-how reliably the figures were *read*, not how complete the packet is. Each
-extracted field is scored by stage — populated, found on its own pages,
-consistent across documents, passing a business rule, not disputed by a
-finding — and the case is the weighted mean of its fields (the figures a
-reviewer acts on weigh 3×), times a coverage factor that drops for each
+The score on a delivered case (`field_scores.overall_composite`, 0–1)
+measures how reliably the figures were *read*, not how complete the packet
+is. Each extracted field is scored by stage — populated, found on its own
+pages, consistent across documents, passing a business rule, not disputed
+by a finding — and the case is the weighted mean of its fields (the figures
+a reviewer acts on weigh 3×), times a coverage factor that drops for each
 income amount the audit says was missed. So that the score tracks accuracy:
 
 - A record's own figures must agree: a self-declared amount may be the
@@ -108,360 +233,297 @@ income amount the audit says was missed. So that the score tracks accuracy:
   a verification request that was never returned, a source named after its
   income type because the household gave no payer.
 
+The score is extraction quality alone; there is no agreement term, because
+there is no second extractor to agree with on this path.
+
 ### How documents are filtered
 
-Filtering is layered. Only the outermost layer looks at page count and title;
-everything after that is content-driven.
+Only the first layer looks at the file; everything after it is content-driven.
 
-| Layer | Where | Rule | What it protects against |
-|---|---|---|---|
-| **1. PDF selection** | `salesforce/client.py::get_pdf_for_case` | `FileExtension='pdf'` + title denylist (`certification review`, `review report`, `audit`, `findings`, `ai file audit`, `review notes`, `review comments`) + `min_pdf_pages` (default 4) | Picking a Certification Review PDF or a cover-sheet fragment as if it were the source packet |
-| **2. Page pre-filter** | `two_pass_classifier.py::_prefilter_and_snippet` | Drop pages with **no text at all AND no OCR-failure flag**. Watermark / low-quality pages are kept and forwarded with their OCR flags. | Silently deleting a real form the OCR struggled on |
-| **3. Per-page LLM classify** | `two_pass_classifier.py::_llm_classify_and_group` | Haiku 4.5 reads a ~450-char snippet per live page and assigns each page a canonical `document_type` **and** a category (`include`, `compliance`, `ignore`). Multi-page forms are grouped in the same call. | Everything downstream — this is where a paystub gets called a paystub |
-| **4. Deterministic split** | same file, post-group pass | Cert forms with two different effective dates on different pages are force-split; older = `<Type> (Previous)`, category `ignore`. | Auditing against the previous cert instead of the current one |
-| **5. Extractor routing** | `extractor.py`, `questionnaire_extractor.py` | Each extractor iterates the groups and picks by substring on `document_type` (e.g. `"application" in dt or "questionnaire" in dt`), skipping `category == "ignore"`. | Feeding a bank statement to the demographics extractor |
+| Layer | Where | Rule |
+|---|---|---|
+| **1. Attachment paging** | `cartograph/documents.py::assemble_packet` | Each attachment is typed by its first bytes, never by filename. A PDF contributes its pages, an image (PNG/JPEG/GIF/TIFF/BMP/WebP) becomes one page, anything else is left out with a warning that reaches the payload. |
+| **2. Page pre-filter** | `two_pass_classifier.py::_prefilter_and_snippet` | Drop only pages with no text at all. Watermark / low-quality pages are kept and forwarded with their OCR flags. |
+| **3. Per-page LLM classify** | `two_pass_classifier.py` | One call reads a short snippet per live page and assigns a canonical `document_type` and category; multi-page forms grouped in the same call. |
+| **4. Deterministic split** | same file, post-group pass | Cert forms with two different effective dates are force-split; older = `<Type> (Previous)`, category `ignore`. |
+| **5. Extractor routing** | `extractor.py`, `questionnaire_extractor.py`, `doc_taxonomy.py` | Each extractor picks groups by document type via the taxonomy's routes, skipping `category == "ignore"`. |
 
-So the answer to "does it filter by page count and name" is: **only Layer 1
-does** — and that's just a coarse gate to keep obvious junk out. Layers 2–5
-are content-based. Places where classification accuracy could be improved
-without redoing the pipeline:
+### Second reads
 
-- **The title denylist is substring-only.** A file called `Q2 Review Notes.pdf`
-  is caught (`review notes`), but `Reviewed 2026-06-15.pdf` isn't.
-- **Extractor routing uses substring matching on `document_type`.** If the
-  classifier labels something `"Sworn Statement of Anticipated Income"` and
-  the prompt example nudges it toward `"Application / Housing Questionnaire"`,
-  a rename in the label list silently orphans the record.
-- **Salesforce case metadata is not fed into the classifier.** `CertType__c`
-  and `Funding_Program2__c` are known before classification runs, but the
-  Haiku prompt doesn't see them, so it can't use them as priors to disambiguate
-  a HUD 50059 from a TIC on a borderline page.
-- **`min_pdf_pages` is coarse.** The floor has to stay low (packet fragments
-  exist), so a short-but-real garbage packet still enters the pipeline.
-- **No title↔content cross-check.** If a document is *titled*
-  `"HUD 50059.pdf"` but its content is a paystub, nothing flags the mismatch.
-
-### Self-healing retries
-
-LLM extraction is non-deterministic, so each extractor re-asks for what the first
-pass dropped. All retries share one driver, `_retry_if_incomplete` (gate → fill,
-max 1, failures swallowed so first-pass data is never lost):
-
-- **Certification info** — re-ask for critical fields that came back null.
-- **Income amounts** — a source with a name but no dollar figure triggers a
-  targeted re-ask for just those amounts.
-- **Income source coverage** — a classified benefit document (SSA / SSI / SSDI /
-  pension / child support) that produced no record of its type is re-extracted on
-  its own (grounded in a real document; never invents income to fill a gap).
-- **Assets** — when the record count is below the number of asset documents, the
-  missed documents are re-extracted.
+LLM extraction is non-deterministic, so the demographics and certification
+extractors re-ask for the critical fields the first pass left null
+(`extractor.py::_retry_if_incomplete`: gate → fill, one retry, failures
+swallowed so first-pass data is never lost). The income extractor can
+re-read a page from its image when OCR dropped a value, and an asset
+document that prints figures but produced no record gets a second read; a
+record returned without any figure is not kept.
 
 ---
 
-## 4. The reconciliation (comparator)
+## 5. Delivery and the feedback loop
 
-`app/services/audit/comparator.py::compare(extraction, sf_data)` diffs the IDP
-extraction against MuleSoft and returns findings + a confidence score. It compares
-four record families plus the IDP-internal findings:
+`app/services/cartograph/adapter.py::build_payload` turns the
+`ExtractionResult` into the ingest payload (schema version `1.3`): envelope
+and `target`, `cert_review`, `household_members` (addressed by
+engine-assigned `ref`s), `income_records` with paystubs nested,
+`asset_records` with bank statements and the VOA nested, `findings` with
+stable keys, and `checklist_matches` (one entry per checklist row the packet
+can answer; rows left out stay untouched on Cartograph's side).
+`expense_records` is not sent because the engine does not extract expenses.
 
-- **Members** — matched on (DOB, SSN last-4) with a fuzzy name fallback.
-- **Income** — matched on normalized source + member; a member-agnostic pass also
-  matches by **source + annualized amount** so MuleSoft's unreliable member field
-  (e.g. a funding-program label) doesn't break matching. Income-source synonyms
-  (SSA/SSI/SSDI/SSP/TANF) are normalized with word-boundary matching.
-- **Assets** — global best-first one-to-one assignment; balance-matching pairs
-  rank above name-only pairs so multiple same-bank accounts don't mis-pair.
-- **Certification scalars** — effective date, cert type, unit number
-  (prefix-normalized), household income total, household size, and rent
-  (reconciled the LIHTC way: gross = tenant + utility allowance).
+- **Vocabulary** — `income_type` / `asset_type` are mapped onto Cartograph's
+  picklists (`IDP_CARTOGRAPH_INCOME_TYPES`, `IDP_CARTOGRAPH_ASSET_TYPES`,
+  `IDP_CARTOGRAPH_TYPE_ALIASES`). An empty picklist collapses every value to
+  `other` and reports it.
+- **Manifest linking** (`manifest.py`) — rows matching records Cartograph
+  already holds (`existing_records_manifest`) carry those ids back so the
+  import updates in place, filling blanks only. A link needs identity
+  evidence (DOB plus a recognisable name, or a close name alone).
+- **Checklist** (`checklist.py`) — reads the rows from either request shape
+  (`requirements[].community_defaults.checklist_items[]` or flat
+  `checklist_rows[]`), matches each to the classified documents, and
+  returns found/not-found with pages and a note.
 
-### Confidence score
-
-```
-case_confidence = extraction_score × 0.6 + agreement_rate × 0.4
-flag            = green (≥0.85) | yellow (≥0.65) | red
-```
-
-A **high-severity comparison disagreement** (e.g. a year-off effective date) caps
-the flag at **yellow** — a single critical mismatch can't be averaged into a
-false green. Zero-value/immaterial items are de-escalated to NOTES.
-
----
-
-## 5. Output report format
-
-Findings are rendered by `app/services/audit/formatter.py` into the
-`Case.IDP_Testing_Results__c` text field, split by the *source* of the finding:
-
-```
---- AI FILE AUDIT ---
-Case: CAS574128
-Processed: 2026-05-28
-Confidence: 81% (YELLOW)
-Findings: 5 from comparison, 1 from IDP analysis
-
-=== MULESOFT COMPARISON ===          ← IDP vs MuleSoft diffs
-[CRITICAL]
-  - ...
-[REVIEW]
-  - ...
-[NOTES]
-  - ...
-
-=== IDP ANALYSIS ===                  ← compliance / field-quality / notes
-[CRITICAL]
-  - Certification form (TIC/HUD 50059) is NOT signed — resubmission required ...
-
----
-Stats: 4 agreements, 2 disagreements, 3 AI-only, 0 MuleSoft-only
-Extraction score: 0.90, Agreement rate: 0.67
-```
-
-Severity → bucket: `high → [CRITICAL]`, `medium → [REVIEW]`, `low/info → [NOTES]`.
+The delivery (`client.py::post_extraction`) is a signed POST bounded by
+`IDP_CARTOGRAPH_TIMEOUT_SECONDS`; the response (`scan_id`, status) is kept
+on the row as `cartograph_delivery`. `scripts/score_calibration.py` joins
+the reviewers' verdicts with the delivered scores.
 
 ---
 
-## 6. HTTP API
-
-| Method & path | Purpose |
-|---|---|
-| `POST /webhook/audit-ready` | **Recommended.** MuleSoft is done → run the full chain (download → extract → compare → writeback). |
-| `POST /webhook/pdf-attached` | Legacy 2-webhook flow: start extraction only. |
-| `POST /webhook/mulesoft-done` | Legacy 2-webhook flow: run comparison once MuleSoft is done. |
-| `GET  /audit/cases` | List audit jobs from the JobStore (filter by `state`, paginated). |
-| `GET  /audit/cases/{case_id}` | Inspect one case: findings text + IDP extraction + MuleSoft data (3-panel dashboard view). |
-| `POST /admin/audit-jobs/reset` | Clear JobStore rows so cases can be re-audited (`mode`: `done` / `by_ids` / `all`). |
-| `GET  /health` | Liveness/readiness check. |
-
-**Auth:** webhooks require a bearer token matching `IDP_WEBHOOK_AUTH_TOKEN`
-(fail-closed in production; bypass only with `IDP_DEV_MODE=true` for local dev).
-
-**Webhook payload** (audit-ready / pdf-attached):
-
-```json
-{
-  "case_id": "500XXXXXXXXXXXX",
-  "case_number": "CAS574128",
-  "cert_type": "AR",                       // MI | AR | AR-SC | IR (others → 422)
-  "funding_program": "LIHTC",              // LIHTC | HUD | USDA | ...
-  "content_document_id": "069XXXXXXXXXXXX" // optional; else IDP scans the case
-}
-```
-
----
-
-## 7. Integration modes (`IDP_AUDIT_MODE`)
-
-- `webhook` (default) — Salesforce pushes signals. Lowest latency; needs
-  Salesforce-side Apex triggers + named credentials.
-- `poll` — IDP polls Salesforce on an interval for ready cases. No SF-side setup;
-  higher latency / API load. Webhooks return 503 in this mode.
-- `both` — useful during transition.
-
-A **maintenance thread** runs in every mode: it prunes terminal JobStore rows
-older than `IDP_AUDIT_RETENTION_DAYS` and a **watchdog** re-queues cases wedged
-mid-flight after a crash/deploy (up to `IDP_AUDIT_WATCHDOG_MAX_RETRIES`).
-
-### Job lifecycle states
-
-`pending → extracting → extracted → comparing → done`
-plus terminal failure states: `extraction_failed`, `comparison_failed`,
-`mulesoft_timeout`. State is stored in SQLite at `output/audit_jobs.db`.
-
----
-
-## 8. Project layout
+## 6. Project layout
 
 ```
 app/
-  main.py                     FastAPI app factory + lifespan (starts poller/maintenance)
-  core/                       config (env settings), logging, exceptions, DI
-  routers/                    health, pdf (manual upload), webhook (Salesforce signals)
-  schemas/                    Pydantic models: extraction, scoring, pdf, context
+  main.py                    app factory + lifespan (intake, resume thread, maintenance thread)
+  core/                      config (IDP_* settings), auth (HMAC), logging, exceptions, DI
+  routers/                   health.py (GET /health), integration.py (the three /integration endpoints)
+  schemas/                   Pydantic models: extraction, scoring, context, health
   services/
-    pdf_service.py            render → preprocess → OCR orchestration
-    ocr_service.py            external OCR client + Vision fallback
-    image_processing.py       OpenCV preprocessing
-    two_pass_classifier.py    page classification + grouping
-    extractor.py              LLM extraction per schema + self-healing retries
-    llm_service.py            Anthropic Claude wrapper (retry/backoff)
-    pipeline.py               full extraction pipeline orchestration
-    income_calculator.py      annualize income by method (Section 9)
-    field_scorer.py           multi-stage field confidence scoring
-    cross_doc_validator.py    TIC-total / consistency checks
-    name_reconciler.py        collapse name variants across records
-    validation.py             normalize money/dates/SSN; clean extraction output
-    signature_validator.py, cert_type_rules.py, special_scenarios.py,
-    bug_detector.py, questionnaire_extractor.py, inventory_builder.py, ...
-    audit/
-      comparator.py           IDP-vs-MuleSoft diff + confidence
-      formatter.py            render findings → IDP_Testing_Results__c text
-      jobs.py                 run_audit / run_extraction / run_comparison
-      job_store.py            SQLite job state (idempotency, retention)
-      poller.py               poll mode + maintenance/watchdog threads
-    salesforce/client.py      SOQL queries (cert review/members/income/assets), PDF download, writeback
-    parsers/                  questionnaire + source-name normalization
-output/                       rendered images, audit_jobs.db
-requirements.txt
-.env                          configuration (not committed)
+    pdf_service.py           render → preprocess → OCR tiers → rotation probe → vision fallback
+    ocr_service.py           DeepSeek / GLM OCR clients, Claude vision read
+    image_processing.py      OpenCV preprocessing, ink-density content-loss check
+    two_pass_classifier.py   page classification + grouping (one LLM call)
+    doc_taxonomy.py          canonical document types, categories, extractor routes
+    extractor.py             LLM extraction per schema + second reads
+    llm_service.py           Anthropic client wrapper (retry, typed failures)
+    pipeline.py              extraction pipeline orchestration
+    race_ethnicity.py        HUD-27061-H / 50059 race and ethnicity read
+    income_calculator.py     annualisation, paystub matching, stale-wage guard
+    field_scorer.py          multi-stage field confidence scoring
+    findings.py              finding construction, categories, stable keys
+    cross_doc_validator.py, signature_validator.py, cert_type_rules.py, special_scenarios.py,
+    completeness.py, identity.py, members.py, name_reconciler.py, validation.py, text_sanitizer.py,
+    inventory_builder.py, questionnaire_extractor.py, hours_resolver.py, bug_detector.py, parsers/
+    audit/job_store.py       SQLite job state (audit_jobs, finding_feedback)
+    cartograph/
+      intake.py              bounded worker pool with waiting-row heartbeat
+      tasks.py               audit_case: fetch → keep packet → extract → adapt → deliver
+      documents.py           presigned-URL fetch, attachment sniffing, packet assembly
+      adapter.py             ExtractionResult → ingest payload
+      checklist.py           checklist rows → matches
+      manifest.py            link payload rows to Cartograph's existing records
+      client.py              signed POST to the ingest; failure reports
+      signing.py             HMAC sign / verify
+      resume.py              re-run cases interrupted by a stop
+      maintenance.py         retention + watchdog sweeps; is_retryable_error
+scripts/                     engine.sh (supervisor), replay_corpus.py, score_calibration.py
+eval/                        extraction-quality harness (gold/, run_eval.py, README.md)
+tests/                       pytest rule tests + corpus_baseline.json
+deliverables/                the Cartograph contract documents
+mock_cartograph.py           local stand-in for Cartograph
+output/                      audit_jobs.db, pdfs/ (kept packets), results/ (extraction JSON)
+.env                         configuration (not committed)
 ```
 
 ---
 
-## 9. Configuration
+## 7. Configuration
 
 Settings load from environment variables / `.env` with the **`IDP_` prefix**
-(`app/core/config.py`). Key ones:
+(`app/core/config.py`). Unknown `IDP_*` names are ignored, so a `.env` still
+carrying retired settings does not stop the engine.
 
-```bash
-# LLM (Anthropic Claude)
-IDP_ANTHROPIC_API_KEY=sk-ant-...
-IDP_LLM_MODEL=claude-sonnet-4-6                 # Sonnet 4 (claude-sonnet-4-20250514) was retired
-IDP_LLM_CLASSIFY_MODEL=claude-haiku-4-5-20251001
+**Storage, logging, rendering, OCR**
 
-# OCR service (external)
-IDP_OCR_SERVICE_URL=https://...
-IDP_OCR_FALLBACK_URL=https://...
-IDP_OCR_VISION_THRESHOLD=0.5        # below this OCR score → Claude Vision
+| Setting | Default | Meaning |
+|---|---|---|
+| `IDP_OUTPUT_DIR` | `output` | Job DB, kept packets and results, per-job work dirs |
+| `IDP_LOG_LEVEL` / `IDP_LOG_JSON` | `INFO` / `false` | Logging |
+| `IDP_DEBUG` | `false` | Also enables `/docs` |
+| `IDP_RENDER_DPI` | `200` | Page render resolution |
+| `IDP_IMAGE_MAX_WIDTH` / `IDP_IMAGE_MAX_HEIGHT` | `1280` / `1920` | OCR input size |
+| `IDP_PREPROCESS_CONCURRENCY` | `4` | Preprocess worker threads |
+| `IDP_OCR_SERVICE_URL` | — | DeepSeek-OCR (tier 1) |
+| `IDP_OCR_FALLBACK_URL` | — | GLM-OCR (tier 2); empty disables the tier |
+| `IDP_OCR_PROMPT` / `IDP_OCR_DPI` / `IDP_OCR_RAW` / `IDP_OCR_RETRY` | `document` / `200` / `false` / `true` | Passed to the OCR service |
+| `IDP_OCR_TIMEOUT` | `600` | Seconds per OCR request |
+| `IDP_OCR_CONCURRENCY` | `4` | Pages OCR'd at once |
+| `IDP_OCR_VISION_THRESHOLD` | `0.5` | Composite score below which a page is re-read by Claude vision |
 
-# Salesforce
-IDP_SF_USERNAME=...
-IDP_SF_PASSWORD=...
-IDP_SF_TOKEN=...
-IDP_SF_DOMAIN=us-hc.my
+**LLM**
 
-# Webhooks / mode
-IDP_WEBHOOK_AUTH_TOKEN=...          # required in production
-IDP_DEV_MODE=false                  # true bypasses webhook auth (local only)
-IDP_AUDIT_MODE=webhook              # webhook | poll | both
+| Setting | Default | Meaning |
+|---|---|---|
+| `IDP_ANTHROPIC_API_KEY` | — | Required |
+| `IDP_LLM_MODEL` / `IDP_LLM_CLASSIFY_MODEL` | `claude-sonnet-5` | Extraction / page classification |
+| `IDP_LLM_MAX_TOKENS` | `16384` | Response budget (thinking tokens share it) |
+| `IDP_LLM_TEMPERATURE` | `0.0` | |
+| `IDP_LLM_THINKING` | `disabled` | `disabled` or `adaptive`, extraction calls only |
+| `IDP_FUNDING_PROGRAM` / `IDP_CERTIFICATION_TYPE_OVERRIDE` | empty | Pipeline-context defaults when the request carries none |
 
-# Job store / housekeeping
-IDP_AUDIT_JOB_DB=output/audit_jobs.db
-IDP_AUDIT_RETENTION_DAYS=7
-IDP_MIN_PDF_PAGES=4                 # smaller PDFs rejected as non-source docs
-```
+**Jobs, housekeeping, retries**
 
-See `app/core/config.py` for the full list (rendering DPI, OCR concurrency,
-watchdog/poll intervals, etc.).
+| Setting | Default | Meaning |
+|---|---|---|
+| `IDP_AUDIT_PIPELINE_CONCURRENCY` | `3` | Cases audited at once (also the memory guard on a 16 GB pod) |
+| `IDP_AUDIT_JOB_DB` | `output/audit_jobs.db` | SQLite job store |
+| `IDP_AUDIT_WATCHDOG_SECONDS` | `1800` | Heartbeat silence after which an owned row is failed |
+| `IDP_AUDIT_RESUME_ON_START` / `IDP_AUDIT_RESUME_DELAY_SECONDS` | `true` / `10` | Re-run interrupted cases at start |
+| `IDP_AUDIT_RETENTION_DAYS` | `7` | Terminal rows older than this are deleted; `0` disables |
+| `IDP_AUDIT_MAINTENANCE_INTERVAL_SECONDS` | `3600` | Sweep interval |
+| `IDP_PDF_RETENTION_DAYS` / `IDP_PDF_RETENTION_MAX_MB` | `14` / `1500` | Kept packets under `output/pdfs`; `0` days disables keeping |
+| `IDP_CARTOGRAPH_EXTRACT_ATTEMPTS` / `IDP_CARTOGRAPH_RETRY_DELAY_SECONDS` | `2` / `30` | Transient extraction failures retried this many times in all |
+
+**Cartograph**
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `IDP_CARTOGRAPH_INGEST_URL` | — | Where results are POSTed |
+| `IDP_CARTOGRAPH_INGEST_SECRET` | — | Signs outbound deliveries |
+| `IDP_CARTOGRAPH_CALLBACK_SECRET` | — | Verifies every inbound request |
+| `IDP_CARTOGRAPH_INCOME_TYPES` / `IDP_CARTOGRAPH_ASSET_TYPES` | `[]` | Cartograph's picklists (JSON lists) |
+| `IDP_CARTOGRAPH_TYPE_ALIASES` | `{}` | Normalised term → picklist value overrides |
+| `IDP_CARTOGRAPH_TIMEOUT_SECONDS` | `30` | Outbound POST timeout |
+| `IDP_CARTOGRAPH_REPOST_WINDOW_SECONDS` | `7200` | Repeat-notification guard; `0` disables |
+| `IDP_REPORT_PREVIOUS_CERT_MISSING` | `false` | Whether a missing prior-year cert is a finding / checklist gap |
+
+`scripts/engine.sh` reads two more from the environment: `IDP_PORT` (8001)
+and `IDP_STOP_GRACE` (30 s given to uvicorn before it is killed).
 
 ---
 
-## 10. Running locally
+## 8. Running
+
+### On the pod
 
 ```bash
-# 1. Install dependencies (Python 3.11+)
+scripts/engine.sh start      # start the keep-alive loop and the engine
+scripts/engine.sh status     # pids, /health, the checkout it started from
+scripts/engine.sh restart    # pushed code takes effect only after this
+scripts/engine.sh stop
+```
+
+The supervisor runs `.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port
+$IDP_PORT` and starts it again whenever it exits (crash, OOM kill) until
+`stop` is asked. Output appends to `engine.log`; pidfiles and the stop flag
+live under `run/`. The pod's `/post_start.sh` calls `engine.sh start` at
+boot, so a pod restart brings the engine back by itself; a case in flight
+at a stop is audited again at the next start, so a restart never waits.
+
+### Locally
+
+```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-
-# 2. Configure — create a .env file with the IDP_* values above
-#   (for local dev without webhook auth: set IDP_DEV_MODE=true)
-
-# 3. Run the API
-uvicorn app.main:app --reload --port 8000
-
-# 4. Smoke-test a webhook (dev mode)
-curl -X POST http://localhost:8000/webhook/audit-ready \
-  -H "Content-Type: application/json" \
-  -d '{"case_id":"500...","case_number":"CAS000001","cert_type":"AR","funding_program":"LIHTC"}'
-
-# 5. Inspect the result
-curl http://localhost:8000/audit/cases/500...
+# create .env with the IDP_* values above (at least the API key, OCR URL
+# and the three Cartograph values)
+.venv/bin/uvicorn app.main:app --port 8001
 ```
 
-Requires a reachable OCR service, valid Anthropic + Salesforce credentials. PDFs
-under `IDP_MIN_PDF_PAGES` (default 4) are rejected as non-source documents.
+Requires a reachable OCR service and a valid Anthropic key. To exercise the
+round trip without Cartograph, run the stand-in in a second terminal with
+`IDP_CARTOGRAPH_INGEST_URL=http://localhost:9000/webhooks/runpod_ocr_results`
+set for the engine:
+
+```bash
+python3 mock_cartograph.py --callback   # verifies the signature, prints the payload,
+                                        # answers 202, posts the import_result back
+```
+
+Then send a notification signed with the inbound secret over the exact
+bytes sent, e.g. from a Python shell:
+
+```python
+import json, httpx
+from app.core.dependencies import get_settings
+from app.services.cartograph.signing import sign, TIMESTAMP_HEADER, SIGNATURE_HEADER
+body = json.dumps({"case_ref": "TEST-0001", "documents": [{"url": "https://.../packet.pdf"}]}).encode()
+ts, sig = sign(body, get_settings().cartograph_callback_secret)
+httpx.post("http://localhost:8001/integration/case", content=body,
+           headers={"Content-Type": "application/json", TIMESTAMP_HEADER: ts, SIGNATURE_HEADER: sig})
+```
 
 ---
 
-## 11. Current issues and known limitations
+## 9. Testing
 
-Live-service state as of 2026-07. Sorted by blast radius, not urgency.
+```bash
+.venv/bin/pip install -r requirements-dev.txt
+.venv/bin/python -m pytest -q tests            # rule tests, no model calls, seconds
+```
 
-### Deployment / operations
+Every reconciliation, calculation, normaliser, identity, scoring and payload
+rule is pinned in `tests/` with one case where it must fire and one where it
+must not; `tests/test_corpus_regression.py` replays the corpus against the
+baseline when the job store is present.
 
-- **The engine runs under `scripts/engine.sh`** (`start`, `stop`, `restart`,
-  `status`): a keep-alive loop that starts uvicorn again whenever it exits,
-  and which the pod's `/post_start.sh` calls at boot, so a pod restart
-  brings the engine back by itself. Pushed code takes effect only after
-  `scripts/engine.sh restart`; `status` prints the checkout the running
-  process started from. A Cartograph case in flight when the engine stops
-  is audited again at the next start (`app/services/cartograph/resume.py`),
-  from the request as received and the packet kept under
-  `output_dir/pdfs`, so a restart never needs to wait for one — uvicorn is
-  given `IDP_STOP_GRACE` seconds (30) and then killed. Notified cases go
-  through a bounded intake (`app/services/cartograph/intake.py`): at most
-  `audit_pipeline_concurrency` (3) are audited at once and the rest wait in
-  line with their heartbeat kept, because the pod's 16 GB memory cap is
-  reached well before thirty packets are rendered together.
-- **No `.gitignore`.** `.env` (Anthropic + Salesforce + webhook credentials)
-  and `.venv/` and `uvicorn.log` are protected only by discipline. Never
-  `git add -A` / `git add .` — always name files. Adding a `.gitignore` is
-  outstanding.
-- **RunPod proxy URL is pod-lifetime scoped.** When the pod is recycled the
-  proxy hostname changes, and the frontend `VITE_API_URL` / `NEXT_PUBLIC_API_URL`
-  in Vercel must be updated by hand. A "CORS error" on the frontend is almost
-  always this, not a real CORS misconfiguration.
+- `scripts/replay_corpus.py update | check [-v]` — replays the deterministic
+  post-model stages (merges, identity, income calculations, findings,
+  scoring, payload) over every stored extraction and diffs against
+  `tests/corpus_baseline.json`. OCR, classification and the model reads need
+  a live run.
+- `eval/run_eval.py` — scores a packet against gold values in `eval/gold/`;
+  see [`eval/README.md`](eval/README.md).
+
+---
+
+## 10. Known limitations
 
 ### Extraction / classification
 
-- **Filtering is coarse at the outer layer** (see §3 "How documents are
-  filtered" for the details and improvement ideas).
-- **Classifier prompt has no case-metadata priors.** Salesforce already knows
-  the case's `CertType__c` and `Funding_Program2__c`; wiring them into the
-  Haiku prompt would resolve most HUD-50059-vs-TIC / RD-3560-vs-worksheet
-  borderline calls.
-- **Extractor↔classifier coupling is by substring.** A rename of a
-  `document_type` label in the classifier prompt silently orphans downstream
-  extractors. There's no registry / enum enforcement.
+- **Attachment paging is the only file-level gate.** Anything that is a PDF
+  or an image enters the pipeline; junk is sorted out by classification.
+- **Extractor↔classifier coupling is by document-type label.** A rename in
+  the classifier's label list must be mirrored in `doc_taxonomy.py` or the
+  records are silently orphaned.
 - **LLM shape drift on multi-applicant forms.** The questionnaire extractor
-  now tolerates a list-shaped response by merging (True wins over False wins
-  over None), but the same drift can happen on any list-typed schema; the
-  tolerance is not generalized.
+  tolerates a list-shaped response by merging (True wins over False wins
+  over None); the tolerance is not generalised to other list-typed schemas.
 - **Field-level HTML/markup leakage.** OCR of HTML-rendered PDFs can leave
-  tag fragments (`</strong></td>`) inside string fields. `text_sanitizer`
-  scrubs at extraction boundaries and drops records with no usable identity;
-  the sanitizer is defense-in-depth, not a fix for the underlying OCR output.
+  tag fragments inside string fields; `text_sanitizer` scrubs at extraction
+  boundaries as defence in depth.
+- **Rotation probe covers 90°/270° only.** Upside-down scans are out of scope.
 
-### Reconciliation
+### Integration
 
-- **MuleSoft field mislabeling is worked around, not eliminated.** The
-  comparator has member-agnostic passes (source + amount) to survive
-  MuleSoft putting a funding-program name in the member field. Genuine
-  mismatches on those fields are noise-suppressed, not resolved.
-- **Confidence is heuristic.** `0.6 × extraction_score + 0.4 × agreement_rate`
-  with a high-severity cap. Thresholds (`0.85`, `0.65`) are hand-tuned to
-  the shadow-mode sample, not learned.
+- **The engine fetches only the URLs in the notification.** It does not call
+  Cartograph for fresh document links and does not poll for missed triggers;
+  a notification lost in transit relies on Cartograph's retry.
+- **A case resumed from the kept packet loses attachment boundaries**, so its
+  rent figures go out without a source `job_document_id`.
+- **A watchdog-failed case is not re-run by the engine**; Cartograph is told
+  to re-notify. Resume covers process stops, not worker deaths.
+- **Single inbound secret.** `verify()` checks one secret; the dual-secret
+  rotation the contract asks for is not implemented.
+- **`expense_records` is never sent.**
 
-### Salesforce integration
-
-- **Session reuse can go stale on the 4th+ sequential SOQL call.** Surfaces as
-  `requests.ConnectionError: RemoteDisconnected`. `_is_retryable_error` now
-  classifies typed `requests` exceptions as transient so the watchdog
-  re-queues them; the root-cause session refresh is not implemented.
-- **Findings field has a 32k-char cap.** `IDP_Testing_Results__c` is a Long
-  Text Area; anything longer is truncated with a `[TRUNCATED — see IDP logs
-  for full findings]` marker. Not observed in practice, but the ceiling is
-  fixed by the schema, not by us.
-- **Writeback is single-field.** Every finding lands in one text blob; the
-  UI does its own parsing of `[CRITICAL] / [REVIEW] / [NOTES]` prefixes.
-
-### Data model
-
-- **JobStore is SQLite, single-file, single-node.** ~2.2k rows, ~464 MB
-  post-VACUUM. Fine for shadow mode, not intended for HA. If the pod dies
-  mid-write the row can be left in an intermediate state — the watchdog
-  handles this, but it's the reason the watchdog exists.
-- **`extraction_result` blobs are large** (~212 KB/row avg). Retention
-  sweep (`IDP_AUDIT_RETENTION_DAYS=7`) is what keeps the DB bounded.
+- **JobStore is SQLite, single-file, single-process.** Fine for one pod, not
+  HA. `extraction_result` blobs are large; the retention sweep keeps the
+  file bounded.
 
 ---
 
-## 12. Glossary
+## 11. Glossary
 
-- **TIC** — Tenant Income Certification.
-- **HUD 50059 / RD 3560-8** — agency certification forms.
+- **Cartograph** — the consumer: holds the case, the checklist and the
+  reviewers; sends notifications and receives the payload.
+- **case_ref** — Cartograph's `Job#ref_number`; the engine's job id.
+- **scan_id** — Cartograph's handle for one delivered extraction; echoed in
+  the import result and in findings feedback.
+- **finding_key** — `CODE:subject`, stable across re-audits of one packet.
+- **TIC** — Tenant Income Certification. **HUD 50059 / RD 3560-8** — agency
+  certification forms. **Gross rent (LIHTC)** — tenant rent + utility allowance.
 - **Cert types** — `MI` (move-in), `AR` (annual recert), `AR-SC` (annual
-  self-certification), `IR` (interim recert).
-- **Gross rent (LIHTC)** — tenant-paid rent + utility allowance.
-- **MuleSoft** — the upstream integration that extracts packet data into
-  Salesforce; IDP audits its output.
+  self-certification), `IR` (interim recert); Cartograph's `initial`,
+  `annual`, `ar_self_cert`, `interim`.

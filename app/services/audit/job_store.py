@@ -1,17 +1,19 @@
-"""Persistent job state for IDP audit cases.
+"""Persistent job state for audit cases.
 
 State machine per case:
-  pending           — initial
-  extracting        — IDP extraction running
-  extracted         — extraction done, awaiting MuleSoft
-  comparing         — comparison running
-  done              — findings produced
-  extraction_failed — IDP extraction errored
-  comparison_failed — comparison errored
-  mulesoft_timeout  — MuleSoft webhook never arrived
+  queued            — accepted and handed to the intake, not started
+  extracting        — the audit is running
+  extracted         — extraction done, being delivered
+  done              — delivered to Cartograph
+  extraction_failed — the audit errored, or the worker died (watchdog)
+  comparison_failed — delivery to Cartograph failed or was rejected
 
-SQLite is sufficient for v1: small write volume, single-process worker,
-survives Render restarts when stored in a persistent volume.
+`pending`, `comparing` and `mulesoft_timeout` belonged to the retired
+Salesforce path; the constants stay so rows left in those states are
+still recognised and pruned.
+
+SQLite: small write volume, one process, and the file sits on the pod's
+persistent volume so state survives restarts.
 """
 import json
 import logging
@@ -25,12 +27,7 @@ from typing import Any, Iterator
 logger = logging.getLogger(__name__)
 
 # State constants
-PENDING = "pending"
-# Accepted and handed to a worker that has not started yet. Distinct from
-# PENDING because the two answer the dedupe question differently: a PENDING
-# row is waiting for a poller to claim it and must stay claimable, while a
-# QUEUED row already has a worker committed to it and a second notification
-# would run the same case twice.
+PENDING = "pending"          # retired: unclaimed, waiting for a poller
 QUEUED = "queued"
 EXTRACTING = "extracting"
 EXTRACTED = "extracted"
@@ -41,9 +38,7 @@ COMPARISON_FAILED = "comparison_failed"
 MULESOFT_TIMEOUT = "mulesoft_timeout"
 
 # States in which some worker already owns the case, so a second arrival for
-# the same case_id is a duplicate rather than a new request. PENDING is
-# deliberately absent: it means "nobody has claimed this yet", which is what
-# the watchdog resets a wedged Salesforce row to so the next poll re-runs it.
+# the same case_id is a duplicate rather than a new request.
 _OWNED_STATES = (QUEUED, EXTRACTING, EXTRACTED, COMPARING)
 
 
@@ -191,18 +186,17 @@ class JobStore:
         cert_type: str | None,
         funding_program: str | None,
         content_document_id: str | None,
-        source: str = "salesforce",
+        source: str = "cartograph",
         claimed: bool = False,
     ) -> dict[str, Any]:
-        """Create or refresh a pending job. Idempotent.
+        """Create or refresh a job. Idempotent.
 
         If a job already exists in a state some worker owns, return as-is.
         If it's terminal (done/failed) or unclaimed, recreate.
 
-        `claimed` is for callers that queue the work themselves rather than
-        leaving the row for a poller to pick up — the row is created already
-        owned, so a duplicate notification arriving before the worker starts
-        is recognized as a duplicate instead of queuing the case twice.
+        `claimed` creates the row already owned (queued), so a duplicate
+        notification arriving before the worker starts is recognized as a
+        duplicate instead of queuing the case twice.
         """
         initial_state = QUEUED if claimed else PENDING
         with self._lock, self._connect() as conn:
@@ -283,71 +277,17 @@ class JobStore:
     def mark_extraction_failed(self, case_id: str, error: str) -> None:
         self._set_state(case_id, EXTRACTION_FAILED, error=error)
 
-    def mark_mulesoft_done(self, case_id: str) -> None:
-        """Record that MuleSoft signaled completion. INSERTs a stub if the
-        case is unknown so the signal isn't lost when webhook 2 races
-        ahead of webhook 1.
-        """
+    def mark_done(self, case_id: str, findings_text: str, confidence: float) -> None:
+        """Mark a case delivered, keeping its findings and extraction
+        confidence on the row."""
         with self._lock, self._connect() as conn:
             now = time.time()
-            cur = conn.execute(
-                "UPDATE audit_jobs SET mulesoft_done_at = ?, updated_at = ? "
-                "WHERE case_id = ?",
-                (now, now, case_id),
-            )
-            if cur.rowcount == 0:
-                # Out-of-order signal: webhook 2 arrived before webhook 1.
-                # Insert a stub so the timestamp is preserved and a later
-                # extraction trigger can find it.
-                conn.execute("""
-                    INSERT INTO audit_jobs (
-                        case_id, state, created_at, updated_at, mulesoft_done_at
-                    ) VALUES (?, ?, ?, ?, ?)
-                """, (case_id, PENDING, now, now, now))
-                logger.warning(
-                    "mark_mulesoft_done: case %s unknown — created stub "
-                    "to preserve signal", case_id,
-                )
-
-    def try_claim_for_comparison(self, case_id: str) -> bool:
-        """Atomically transition EXTRACTED → COMPARING. Returns True if this
-        caller won the claim. Used to prevent duplicate concurrent comparisons
-        when webhook 2 and the post-extraction trigger race.
-        """
-        with self._lock, self._connect() as conn:
-            now = time.time()
-            cur = conn.execute("""
-                UPDATE audit_jobs SET state = ?, updated_at = ?
-                WHERE case_id = ? AND state = ?
-            """, (COMPARING, now, case_id, EXTRACTED))
-            return cur.rowcount > 0
-
-    def mark_done(
-        self,
-        case_id: str,
-        findings_text: str,
-        confidence: float,
-        mulesoft_snapshot: dict[str, Any] | None = None,
-    ) -> None:
-        """Mark a case done and persist the MuleSoft data used for the
-        comparison. The snapshot lets the dashboard render exactly what
-        the analyst's findings were computed against, even if Salesforce
-        changes later.
-        """
-        with self._lock, self._connect() as conn:
-            now = time.time()
-            snapshot_json = (
-                json.dumps(mulesoft_snapshot, default=str)
-                if mulesoft_snapshot is not None
-                else None
-            )
             conn.execute("""
                 UPDATE audit_jobs
                 SET state = ?, findings_text = ?, confidence = ?,
-                    mulesoft_snapshot = ?,
                     completed_at = ?, updated_at = ?
                 WHERE case_id = ?
-            """, (DONE, findings_text, confidence, snapshot_json, now, now, case_id))
+            """, (DONE, findings_text, confidence, now, now, case_id))
 
     def record_request(self, case_id: str, raw: bytes | str, checklist_rows: list[dict] | None) -> None:
         """Keep the case request as received, and the checklist rows read
@@ -489,91 +429,6 @@ class JobStore:
             ).fetchall()
             return [dict(r) for r in rows]
 
-    def list_all(
-        self,
-        state: str | None = None,
-        limit: int = 100,
-        offset: int = 0,
-    ) -> list[dict[str, Any]]:
-        """List jobs with optional state filter + pagination.
-
-        Excludes the bulky extraction_result blob — callers fetch the full
-        record via get(case_id) when they need it.
-        """
-        cols = (
-            "case_id, case_number, state, cert_type, funding_program, "
-            "confidence, error, created_at, updated_at, extracted_at, "
-            "mulesoft_done_at, completed_at"
-        )
-        with self._connect() as conn:
-            if state:
-                rows = conn.execute(
-                    f"SELECT {cols} FROM audit_jobs WHERE state = ? "
-                    "ORDER BY updated_at DESC LIMIT ? OFFSET ?",
-                    (state, limit, offset),
-                ).fetchall()
-            else:
-                rows = conn.execute(
-                    f"SELECT {cols} FROM audit_jobs "
-                    "ORDER BY updated_at DESC LIMIT ? OFFSET ?",
-                    (limit, offset),
-                ).fetchall()
-            return [dict(r) for r in rows]
-
-    def count(self, state: str | None = None) -> int:
-        with self._connect() as conn:
-            if state:
-                row = conn.execute(
-                    "SELECT COUNT(*) AS n FROM audit_jobs WHERE state = ?",
-                    (state,),
-                ).fetchone()
-            else:
-                row = conn.execute(
-                    "SELECT COUNT(*) AS n FROM audit_jobs",
-                ).fetchone()
-            return row["n"]
-
-    # ------------------------------------------------------------------
-    # Admin / maintenance
-    # ------------------------------------------------------------------
-
-    def delete_by_state(self, state: str) -> int:
-        """Delete all rows in the given state. Returns rowcount.
-
-        Used by the admin reset endpoint to re-queue completed audits
-        without wiping in-flight work.
-        """
-        with self._lock, self._connect() as conn:
-            cur = conn.execute(
-                "DELETE FROM audit_jobs WHERE state = ?", (state,),
-            )
-            return cur.rowcount
-
-    def delete_by_case_ids(self, case_ids: list[str]) -> int:
-        """Delete rows for specific case IDs. Returns rowcount.
-
-        SQLite has a 999-param ceiling for IN clauses; we chunk to be safe.
-        """
-        if not case_ids:
-            return 0
-        total = 0
-        with self._lock, self._connect() as conn:
-            for i in range(0, len(case_ids), 500):
-                chunk = case_ids[i:i + 500]
-                placeholders = ",".join("?" * len(chunk))
-                cur = conn.execute(
-                    f"DELETE FROM audit_jobs WHERE case_id IN ({placeholders})",
-                    chunk,
-                )
-                total += cur.rowcount
-        return total
-
-    def delete_all(self) -> int:
-        """Delete every row. Returns rowcount. Nuclear option."""
-        with self._lock, self._connect() as conn:
-            cur = conn.execute("DELETE FROM audit_jobs")
-            return cur.rowcount
-
     _TERMINAL_STATES = (
         DONE, EXTRACTION_FAILED, COMPARISON_FAILED, MULESOFT_TIMEOUT,
     )
@@ -581,10 +436,8 @@ class JobStore:
     def delete_terminal_older_than(self, cutoff_ts: float) -> int:
         """Delete terminal-state rows whose updated_at is older than cutoff.
 
-        Used by the retention sweep to cap unbounded growth. Only touches
-        rows the pipeline is done with — in-flight states (pending,
-        extracting, extracted, comparing) are never deleted regardless of
-        age (the watchdog handles those).
+        Used by the retention sweep. In-flight states are never deleted
+        regardless of age; the watchdog handles those.
         """
         placeholders = ",".join("?" * len(self._TERMINAL_STATES))
         with self._lock, self._connect() as conn:
@@ -624,59 +477,13 @@ class JobStore:
             ).fetchall()
             return [dict(r) for r in rows]
 
-    def reset_to_pending(self, case_id: str) -> bool:
-        """Reset a row back to PENDING state and increment retry_count.
-
-        Preserves identity fields (case_number, cert_type, funding_program,
-        content_document_id) but wipes anything from the prior attempt
-        (extraction_result, findings, timestamps, error). Returns True
-        if a row was reset, False if no row existed.
-        """
-        with self._lock, self._connect() as conn:
-            now = time.time()
-            cur = conn.execute("""
-                UPDATE audit_jobs
-                SET state = ?,
-                    retry_count = retry_count + 1,
-                    updated_at = ?,
-                    error = NULL,
-                    extraction_result = NULL,
-                    findings_text = NULL,
-                    confidence = NULL,
-                    extracted_at = NULL,
-                    mulesoft_done_at = NULL,
-                    completed_at = NULL
-                WHERE case_id = ?
-            """, (PENDING, now, case_id))
-            return cur.rowcount > 0
-
-    def increment_retry(self, case_id: str) -> int:
-        """Bump retry_count and return the new value (0 if row missing).
-
-        Used by the retryable-failure paths so automated re-attempts share
-        one bounded budget with the watchdog (reset_to_pending also
-        increments). upsert_pending deliberately preserves retry_count, so
-        the count survives poll-cycle re-queues.
-        """
-        with self._lock, self._connect() as conn:
-            conn.execute(
-                "UPDATE audit_jobs SET retry_count = retry_count + 1 "
-                "WHERE case_id = ?",
-                (case_id,),
-            )
-            row = conn.execute(
-                "SELECT retry_count FROM audit_jobs WHERE case_id = ?",
-                (case_id,),
-            ).fetchone()
-            return int(row["retry_count"]) if row else 0
-
 
 _SINGLETON: JobStore | None = None
 _SINGLETON_LOCK = threading.Lock()
 
 
 def get_job_store(db_path: Path) -> JobStore:
-    """Module-level singleton so all webhook handlers share one store."""
+    """Module-level singleton so every handler and thread shares one store."""
     global _SINGLETON
     if _SINGLETON is None:
         with _SINGLETON_LOCK:

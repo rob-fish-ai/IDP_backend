@@ -1,14 +1,17 @@
 # IDP_backend — Project Overview
 
-_Last updated: 2026-07-24_
+_Last updated: 2026-11-02_
 
-A shadow-mode **audit service** for affordable-housing certification packets
-(LIHTC TIC, HUD 50059, RD 3560-8, HUD Section 8 AR/MI/IR). It independently
-re-extracts every packet with OCR + Claude, reconciles the result against the
-MuleSoft IDP data already in Salesforce, and writes an analyst-readable
-findings report back to the Case. MuleSoft and this service are **peer
-extractors**: neither is assumed correct; disagreements are surfaced for
-human analysts with severity and materiality attached.
+An **audit engine** for affordable-housing certification packets (LIHTC
+TIC, HUD 50059, RD 3560-8, HUD Section 8 MI/AR/AR-SC/IR) serving one
+consumer, Cartograph. Cartograph notifies the engine when a case is ready;
+the engine fetches the packet, reads it with OCR + Claude, extracts
+household, income, asset and certification figures with page provenance,
+compiles findings, answers the case's checklist, and delivers a signed
+payload to Cartograph's ingest. Reviewers judge the findings there and their
+verdicts come back to the engine. Nothing is inferred: unknown is `null`,
+SSNs leave as last four digits, and anything the payload cannot carry is a
+warning, not a silent drop.
 
 ---
 
@@ -17,252 +20,265 @@ human analysts with severity and materiality attached.
 ### 1.1 Runtime shape
 
 ```
-Salesforce (Cases, files, Certification_Review__c)
-        │  poll every 60s (IDP_AUDIT_MODE=poll)          FastAPI :8001
-        ▼                                                    │
-┌──────────────────────────── uvicorn worker ────────────────┴─────────┐
-│  poller thread ──► job pipeline (extract → compare → write-back)     │
-│  maintenance thread ──► watchdog / retention / revisit sweeps        │
-│  HTTP: /audit/cases, /audit/cases/{id}, webhook, admin reset         │
-└──────────────────────────────────────────────────────────────────────┘
-        │
-   SQLite JobStore  /var/data/audit_jobs.db
+Cartograph (Heroku)                              IDP engine (RunPod, FastAPI :8001)
+   POST /integration/case ─────────────────────►  verify HMAC → dedupe → store request → intake line
+                                                  ┌─────────── uvicorn, one process ───────────────┐
+                                                  │ intake pool (IDP_AUDIT_PIPELINE_CONCURRENCY=3) │
+                                                  │   fetch → keep packet → OCR → extract → adapt  │
+                                                  │ resume thread   re-runs cases interrupted by a │
+                                                  │                 stop, from the stored request  │
+                                                  │ maintenance     retention sweep + watchdog     │
+                                                  └────────────────────────────────────────────────┘
+   POST /webhooks/runpod_ocr_results ◄────────────  signed delivery
+   POST /integration/import_result ───────────────►  stored on the job row
+   POST /integration/findings_feedback ───────────►  stored per finding key
+                                                  SQLite job store: IDP_AUDIT_JOB_DB (output/audit_jobs.db)
 ```
 
-- **Job state machine**: `pending → extracting → extracted → comparing → done`,
-  with terminal failure states `extraction_failed`, `comparison_failed`,
-  `mulesoft_timeout`. Every transition is persisted; a watchdog re-queues or
-  terminalizes wedged in-flight jobs, a retention sweep prunes old terminal
-  rows, and a **revisit sweep** re-opens failed *and* done-but-unauditable
-  cases when new attachments arrive (see §3.9).
-- **Models**: extraction runs on Claude Sonnet 4.6 (`claude-sonnet-4-6`);
-  page classification runs on Haiku 4.5. Targeted image checks (signatures,
-  draft watermarks) use Claude vision.
-- **OCR**: external DeepSeek-OCR primary, GLM-OCR fallback, Claude Vision
-  fallback below a 0.5 quality score; an ink-density detector catches pages
-  where OCR silently returned a fraction of the visible content.
+- **Job state machine**: `queued → extracting → extracted → done`, with
+  terminal failures `extraction_failed` (audit errored, document
+  unavailable, or worker died) and `comparison_failed` (delivery failed,
+  rejected, or not configured). Owned rows carry a heartbeat — the intake
+  touches waiting rows, the audit touches the row as it works — so the
+  watchdog (`IDP_AUDIT_WATCHDOG_SECONDS`, 30 min) measures silence, not
+  elapsed time.
+- **Every failure is reported**, not only logged: a `status: failed` payload
+  with an `error_code` (`document_unavailable`, `extraction_failed`,
+  `engine_error`, `engine_restarted`) goes to Cartograph's ingest.
+- **Models**: extraction and classification both default to
+  `claude-sonnet-5` (`IDP_LLM_MODEL`, `IDP_LLM_CLASSIFY_MODEL`).
+  Classification moved off Haiku on 2026-09-10 after identical bytes
+  classified differently on two runs. Targeted image reads (signatures,
+  race/ethnicity form, low-quality pages) use Claude vision.
+- **OCR**: DeepSeek-OCR primary, GLM-OCR second tier, Claude vision for
+  pages below the 0.5 quality threshold, flagged by the service, degenerate
+  or repetitive, or whose ink density implies text OCR did not return.
+- **Auth**: HMAC-SHA256 over `"{timestamp}.{raw_body}"`, hex digest, headers
+  `X-Timestamp` / `X-Signature`, 300 s skew, one secret per direction, fail
+  closed (401 when unset).
 
-### 1.2 Document acquisition (merge-all)
+### 1.2 Document acquisition
 
-A case accumulates files over its review lifecycle (original packet,
-supplements after rejections, reviewer reports). The service:
-
-1. Queries all case PDFs newest-first.
-2. Drops denylisted titles (certification reviews, audit reports, review
-   notes) and any PDF whose embedded first-page text matches the denylist
-   (reviewer report under a neutral title).
-3. Clusters **multi-part packets** — titles differing by exactly one numeric
-   fragment (`part 2`, `Pt2`, `.2`, `p2`, `2 of 3`, bare trailing digits) —
-   and merges each set in part order.
-4. **Merges every surviving file into one packet**, newest file first, up to
-   a 150-page cap. Classification routes the pages afterwards, so
-   supplements and packets coexist without a "pick one file" decision.
-5. Records per-file page boundaries. If two *current* cert forms of the same
-   type appear in **different source files**, the one appearing later in the
-   merged page order (= from the older file) is demoted to
-   `(Superseded)`/ignored — stale resubmissions never feed extraction.
-6. The min-pages gate (default 4) applies to the merged whole.
+1. The notification names the case's documents with **presigned URLs**,
+   fetched as the first act of the audit so the links need only outlive the
+   wait in the intake line.
+2. Each attachment is typed by its first bytes: PDFs contribute their pages,
+   images become one page each, anything else is left out with a warning
+   that reaches the payload. The parts are merged into **one PDF** in the
+   order sent, with per-attachment page spans so a figure can be traced to
+   the request document it came from.
+3. The merged packet is **kept under `output/pdfs`** (`IDP_PDF_RETENTION_DAYS`
+   14, `IDP_PDF_RETENTION_MAX_MB` 1500), because every contested finding has
+   needed the rendered page. The extraction JSON is kept under
+   `output/results/`; the per-job work dir (page images, OCR text) is deleted.
+4. **Resume on restart**: at start, every owned Cartograph row is claimed and
+   run again in arrival order from the request as received
+   (`cartograph_request` on the row), the kept packet standing in when the
+   presigned URLs have expired. A row with no stored request is failed with
+   that reason and Cartograph is told.
+5. **Repeat guard**: a notification for a case delivered within
+   `IDP_CARTOGRAPH_REPOST_WINDOW_SECONDS` (2 h) naming the same documents is
+   answered `already_delivered` and not audited again.
 
 ### 1.3 Extraction pipeline (per job)
 
 | Step | What happens |
 |---|---|
-| 1–2 | OCR all pages; two-pass classification (keyword pass, then one Haiku call over page snippets) into typed, person-scoped document groups; post-group splitting by effective date / windowed regex |
-| 3 | Routed LLM extraction — demographics, certification info, income (paystubs + verification records), assets — each call sees only the doc types it needs |
-| 3b | Signature vision check: if text-level `isSigned == "No"`, one vision call on the cert's signature page distinguishes wet-signed / blank / watermarked-draft |
-| 3c | Income calculations: source-of-truth routing (paystub-avg / VOI rate×freq / fixed-monthly ×12 / self-declared×frequency), YTD audit cross-checks, **stale-wage guard** (EIV/Work Number history >15 months before the effective date is `[historical]`, excluded from current income) |
-| 4 | Deterministic document inventories (financial + HUD) |
-| 4b | Questionnaire disclosure extraction (LLM-first) and affirmative-response validation |
-| 5 | Findings generation: missing compliance documents, signature requirements (Section 11), cross-document consistency (TIC totals vs source sums), special scenarios, per-field scoring with OCR-quality awareness |
-| 6 | Persisted `ExtractionResult` incl. per-page OCR quality (`page_ocr`) for later diagnosis |
+| A | Render at 200 DPI, keep the colour render and the PDF text layer; preprocess to 1280×1920 in parallel |
+| B | DeepSeek OCR (4 pages at once) → rotation probe re-renders sideways pages at 90°/270° → GLM tier for pages still unreadable → Claude vision for low-quality, flagged, degenerate or content-loss pages |
+| 1–2 | One LLM call classifies every live page into a canonical document type and category and groups multi-page forms; cert forms with two effective dates are force-split; a packet holding only last year's form promotes it to form of record with a finding |
+| 3 | Routed LLM extraction — demographics, certification info, income (paystubs + verification records), assets; previous cert read for interim deltas; signature vision check when the text says unsigned; race and ethnicity from the HUD-27061-H form image, unticked is `null` |
+| 4 / 4b | Deterministic document inventories; questionnaire disclosures (LLM-first) and affirmative-response validation |
+| 4f | Income calculations: source-of-truth routing, YTD cross-checks, stale-wage guard (`[historical]`, excluded from current income and from the score) |
+| 5 | Findings with stable `finding_key`s: missing compliance documents, signature requirements, cross-document consistency, special scenarios, cert-type rules |
+| 6 | Field-level scoring → `field_scores.overall_composite`; per-page OCR quality kept as `page_ocr` |
 
-### 1.4 Comparison & confidence
+Transient failures (model unavailable, truncated response, rate limit,
+network) are retried under `IDP_CARTOGRAPH_EXTRACT_ATTEMPTS` (2); a
+permanent one is reported at once.
 
-When MuleSoft data is available (`Certification_Review__c` + member/income/
-asset child records), the comparator reconciles:
+### 1.4 Delivery and the Cartograph feedback loop
 
-- **Members** by (DOB, SSN-last4) keys with fuzzy-name fallback.
-- **Income** keyed by benefit *program* for SSA-family income (payer vs
-  program naming never causes false pairs), org-name normalization,
-  placeholder-source matching, first+last member tokens. Amounts compare
-  annual-to-annual; a mismatch at almost exactly ×12/24/26/52 (either
-  direction) routes to REVIEW as a **basis mismatch**, and every income
-  mismatch displays the AI row's `frequencyOfPay` and YTD.
-- **Assets** in tiers (account number → name+type → balance stubs), sibling
-  checking/savings duplicate collapse (keeping the MuleSoft-corroborated
-  twin), and a **$100 materiality floor** — one-sided prepaid cards and
-  near-empty accounts are NOTES, not CRITICALs.
-- **Certification scalars** (effective date, cert type, unit, income total,
-  rent — gross-to-gross with LIHTC fallback). Unit numbers match on
-  punctuation-joined and last-token forms (`211-A` ≡ `211A`,
-  `Bldg 2 Unit 27` ≡ `27`). An effective date off by exactly one year with
-  the same month/day is flagged as probable move-in/previous-form confusion
-  (REVIEW, not CRITICAL).
+The adapter (`cartograph/adapter.py`, schema `1.3`) builds the payload in
+Cartograph's vocabulary: `cert_review`, `household_members` (engine-assigned
+`ref`s), `income_records` with paystubs nested, `asset_records` with bank
+statements and VOA nested, `findings`, and `checklist_matches` (one entry per
+checklist row the packet can answer). Income and asset types map onto
+Cartograph's picklists (`IDP_CARTOGRAPH_INCOME_TYPES` / `_ASSET_TYPES` /
+`_TYPE_ALIASES`); rows matching the request's `existing_records_manifest`
+carry Cartograph's ids back so the import updates in place. The delivery is
+a signed POST; its response (`scan_id`) is stored as `cartograph_delivery`.
 
-**Confidence** = 0.6 × extraction score + 0.4 × agreement rate;
-flags: GREEN ≥ 0.85, YELLOW ≥ 0.65, RED below. The findings text is written
-to `Case.IDP_Testing_Results__c` (32k cap guarded) and
-`IDP_Audit_Complete__c` is set; a MuleSoft snapshot is stored with the job
-so the analyst UI shows exactly the data the findings were computed against.
+Two things come back: the **import result** (stored as
+`cartograph_import_result`; a case delivered then rejected during import is
+otherwise indistinguishable from one that imported cleanly) and the nightly
+**findings feedback** — reviewer verdicts (`valid` / `invalid`) per
+`finding_key` and the findings reviewers added by hand, stored in the
+`finding_feedback` table. `scripts/score_calibration.py` reads it to show
+precision per finding code against the delivered scores.
 
-### 1.5 API surface
-
-- `GET /audit/cases` — paginated lightweight rows (id, number, state,
-  cert type, funding, confidence, timestamps).
-- `GET /audit/cases/{case_id}` — full job: `findings_text`, complete
-  `extraction_result` (14 sections incl. `page_ocr`, `income_calculations`),
-  `mulesoft_data` (snapshot or live) + provenance flag.
-- Webhook endpoints for push-mode operation; admin reset endpoint for
-  re-queuing (`done` / failed / all scopes).
+The contract lives in `deliverables/01_endpoints_and_auth.md` and
+`deliverables/02_ingest_payload_contract.md`.
 
 ---
 
 ## 2. Core features
 
-- **Convention-agnostic multi-part merging** — proven across 16 real
-  naming conventions in production (`part N`, `Pt N`, `.N`, `p N`,
-  `N of M`, bare digits, infix digits).
-- **Merge-all acquisition** — supplements can no longer shadow the real
-  packet; contested "newest file" heuristics eliminated.
-- **Vision-verified signatures** — handwriting never survives OCR, so
-  "unsigned" verdicts are settled by one image call; detects
-  "This is Not a Final Document" draft watermarks as a distinct CRITICAL.
-- **Honest unverifiability findings** — "signatures could not be verified
-  from document text — verify visually" replaces false "0 signed of N"
-  CRITICALs; compliance-form *absence* remains CRITICAL.
-- **Materiality-aware severity** — $0/no-materiality income clusters,
-  sub-$100 assets, IR-scoped noise, and basis mismatches are demoted so the
-  CRITICAL list is worth an analyst's time.
-- **Stale-wage guard** — EIV / Work Number wage *history* (job ended) is
-  excluded from current income and surfaced as its own REVIEW finding.
-- **Frequency-aware annualization** — self-declared monthly benefits are
-  annualized (×12/×26/…); mismatch findings expose `frequencyOfPay` + YTD.
-- **Self-cert scoring honesty** — AR-SC packets no longer bleed score for
-  wage-verification fields that self-certification never contains.
-- **Failure recovery** — retryable classification/API failures never
-  mark a case done; revisit sweeps re-audit failed and
-  done-with-missing-cert cases automatically when corrected packets arrive.
-- **Per-page OCR forensics** — every job stores page-level OCR quality,
-  fallback provenance, and suspected-content-loss flags for post-hoc review.
+- **Bounded intake, resume on restart, repeat guard** — at most three cases
+  audited at once (also the memory guard on the 16 GB pod); in-flight cases
+  re-run from the stored request and kept packet after a stop; a re-sent
+  notification for a delivered case costs nothing.
+- **Multi-attachment packets** — PDFs and images merged by content type with
+  per-attachment page spans; unreadable attachments reported, not fatal.
+- **Rotation probe and layered OCR fallbacks** — sideways scans re-rendered
+  and re-read (DeepSeek hallucinates tables on rotated pages rather than
+  failing); second OCR tier, then Claude vision for low-score, flagged,
+  degenerate, repetitive or content-lost pages; the better read is kept.
+- **Vision-verified signatures** — an "unsigned" text verdict is settled by
+  one image call; draft watermarks are their own finding. Where no page can
+  be checked, the finding says "verify visually" instead of a false
+  "0 signed of N".
+- **Race and ethnicity from the household's own form** — read from the
+  image, unticked is unknown, delivered in Cartograph's exact vocabulary.
+- **Stale-wage guard** — EIV / Work Number wage history (job ended) is
+  excluded from current income and the score, surfaced as its own finding.
+- **Frequency-aware annualisation** — self-declared monthly benefits are
+  annualised (×12/×26/…).
+- **Self-cert scoring honesty** — AR-SC packets do not lose score for
+  wage-verification fields self-certification never contains.
+- **Stable finding keys** — same code + same subject = same key, so a
+  re-audit updates in place and reviewer resolutions survive.
+- **Manifest linking** — payload rows matched to Cartograph's existing
+  records on identity evidence, never on an ambiguous name.
+- **Failure recovery and OCR forensics** — transient model/API/network
+  failures are retried, every terminal failure is reported to Cartograph
+  with an error code, and every job stores page-level OCR quality, fallback
+  provenance and suspected-content-loss flags.
 
 ---
 
 ## 3. Resolved issues (with case evidence)
 
-1. **Multi-part packets failed or half-audited** — single-file downloads
-   missed parts (CAS610430 terminal failure → 89% after part grouping +
-   merge). Later generalized to merge-all.
-2. **Classification LLM failure produced garbage audits** — total failure
-   used to yield all-`Unknown` pages and a 7% "done" audit
-   (CAS610991/993 → 79%/73%). Now raises `ClassificationUnavailableError`,
-   always retryable, with retry budgets; Anthropic API failures likewise
-   never mark a case completed.
-3. **OCR silent content loss** — pages with heavy ink but tiny text output
-   are detected by ink-density ratio and routed to vision fallback
-   (calibrated on real half-lost pages).
-4. **Signature false-CRITICAL epidemic** — "NOT signed" fired on 81% of
-   reports with zero correlation to reviewer rejections (lift 0.97).
-   Fixed via the vision check + honest unverifiability wording; validated
-   live on both a wet-signed page and a watermarked draft.
-5. **Comparator false CRITICALs batch** — unit-number formats, zero-income
-   records keyed by affiant name, duplicate checking/savings extraction
-   twins (kept the MuleSoft-corroborated copy — CAS611474 0.46 with both
-   false CRITICALs gone), placeholder sources, benefit-program keying
-   (SSA family), terminated-employment N/A scoring, `(unnamed)` rendering.
-6. **Field-scorer dishonesty on self-certs** — CAS611655-class AR-SC
-   packets scored RED for absent wage docs that self-certification doesn't
-   require; now N/A'd with reasons.
-7. **Catastrophic regex backtracking froze the whole service** — an O(n³)
-   employment-table regex in previous-cert parsing held the GIL for 1h+ on
-   one case; the API (single process) stopped answering ("Failed to
-   fetch"). Rewritten linear; 58KB poison input now parses in 0.29s.
-8. **Supplement shadowed the packet** — newest-file selection audited a
-   7-page questionnaire while the 50-page packet sat unread
-   (CAS611336 31% → 77% on merged replay). Fixed by merge-all +
-   superseded-cert demotion; 16 affected cases re-queued.
-9. **Done-but-unauditable cases never recovered** — revisit sweep extended
-   to `done` rows carrying the missing-cert headline; re-audits
-   automatically when a new attachment lands.
-10. **Effective date off-by-one-year cluster (8 cases)** — extractor read
-    the TIC header's adjacent "Move-in Date" (verified against the rendered
-    PDF, CAS611404) or a previous year's form. Prompt hardened; comparator
-    demotes the exact-one-year pattern to REVIEW.
-11. **Monthly-vs-annual income mismatches (7+ cases)** — monthly benefit
-    amounts compared raw against MuleSoft's annual figures. The correct
-    annualization helper existed as dead code; now wired in
-    (CAS611132: $1,098/mo → $13,176 — matches MuleSoft to the cent), with a
-    ratio-based comparator safety net for the inverse (over-annualized)
-    cluster.
-12. **Stale EIV wage history counted as current income** — CAS612199
-    annualized $84k from quarters dated 2022–2023 on a 2026 cert (job had
-    ended; MuleSoft carried only the SSA benefit). 15-month recency guard
-    marks such evidence `[historical]`; the false 482% income-total CRITICAL
-    disappears and the TIC total agrees exactly.
-13. **Trivial-asset noise** — 11 cases carried CRITICAL/REVIEW findings for
-    prepaid cards and balances of $0–$77; now NOTES under the materiality
-    floor.
+1. **Classification LLM failure produced garbage audits** — total failure
+   used to yield all-`Unknown` pages and a 7% "done" audit (CAS610991/993).
+   Now raises `ClassificationUnavailableError`, always retryable; model API
+   failures likewise never mark a case completed.
+2. **OCR silent content loss** — pages with heavy ink but tiny text output
+   are detected by ink-density ratio and routed to vision fallback.
+3. **Signature false-CRITICAL epidemic** — "NOT signed" fired on 81% of
+   reports with no correlation to reviewer rejections. Fixed via the vision
+   check + honest unverifiability wording.
+4. **Field-scorer dishonesty on self-certs** — AR-SC packets scored RED for
+   absent wage docs that self-certification does not require; now N/A'd.
+5. **Catastrophic regex backtracking froze the whole service** — an O(n³)
+   employment-table regex held the GIL for 1h+; rewritten linear, 58KB
+   poison input parses in 0.29s.
+6. **Effective date off-by-one-year cluster** — the extractor read the TIC
+   header's adjacent "Move-in Date" or a previous year's form; prompt
+   hardened.
+7. **Monthly benefit amounts delivered raw** — the annualisation helper
+   existed as dead code; now wired in (CAS611132: $1,098/mo → $13,176).
+8. **Stale EIV wage history counted as current income** — CAS612199
+   annualised $84k from 2022–2023 quarters on a 2026 cert. 15-month recency
+   guard marks such evidence `[historical]`.
+9. **Unbounded concurrency killed the engine** — 34 notifications in one
+   hour, 26 packets rendering at once, 16 GB cap reached, kernel OOM kill
+   with all of them half done (2026-10-13). Now the bounded intake.
+10. **Restart failed the in-flight batch** — fifteen cases of one morning's
+    batch were failed by the watchdog two days late, and Cartograph's import
+    took each failure notice for a result. Now the resume path.
+11. **Slow packets mistaken for dead workers** — a 119-page sideways-scanned
+    packet took 42 minutes legitimately and the watchdog failed it, which
+    released the dedupe and let a re-notification audit it twice. Now the
+    heartbeat.
+12. **Repeat notifications cost a second audit** — during the 2026-10-29
+    batch Cartograph re-sent 29 of 61 cases between seconds and 94 minutes
+    after accepting their results. Now the repeat guard.
+13. **An unhandled exception left a case `extracting` forever** — a PNG
+    attachment on J-CCAC-06750 escaped the task; every re-notification was
+    then ignored as a duplicate. The task wrapper now records and reports
+    whatever the inner audit did not expect, and images are paged.
+14. **Sideways scans read as invented tables** — a sideways HUD 50059
+    rendered as 35KB of plausible content scoring 0.62. Now the rotation
+    probe, run before the second OCR tier (21 min → 3 min on a 119-page
+    packet).
+15. **Repetitive OCR output shipped as read** — a benefit letter came back a
+    third garbage (`I1I1I1…`) at composite 0.81 with no flag, and the head of
+    household's income was delivered as $0.00. Repeated-pattern and
+    service-flag gates now queue the page for vision; GLM reads, whose score
+    and flags used to be discarded for a fabricated 0.6, now pass through.
+16. **Mid-JSON truncation on asset-heavy cases** — 8192 max tokens was too
+    small once thinking tokens shared the budget; now 16384.
+17. **Untranslated cert types disabled the rules** — Cartograph's `annual`
+    passed straight through and AR-SC exemptions never fired; now mapped to
+    the engine's vocabulary, unknown values left to the documents.
 
-### Score validity work
+### Measurement loop
 
-A backtest against human reviewer verdicts established the score is
-directionally meaningful but weakly calibrated: rejection ("miss") rates of
-**43% for green / 58% for yellow / 70% for red** cases. Finding-type lift
-analysis identified date mismatches as the strongest predictor (lift 1.28)
-and unsigned-cert findings as pure noise (0.97) — which drove fixes #4 and
-#10 above. Re-running the backtest on post-fix data is the standing
-measurement loop.
+Reviewer verdicts arrive nightly on `/integration/findings_feedback` and are
+stored per finding key. `scripts/score_calibration.py` joins them with the
+delivered scores (precision per finding code, score of cases with an invalid
+verdict against those without); thresholds are set by hand from what it
+shows once enough verdicts exist on the current rules.
+`scripts/replay_corpus.py` re-judges every rule change against every stored
+packet before it ships.
 
 ---
 
 ## 4. Known issues & open items
 
-- **Cross-unit misfiled packets** (CAS612207/CAS612195): two sibling cases
-  hold each other's packet parts; unit 121's Part 1 (with its 50059) was
-  never uploaded to either. Proposed: unit-scope filter at merge time
-  (review's unit vs unit tokens in file titles) + a headline misfiled-
-  attachment finding. *Awaiting approval; needs analyst action regardless.*
 - **Divider pages read as OCR failures** — near-blank section separators
-  ("EIV", "Student Verification") produce scary "11 pages could not be
-  read" REVIEWs. Proposed: ink-density divider recognition → ignore type.
-- **Bank-name aliasing** — "Jpmorgan Chase" vs "Chase Bank" produces a
-  false missing/missed asset pair (CAS611607); needs org-alias
-  normalization like the income side.
-- **Small-denominator confidence collapse** — 1–2 disagreements among 3–6
-  compared items crater the agreement rate (most of the 0.50–0.65 band);
-  reweighting the confidence formula from measured finding-type lifts is
-  the planned fix once post-fix data accumulates.
-- **Cert-type-aware min pages** — 3-page AR-SC packets are rejected by the
-  global min-pages gate (CAS610281).
-- **CAS610911** — stuck `pending` since mid-July; needs investigation.
-- **Reviewer-rejection mining** — Review_Line_Items / reviewer PDFs hold
-  labeled rejection reasons (initialed-changes, rent-limit verification)
-  that could seed new targeted checks.
-- **Frontend** (separate repo): income table renders each paystub as its own
-  row repeating the source's annual total (5 stubs read as $437k); stubs
-  should group per source. `frequencyOfPay` / ANNUAL columns landed; YTD for
-  real paystubs will populate now that `ytdGross` is extracted.
-- **Parked by decision**: Salesforce session re-auth; auth/CORS pinning on
-  the GET endpoints; `.gitignore` hygiene. Git remote still points at the
-  old URL (redirects to `rob-fish-ai/IDP_backend`).
+  ("EIV", "Student Verification") produce "N pages could not be read"
+  findings. Proposed: ink-density divider recognition → ignore type.
+- **No document refresh or reconciliation poll.** The engine uses only the
+  URLs in the notification; the contract's documents and `audit_pending`
+  flows are not called. A notification lost in transit relies on
+  Cartograph's retry.
+- **A resumed case loses attachment boundaries** when it runs from the kept
+  packet, so its rent figures carry no source `job_document_id`.
+- **Watchdog-failed cases need re-notification**; the engine does not re-run
+  a case whose worker died inside a live process.
+- **Single inbound secret** — the dual-secret rotation the contract asks for
+  is not implemented in `verify()`. **`expense_records`** is not delivered.
+- **Empty picklists collapse everything to `other`** until
+  `IDP_CARTOGRAPH_INCOME_TYPES` / `_ASSET_TYPES` are configured.
+- **Extractor↔classifier coupling is by label** (mirror renames in
+  `doc_taxonomy.py`); **180° scans** are outside the rotation probe's scope.
 
 ---
 
 ## 5. Operations quick reference
 
-- **Run the worker** (user-managed, in a terminal):
-  `uvicorn app.main:app --host 0.0.0.0 --port 8001` with
-  `IDP_AUDIT_MODE=poll`. Restart after each deploy — `--reload` has not
-  proven reliable, and one wedged process freezes both pipeline and API.
-- **Job store**: SQLite at `/var/data/audit_jobs.db` (table `audit_jobs`).
-  Confidence, findings text, extraction JSON, and the MuleSoft snapshot
-  live on the row.
-- **Re-queue a case**: flip `IDP_Audit_Complete__c` to false in Salesforce
-  and reset the row to `pending` (`reset_to_pending` preserves identity,
-  wipes prior results). For rows pruned by retention, the flag flip alone
-  is enough — the poller re-discovers the case.
-- **Diagnose a case**: findings text → `extraction_result` (groups,
-  `page_ocr`, `income_calculations`) → MuleSoft snapshot → rendered PDF.
-  Contested findings are always verified against the actual page images.
-- **Key settings** (`app/core/config.py`): `min_pdf_pages` (4),
-  `max_merged_pages` (150), poll interval/batch, OCR endpoints and
-  fallback threshold, model ids.
+- **Run / restart**: `scripts/engine.sh start | stop | restart | status`.
+  Pushed code takes effect only after `restart`; `status` prints the
+  checkout the running process started from. `/post_start.sh` calls `start`
+  at pod boot. Env: `IDP_PORT` (8001), `IDP_STOP_GRACE` (30).
+- **Logs**: `engine.log` in the repo root (uvicorn output plus supervisor
+  notes). Pidfiles and the stop flag under `run/`.
+- **Job store**: SQLite at `IDP_AUDIT_JOB_DB` (default `output/audit_jobs.db`),
+  tables `audit_jobs` and `finding_feedback`. WAL mode, so ad-hoc reads do
+  not block the worker.
+- **Check a case**:
+  ```bash
+  sqlite3 output/audit_jobs.db "select case_id, state, confidence, error,
+    datetime(completed_at,'unixepoch') from audit_jobs where case_id='J-XXXX-00000'"
+  sqlite3 output/audit_jobs.db "select cartograph_delivery, cartograph_import_result
+    from audit_jobs where case_id='J-XXXX-00000'"
+  sqlite3 output/audit_jobs.db "select source, finding_key, verdict, verdict_reason, description
+    from finding_feedback where case_id='J-XXXX-00000'"
+  ```
+- **Re-run a case**: have Cartograph notify again. A `done` case within the
+  repost window with the same documents is ignored (`already_delivered`);
+  one with a different document list, or outside the window, is audited. An
+  owned row answers `already_in_progress` until it finishes or the watchdog
+  fails it.
+- **Diagnose a case**: `findings_text` and `extraction_result` on the row
+  (groups, `page_ocr`, `income_calculations`, `field_scores`) → the kept
+  extraction JSON under `output/results/` → the kept packet under
+  `output/pdfs/` (`<case_ref>_<stamp>.pdf`). Contested findings are always
+  verified against the actual page.
+- **Local round trip**: `python3 mock_cartograph.py --callback` with
+  `IDP_CARTOGRAPH_INGEST_URL=http://localhost:9000/webhooks/runpod_ocr_results`.
+- **Tests / replay**: `.venv/bin/python -m pytest -q tests`;
+  `python scripts/replay_corpus.py check -v`; `eval/run_eval.py` (see
+  `eval/README.md`).

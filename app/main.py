@@ -2,12 +2,11 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.dependencies import get_settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import setup_logging
-from app.routers import health, integration, pdf, webhook
+from app.routers import health, integration
 
 
 @asynccontextmanager
@@ -16,19 +15,9 @@ async def lifespan(_app: FastAPI):
     setup_logging(settings)
     settings.output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Start the audit poller as a background thread when audit_mode is
-    # "poll" or "both". In "webhook" mode (default) this is a no-op —
-    # the FastAPI server only listens for incoming webhooks.
-    #
-    # The maintenance thread (retention cleanup + watchdog) runs in every
-    # mode so pure-webhook deployments still prune old terminal rows from
-    # the JobStore and recover wedged in-flight cases.
-    from app.services.audit.poller import (
-        start_maintenance_thread, start_poller_thread,
-        stop_maintenance_thread, stop_poller_thread,
-    )
     from app.services.audit.job_store import get_job_store
     from app.services.cartograph.intake import get_intake, shutdown_intake
+    from app.services.cartograph.maintenance import start_maintenance_thread, stop_maintenance_thread
     from app.services.cartograph.resume import interrupted_cases, start_resume_thread
 
     # Cases that were in flight when the last process stopped are claimed
@@ -36,13 +25,11 @@ async def lifespan(_app: FastAPI):
     # them as wedged instead of letting them run again.
     get_intake(settings)
     start_resume_thread(settings, get_job_store(settings.audit_job_db))
-    start_poller_thread()
     start_maintenance_thread()
     try:
         yield
     finally:
         shutdown_intake()
-        stop_poller_thread()
         stop_maintenance_thread()
         try:
             in_flight = [r["case_id"] for r in interrupted_cases(get_job_store(settings.audit_job_db))]
@@ -74,25 +61,9 @@ def create_app() -> FastAPI:
         openapi_url="/openapi.json" if docs_enabled else None,
     )
 
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=[
-            "https://idp-frontend-drab.vercel.app/",
-            "http://localhost:3000",
-            "http://localhost:5173",
-        ],
-        allow_origin_regex=r"https://idp-frontend.*\.vercel\.app",
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-        expose_headers=["*"],
-    )
-
     register_exception_handlers(app)
 
     app.include_router(health.router)
-    app.include_router(pdf.router)
-    app.include_router(webhook.router)
     app.include_router(integration.router)
 
     return app
