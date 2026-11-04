@@ -57,6 +57,10 @@ class Settings(BaseSettings):
     # total size, oldest first; 0 days disables keeping them.
     pdf_retention_days: int = 14
     pdf_retention_max_mb: int = 1500
+    # Everything else the engine writes under output_dir — the extraction
+    # JSON under results/ and a work dir a crash left behind — is deleted by
+    # the maintenance thread once older than this; 0 disables the sweep.
+    output_retention_days: int = 30
     # A Cartograph extraction that fails for a transient reason (the model
     # unavailable, a truncated response, a rate limit) is tried again this
     # many times in all, with this pause, before the failure is reported.

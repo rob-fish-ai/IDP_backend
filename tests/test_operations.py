@@ -519,3 +519,49 @@ def test_the_watchdog_fails_a_row_whose_worker_died_and_retention_prunes_old_row
     assert maintenance.is_retryable_error(httpx.ReadTimeout("read timed out"))
     assert maintenance.is_retryable_error(RuntimeError("cannot schedule new futures after interpreter shutdown"))
     assert not maintenance.is_retryable_error(ValueError("source or target not a PDF"))
+
+
+def test_the_output_sweep_removes_old_results_orphaned_work_dirs_and_aged_packets(monkeypatch, tmp_path):
+    """What the engine writes under output_dir ages out by itself: the
+    extraction JSON kept under results/, a work dir a crash left behind,
+    and the kept packets — which otherwise only shrink when a new case
+    arrives. A work dir of a case the store still owns is never touched,
+    however old, and neither is anything inside the window."""
+    import os
+    from types import SimpleNamespace
+    from app.services.audit.job_store import JobStore
+    from app.services.cartograph import maintenance
+    store = JobStore(tmp_path / "jobs.db")
+    monkeypatch.setattr(maintenance, "get_job_store", lambda _p: store)
+    settings = SimpleNamespace(audit_job_db=tmp_path / "jobs.db", output_dir=tmp_path, output_retention_days=30,
+                               pdf_retention_days=14, pdf_retention_max_mb=1500)
+    old = time.time() - 40 * 86400
+
+    def aged(path):
+        os.utime(path, (old, old))
+
+    (tmp_path / "results").mkdir()
+    (tmp_path / "results" / "J-OLD_20261001-000000.json").write_text("{}")
+    aged(tmp_path / "results" / "J-OLD_20261001-000000.json")
+    (tmp_path / "results" / "J-NEW_20261101-000000.json").write_text("{}")
+    for case in ("J-ORPHAN", "J-OWNED"):
+        d = tmp_path / f"cartograph_{case}"
+        d.mkdir()
+        (d / "page_1.png").write_bytes(b"x")
+        aged(d / "page_1.png")
+        aged(d)
+    store.upsert_pending("J-OWNED", "J-OWNED", "annual", "HUD", None, claimed=True)
+    store.mark_extracting("J-OWNED")
+    (tmp_path / "pdfs").mkdir()
+    (tmp_path / "pdfs" / "J-OLD_20261001-000000.pdf").write_bytes(b"%PDF")
+    aged(tmp_path / "pdfs" / "J-OLD_20261001-000000.pdf")
+    (tmp_path / "pdfs" / "J-NEW_20261101-000000.pdf").write_bytes(b"%PDF")
+
+    assert maintenance.output_sweep(settings) == 3
+    assert sorted(p.name for p in (tmp_path / "results").iterdir()) == ["J-NEW_20261101-000000.json"]
+    assert not (tmp_path / "cartograph_J-ORPHAN").exists() and (tmp_path / "cartograph_J-OWNED").is_dir()
+    assert sorted(p.name for p in (tmp_path / "pdfs").iterdir()) == ["J-NEW_20261101-000000.pdf"]
+    assert maintenance.output_sweep(settings) == 0
+    settings.output_retention_days = 0
+    aged(tmp_path / "results" / "J-NEW_20261101-000000.json")
+    assert maintenance.output_sweep(settings) == 0

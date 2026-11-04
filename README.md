@@ -83,7 +83,9 @@ claimed and run again from the stored request, the packet kept under
 `output/pdfs` standing in when the presigned URLs have expired), and
 **maintenance** (`cartograph/maintenance.py`: every
 `IDP_AUDIT_MAINTENANCE_INTERVAL_SECONDS` a retention sweep deletes terminal
-rows older than `IDP_AUDIT_RETENTION_DAYS` and a watchdog fails owned rows
+rows older than `IDP_AUDIT_RETENTION_DAYS`, an output sweep deletes result
+JSON, orphaned work dirs and aged packets under `output/` older than
+`IDP_OUTPUT_RETENTION_DAYS`, and a watchdog fails owned rows
 whose heartbeat has not moved for `IDP_AUDIT_WATCHDOG_SECONDS`, telling
 Cartograph to re-notify).
 
@@ -383,6 +385,7 @@ carrying retired settings does not stop the engine.
 | `IDP_AUDIT_RETENTION_DAYS` | `7` | Terminal rows older than this are deleted; `0` disables |
 | `IDP_AUDIT_MAINTENANCE_INTERVAL_SECONDS` | `3600` | Sweep interval |
 | `IDP_PDF_RETENTION_DAYS` / `IDP_PDF_RETENTION_MAX_MB` | `14` / `1500` | Kept packets under `output/pdfs`; `0` days disables keeping |
+| `IDP_OUTPUT_RETENTION_DAYS` | `30` | Extraction JSON under `output/results` and orphaned work dirs older than this are deleted hourly; `0` disables |
 | `IDP_CARTOGRAPH_EXTRACT_ATTEMPTS` / `IDP_CARTOGRAPH_RETRY_DELAY_SECONDS` | `2` / `30` | Transient extraction failures retried this many times in all |
 
 **Cartograph**

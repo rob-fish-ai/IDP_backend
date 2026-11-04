@@ -1,22 +1,26 @@
-"""Housekeeping on the job store, and the transient-failure test the audit
-task retries on.
+"""Housekeeping on the job store and the output folder, and the
+transient-failure test the audit task retries on.
 
-The maintenance thread runs two sweeps on an interval: retention deletes
-terminal rows older than `audit_retention_days`, and the watchdog fails a
-row whose worker died without the process stopping. A row whose process
+The maintenance thread runs three sweeps on an interval: retention deletes
+terminal rows older than `audit_retention_days`, the output sweep deletes
+what the engine wrote under output_dir more than `output_retention_days`
+ago, and the watchdog fails a row whose worker died without the process
+stopping. A row whose process
 stopped is not the watchdog's: the resume path claims every owned
 Cartograph row at start, before the first sweep, and runs it again.
 """
 from __future__ import annotations
 
 import logging
+import shutil
 import threading
 import time
+from pathlib import Path
 
 from app.core.config import Settings
 from app.core.dependencies import get_settings
 from app.core.exceptions import ClassificationUnavailableError, ExtractionUnavailableError
-from app.services.audit.job_store import EXTRACTED, EXTRACTING, QUEUED, get_job_store
+from app.services.audit.job_store import _OWNED_STATES, EXTRACTED, EXTRACTING, QUEUED, get_job_store
 
 logger = logging.getLogger(__name__)
 
@@ -133,6 +137,49 @@ def watchdog_sweep(settings: Settings) -> int:
     return len(wedged)
 
 
+def output_sweep(settings: Settings) -> int:
+    """Delete what the engine wrote under output_dir more than
+    `output_retention_days` ago: the extraction JSON kept under results/,
+    and a cartograph_<case_ref> work dir a crash left behind (a run deletes
+    its own on the way out, so one older than the window is an orphan; a
+    case still owned by the store is left alone regardless). The kept
+    packets under pdfs/ are pruned by their own rule here too, so they age
+    out even when no new case arrives to trigger it. Returns the number of
+    entries removed; 0 days disables the sweep."""
+    days = settings.output_retention_days
+    if days <= 0:
+        return 0
+    root = Path(settings.output_dir)
+    cutoff = time.time() - days * 86400
+    removed = 0
+
+    results = root / "results"
+    if results.is_dir():
+        for f in results.glob("*.json"):
+            if f.stat().st_mtime < cutoff:
+                f.unlink(missing_ok=True)
+                removed += 1
+
+    store = get_job_store(settings.audit_job_db)
+    for d in root.glob("cartograph_*"):
+        if not d.is_dir() or d.stat().st_mtime >= cutoff:
+            continue
+        row = store.get(d.name[len("cartograph_"):])
+        if row and row.get("state") in _OWNED_STATES:
+            continue
+        shutil.rmtree(d, ignore_errors=True)
+        removed += 1
+
+    pdfs = root / "pdfs"
+    if pdfs.is_dir() and settings.pdf_retention_days > 0:
+        from app.services.cartograph.tasks import prune_packets
+        removed += prune_packets(pdfs, settings.pdf_retention_days, settings.pdf_retention_max_mb)
+
+    if removed:
+        logger.info("Output sweep removed %d entr(y/ies) older than %d day(s) under %s", removed, days, root)
+    return removed
+
+
 # ---------------------------------------------------------------------------
 # The maintenance thread
 # ---------------------------------------------------------------------------
@@ -144,10 +191,12 @@ _MAINT_STOP: threading.Event | None = None
 def _run_maintenance_loop(stop_event: threading.Event) -> None:
     settings = get_settings()
     interval = settings.audit_maintenance_interval_seconds
-    logger.info("Maintenance thread started (retention=%dd, interval=%ds)", settings.audit_retention_days, interval)
+    logger.info("Maintenance thread started (rows=%dd, output=%dd, interval=%ds)",
+                settings.audit_retention_days, settings.output_retention_days, interval)
     while not stop_event.is_set():
         try:
             retention_sweep(settings)
+            output_sweep(settings)
             watchdog_sweep(settings)
         except Exception:
             logger.exception("Maintenance sweep failed — will retry next interval")
