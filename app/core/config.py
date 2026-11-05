@@ -1,6 +1,16 @@
 from pathlib import Path
 
+from pydantic import BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class CartographEnvironment(BaseModel):
+    """One Cartograph environment the engine serves: where its results
+    go, the secret that signs them, and the secret its requests arrive
+    signed with."""
+    ingest_url: str = ""
+    ingest_secret: str = ""
+    callback_secret: str = ""
 
 
 class Settings(BaseSettings):
@@ -145,13 +155,24 @@ class Settings(BaseSettings):
     audit_maintenance_interval_seconds: int = 3600   # 1 hour
 
     # --- Cartograph integration -------------------------------------------
-    # Outbound: where extraction results are POSTed, and the secret used to
-    # sign them. Cartograph verifies with the same scheme it uses inbound.
+    # The environments this engine serves, by name — Cartograph runs dev,
+    # staging and prod, and its staging shares the prod engine. Each has
+    # its own ingest URL (where results are POSTed), ingest secret (signs
+    # them) and callback secret (its requests arrive signed with it). The
+    # engine tells callers apart by which callback secret verifies the
+    # signature, delivers back to that environment, and keys the job
+    # store per environment. A JSON object in the env file:
+    #   IDP_CARTOGRAPH_ENVIRONMENTS={"prod": {"ingest_url": "...",
+    #       "ingest_secret": "...", "callback_secret": "..."}, "staging": {...}}
+    cartograph_environments: dict[str, CartographEnvironment] = {}
+    # The environment whose rows are keyed by bare case_ref (the others
+    # are keyed "<name>:<case_ref>"); the only or first configured one
+    # when unset. Keeps rows written before environments existed valid.
+    cartograph_default_environment: str = ""
+    # The single-environment settings from before 2026-11-05. Still read:
+    # when no environments are configured they define one, named "default".
     cartograph_ingest_url: str = ""
     cartograph_ingest_secret: str = ""
-    # Inbound: the secret Cartograph signs its result callback with. Distinct
-    # from the outbound secret so a compromise in one direction does not
-    # expose the other.
     cartograph_callback_secret: str = ""
     # Cartograph's own picklists for income and asset type. Supplied as
     # configuration because they belong to the consumer, not to the engine:

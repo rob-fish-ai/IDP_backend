@@ -75,7 +75,11 @@ CREATE TABLE IF NOT EXISTS audit_jobs (
     cartograph_import_result TEXT,   -- JSON: their import outcome + warnings
     cartograph_import_at REAL,
     cartograph_request TEXT,         -- the case request body as received
-    checklist_rows TEXT              -- JSON: checklist rows read from it
+    checklist_rows TEXT,             -- JSON: checklist rows read from it
+    -- The Cartograph environment the case came from (dev, staging, prod).
+    -- Rows of the default environment are keyed by bare case_ref, the
+    -- others "<environment>:<case_ref>" (cartograph.environments.job_key).
+    environment TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_state ON audit_jobs(state);
@@ -149,6 +153,7 @@ class JobStore:
                 # can say what Cartograph sent that the engine dropped.
                 ("cartograph_request", "TEXT"),
                 ("checklist_rows", "TEXT"),
+                ("environment", "TEXT"),
             ):
                 if column not in existing_cols:
                     conn.execute(
@@ -188,6 +193,7 @@ class JobStore:
         content_document_id: str | None,
         source: str = "cartograph",
         claimed: bool = False,
+        environment: str | None = None,
     ) -> dict[str, Any]:
         """Create or refresh a job. Idempotent.
 
@@ -214,11 +220,12 @@ class JobStore:
             conn.execute("""
                 INSERT INTO audit_jobs (
                     case_id, case_number, state, cert_type, funding_program,
-                    content_document_id, source, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    content_document_id, source, environment, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(case_id) DO UPDATE SET
                     case_number = excluded.case_number,
                     state = excluded.state,
+                    environment = excluded.environment,
                     cert_type = excluded.cert_type,
                     funding_program = excluded.funding_program,
                     content_document_id = excluded.content_document_id,
@@ -233,7 +240,7 @@ class JobStore:
                     completed_at = NULL
             """, (
                 case_id, case_number, initial_state, cert_type, funding_program,
-                content_document_id, source, now, now,
+                content_document_id, source, environment, now, now,
             ))
             return {"state": initial_state, "deduplicated": False}
 

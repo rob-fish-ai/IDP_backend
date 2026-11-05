@@ -117,11 +117,30 @@ X-Timestamp = unix seconds
 X-Signature = HMAC_SHA256(secret, signed).hexdigest()     # hex, no prefix
 ```
 
-Inbound requests are verified against `IDP_CARTOGRAPH_CALLBACK_SECRET`;
-outbound deliveries are signed with `IDP_CARTOGRAPH_INGEST_SECRET` — one
-secret per direction. Fail closed: an unset inbound secret, missing headers,
-a timestamp more than 300 s from now, or a mismatch all return **401**. The
-signature covers the exact bytes sent.
+One engine host can serve several Cartograph environments (Cartograph runs
+dev, staging and prod; its staging shares the prod engine). Each environment
+has its own secret pair and ingest URL under `IDP_CARTOGRAPH_ENVIRONMENTS`:
+
+```
+IDP_CARTOGRAPH_ENVIRONMENTS={"prod": {"ingest_url": "https://.../webhooks/runpod_ocr_results",
+                                      "ingest_secret": "...", "callback_secret": "..."},
+                             "staging": {...}}
+```
+
+An inbound request is verified against each environment's `callback_secret`;
+the one that verifies names the environment, and the result is signed with
+that environment's `ingest_secret` and POSTed to its `ingest_url`. Job rows
+are keyed per environment (`<name>:<case_ref>`, bare `case_ref` for the
+default environment — `IDP_CARTOGRAPH_DEFAULT_ENVIRONMENT`, else the first
+configured), so a staging run of a case never deduplicates against the prod
+run of the same reference. The older single-environment settings
+(`IDP_CARTOGRAPH_INGEST_URL`, `_INGEST_SECRET`, `_CALLBACK_SECRET`) still
+work and define one environment named `default`. `/health` lists the
+environments served (names and hosts, never secrets).
+
+Fail closed: no configured environment, missing headers, a timestamp more
+than 300 s from now, or a signature matching no environment all return
+**401**. The signature covers the exact bytes sent.
 
 ### `POST /integration/case`
 
@@ -392,9 +411,9 @@ carrying retired settings does not stop the engine.
 
 | Setting | Default | Meaning |
 |---|---|---|
-| `IDP_CARTOGRAPH_INGEST_URL` | — | Where results are POSTed |
-| `IDP_CARTOGRAPH_INGEST_SECRET` | — | Signs outbound deliveries |
-| `IDP_CARTOGRAPH_CALLBACK_SECRET` | — | Verifies every inbound request |
+| `IDP_CARTOGRAPH_ENVIRONMENTS` | `{}` | JSON object: per environment `ingest_url`, `ingest_secret`, `callback_secret` |
+| `IDP_CARTOGRAPH_DEFAULT_ENVIRONMENT` | first configured | Environment whose rows are keyed by bare `case_ref` |
+| `IDP_CARTOGRAPH_INGEST_URL` / `_INGEST_SECRET` / `_CALLBACK_SECRET` | — | Single-environment form; defines one environment named `default` when `IDP_CARTOGRAPH_ENVIRONMENTS` is unset |
 | `IDP_CARTOGRAPH_INCOME_TYPES` / `IDP_CARTOGRAPH_ASSET_TYPES` | `[]` | Cartograph's picklists (JSON lists) |
 | `IDP_CARTOGRAPH_TYPE_ALIASES` | `{}` | Normalised term → picklist value overrides |
 | `IDP_CARTOGRAPH_TIMEOUT_SECONDS` | `30` | Outbound POST timeout |

@@ -131,7 +131,8 @@ def watchdog_sweep(settings: Settings) -> int:
         if (job.get("source") or "") != "cartograph":
             continue        # a row from a retired integration; nobody to tell
         try:
-            post_failure(case_number, err, settings, error_code="engine_error")
+            post_failure(case_number, err, settings, error_code="engine_error",
+                         environment=job.get("environment"))
         except Exception:
             logger.exception("Watchdog: could not report wedged case_ref=%s to Cartograph", case_number)
     return len(wedged)

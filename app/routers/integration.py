@@ -32,6 +32,7 @@ from app.core.config import Settings
 from app.core.dependencies import get_settings
 from app.services.audit.job_store import get_job_store
 from app.services.cartograph.checklist import normalise_rows
+from app.services.cartograph.environments import job_key
 from app.services.cartograph.intake import enqueue_case
 
 logger = logging.getLogger(__name__)
@@ -138,12 +139,19 @@ async def receive_case(
     documents as the first act of the audit, so the presigned URLs only
     need to outlive the wait rather than the whole audit.
     """
+    # The environment the signature named (cartograph.environments). The
+    # job is keyed by it: staging and prod share Cartograph's database and
+    # so its case references, and a staging run must not be deduplicated
+    # against the prod run of the same case.
+    environment = getattr(request.state, "environment", None)
+    job = job_key(settings, environment, payload.case_ref)
+
     # Idempotency lives in the job store rather than in the signature window.
     # Cartograph is expected to retry, and a retry is indistinguishable from
     # a replay — both should cost one audit, not two.
     store = get_job_store(settings.audit_job_db)
     repeat = repeat_of_delivered(
-        store.get(payload.case_ref),
+        store.get(job),
         [d.model_dump() for d in payload.documents],
         settings.cartograph_repost_window_seconds,
     )
@@ -158,8 +166,9 @@ async def receive_case(
             "delivered_seconds_ago": repeat,
         }
     upsert = store.upsert_pending(
-        case_id=payload.case_ref,
+        case_id=job,
         case_number=payload.case_ref,
+        environment=environment,
         cert_type=payload.cert_type,
         funding_program=payload.program,
         content_document_id=None,
@@ -201,18 +210,19 @@ async def receive_case(
                        payload.case_ref, unknown)
     checklist_rows = normalise_rows(body if isinstance(body, dict) else {})
     try:
-        store.record_request(payload.case_ref, raw, checklist_rows)
+        store.record_request(job, raw, checklist_rows)
     except Exception:
         logger.exception("Could not keep the request for case_ref=%s", payload.case_ref)
 
     logger.info(
-        "Cartograph audit request case_ref=%s cert=%s program=%s documents=%d checklist_rows=%d",
-        payload.case_ref, payload.cert_type, payload.program,
+        "Cartograph audit request case_ref=%s env=%s cert=%s program=%s documents=%d checklist_rows=%d",
+        payload.case_ref, environment, payload.cert_type, payload.program,
         len(payload.documents), len(checklist_rows),
     )
 
     enqueue_case(
         case_ref=payload.case_ref,
+        environment=environment,
         documents=[d.model_dump() for d in payload.documents],
         cert_type=payload.cert_type,
         program=payload.program,
@@ -224,7 +234,7 @@ async def receive_case(
         existing_records_manifest=payload.existing_records_manifest,
     )
 
-    return {"status": "accepted", "case_ref": payload.case_ref}
+    return {"status": "accepted", "case_ref": payload.case_ref, "environment": environment}
 
 
 # ---------------------------------------------------------------------------
@@ -262,15 +272,16 @@ async def cartograph_import_result(request: Request) -> dict:
     # field. It must not be stored as an import result: that would replace
     # the record of how the import went with a list of verdicts.
     if (payload.get("event_type") or payload.get("event") or "").strip().lower() == "findings_feedback":
-        return _store_findings_feedback(payload, raw)
+        return _store_findings_feedback(payload, raw, getattr(request.state, "environment", None))
 
     # Store it against the job before logging. A case that was delivered and
     # then rejected during their import is otherwise indistinguishable here
     # from one that imported cleanly — both leave the job row saying "done".
     if case_ref:
         try:
-            get_job_store(get_settings().audit_job_db).record_import_result(
-                str(case_ref), payload,
+            settings = get_settings()
+            get_job_store(settings.audit_job_db).record_import_result(
+                job_key(settings, getattr(request.state, "environment", None), str(case_ref)), payload,
             )
         except Exception:
             # Never let bookkeeping turn a report we asked for into an error
@@ -286,8 +297,8 @@ async def cartograph_import_result(request: Request) -> dict:
     # that produced warnings is something to act on, not background noise.
     if status == "ok" and not warnings:
         logger.info(
-            "Cartograph import ok case_ref=%s scan_id=%s created=%s",
-            case_ref, payload.get("scan_id"), counts,
+            "Cartograph import ok case_ref=%s env=%s scan_id=%s created=%s",
+            case_ref, getattr(request.state, "environment", None), payload.get("scan_id"), counts,
         )
     else:
         logger.warning(
@@ -370,12 +381,13 @@ def _normalise_feedback_case(case: dict) -> dict:
     return out
 
 
-def _store_one_feedback_case(case: dict) -> tuple[str, dict]:
+def _store_one_feedback_case(case: dict, environment: str | None = None) -> tuple[str, dict]:
     case_ref = case.get("case_ref") or case.get("job_id")
     case = _normalise_feedback_case(case)
     try:
-        counts = get_job_store(get_settings().audit_job_db).record_findings_feedback(
-            str(case_ref), case,
+        settings = get_settings()
+        counts = get_job_store(settings.audit_job_db).record_findings_feedback(
+            job_key(settings, environment, str(case_ref)), case,
         )
     except Exception:
         logger.exception("Could not store findings feedback for case_ref=%s", case_ref)
@@ -387,7 +399,7 @@ def _store_one_feedback_case(case: dict) -> tuple[str, dict]:
     return str(case_ref), counts
 
 
-def _store_findings_feedback(payload, raw: bytes = b"") -> dict:
+def _store_findings_feedback(payload, raw: bytes = b"", environment: str | None = None) -> dict:
     """Store a findings_feedback body, which is either one case with a
     top-level case_ref or a batch envelope with a `cases` list.
 
@@ -403,7 +415,7 @@ def _store_findings_feedback(payload, raw: bytes = b"") -> dict:
         raise HTTPException(status_code=400, detail="body must be a JSON object")
 
     if payload.get("case_ref") or payload.get("job_id"):
-        case_ref, counts = _store_one_feedback_case(payload)
+        case_ref, counts = _store_one_feedback_case(payload, environment)
         return {"ok": True, "received": case_ref, "stored": counts}
 
     cases = payload.get("cases")
@@ -412,7 +424,7 @@ def _store_findings_feedback(payload, raw: bytes = b"") -> dict:
         skipped = 0
         for case in cases:
             if isinstance(case, dict) and (case.get("case_ref") or case.get("job_id")):
-                case_ref, counts = _store_one_feedback_case(case)
+                case_ref, counts = _store_one_feedback_case(case, environment)
                 stored[case_ref] = counts
             else:
                 skipped += 1
@@ -457,4 +469,4 @@ async def cartograph_findings_feedback(request: Request) -> dict:
     except ValueError:
         logger.warning("Findings feedback rejected, invalid JSON: %s", _describe_rejected_body(raw))
         raise HTTPException(status_code=400, detail="invalid JSON body")
-    return _store_findings_feedback(payload, raw)
+    return _store_findings_feedback(payload, raw, getattr(request.state, "environment", None))

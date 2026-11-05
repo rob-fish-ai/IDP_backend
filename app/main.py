@@ -23,6 +23,13 @@ async def lifespan(_app: FastAPI):
     # Cases that were in flight when the last process stopped are claimed
     # before the maintenance thread starts, or its first sweep would fail
     # them as wedged instead of letting them run again.
+    from app.services.cartograph.environments import describe
+    env = describe(settings)
+    logging.getLogger(__name__).info(
+        "Cartograph environments: %s (default: %s)",
+        ", ".join(f"{n} -> {d['ingest_host'] or 'no ingest url'}" for n, d in env["environments"].items()) or "none",
+        env["default"],
+    )
     get_intake(settings)
     start_resume_thread(settings, get_job_store(settings.audit_job_db))
     start_maintenance_thread()

@@ -48,7 +48,7 @@ class Intake:
     # -- submitting -------------------------------------------------------
 
     def submit(self, **kwargs) -> Future:
-        case_ref = kwargs["case_ref"]
+        case_ref = _label(kwargs)
         with self._lock:
             self._waiting[case_ref] = time.time()
             running, ahead = len(self._running), len(self._waiting) - 1
@@ -58,7 +58,7 @@ class Intake:
         return self._pool.submit(self._audit, kwargs)
 
     def _audit(self, kwargs: dict) -> None:
-        case_ref = kwargs["case_ref"]
+        case_ref = _label(kwargs)
         with self._lock:
             joined = self._waiting.pop(case_ref, None)
             self._running.add(case_ref)
@@ -126,6 +126,13 @@ def get_intake(settings=None) -> Intake:
             )
             logger.info("Intake ready: %d case(s) audited at once, the rest wait in line", _INTAKE.workers)
         return _INTAKE
+
+
+def _label(kwargs: dict) -> str:
+    """How the line names a case: by case_ref, prefixed by the environment
+    when there is one, since staging and prod share case references."""
+    env = kwargs.get("environment")
+    return f"{env}:{kwargs['case_ref']}" if env else kwargs["case_ref"]
 
 
 def enqueue_case(**kwargs) -> Future:

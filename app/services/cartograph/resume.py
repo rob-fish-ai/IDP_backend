@@ -65,9 +65,11 @@ def resume_kwargs(row: dict, settings) -> dict | None:
         return None
     if not isinstance(body, dict) or not body.get("documents"):
         return None
-    packet = kept_packet(row["case_id"], settings)
+    case_ref = row.get("case_number") or row["case_id"]
+    packet = kept_packet(case_ref, settings)
     return {
-        "case_ref": row["case_id"],
+        "case_ref": case_ref,
+        "environment": row.get("environment"),
         "documents": body["documents"],
         "cert_type": body.get("cert_type"),
         "program": body.get("program"),
@@ -99,7 +101,8 @@ def claim_interrupted_cases(settings, store) -> list[dict]:
                          row["case_id"], row.get("state"))
             store.mark_extraction_failed(row["case_id"], reason)
             try:
-                post_failure(row["case_id"], reason, settings, error_code="engine_restarted")
+                post_failure(row.get("case_number") or row["case_id"], reason, settings,
+                             error_code="engine_restarted", environment=row.get("environment"))
             except Exception:
                 logger.exception("Resume: could not report case_ref=%s to Cartograph", row["case_id"])
             continue

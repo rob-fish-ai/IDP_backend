@@ -17,6 +17,7 @@ import logging
 import httpx
 
 from app.core.config import Settings
+from app.services.cartograph.environments import CartographNotConfigured, for_delivery, is_configured
 from app.services.cartograph.signing import (
     SIGNATURE_HEADER,
     TIMESTAMP_HEADER,
@@ -32,25 +33,9 @@ from app.services.cartograph.adapter import SCHEMA_VERSION
 logger = logging.getLogger(__name__)
 
 
-class CartographNotConfigured(RuntimeError):
-    """Raised when delivery is attempted without a URL or secret."""
-
-
-def is_configured(settings: Settings) -> bool:
-    """Whether delivery can be attempted at all.
-
-    The placeholder check is not pedantry. The shipped default is
-    'https://<cartograph-host>/webhooks/runpod_ocr_results', which is a
-    non-empty string, so a bare truthiness test calls it configured and the
-    failure surfaces minutes later as a DNS error inside a background task
-    rather than as the configuration problem it is.
-    """
-    url = settings.cartograph_ingest_url
-    if not url or not settings.cartograph_ingest_secret:
-        return False
-    if "<" in url or ">" in url:
-        return False
-    return True
+# CartographNotConfigured and is_configured live in `environments` now and
+# are re-exported here for the callers that import them from the client.
+__all__ = ["CartographNotConfigured", "is_configured", "post_extraction", "post_failure"]
 
 
 def post_failure(
@@ -59,6 +44,7 @@ def post_failure(
     settings: Settings,
     *,
     error_code: str = "extraction_failed",
+    environment: str | None = None,
 ) -> dict | None:
     """Tell Cartograph a case could not be audited.
 
@@ -71,10 +57,10 @@ def post_failure(
     Best-effort by design. It is called from failure paths, so it must not
     raise and mask the error it is reporting.
     """
-    if not is_configured(settings):
+    if not is_configured(settings, environment):
         logger.error(
-            "case_ref=%s failed (%s) and Cartograph is not configured, so the "
-            "failure could not be reported: %s", case_ref, error_code, reason,
+            "case_ref=%s failed (%s) and Cartograph environment %s is not configured, so the "
+            "failure could not be reported: %s", case_ref, error_code, environment or "default", reason,
         )
         return None
 
@@ -86,7 +72,7 @@ def post_failure(
         "error_message": reason,
     }
     try:
-        return post_extraction(payload, settings)
+        return post_extraction(payload, settings, environment=environment)
     except Exception:
         logger.exception(
             "case_ref=%s could not report failure to Cartograph", case_ref,
@@ -94,20 +80,18 @@ def post_failure(
         return None
 
 
-def post_extraction(payload: dict, settings: Settings) -> dict:
-    """POST one extraction payload. Returns Cartograph's parsed response.
+def post_extraction(payload: dict, settings: Settings, environment: str | None = None) -> dict:
+    """POST one extraction payload to the environment the case came from
+    (the default one when unnamed). Returns Cartograph's parsed response.
 
     The body is serialized once and both signed and sent as the same bytes:
     signing a re-serialization would produce a different string and fail
     verification for reasons that are invisible from the 401.
     """
-    if not is_configured(settings):
-        raise CartographNotConfigured(
-            "IDP_CARTOGRAPH_INGEST_URL / IDP_CARTOGRAPH_INGEST_SECRET are not set"
-        )
+    name, env = for_delivery(settings, environment)
 
     body = json.dumps(payload, separators=(",", ":"), default=str).encode()
-    timestamp, signature = sign(body, settings.cartograph_ingest_secret)
+    timestamp, signature = sign(body, env.ingest_secret)
 
     headers = {
         "Content-Type": "application/json",
@@ -116,9 +100,7 @@ def post_extraction(payload: dict, settings: Settings) -> dict:
     }
 
     with httpx.Client(timeout=settings.cartograph_timeout_seconds) as client:
-        response = client.post(
-            settings.cartograph_ingest_url, content=body, headers=headers,
-        )
+        response = client.post(env.ingest_url, content=body, headers=headers)
 
     try:
         parsed = response.json()
@@ -127,13 +109,13 @@ def post_extraction(payload: dict, settings: Settings) -> dict:
 
     if response.status_code >= 400:
         logger.error(
-            "Cartograph ingest rejected case_ref=%s status=%d body=%s",
-            payload.get("case_ref"), response.status_code, parsed,
+            "Cartograph ingest rejected case_ref=%s env=%s status=%d body=%s",
+            payload.get("case_ref"), name, response.status_code, parsed,
         )
     else:
         logger.info(
-            "Cartograph ingest accepted case_ref=%s status=%d scan_id=%s",
-            payload.get("case_ref"), response.status_code, parsed.get("scan_id"),
+            "Cartograph ingest accepted case_ref=%s env=%s status=%d scan_id=%s",
+            payload.get("case_ref"), name, response.status_code, parsed.get("scan_id"),
         )
 
     return {

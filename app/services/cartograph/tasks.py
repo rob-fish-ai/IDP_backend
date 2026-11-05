@@ -26,6 +26,7 @@ from app.services.cartograph.client import (
 )
 from app.services.cartograph.documents import DocumentUnavailable, fetch_packet
 from app.services.pdf_service import process_pdf_full
+from app.services.cartograph.environments import job_key
 from app.services.cartograph.maintenance import is_retryable_error
 
 logger = logging.getLogger(__name__)
@@ -102,8 +103,9 @@ def audit_case(
     checklist_rows: list[dict] | None = None,
     existing_records_manifest: dict | list | None = None,
     fallback_packet: str | Path | None = None,
+    environment: str | None = None,
 ) -> None:
-    """Run one notified case end to end.
+    """Run one notified case end to end, for the environment it came from.
 
     Every failure is recorded on the job row and reported to Cartograph
     rather than only logged. A case that fails silently here is a case
@@ -116,23 +118,25 @@ def audit_case(
     """
     settings = get_settings()
     store = get_job_store(settings.audit_job_db)
+    job = job_key(settings, environment, case_ref)
     try:
         _audit_case(
             store, settings, case_ref=case_ref, documents=documents, cert_type=cert_type,
             program=program, job_id=job_id, community_id=community_id,
             unit_number=unit_number, effective_date=effective_date, checklist_rows=checklist_rows,
             existing_records_manifest=existing_records_manifest, fallback_packet=fallback_packet,
+            environment=environment,
         )
     except Exception as exc:
         logger.exception("Unhandled failure auditing case_ref=%s", case_ref)
-        row = store.get(case_ref) or {}
+        row = store.get(job) or {}
         reason = f"unexpected error: {exc}"
         if row.get("state") in (None, "pending", "queued", "extracting"):
-            store.mark_extraction_failed(case_ref, reason)
+            store.mark_extraction_failed(job, reason)
         else:
-            store.mark_comparison_failed(case_ref, reason)
+            store.mark_comparison_failed(job, reason)
         try:
-            post_failure(case_ref, reason, settings, error_code="engine_error")
+            post_failure(case_ref, reason, settings, error_code="engine_error", environment=environment)
         except Exception:
             logger.exception("Could not report the failure of case_ref=%s to Cartograph", case_ref)
 
@@ -152,7 +156,9 @@ def _audit_case(
     checklist_rows: list[dict] | None = None,
     existing_records_manifest: dict | list | None = None,
     fallback_packet: str | Path | None = None,
+    environment: str | None = None,
 ) -> None:
+    job = job_key(settings, environment, case_ref)
 
     # Their vocabulary, translated before it reaches anything that keys on
     # ours. An untranslated "annual" disables every cert-type rule, and
@@ -167,7 +173,7 @@ def _audit_case(
             case_ref, cert_type,
         )
 
-    store.mark_extracting(case_ref)
+    store.mark_extracting(job)
 
     # Fetch first, before anything expensive. Presigned URLs expire, so the
     # window between the notification and the download is kept as small as
@@ -188,9 +194,9 @@ def _audit_case(
             from_kept_packet = True
         else:
             logger.error("case_ref=%s document unavailable: %s", case_ref, exc)
-            store.mark_extraction_failed(case_ref, f"document unavailable: {exc}")
+            store.mark_extraction_failed(job, f"document unavailable: {exc}")
             # Recoverable on their side: reissue the link and notify again.
-            post_failure(case_ref, str(exc), settings,
+            post_failure(case_ref, str(exc), settings, environment=environment,
                          error_code="document_unavailable")
             return
     for warning in packet_warnings:
@@ -221,7 +227,7 @@ def _audit_case(
                 # the watchdog cannot tell that from a dead worker — it would
                 # fail a running case, which releases the dedupe and lets a
                 # re-notification audit the same case twice.
-                heartbeat=lambda: store.touch(case_ref),
+                heartbeat=lambda: store.touch(job),
             ),
             attempts=settings.cartograph_extract_attempts,
             delay=settings.cartograph_retry_delay_seconds,
@@ -229,13 +235,13 @@ def _audit_case(
             on_retry=lambda n, exc: (
                 logger.warning("Extraction attempt %d for case_ref=%s failed for a transient reason (%s) — retrying",
                                n, case_ref, exc),
-                store.touch(case_ref),
+                store.touch(job),
             ),
         )
     except Exception as exc:
         logger.exception("Extraction failed for case_ref=%s", case_ref)
-        store.mark_extraction_failed(case_ref, str(exc))
-        post_failure(case_ref, str(exc), settings, error_code="extraction_failed")
+        store.mark_extraction_failed(job, str(exc))
+        post_failure(case_ref, str(exc), settings, error_code="extraction_failed", environment=environment)
         return
     finally:
         # The work directory (page renders, OCR text) is deleted, but the
@@ -257,7 +263,7 @@ def _audit_case(
         extraction.model_dump()
         if hasattr(extraction, "model_dump") else extraction
     )
-    store.mark_extracted(case_ref, extraction_dict)
+    store.mark_extracted(job, extraction_dict)
 
     adapted = build_payload(
         extraction,
@@ -281,7 +287,7 @@ def _audit_case(
     for warning in adapted.warnings:
         logger.warning("case_ref=%s payload warning: %s", case_ref, warning)
 
-    if not is_configured(settings):
+    if not is_configured(settings, environment):
         # Extraction is finished and stored, so nothing is lost — but the
         # result has nowhere to go. Say so plainly rather than leaving the
         # job looking complete.
@@ -296,19 +302,19 @@ def _audit_case(
         return
 
     try:
-        response = post_extraction(adapted.payload, settings)
+        response = post_extraction(adapted.payload, settings, environment=environment)
     except CartographNotConfigured as exc:
         logger.error("case_ref=%s delivery skipped: %s", case_ref, exc)
-        store.mark_comparison_failed(case_ref, str(exc))
+        store.mark_comparison_failed(job, str(exc))
         return
     except Exception as exc:
         logger.exception("Delivery to Cartograph failed for case_ref=%s", case_ref)
-        store.mark_comparison_failed(case_ref, f"delivery failed: {exc}")
+        store.mark_comparison_failed(job, f"delivery failed: {exc}")
         return
 
     # Recorded before the outcome is judged, so a rejection keeps the reason
     # their endpoint gave rather than only the status code.
-    store.record_delivery(case_ref, response)
+    store.record_delivery(job, response)
 
     if not response["ok"]:
         # Their ingest rejected it. Record enough to reproduce without

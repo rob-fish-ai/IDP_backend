@@ -55,7 +55,10 @@ Cartograph (Heroku)                              IDP engine (RunPod, FastAPI :80
   pages below the 0.5 quality threshold, flagged by the service, degenerate
   or repetitive, or whose ink density implies text OCR did not return.
 - **Auth**: HMAC-SHA256 over `"{timestamp}.{raw_body}"`, hex digest, headers
-  `X-Timestamp` / `X-Signature`, 300 s skew, one secret per direction, fail
+  `X-Timestamp` / `X-Signature`, 300 s skew, one secret pair per Cartograph
+  environment (`IDP_CARTOGRAPH_ENVIRONMENTS`: dev, staging and prod can share
+  a host; the secret that verifies names the caller and its results go back
+  to that environment's URL, with job rows keyed per environment), fail
   closed (401 when unset).
 
 ### 1.2 Document acquisition
@@ -239,8 +242,9 @@ packet before it ships.
   packet, so its rent figures carry no source `job_document_id`.
 - **Watchdog-failed cases need re-notification**; the engine does not re-run
   a case whose worker died inside a live process.
-- **Single inbound secret** — the dual-secret rotation the contract asks for
-  is not implemented in `verify()`. **`expense_records`** is not delivered.
+- **One secret per environment, no rotation window** — the dual-secret
+  rotation the contract asks for is not implemented in `verify()`; rotating
+  means changing both sides together. **`expense_records`** is not delivered.
 - **Empty picklists collapse everything to `other`** until
   `IDP_CARTOGRAPH_INCOME_TYPES` / `_ASSET_TYPES` are configured.
 - **Extractor↔classifier coupling is by label** (mirror renames in
