@@ -32,9 +32,9 @@ def test_every_certification_family_is_ordered_the_same_way():
     assert [(g.document_type, g.pages) for g in out] == [("Tenant Income Certification (TIC)", [2]), ("Tenant Income Certification (TIC) (Previous)", [9])]
 
     text = {2: "Form RD 3560-8  Effective Date: 07/01/2026", 9: "Form RD 3560-8  Effective Date: 07/01/2025"}
-    groups = [_group("HUD 3560 Form (Previous)", [2], category="ignore"), _group("HUD 3560 Form", [9])]
+    groups = [_group("RD 3560-8 Form (Previous)", [2], category="ignore"), _group("RD 3560-8 Form", [9])]
     out, _ = _order_certifications(groups, text)
-    assert [(g.document_type, g.pages) for g in out] == [("HUD 3560 Form", [2]), ("HUD 3560 Form (Previous)", [9])]
+    assert [(g.document_type, g.pages) for g in out] == [("RD 3560-8 Form", [2]), ("RD 3560-8 Form (Previous)", [9])]
 
 
 def test_labels_the_model_got_right_are_left_alone():

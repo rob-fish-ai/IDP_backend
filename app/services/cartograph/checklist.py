@@ -275,7 +275,7 @@ def match_checklist(rows: list[dict], extraction, expect_previous: bool = False)
         m["note_source"] = NOTE_SOURCE
     return out
 
-_CERT_FORMS = {"HUD 50059", "Tenant Income Certification (TIC)", "HUD 3560 Form"}
+_CERT_FORMS = {"HUD 50059", "Tenant Income Certification (TIC)", "RD 3560-8 Form"}
 
 # Every note the engine writes is marked as the scan's in a field of its
 # own, so Cartograph can tell it from a note typed by staff (and clear it

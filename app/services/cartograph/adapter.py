@@ -852,7 +852,7 @@ def build_cert_review(
 _FORM_TYPE_OUT = {
     "HUD 50059": "HUD-50059",
     "Tenant Income Certification (TIC)": "TIC",
-    "HUD 3560 Form": "RD-3560-8",
+    "RD 3560-8 Form": "RD-3560-8",
     "HUD Model Lease": "HUD-LEASE",
 }
 # Forms whose printed gross rent is HUD's: contract rent + utility allowance.

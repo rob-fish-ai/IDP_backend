@@ -955,7 +955,7 @@ def _lower_fields(card: RecordScoreCard, field_names: tuple, score: float, reaso
 # the form does not carry is not a gap; a null in one it carries is.
 _FORM_MEMBER_FIELDS = {
     "HUD 50059": {"disabled", "student"},
-    "HUD 3560 Form": {"disabled", "student"},
+    "RD 3560-8 Form": {"disabled", "student"},
     "Tenant Income Certification (TIC)": {"student"},
     "HUD Model Lease": set(),
     "Lease Agreement": set(),

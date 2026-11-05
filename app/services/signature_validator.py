@@ -18,7 +18,7 @@ from app.services.findings import (
     RESOLVE_PRESENCE,
     make_finding,
 )
-from app.services.members import is_unborn
+from app.services.program import is_hud_property
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,6 @@ def validate_signatures(
         certification_info, _certification_date_state(inventory_hud, inventory_financial),
     ))
     findings.extend(_check_signed_after_effective(certification_info))
-    adult_count = _count_adults(household, certification_info)
     member_count = len(household.houseHold) if household else 0
 
     all_docs = (
@@ -70,115 +69,46 @@ def validate_signatures(
         _check_signed_dated(by_type, "HUD 50059",
                             findings, "HUD 50059 must be signed and dated (Section 11)")
 
-    # --- 3. Tenant Release and Consent: signed by all adults ---
-    _check_all_adults_signed(by_type, "Tenant Release and Consent Form",
-                             adult_count, findings,
-                             "Tenant Release and Consent Form must be signed by all adult members (Section 11)")
+    # The supporting forms (tenant release, student certification, 92006,
+    # the 9887 package, the acknowledgement of HUD forms, the model lease,
+    # lead paint) carry no signature finding. Their isSigned comes from
+    # the OCR text, and a handwritten signature is not in the text, so
+    # "could not verify a signature" fired on signed forms; reviewers
+    # rejected every one of those notes and confirmed none (the 47-row
+    # export of 2026-11-05). Whether such a form is present is checked
+    # elsewhere; only the certification form keeps a signature finding.
+    # The Initial Notice of Recertification is a letter from management,
+    # not a form the household signs (reviewer verdict on J-VIV-06676).
 
-    # --- 4. Student Status Certification: signed and dated ---
-    _check_signed_dated(by_type, "Student Status Certification",
-                        findings, "Student Status Certification must be signed and dated (Section 11)")
-
-    # --- 5. Citizenship Declaration (Section 214): one per member, signed, dated ---
-    # Only required for HUD/USDA properties
-    funding = (ctx.funding_program or "").lower()
-    is_hud_or_usda = any(p in funding for p in ("hud", "section", "usda")) or _has_hud_50059(group_types)
-    if is_hud_or_usda:
-        cit_docs = by_type.get("Citizenship Declaration", [])
-        # Form absent entirely = hard compliance gap. Form present but
-        # "unsigned" = unverifiable, not proven-missing: handwritten
-        # signatures never survive OCR, so text-level signed-counts fired
-        # on 99% of cases with zero correlation to reviewer rejections.
-        if member_count > 0 and not cit_docs:
+    # --- 5-6. Citizenship Declaration (Section 214) and Race and Ethnic
+    # Data Form: one per member. HUD forms; a tax-credit packet owes none.
+    is_hud_or_usda = is_hud_property(ctx.funding_program, group_types)
+    if is_hud_or_usda and member_count > 0:
+        if not by_type.get("Citizenship Declaration"):
             findings.append(
                 "Missing required compliance document: Citizenship "
                 "Declaration (Section 214) — one per household member "
                 "(Section 11)"
             )
-        elif member_count > 0 and sum(1 for d in cit_docs if d.isSigned == "Yes") < member_count:
+        if not by_type.get("HUD Race and Ethnic Data Form"):
             findings.append(
-                "Citizenship Declaration (Section 214) present but "
-                "signatures could not be verified from document text "
-                "(handwritten signatures are not machine-readable) — "
-                "verify signatures visually (Section 11)"
+                "Missing required compliance document: Race and Ethnic Data "
+                "Form — one per household member (Section 11)"
             )
 
-    # --- 6. Race and Ethnic Data Form: one per member, signed, dated ---
-    # A HUD form (HUD-27061-H); a tax-credit packet owes none, and this
-    # rule fired on every LIHTC household until it was gated like the
-    # citizenship rule above it.
-    race_docs = by_type.get("HUD Race and Ethnic Data Form", [])
-    if not is_hud_or_usda:
-        pass
-    elif member_count > 0 and not race_docs:
-        findings.append(
-            "Missing required compliance document: Race and Ethnic Data "
-            "Form — one per household member (Section 11)"
-        )
-    elif member_count > 0 and sum(1 for d in race_docs if d.isSigned == "Yes") < member_count:
-        findings.append(
-            "Race and Ethnic Data Form present but signatures could not "
-            "be verified from document text (handwritten signatures are "
-            "not machine-readable) — verify signatures visually (Section 11)"
-        )
-
-    # --- 7. HUD 92006: completed, signed, dated ---
-    _check_signed_dated(by_type, "HUD 92006",
-                        findings, "HUD 92006 (Emergency Contact) must be completed, signed, and dated (Section 11)")
-
-    # --- 8. HUD 9887: all adults sign, within 18 months ---
+    # --- 8. HUD 9887: within 18 months of the effective date ---
     # Completeness of the form (its final section present) is asserted on
-    # the page text by special_scenarios; page counts said nothing once the
-    # classifier split the 9887 package into cover, fact sheet, 9887 and
-    # 9887-A groups.
-    hud_9887_docs = by_type.get("HUD 9887", [])
-    if hud_9887_docs:
-        # Check 18-month rule
-        effective = _parse_date(
-            certification_info.effectiveDate if certification_info else None
-        )
-        for doc in hud_9887_docs:
-            sig_date = _parse_date(doc.signatureDate)
-            if effective and sig_date:
-                months_diff = (effective.year - sig_date.year) * 12 + (effective.month - sig_date.month)
-                if abs(months_diff) > 18:
-                    findings.append(
-                        f"HUD 9887 signature date {doc.signatureDate} is more than 18 months "
-                        f"from effective date {certification_info.effectiveDate} — Section 11"
-                    )
-
-        signed_count = sum(1 for d in hud_9887_docs if d.isSigned == "Yes")
-        if adult_count > 0 and signed_count < 1:
-            findings.append(_unverified(
-                "HUD 9887 must be signed by all adult household members (Section 11)"
-            ))
-
-    # --- 9. HUD 9887-A: signed ---
-    hud_9887a_docs = by_type.get("HUD 9887-A", [])
-    if hud_9887a_docs:
-        unsigned = [d for d in hud_9887a_docs if d.isSigned == "No"]
-        if unsigned:
-            findings.append(_unverified(
-                f"HUD 9887-A must be signed by tenant and owner on each form "
-                f"({len(unsigned)} form(s) show no signature in the text) (Section 11)"
-            ))
-
-    # --- 10. Acknowledgement of Receipt: signed by all adults ---
-    _check_all_adults_signed(by_type, "Acknowledgement of Receipt",
-                             adult_count, findings,
-                             "Acknowledgement of Receipt of HUD Forms must be signed by all adult members (Section 11)")
-
-    # (The Initial Notice of Recertification is a letter from management,
-    # not a form the household signs; it carries no signature requirement.
-    # Reviewer verdict on J-VIV-06676.)
-
-    # --- 12. HUD Model Lease ---
-    _check_signed_dated(by_type, "HUD Model Lease",
-                        findings, "HUD Model Lease must be signed and dated (Section 11)")
-
-    # --- 13. Lead-Based Paint ---
-    _check_signed_dated(by_type, "Lead-Based Paint Certification",
-                        findings, "Lead-Based Paint Certification must be signed (Section 11)")
+    # the page text by special_scenarios.
+    effective = _parse_date(certification_info.effectiveDate if certification_info else None)
+    for doc in by_type.get("HUD 9887", []):
+        sig_date = _parse_date(doc.signatureDate)
+        if effective and sig_date:
+            months_diff = (effective.year - sig_date.year) * 12 + (effective.month - sig_date.month)
+            if abs(months_diff) > 18:
+                findings.append(
+                    f"HUD 9887 signature date {doc.signatureDate} is more than 18 months "
+                    f"from effective date {certification_info.effectiveDate} — Section 11"
+                )
 
     return findings
 
@@ -212,54 +142,6 @@ def _unverified(message: str) -> str:
     return (f"{base}; a signature could not be verified from the document text "
             f"(handwritten signatures are not machine-readable) — verify visually (Section 11)")
 
-
-def _check_all_adults_signed(
-    by_type: dict[str, list],
-    doc_type: str,
-    adult_count: int,
-    findings: list[str],
-    message: str,
-) -> None:
-    """Add finding if signed count < adult count."""
-    docs = by_type.get(doc_type, [])
-    signed_count = sum(1 for d in docs if d.isSigned == "Yes")
-    if adult_count > 0 and docs and signed_count < adult_count:
-        findings.append(_unverified(message))
-
-
-def _count_adults(
-    household: HouseholdDemographics | None,
-    certification_info: CertificationInfo | None,
-) -> int:
-    """Count household members age >= 18 as of effective date."""
-    if not household or not household.houseHold:
-        return 0
-
-    effective = _parse_date(
-        certification_info.effectiveDate if certification_info else None
-    )
-    if not effective:
-        effective = date.today()
-
-    count = 0
-    for member in household.houseHold:
-        if is_unborn(member):
-            continue
-        dob = _parse_date(member.DOB)
-        if dob:
-            age = (effective - dob).days / 365.25
-            if age >= 18:
-                count += 1
-        else:
-            # If no DOB, assume adult (conservative)
-            count += 1
-
-    return count
-
-
-def _has_hud_50059(group_types: set[str]) -> bool:
-    """Check if HUD 50059 exists in document groups."""
-    return any("HUD 50059" in t for t in group_types if "(Previous)" not in t)
 
 
 def _parse_date(value: str | None) -> date | None:

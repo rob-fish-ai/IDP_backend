@@ -17,7 +17,7 @@ from app.services.members import is_unborn
 from app.services.pipeline import (
     _deduplicate_household_members, _document_certification_type, _rent_identity_findings, _same_cert_type,
 )
-from app.services.signature_validator import _check_signed_after_effective, _count_adults, validate_signatures
+from app.services.signature_validator import _check_signed_after_effective, validate_signatures
 from app.services.two_pass_classifier import _label_by_printed_title, _post_group_title_relabel
 
 
@@ -39,7 +39,7 @@ def test_new_labels_and_aliases_resolve():
 
 def test_printed_title_relabels_only_when_the_page_does_not_name_its_own_label():
     tic = "Ohio Housing Finance Agency Tenant Income Certification Move-In Date: 5/29/26 PART II"
-    assert _label_by_printed_title("HUD 3560 Form", tic)[0] == "Tenant Income Certification (TIC)"
+    assert _label_by_printed_title("RD 3560-8 Form", tic)[0] == "Tenant Income Certification (TIC)"
     assert _label_by_printed_title("Tenant Income Certification (TIC)", tic) is None
     vawa = "LEASE ADDENDUM Violence Against Women and Justice Department Reauthorization Act of 2005 (VAWA)"
     assert _label_by_printed_title("VAWA Lease Addendum", vawa) is None
@@ -89,7 +89,6 @@ def test_unborn_child_is_a_member_with_no_identity_fields():
     unborn = HouseholdMember(FirstName="Unborn", LastName="Child", relationship="Unborn Child", householdMemberNumber="03")
     assert is_unborn(unborn) and not is_unborn(_member("Ana", "Diaz", "2015-01-01", None))
     hh = HouseholdDemographics(houseHold=[_member("Aridia", "Perez", "1988-06-08", "***-**-8076", relationship="Head"), unborn])
-    assert _count_adults(hh, CertificationInfo(effectiveDate="2026-05-29")) == 1
     assert required_member_gaps([m.model_dump() for m in hh.houseHold]) == []
     sc = RecordScorer("household_member", "Unborn Child")
     for f, v in (("FirstName", "Unborn"), ("LastName", "Child"), ("relationship", "Unborn Child"),
@@ -200,15 +199,15 @@ def test_fields_an_employer_form_would_carry_are_not_gaps_on_a_stub_backed_recor
 def test_certification_pages_without_a_readable_title_are_labelled_by_their_printed_form():
     p1 = ("Move-In Date: 05/29/2026 Certification Date: 05/29/2026 PART II - HOUSEHOLD COMPOSITION "
           "Income Equates to: 15 % AMGI HH Meets Income Restriction at 60 %")
-    assert _label_by_printed_title("HUD 3560 Form", p1)[0] == "Tenant Income Certification (TIC)"
+    assert _label_by_printed_title("RD 3560-8 Form", p1)[0] == "Tenant Income Certification (TIC)"
     p50059 = "OWNER'S CERTIFICATION OF COMPLIANCE WITH HUD'S TENANT ELIGIBILITY AND RENT PROCEDURES HUD-50059 Total Tenant Payment"
     assert _label_by_printed_title("Tenant Income Certification (TIC)", p50059)[0] == "HUD 50059"
     assert _label_by_printed_title("HUD 50059", p50059) is None
     # One phrase alone does not relabel a certification form.
-    assert _label_by_printed_title("HUD 3560 Form", "some page mentioning amgi once") is None
+    assert _label_by_printed_title("RD 3560-8 Form", "some page mentioning amgi once") is None
     # The form's second page, with no marker of its own, follows the first.
     text = {1: p1, 2: "PART VI - RENT Tenant Paid Rent: $580 Utility Allowance: $166 SIGNATURES"}
-    out, updates = _post_group_title_relabel([_group("HUD 3560 Form", [1, 2])], text)
+    out, updates = _post_group_title_relabel([_group("RD 3560-8 Form", [1, 2])], text)
     assert [(g.document_type, g.pages) for g in out] == [("Tenant Income Certification (TIC)", [1, 2])]
     assert {u[0] for u in updates} == {1, 2}
 

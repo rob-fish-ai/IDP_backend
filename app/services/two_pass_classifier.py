@@ -21,7 +21,7 @@ from app.core.exceptions import ClassificationUnavailableError
 from app.schemas.extraction import ClassificationResult, DocumentGroup, PageClassification
 from app.services.llm_service import call_llm_json
 from app.services.doc_taxonomy import (
-    canonical_label, category_of, family_of, known_labels, prompt_type_list,
+    canonical_label, category_of, family_of, is_hud_only_type, known_labels, prompt_type_list,
 )
 from app.services.text_sanitizer import sanitize_for_extraction, strip_html
 
@@ -185,7 +185,7 @@ CRITICAL CLASSIFICATION RULES:
 
 - "Form RD 3560-8" / "USDA-Rural Housing Service Tenant Certification" / any
   form listing household members with SSNs, annual income calculation lines,
-  and RHS decision fields = "HUD 3560 Form", INCLUDE.
+  and RHS decision fields = "RD 3560-8 Form", INCLUDE.
   Do NOT label RD 3560-8 as "Income Calculation Worksheet" just because it
   contains a "Part IV - Income Calculations" heading.
 
@@ -194,7 +194,7 @@ CRITICAL CLASSIFICATION RULES:
   DETERMINING GROSS TENANT CONTRIBUTION (GTC)", "PART IX - DETERMINING NET
   TENANT CONTRIBUTION (NTC)", "PART X - CERTIFICATION BY BORROWER",
   "Gross Note Rate Rent", "Note Rate Rent", "Utility Allowance" as line
-  items (30.a / 30.b / 30.c). Classify as "HUD 3560 Form", INCLUDE — do NOT
+  items (30.a / 30.b / 30.c). Classify as "RD 3560-8 Form", INCLUDE — do NOT
   misclassify as "Income Calculation Worksheet" or "TIC" just because the
   Part I header is absent on the back page.
 
@@ -588,6 +588,32 @@ _TITLE_VOTES = (
 )
 
 
+def demote_hud_only_nearest_matches(classification, document_groups: list[DocumentGroup]) -> list[int]:
+    """On a packet that is not a HUD or USDA file, a nearest match onto a
+    type that exists only on one is a mislabel: a "Verification of Social
+    Services" page is not an EIV Income Report, and routed as one it would
+    be read for income. Such pages become Unknown, with the observed title
+    kept in the notes, and are not reported as a type to confirm. Returns
+    the pages demoted."""
+    demoted: list[int] = []
+    for g in document_groups:
+        if g.category == "ignore" or not is_hud_only_type(g.document_type):
+            continue
+        pages = [p for p in classification.pages if p.page in g.pages]
+        if not pages or any(p.fit not in ("nearest", "none") for p in pages):
+            continue
+        was = g.document_type
+        g.document_type, g.category = "Unknown", category_of("Unknown")
+        for p in pages:
+            p.document_type, p.category, p.fit = "Unknown", g.category, "none"
+            p.notes = (f"not a HUD file — '{was}' was the nearest type, not this page's"
+                       + (f"; {p.notes}" if p.notes else ""))
+        demoted.extend(g.pages)
+        logger.info("Classification: pages %s were a nearest match to %r on a non-HUD packet — left unclassified",
+                    g.pages, was)
+    return demoted
+
+
 def _title_family(text: str) -> tuple[str, str] | None:
     """(title, family) the page's own heading suggests, or None."""
     plain = strip_html(text or "")
@@ -691,7 +717,7 @@ _CERT_FINGERPRINTS = {
         "50059", "owner's certification of compliance", "tracs", "hud's tenant eligibility",
         "anticipated voucher date", "total tenant payment",
     ),
-    "HUD 3560 Form": (
+    "RD 3560-8 Form": (
         "3560-8", "rd 3560", "rural development", "tenant certification", "usda",
     ),
 }
@@ -955,7 +981,7 @@ def _build_unknown_fallback(
 _CERTIFICATION_TYPES = {
     "HUD 50059",
     "Tenant Income Certification (TIC)",
-    "HUD 3560 Form",
+    "RD 3560-8 Form",
 }
 
 
@@ -1076,7 +1102,7 @@ def _post_group_split(
 ) -> tuple[list[DocumentGroup], list[tuple[int, str, str]]]:
     """Deterministic post-group split for previous-cert contamination.
 
-    After LLM grouping, check each cert group (HUD 50059 / TIC / HUD 3560 Form):
+    After LLM grouping, check each cert group (HUD 50059 / TIC / RD 3560-8 Form):
     - Extract effective date and income total per page
     - If pages have different dates or incomes → split into current + previous
     """

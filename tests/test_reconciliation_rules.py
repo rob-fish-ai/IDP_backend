@@ -1144,7 +1144,7 @@ def test_certified_figures_are_delivered_on_their_own_fields_never_as_self_decla
                                     verificationStatus="declared_only", sourcePages=[2])
     rd = VerificationIncomeEntry(memberName="Cleveland White", sourceName="ACME", incomeType="Non-Federal Wage",
                                  rateOfPay="15.00", rateUnit="hourly", verificationStatus="verified",
-                                 certificationAmount="31200.00", certificationForm="HUD 3560 Form", sourcePages=[30])
+                                 certificationAmount="31200.00", certificationForm="RD 3560-8 Form", sourcePages=[30])
     ex = SimpleNamespace(household_demographics=hh, certification_info=CertificationInfo(effectiveDate="2026-12-01"),
                          income=IncomeExtraction(sourceIncome=SourceIncome(verificationIncome=[both, older, rd])),
                          income_calculations=[])

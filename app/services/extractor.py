@@ -136,7 +136,7 @@ Return ONLY valid JSON: {"houseHold": [...]}"""
 CERT_INFO_SYSTEM_PROMPT = """\
 You are an expert data extractor for HUD/Affordable Housing certification documents.
 
-Extract certification-level information from TIC forms, HUD 50059 forms, HUD 3560 forms,
+Extract certification-level information from TIC forms, HUD 50059 forms, USDA RD 3560-8 forms,
 or HUD Model Lease agreements. Only extract from the CURRENT certification — ignore any
 document classified as "(Previous)".
 
@@ -228,12 +228,12 @@ FIELDS TO EXTRACT:
 DOCUMENT-SPECIFIC GUIDANCE:
 - TIC Form: Cert type is in the header area (checkboxes for Initial/Annual/Interim/Other). Effective date is labeled "Effective Date" — the adjacent "Move-in Date" line is a DIFFERENT field; do not confuse them (on recertifications they differ by one or more years). Income is in Part III "Income"; on an alternate certification it is the "Gross Household Income" / "Total Household Income" line — "Household Income at move-in" is the move-in year's figure and is NEVER householdIncome. Rent fields are in Part IV "Rent".
 - HUD 50059: Cert type is field 2b "Type of Action" (1=Initial, 2=Annual, 3=Interim, etc.). Effective date is field 2a. Field 29 = Contract Rent (= contractRent), Field 30 = Utility Allowance, Field 31 = Gross Rent (this is the true grossRent, NOT field 29). Field 110 = Tenant Rent. Field 86 = Total Annual Income.
-- HUD 3560 (RD 3560-8 / USDA): Line 30.a = Note Rate Rent (= contractRent), Line 30.b = Utility Allowance, Line 30.c = Gross Note Rate Rent (use as grossRent). Line 33 = Final NTC (Net Tenant Contribution = tenantRent). Line 18.f = Monthly Income, Line 20 = Adjusted Annual Income.
+- RD 3560-8 (USDA Rural Development): Line 30.a = Note Rate Rent (= contractRent), Line 30.b = Utility Allowance, Line 30.c = Gross Note Rate Rent (use as grossRent). Line 33 = Final NTC (Net Tenant Contribution = tenantRent). Line 18.f = Monthly Income, Line 20 = Adjusted Annual Income.
 - HUD Model Lease: Gross Rent = Contract Rent + Utility Allowance. "Contract Rent" = contractRent. Record grossRent from the "Gross Rent" line if shown, otherwise compute Contract Rent + UA. "Tenant Rent" / tenant's portion = tenantRent. "Utility Allowance" = utilityAllowance. "Unit" / dwelling unit number = unitNumber. Lease commencement date = effectiveDate. Signature date on the lease = signatureDate.
 - Self-Certification forms (OHCS "Self-Certification of Household Annual Income", NY "AR Self Certification" / "Owner's Eligibility Determination" — classified as TIC): header "Effective Date" or "Recert Yr & Effective Date" = effectiveDate; "Unit Number" / "Apt #" = unitNumber; "Add Total Annual Household Income from all Sources" (a+b) = householdIncome; the owner section's "Rent" = tenantRent, "Utility Allowance" = utilityAllowance, "Current Income Limit" and "Current Maximum Gross Rent Limit" = limits (rentLimit), NOT rent; resident + owner signature blocks = isSigned/signatureDate.
 
 MULTI-SOURCE FALLBACK (CRITICAL):
-When the primary certification form (TIC / HUD 50059 / HUD 3560) has a BLANK
+When the primary certification form (TIC / HUD 50059 / RD 3560-8) has a BLANK
 field, look for the same data on a secondary form within the same group:
   1. TIC rent fields blank → check RD 3560-8 Line 30.a/b/c (on same cert)
   2. TIC income blank → check household income on RD 3560-8 Line 18.f × 12 or Line 20

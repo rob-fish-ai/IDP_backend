@@ -36,12 +36,17 @@ certification packet, and should stay with the reviewer.
 
 ## 2. Three things that apply throughout
 
-**Signature items mean "present and dated", not "signed".** The engine treats a
-form that is present but shows no signature as *unverifiable* rather than
-proven-missing. Handwritten signatures do not survive OCR, and text-level
-signature counting fired on 99% of cases with no correlation to reviewer
-rejections. Where a signature genuinely must be confirmed, the engine performs a
-targeted vision check on that page.
+**Signature items mean "present", not "signed".** Handwritten signatures do
+not survive OCR, so the engine reports whether a supporting form is in the
+packet and says nothing about its signature; the "a signature could not be
+verified" notes it once sent were rejected by reviewers on every signed form
+(2026-11-05 export). Only the certification form keeps a signature finding.
+
+**HUD rules fire on HUD files.** Social Security numbers, the 9887 package, the
+acknowledgement of HUD forms, the citizenship and race declarations and EIV
+expectations are HUD and USDA requirements. One test decides whether a packet
+is a HUD file — the funding program Cartograph sends, or a current HUD 50059 in
+the packet — and every such rule uses it. A tax-credit packet owes none of them.
 
 **Scope differs by item.** Some are per-case, some per household member, some
 per income or asset record. The engine emits one finding per subject, so a

@@ -14,6 +14,7 @@ from app.schemas.extraction import (
     HouseholdDemographics,
     IncomeExtraction,
 )
+from app.services.program import is_hud_property
 from app.services.findings import (
     ASSIGN_CLIENT,
     ASSIGN_INTERNAL,
@@ -41,7 +42,11 @@ def check_special_scenarios(
     """Check for special scenarios per Section 19."""
     findings: list[Finding] = []
 
-    findings.extend(_check_members_without_ssn(household, certification_info))
+    # Social Security numbers for every member over six is HUD's rule
+    # (and USDA's); the tax credit asks for none. Reviewers rejected it on
+    # every LIHTC property it fired on.
+    if is_hud_property(ctx.funding_program if ctx else None, (g.document_type for g in document_groups)):
+        findings.extend(_check_members_without_ssn(household, certification_info))
     findings.extend(_check_student_contradictions(household, document_groups))
     findings.extend(_check_ssa_overpayment(document_groups))
     findings.extend(_check_hud_9887_content(document_groups))
@@ -55,7 +60,7 @@ def _check_members_without_ssn(
     household: HouseholdDemographics | None,
     certification_info: CertificationInfo | None,
 ) -> list[Finding]:
-    """Members over age 6 must have SSN. Zeros = finding."""
+    """Members over age 6 must have SSN (HUD/USDA files only). Zeros = finding."""
     findings: list[Finding] = []
     if not household or not household.houseHold:
         return findings

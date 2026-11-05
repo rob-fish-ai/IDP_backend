@@ -9,6 +9,7 @@ from app.schemas.extraction import (
     HouseholdDemographics,
 )
 from app.services.doc_taxonomy import is_current_certification_form
+from app.services.program import is_hud_property
 from app.services.findings import (
     ASSIGN_CLIENT,
     CATEGORY_FILE_REVIEW,
@@ -49,12 +50,8 @@ def validate_cert_type_requirements(
 
     # The move-in forms below the application are HUD's (citizenship,
     # race/ethnic, 92006, the TRACS summaries); a tax-credit move-in owes
-    # none of them. HUD is shown by a current 50059 in the packet or by the
-    # caller's funding program.
-    funding = (funding_program or "").lower()
-    hud_property = any(p in funding for p in ("hud", "section", "usda", "rad", "public housing")) or any(
-        "HUD 50059" in dt and "(Previous)" not in dt for dt in (doc_types | hud_doc_types)
-    )
+    # none of them.
+    hud_property = is_hud_property(funding_program, doc_types | hud_doc_types)
 
     if ct in ("MI", "IC"):
         findings.extend(_check_mi_requirements(doc_types, hud_doc_types, member_count, hud_property))

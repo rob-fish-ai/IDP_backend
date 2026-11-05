@@ -66,9 +66,11 @@ TAXONOMY: dict[str, dict] = {
     "Tenant Income Certification (TIC)": _t(INCLUDE, FAMILY_CERT, (ROUTE_DEMO, ROUTE_CERT, ROUTE_INCOME, ROUTE_ASSET),
                                             aliases=("Tenant Income Certification", "TIC"),
                                             hint="LIHTC TIC, state HFA TIC forms, AR-SC self-certifications"),
-    "HUD 3560 Form": _t(INCLUDE, FAMILY_CERT, (ROUTE_DEMO, ROUTE_CERT, ROUTE_INCOME, ROUTE_ASSET),
-                        aliases=("RD 3560-8", "Form RD 3560-8"),
-                        hint="USDA RD 3560-8 Tenant Certification"),
+    # USDA Rural Development's tenant certification, not a HUD form; it was
+    # labelled "HUD 3560 Form" until 2026-11-05 and that label stays an alias.
+    "RD 3560-8 Form": _t(INCLUDE, FAMILY_CERT, (ROUTE_DEMO, ROUTE_CERT, ROUTE_INCOME, ROUTE_ASSET),
+                         aliases=("RD 3560-8", "Form RD 3560-8", "HUD 3560 Form", "HUD 3560", "USDA 3560-8"),
+                         hint="USDA RD 3560-8 Tenant Certification"),
     "HUD Model Lease": _t(INCLUDE, FAMILY_LEASE, (ROUTE_DEMO, ROUTE_CERT),
                           hint="HUD Section 8/202/236 lease — contains rent/effective date"),
     "Lease Agreement": _t(INCLUDE, FAMILY_LEASE, (ROUTE_DEMO, ROUTE_CERT),
@@ -253,6 +255,27 @@ def canonical_label(document_type: str | None) -> tuple[str, str]:
     return "Unknown", "none"
 
 
+# Types that exist only on a HUD or USDA file. A classifier's nearest match
+# onto one of these from a tax-credit packet is a mislabel (a "Verification
+# of Social Services" is not an EIV report), and the pipeline demotes it.
+HUD_ONLY_TYPES: frozenset[str] = frozenset({
+    "HUD 50059", "RD 3560-8 Form", "HUD Model Lease",
+    "HUD 9887", "HUD 9887-A", "HUD 9887 Consent Package Cover", "HUD 9887/A Fact Sheet",
+    "HUD 92006", "HUD Race and Ethnic Data Form", "Citizenship Declaration",
+    "Acknowledgement of Receipt",
+    "EIV Summary Report", "EIV Income Report", "EIV Income Report Confirmation",
+})
+
+
+def is_hud_only_type(document_type: str | None) -> bool:
+    """Whether the type (suffix ignored) exists only on a HUD or USDA file."""
+    if not document_type:
+        return False
+    canon, _ = canonical_label(document_type)
+    base, _ = _split_suffix(canon)
+    return base in HUD_ONLY_TYPES
+
+
 def is_countersigned_confirmation(document_type: str | None) -> bool:
     """Whether the type is a manager's sheet restating a third-party report
     that the household countersigns (see `_t`)."""
@@ -267,9 +290,12 @@ def confirmed_report_of(document_type: str | None) -> str | None:
 
 
 def spec_of(document_type: str | None) -> dict | None:
+    """The taxonomy entry for a label, through its aliases: a retired label
+    kept as an alias (a stored "HUD 3560 Form") reads as what it names."""
     if not document_type:
         return None
-    base, _ = _split_suffix(document_type)
+    canon, _ = canonical_label(document_type)
+    base, _ = _split_suffix(canon)
     return TAXONOMY.get(base)
 
 
@@ -278,10 +304,10 @@ def category_of(document_type: str | None) -> str:
     A previous or superseded certification is ignored whatever its base."""
     if not document_type:
         return IGNORE
-    base, suffix = _split_suffix(document_type)
+    _, suffix = _split_suffix(document_type)
     if suffix:
         return IGNORE
-    spec = TAXONOMY.get(base)
+    spec = spec_of(document_type)
     return spec["category"] if spec else IGNORE
 
 
@@ -358,10 +384,12 @@ def is_certification_form(document_type: str | None) -> bool:
     """
     if not document_type:
         return False
-    base, _ = _split_suffix(document_type)
-    spec = TAXONOMY.get(base)
+    # By spec, so a retired label kept as an alias (a stored "HUD 3560
+    # Form") still reads as the certification it is.
+    spec = spec_of(document_type)
     if spec and spec["family"] == FAMILY_CERT:
         return True
+    base, _ = _split_suffix(document_type)
     low = base.lower()
     if any(word in low for word in _RESEMBLES_CERTIFICATION):
         if low not in _reported:
@@ -407,3 +435,6 @@ def is_certification_source(label: str | None) -> bool:
     if is_current_certification_form(label):
         return True
     return bool(_CERTIFICATION_SOURCE_RE.search(label))
+
+
+assert_known(HUD_ONLY_TYPES, "doc_taxonomy.HUD_ONLY_TYPES")

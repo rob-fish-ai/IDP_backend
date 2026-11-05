@@ -22,6 +22,7 @@ from app.schemas.extraction import (
 )
 from app.services.bug_detector import detect_known_bugs
 from app.services.completeness import check_completeness
+from app.services.program import is_hud_property
 from app.services.doc_taxonomy import (
     ROUTE_ASSET, ROUTE_CERT, ROUTE_DEMO, ROUTE_INCOME, assert_known,
     canonical_label, is_current_certification_form, is_previous_certification,
@@ -81,7 +82,7 @@ from app.services.field_scorer import (
 )
 from app.services.signature_validator import validate_signatures
 from app.services.special_scenarios import check_special_scenarios
-from app.services.two_pass_classifier import classify_and_group
+from app.services.two_pass_classifier import classify_and_group, demote_hud_only_nearest_matches
 
 logger = logging.getLogger(__name__)
 
@@ -139,6 +140,8 @@ def run_extraction_pipeline(
     # Pass 2: LLM correct + group (one call, sees full file context)
     logger.info("Steps 1-2/6: Two-pass classification + grouping")
     classification, document_groups = classify_and_group(page_texts, settings)
+    if not is_hud_property(ctx.funding_program, (g.document_type for g in document_groups)):
+        demote_hud_only_nearest_matches(classification, document_groups)
     # A recertification packet assembled before the new certification is
     # executed holds only last year's form. Read as "previous" it reached
     # no extractor, and the case went out with no household at all. The
@@ -2406,7 +2409,7 @@ def _deduplicate_household_members(household) -> list[str]:
 
 
 _CURRENT_CERT_FORM_TYPES = (
-    "HUD 50059", "Tenant Income Certification (TIC)", "HUD 3560 Form",
+    "HUD 50059", "Tenant Income Certification (TIC)", "RD 3560-8 Form",
 )
 
 
@@ -2435,7 +2438,7 @@ def _demote_superseded_cert_groups(
     kept: dict[str, tuple[int, str | None]] = {}
     duplicates = sorted(
         (g for g in document_groups
-         if g.document_type in _CURRENT_CERT_FORM_TYPES
+         if canonical_label(g.document_type)[0] in _CURRENT_CERT_FORM_TYPES
          and g.category != "ignore" and g.pages),
         key=lambda g: min(g.pages),
     )
@@ -2670,12 +2673,7 @@ def _generate_findings(
         "Acknowledgement of Receipt": "Acknowledgement of Receipt of HUD Forms — signed by all adults",
     }
     assert_known(required_hud_forms, "pipeline.required_hud_forms")
-    is_hud_property = any(
-        canonical_label(g.document_type)[0] == "HUD 50059"
-        and not is_previous_certification(g.document_type)
-        for g in document_groups
-    )
-    if is_hud_property:
+    if is_hud_property(ctx.funding_program if ctx else None, doc_types_found):
         for form, description in required_hud_forms.items():
             if form not in doc_types_found:
                 findings.append(
