@@ -440,6 +440,21 @@ class JobStore:
         DONE, EXTRACTION_FAILED, COMPARISON_FAILED, MULESOFT_TIMEOUT,
     )
 
+    def clear_extraction_older_than(self, cutoff_ts: float) -> int:
+        """Drop the extraction blob from terminal rows whose updated_at is
+        older than cutoff, keeping the row. The blob is the bulk of a row;
+        the state, timings, request, findings and delivery record are what
+        the endpoints and the repeat guard read after a case is over."""
+        placeholders = ",".join("?" * len(self._TERMINAL_STATES))
+        with self._lock, self._connect() as conn:
+            cur = conn.execute(
+                f"UPDATE audit_jobs SET extraction_result = NULL "
+                f"WHERE state IN ({placeholders}) AND updated_at < ? "
+                f"AND extraction_result IS NOT NULL",
+                (*self._TERMINAL_STATES, cutoff_ts),
+            )
+            return cur.rowcount
+
     def delete_terminal_older_than(self, cutoff_ts: float) -> int:
         """Delete terminal-state rows whose updated_at is older than cutoff.
 
@@ -477,7 +492,7 @@ class JobStore:
         with self._connect() as conn:
             rows = conn.execute(
                 f"SELECT case_id, case_number, state, retry_count, updated_at, "
-                f"source "
+                f"source, environment "
                 f"FROM audit_jobs "
                 f"WHERE state IN ({placeholders}) AND updated_at < ?",
                 (*states, cutoff),

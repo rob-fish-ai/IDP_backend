@@ -71,6 +71,13 @@ class Settings(BaseSettings):
     # JSON under results/ and a work dir a crash left behind — is deleted by
     # the maintenance thread once older than this; 0 disables the sweep.
     output_retention_days: int = 30
+    # The extraction kept on a job row (about half a megabyte a case) is
+    # cleared from terminal rows older than this, so the job store grows by
+    # the row's bookkeeping alone once a case is delivered or failed. The
+    # row itself stays until audit_retention_days. 0 keeps the extraction
+    # for the row's whole life, which is what the corpus regression on a
+    # development host needs (scripts/replay_corpus.py reads it).
+    extraction_retention_days: int = 0
     # A Cartograph extraction that fails for a transient reason (the model
     # unavailable, a truncated response, a rate limit) is tried again this
     # many times in all, with this pause, before the failure is reported.

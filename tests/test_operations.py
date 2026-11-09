@@ -497,6 +497,10 @@ def test_the_watchdog_fails_a_row_whose_worker_died_and_retention_prunes_old_row
         with store._connect() as conn:
             conn.execute("UPDATE audit_jobs SET updated_at = ? WHERE case_id = ?", (time.time() - age, case))
     row("J-DEAD", age=4000)
+    store.upsert_pending("staging:J-DEAD", "J-DEAD", "annual", "HUD", None, claimed=True, environment="staging")
+    store.mark_extracting("staging:J-DEAD")
+    with store._connect() as conn:
+        conn.execute("UPDATE audit_jobs SET updated_at = ? WHERE case_id = 'staging:J-DEAD'", (time.time() - 4000,))
     row("500Rb00001", source="salesforce", age=4000)
     row("J-SLOW", age=600)                                   # heartbeat 10 minutes ago: still working
     store.upsert_pending("J-OLD", "J-OLD", "annual", "HUD", None, claimed=True)
@@ -506,12 +510,13 @@ def test_the_watchdog_fails_a_row_whose_worker_died_and_retention_prunes_old_row
 
     posted: list = []
     monkeypatch.setattr("app.services.cartograph.client.post_failure",
-                        lambda case_ref, reason, settings, **kw: posted.append((case_ref, kw.get("error_code"))))
-    assert maintenance.watchdog_sweep(settings) == 2
+                        lambda case_ref, reason, settings, **kw: posted.append((case_ref, kw.get("error_code"), kw.get("environment"))))
+    assert maintenance.watchdog_sweep(settings) == 3
     assert store.get("J-DEAD")["state"] == "extraction_failed" and "re-notify" in store.get("J-DEAD")["error"]
     assert store.get("500Rb00001")["state"] == "extraction_failed"
     assert store.get("J-SLOW")["state"] == "extracting"
-    assert posted == [("J-DEAD", "engine_error")]
+    # the failure is reported to the environment the row came from
+    assert sorted(posted, key=lambda t: t[2] or "") == [("J-DEAD", "engine_error", None), ("J-DEAD", "engine_error", "staging")]
 
     assert maintenance.retention_sweep(settings) == 1
     assert store.get("J-OLD") is None and store.get("J-DEAD") is not None
@@ -565,3 +570,43 @@ def test_the_output_sweep_removes_old_results_orphaned_work_dirs_and_aged_packet
     settings.output_retention_days = 0
     aged(tmp_path / "results" / "J-NEW_20261101-000000.json")
     assert maintenance.output_sweep(settings) == 0
+
+
+def test_the_extraction_sweep_clears_the_blob_from_old_terminal_rows_and_keeps_the_rows(monkeypatch, tmp_path):
+    """At production volume the extraction blob is most of a row. Once a
+    case is over and older than the window the blob goes and the row stays,
+    with its state, findings and delivery record; a case in flight or
+    inside the window keeps its blob, and 0 days keeps every blob — the
+    corpus regression on a development host reads them."""
+    from types import SimpleNamespace
+    from app.services.audit.job_store import JobStore
+    from app.services.cartograph import maintenance
+    store = JobStore(tmp_path / "jobs.db")
+    monkeypatch.setattr(maintenance, "get_job_store", lambda _p: store)
+    settings = SimpleNamespace(audit_job_db=tmp_path / "jobs.db", extraction_retention_days=7)
+
+    def row(case, state, age):
+        store.upsert_pending(case, case, "annual", "LIHTC", None, claimed=True)
+        store.mark_extracted(case, {"blob": "x" * 100})
+        if state == "done":
+            store.mark_done(case, findings_text="found", confidence=0.9)
+        elif state == "failed":
+            store.mark_comparison_failed(case, "ingest rejected")
+        with store._connect() as conn:
+            conn.execute("UPDATE audit_jobs SET updated_at = ? WHERE case_id = ?", (time.time() - age, case))
+    row("J-OLD-DONE", "done", 10 * 86400)
+    row("J-OLD-FAILED", "failed", 10 * 86400)
+    row("J-NEW-DONE", "done", 86400)
+    row("J-RUNNING", "extracted", 10 * 86400)
+
+    assert maintenance.extraction_sweep(settings) == 2
+    old_done = store.get("J-OLD-DONE")
+    assert old_done["state"] == "done" and old_done["findings_text"] == "found" and old_done["extraction_result"] is None
+    assert store.get("J-OLD-FAILED")["extraction_result"] is None
+    assert store.get("J-NEW-DONE")["extraction_result"] == {"blob": "x" * 100}
+    assert store.get("J-RUNNING")["extraction_result"] == {"blob": "x" * 100}
+    assert maintenance.extraction_sweep(settings) == 0
+    settings.extraction_retention_days = 0
+    with store._connect() as conn:
+        conn.execute("UPDATE audit_jobs SET updated_at = 0")
+    assert maintenance.extraction_sweep(settings) == 0

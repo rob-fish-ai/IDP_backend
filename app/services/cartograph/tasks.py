@@ -292,12 +292,12 @@ def _audit_case(
         # result has nowhere to go. Say so plainly rather than leaving the
         # job looking complete.
         logger.error(
-            "case_ref=%s extracted but not delivered: "
-            "IDP_CARTOGRAPH_INGEST_URL / _SECRET are not configured",
-            case_ref,
+            "case_ref=%s extracted but not delivered: no ingest URL and "
+            "secret are configured for environment %s",
+            case_ref, environment or "default",
         )
         store.mark_comparison_failed(
-            case_ref, "Cartograph delivery not configured"
+            job, "Cartograph delivery not configured"
         )
         return
 
@@ -320,7 +320,7 @@ def _audit_case(
         # Their ingest rejected it. Record enough to reproduce without
         # re-running the extraction.
         store.mark_comparison_failed(
-            case_ref,
+            job,
             f"ingest rejected: HTTP {response['status_code']} "
             f"{response['response']}",
         )
@@ -335,7 +335,7 @@ def _audit_case(
     # path, so it is left out rather than silently reweighted.
     scores = getattr(extraction, "field_scores", None)
     store.mark_done(
-        case_ref,
+        job,
         findings_text="\n".join(extraction.findings),
         confidence=scores.overall_composite if scores else 0.0,
     )

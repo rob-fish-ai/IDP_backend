@@ -83,7 +83,9 @@ claimed and run again from the stored request, the packet kept under
 `output/pdfs` standing in when the presigned URLs have expired), and
 **maintenance** (`cartograph/maintenance.py`: every
 `IDP_AUDIT_MAINTENANCE_INTERVAL_SECONDS` a retention sweep deletes terminal
-rows older than `IDP_AUDIT_RETENTION_DAYS`, an output sweep deletes result
+rows older than `IDP_AUDIT_RETENTION_DAYS`, an extraction sweep drops the
+extraction blob from terminal rows older than
+`IDP_EXTRACTION_RETENTION_DAYS`, an output sweep deletes result
 JSON, orphaned work dirs and aged packets under `output/` older than
 `IDP_OUTPUT_RETENTION_DAYS`, and a watchdog fails owned rows
 whose heartbeat has not moved for `IDP_AUDIT_WATCHDOG_SECONDS`, telling
@@ -405,6 +407,7 @@ carrying retired settings does not stop the engine.
 | `IDP_AUDIT_MAINTENANCE_INTERVAL_SECONDS` | `3600` | Sweep interval |
 | `IDP_PDF_RETENTION_DAYS` / `IDP_PDF_RETENTION_MAX_MB` | `14` / `1500` | Kept packets under `output/pdfs`; `0` days disables keeping |
 | `IDP_OUTPUT_RETENTION_DAYS` | `30` | Extraction JSON under `output/results` and orphaned work dirs older than this are deleted hourly; `0` disables |
+| `IDP_EXTRACTION_RETENTION_DAYS` | `0` | The extraction blob (about 0.5 MB a case) is cleared from terminal rows older than this, the row itself staying; `0` keeps it for the row's life, which the corpus regression needs |
 | `IDP_CARTOGRAPH_EXTRACT_ATTEMPTS` / `IDP_CARTOGRAPH_RETRY_DELAY_SECONDS` | `2` / `30` | Transient extraction failures retried this many times in all |
 
 **Cartograph**
@@ -442,6 +445,73 @@ $IDP_PORT` and starts it again whenever it exits (crash, OOM kill) until
 live under `run/`. The pod's `/post_start.sh` calls `engine.sh start` at
 boot, so a pod restart brings the engine back by itself; a case in flight
 at a stop is audited again at the next start, so a restart never waits.
+
+### Production profile
+
+The defaults suit a development host that sees a few cases a day and keeps
+every extraction for the corpus regression. At the production rate
+Cartograph plans (200 cases on a normal day, 300 on a heavy one) a case
+costs about 4 MB of packet, 0.5 MB of extraction blob, 0.5 MB of result
+JSON and 15 KB of row bookkeeping, so the production host sets:
+
+| Setting | Production value | Holds |
+|---|---|---|
+| `IDP_AUDIT_RETENTION_DAYS` | `30` | a month of rows, 150 MB |
+| `IDP_EXTRACTION_RETENTION_DAYS` | `3` | three days of blobs for a case under question, 450 MB |
+| `IDP_OUTPUT_RETENTION_DAYS` | `14` | two weeks of result JSON, 2 GB |
+| `IDP_PDF_RETENTION_DAYS` / `IDP_PDF_RETENTION_MAX_MB` | `14` / `20000` | two weeks of packets, 17 GB; the cap wins when a run of heavy days exceeds it |
+
+About 20 GB in all; a 100 GB volume leaves room for heavy weeks and for
+raising the windows later. `/health` reports `storage.output_free_mb`,
+`storage.job_db_free_mb` and `storage.job_db_mb`, so the host filling up
+is visible from the same call that says the engine is up. The job store
+and the output folder must both sit on the persistent volume, not the
+container disk: a container disk is lost when the pod is re-created, and
+with it every in-flight row and kept packet.
+
+### Setting up a new host
+
+Everything the engine needs that is not in this repository: the `.env`
+file, the job store, the output folder, and the pod's boot hook. To stand
+up a Dev or Prod engine on a fresh pod:
+
+1. **Pod.** CPU only (rendering and extraction run on CPU and the Claude
+   API; OCR is a separate service), 8 vCPU / 32 GB, a persistent volume
+   of 100 GB mounted at `/workspace`. Python 3.10 or newer.
+2. **Code.** `git clone` into `/workspace/IDP_backend`, then
+   `python3.10 -m venv .venv && .venv/bin/pip install -r requirements.txt`.
+3. **Data folders on the volume.** `mkdir -p /workspace/data/output` and
+   point `IDP_AUDIT_JOB_DB=/workspace/data/audit_jobs.db` and
+   `IDP_OUTPUT_DIR=/workspace/data/output` at them in `.env`. A move from
+   an existing host copies its `audit_jobs.db` there after `engine.sh
+   stop` on the old host, so the rows and the repeat guard come along;
+   the kept packets and result JSON can be copied or left to age out.
+4. **`.env`.** Start from the existing host's file; never commit it.
+   Change the Anthropic key if this host has its own, set
+   `IDP_CARTOGRAPH_ENVIRONMENTS` to the environments this host serves and
+   `IDP_CARTOGRAPH_DEFAULT_ENVIRONMENT` to the one whose rows are keyed by
+   bare case_ref (the Prod host serves `prod` and `staging` with `prod`
+   as default; the Dev host serves `dev`), drop the legacy
+   `IDP_CARTOGRAPH_INGEST_URL` / `_INGEST_SECRET` / `_CALLBACK_SECRET`
+   trio, and on the Prod host apply the production profile above.
+5. **OCR access.** The OCR service is run by another party; ask them to
+   allow the new host's address before the first case.
+6. **Boot hook.** Add to the pod's `/post_start.sh`, before anything that
+   may exit the script:
+   ```bash
+   if [[ -x /workspace/IDP_backend/scripts/engine.sh ]]; then
+       bash /workspace/IDP_backend/scripts/engine.sh start >> /workspace/IDP_backend/engine.log 2>&1 || true
+   fi
+   ```
+7. **Start and check.** `scripts/engine.sh start`, then `scripts/engine.sh
+   status`: the health line must list every environment this host serves
+   with `"verifies": true` and `"deliverable": true`, and a sensible
+   `output_free_mb`. The boot log line `Cartograph environments: ...`
+   says the same. Then have Cartograph send one case from each environment
+   and confirm it reaches `done` in `/audit/cases` and arrives on their side.
+8. **Old host.** Once the new one has taken a case end to end, `engine.sh
+   stop` on the old host and remove its Cartograph secrets, so one
+   environment is never served from two places.
 
 ### Locally
 
@@ -526,13 +596,15 @@ baseline when the job store is present.
   rent figures go out without a source `job_document_id`.
 - **A watchdog-failed case is not re-run by the engine**; Cartograph is told
   to re-notify. Resume covers process stops, not worker deaths.
-- **Single inbound secret.** `verify()` checks one secret; the dual-secret
-  rotation the contract asks for is not implemented.
+- **One inbound secret per environment.** A caller is identified by which
+  environment's callback secret verifies; the dual-secret rotation the
+  contract asks for (old and new valid at once) is not implemented.
 - **`expense_records` is never sent.**
 
 - **JobStore is SQLite, single-file, single-process.** Fine for one pod, not
-  HA. `extraction_result` blobs are large; the retention sweep keeps the
-  file bounded.
+  HA. `extraction_result` blobs are large; the extraction and retention
+  sweeps keep the file bounded, and SQLite does not return freed pages to
+  the filesystem until a `VACUUM`, so the file's size is a high-water mark.
 
 ---
 

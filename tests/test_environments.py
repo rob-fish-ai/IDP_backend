@@ -110,6 +110,7 @@ def test_a_case_from_each_environment_is_its_own_job_and_its_own_repeat_guard(tm
             assert store.get("staging:J-1")["cartograph_import_result"] and not store.get("J-1")["cartograph_import_result"]
             health = client.get("/health").json()
             assert sorted(health["environments"]) == ["prod", "staging"] and health["default_environment"] == "prod"
+            assert health["storage"]["output_free_mb"] > 0 and health["storage"]["job_db_mb"] >= 0
     finally:
         app.dependency_overrides.clear()
 
@@ -137,3 +138,36 @@ def test_delivery_goes_to_the_environment_the_case_came_from(tmp_path, monkeypat
     with pytest.raises(cl.CartographNotConfigured):
         cl.post_extraction({"case_ref": "J-1"}, s, environment="dev")
     assert cl.post_failure("J-1", "boom", s, environment="dev") is None   # best effort, never raises
+
+
+def test_a_case_from_a_named_environment_finishes_on_its_own_row(tmp_path, monkeypatch):
+    """The audit task writes every state change under the environment-keyed
+    job id, including the last ones: a staging case that is delivered is
+    done under "staging:J-1", and one its ingest rejects is failed there.
+    Written by bare case_ref, those updates would touch no row, the case
+    would sit in "extracted" and the watchdog would fail it an hour later."""
+    from app.services.audit.job_store import JobStore
+    from app.services.cartograph import tasks
+    s = _settings(tmp_path)
+    store = JobStore(s.audit_job_db)
+    extraction = SimpleNamespace(model_dump=lambda: {"ok": True}, findings=["Finding one"], field_scores=None)
+    monkeypatch.setattr(tasks, "fetch_packet", lambda documents: (b"%PDF", [], None))
+    monkeypatch.setattr(tasks, "keep_packet", lambda *a, **k: None)
+    monkeypatch.setattr(tasks, "process_pdf_full", lambda *a, **k: {"extraction": extraction})
+    monkeypatch.setattr(tasks, "build_payload", lambda *a, **k: SimpleNamespace(payload={}, warnings=[], member_count=1))
+    answers = iter([{"ok": True, "status_code": 202, "response": {"scan_id": 1}, "bytes_sent": 2},
+                    {"ok": False, "status_code": 422, "response": "bad", "bytes_sent": 2}])
+    posted = []
+    monkeypatch.setattr(tasks, "post_extraction", lambda payload, settings, environment=None: (posted.append(environment), next(answers))[1])
+
+    def run(case):
+        store.upsert_pending(f"staging:{case}", case, "annual", "LIHTC", None, claimed=True, environment="staging")
+        tasks._audit_case(store, s, case_ref=case, documents=[{"url": "https://example.invalid/p.pdf"}],
+                          cert_type=None, program=None, job_id=None, community_id=None, unit_number=None,
+                          effective_date=None, environment="staging")
+
+    run("J-1")
+    assert store.get("staging:J-1")["state"] == "done" and store.get("staging:J-1")["findings_text"] == "Finding one"
+    run("J-2")
+    assert store.get("staging:J-2")["state"] == "comparison_failed" and "422" in store.get("staging:J-2")["error"]
+    assert posted == ["staging", "staging"] and store.get("J-1") is None and store.get("J-2") is None

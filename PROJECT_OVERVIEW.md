@@ -27,7 +27,8 @@ Cartograph (Heroku)                              IDP engine (RunPod, FastAPI :80
                                                   │   fetch → keep packet → OCR → extract → adapt  │
                                                   │ resume thread   re-runs cases interrupted by a │
                                                   │                 stop, from the stored request  │
-                                                  │ maintenance     retention + output sweeps,     │
+                                                  │ maintenance     retention, extraction, output  │
+                                                  │                 sweeps,                        │
                                                   │                 watchdog                       │
                                                   └────────────────────────────────────────────────┘
    POST /webhooks/runpod_ocr_results ◄────────────  signed delivery

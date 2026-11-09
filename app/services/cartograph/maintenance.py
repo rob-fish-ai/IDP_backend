@@ -1,11 +1,12 @@
 """Housekeeping on the job store and the output folder, and the
 transient-failure test the audit task retries on.
 
-The maintenance thread runs three sweeps on an interval: retention deletes
-terminal rows older than `audit_retention_days`, the output sweep deletes
-what the engine wrote under output_dir more than `output_retention_days`
-ago, and the watchdog fails a row whose worker died without the process
-stopping. A row whose process
+The maintenance thread runs four sweeps on an interval: retention deletes
+terminal rows older than `audit_retention_days`, the extraction sweep drops
+the extraction blob from terminal rows older than
+`extraction_retention_days`, the output sweep deletes what the engine wrote
+under output_dir more than `output_retention_days` ago, and the watchdog
+fails a row whose worker died without the process stopping. A row whose process
 stopped is not the watchdog's: the resume path claims every owned
 Cartograph row at start, before the first sweep, and runs it again.
 """
@@ -101,6 +102,21 @@ def retention_sweep(settings: Settings) -> int:
     return deleted
 
 
+def extraction_sweep(settings: Settings) -> int:
+    """Clear the extraction blob from terminal rows older than
+    extraction_retention_days, keeping the rows; 0 disables. At production
+    volume the blobs are most of the job store, and once a case is
+    delivered Cartograph holds the structured copy."""
+    days = settings.extraction_retention_days
+    if days <= 0:
+        return 0
+    cutoff = time.time() - days * 86400
+    cleared = get_job_store(settings.audit_job_db).clear_extraction_older_than(cutoff)
+    if cleared:
+        logger.info("Extraction sweep cleared the extraction from %d terminal row(s) older than %d day(s)", cleared, days)
+    return cleared
+
+
 def watchdog_sweep(settings: Settings) -> int:
     """Fail the rows whose worker died mid-audit, and tell Cartograph.
 
@@ -192,11 +208,13 @@ _MAINT_STOP: threading.Event | None = None
 def _run_maintenance_loop(stop_event: threading.Event) -> None:
     settings = get_settings()
     interval = settings.audit_maintenance_interval_seconds
-    logger.info("Maintenance thread started (rows=%dd, output=%dd, interval=%ds)",
-                settings.audit_retention_days, settings.output_retention_days, interval)
+    logger.info("Maintenance thread started (rows=%dd, extraction=%dd, output=%dd, interval=%ds)",
+                settings.audit_retention_days, settings.extraction_retention_days,
+                settings.output_retention_days, interval)
     while not stop_event.is_set():
         try:
             retention_sweep(settings)
+            extraction_sweep(settings)
             output_sweep(settings)
             watchdog_sweep(settings)
         except Exception:
