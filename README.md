@@ -350,7 +350,8 @@ app/
       signing.py             HMAC sign / verify
       resume.py              re-run cases interrupted by a stop
       maintenance.py         retention + watchdog sweeps; is_retryable_error
-scripts/                     engine.sh (supervisor), replay_corpus.py, score_calibration.py
+    preflight.py             what a host needs before its first case (scripts/preflight.py)
+scripts/                     engine.sh (supervisor), preflight.py, replay_corpus.py, score_calibration.py
 eval/                        extraction-quality harness (gold/, run_eval.py, README.md)
 tests/                       pytest rule tests + corpus_baseline.json
 deliverables/                the Cartograph contract documents
@@ -423,8 +424,11 @@ carrying retired settings does not stop the engine.
 | `IDP_CARTOGRAPH_REPOST_WINDOW_SECONDS` | `7200` | Repeat-notification guard; `0` disables |
 | `IDP_REPORT_PREVIOUS_CERT_MISSING` | `false` | Whether a missing prior-year cert is a finding / checklist gap |
 
-`scripts/engine.sh` reads two more from the environment: `IDP_PORT` (8001)
-and `IDP_STOP_GRACE` (30 s given to uvicorn before it is killed).
+`scripts/engine.sh` reads two more from the environment, or from `.env`
+when the environment does not set them: `IDP_PORT` (8001) and
+`IDP_STOP_GRACE` (30 s given to uvicorn before it is killed). A host whose
+8001 is taken puts `IDP_PORT=8002` in `.env`; the engine itself ignores
+the line.
 
 ---
 
@@ -503,7 +507,12 @@ up a Dev or Prod engine on a fresh pod:
        bash /workspace/IDP_backend/scripts/engine.sh start >> /workspace/IDP_backend/engine.log 2>&1 || true
    fi
    ```
-7. **Start and check.** `scripts/engine.sh start`, then `scripts/engine.sh
+7. **Preflight, start and check.** `.venv/bin/python scripts/preflight.py`
+   makes one tiny request to the Claude API and to each OCR service, and
+   checks every configured environment has a full ingest URL and both
+   secrets, and that the data folders have room and the job store opens.
+   A FAIL line is something the first case would die on; fix it before
+   going on. Then `scripts/engine.sh start` and `scripts/engine.sh
    status`: the health line must list every environment this host serves
    with `"verifies": true` and `"deliverable": true`, and a sensible
    `output_free_mb`. The boot log line `Cartograph environments: ...`
@@ -512,6 +521,13 @@ up a Dev or Prod engine on a fresh pod:
 8. **Old host.** Once the new one has taken a case end to end, `engine.sh
    stop` on the old host and remove its Cartograph secrets, so one
    environment is never served from two places.
+
+### After an `.env` change
+
+`.venv/bin/python scripts/preflight.py` (or `--offline` to skip the
+network checks) says in one screen whether the key, the OCR services, the
+environments and the storage are usable, before a restart finds out the
+hard way.
 
 ### Locally
 

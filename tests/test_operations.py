@@ -610,3 +610,41 @@ def test_the_extraction_sweep_clears_the_blob_from_old_terminal_rows_and_keeps_t
     with store._connect() as conn:
         conn.execute("UPDATE audit_jobs SET updated_at = 0")
     assert maintenance.extraction_sweep(settings) == 0
+
+
+def test_preflight_names_what_a_new_host_is_missing(tmp_path):
+    """The preflight's offline checks: an environment with a placeholder, a
+    bare host for an ingest URL or one secret used in both directions is a
+    fail that names the field; a host with no environment is a warning,
+    not a failure, because that is the safe state before credentials
+    exist; the storage checks make the folders and open the store."""
+    from app.core.config import CartographEnvironment, Settings
+    from app.services import preflight
+
+    def settings(**kw):
+        return Settings(audit_job_db=tmp_path / "data" / "jobs.db", output_dir=tmp_path / "data" / "output",
+                        cartograph_ingest_url="", cartograph_ingest_secret="", cartograph_callback_secret="", **kw)
+
+    none = {n: (s, d) for n, s, d in preflight.check_environments(settings())}
+    assert none["cartograph"][0] == "warn"
+
+    envs = {
+        "prod": CartographEnvironment(ingest_url="https://carto.example/webhooks/runpod_ocr_results",
+                                      ingest_secret="out", callback_secret="in"),
+        "staging": CartographEnvironment(ingest_url="https://staging.carto.example",
+                                         ingest_secret="REPLACE_WITH_STAGING_INGEST_SECRET", callback_secret="same"),
+        "dev": CartographEnvironment(ingest_url="https://dev.carto.example/webhooks/runpod_ocr_results",
+                                     ingest_secret="same", callback_secret="same"),
+    }
+    got = {n: (s, d) for n, s, d in preflight.check_environments(settings(cartograph_environments=envs))}
+    assert got["cartograph prod"] == ("ok", "delivers to carto.example")
+    assert got["cartograph staging"][0] == "fail"
+    assert "ingest_url is not a full https URL with a path" in got["cartograph staging"][1]
+    assert "ingest_secret is a placeholder" in got["cartograph staging"][1]
+    assert got["cartograph dev"] == ("fail", "ingest_secret and callback_secret are the same value")
+
+    storage = {n: (s, d) for n, s, d in preflight.check_storage(settings(), warn_below_mb=0)}
+    assert storage["output dir"][0] == "ok" and (tmp_path / "data" / "output").is_dir()
+    assert storage["job store"] == ("ok", f"{tmp_path / 'data' / 'jobs.db'}: new")
+    assert all(s == "ok" for s, _ in storage.values())
+    assert preflight.run_all(settings(), network=False)[0][0] == "cartograph"

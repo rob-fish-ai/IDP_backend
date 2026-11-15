@@ -14,14 +14,23 @@
 # not wait for it: uvicorn is given IDP_STOP_GRACE seconds to finish what it
 # is doing and is then killed.
 #
-# Settings: IDP_PORT (8001), IDP_STOP_GRACE (30). Logs append to engine.log.
+# Settings: IDP_PORT (8001), IDP_STOP_GRACE (30), from the environment or,
+# when it does not set them, from the repo's .env — so a host whose port is
+# taken (a VS Code server on 8001) puts one IDP_PORT line in .env and every
+# start, including the boot hook's, lands on it. Logs append to engine.log.
 set -u
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RUN="$ROOT/run"
 LOG="$ROOT/engine.log"
-PORT="${IDP_PORT:-8001}"
-GRACE="${IDP_STOP_GRACE:-30}"
+
+# The last uncommented assignment of a key in .env, unquoted; empty if none.
+from_env_file() {
+    [[ -f "$ROOT/.env" ]] || return 0
+    grep -E "^[[:space:]]*$1[[:space:]]*=" "$ROOT/.env" | tail -1 | cut -d= -f2- | tr -d ' "\'"'"
+}
+PORT="${IDP_PORT:-$(from_env_file IDP_PORT)}"; PORT="${PORT:-8001}"
+GRACE="${IDP_STOP_GRACE:-$(from_env_file IDP_STOP_GRACE)}"; GRACE="${GRACE:-30}"
 SUP_PID="$RUN/supervisor.pid"
 APP_PID="$RUN/engine.pid"
 STOP_FLAG="$RUN/stop"
