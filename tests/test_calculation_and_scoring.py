@@ -447,7 +447,8 @@ def test_a_voi_row_is_sent_only_when_a_verification_stated_something():
     members = build_household_members(ex, warnings)
     records = build_income_records(ex, members, Settings(cartograph_income_types=["wages_and_salaries"]), warnings)
     assert records[0]["vois"] == []
-    assert records[0]["frequency_of_pay"] == "bi-weekly"
+    assert records[0]["frequency_of_pay"] == "biweekly"
+    assert all(s["pay_frequency"] == "biweekly" and s["period_start"] is None for s in records[0]["paystubs"])
     voi = records[1]["vois"][0]
     assert voi["voi_type"] == "Work Number" and voi["rate_of_pay"] == "21.00" and voi["rate_unit"] == "hourly"
     assert voi["frequency_of_pay"] == "bi-weekly" and voi["ytd_amount"] == "9701.07" and voi["employment_start_date"] == "2026-03-13"
@@ -684,3 +685,41 @@ def test_a_source_named_after_its_income_type_is_not_a_misread_name():
     named = _scored_income(sourceName="Acme Staffing", incomeType="Non-Federal Wage", selfDeclaredAmount="547.00")
     score_business_rules([named])
     assert _field(named, "sourceName").flag.value != "na"
+
+
+def test_stub_periods_reach_cartograph_in_its_spelling_and_decide_a_frequency_the_stub_omits():
+    from app.schemas.extraction import CertificationInfo, IncomeExtraction, SourceIncome
+    from app.services.cartograph.adapter import build_household_members, build_income_records
+    from app.services.income_calculator import _first_paycheck_start, calculate_paystub_based
+    from app.core.config import Settings
+    from datetime import date
+    hh = HouseholdDemographics(houseHold=[HouseholdMember(FirstName="Noor", LastName="Haddad", DOB="1990-02-02", head="H", relationship="Head")])
+    # Two stubs: too few pay dates to infer a period, and no stated interval.
+    # Their printed periods are fifteen and sixteen days: semi-monthly.
+    stubs = [
+        PayStubEntry(sourceName="Paxton", memberName="Noor Haddad", grossPay="1200.00", payDate="2026-08-20",
+                     periodStart="2026-08-01", periodEnd="2026-08-15", ytdGross="1200.00"),
+        PayStubEntry(sourceName="Paxton", memberName="Noor Haddad", grossPay="1300.00", payDate="2026-09-05",
+                     periodStart="2026-08-16", periodEnd="2026-08-31"),
+    ]
+    annual, details = calculate_paystub_based(stubs)
+    assert annual == "30000.00", details
+    # The first stub's YTD equals its gross: the period it prints is the first paycheck's start.
+    assert _first_paycheck_start(stubs) == date(2026, 8, 1)
+    voi = VerificationIncomeEntry(memberName="Noor Haddad", sourceName="Paxton", incomeType="Non-Federal Wage",
+                                  type_of_VOI="Employment Verification", rateOfPay="2500.00", rateUnit="semi-monthly",
+                                  frequencyOfPay="semi-monthly", verificationStatus="verified", sourcePages=[4])
+    ex = SimpleNamespace(household_demographics=hh, certification_info=CertificationInfo(effectiveDate="2027-01-01"),
+                         income=IncomeExtraction(sourceIncome=SourceIncome(payStub=stubs, verificationIncome=[voi])),
+                         income_calculations=[])
+    warnings: list[str] = []
+    members = build_household_members(ex, warnings)
+    records = build_income_records(ex, members, Settings(cartograph_income_types=["wages_and_salaries"]), warnings)
+    record = records[0]
+    # The income record speaks Cartograph's vocabulary; the stub rows carry their periods.
+    assert record["frequency_of_pay"] == "semimonthly"
+    first = next(s for s in record["paystubs"] if s["pay_date"] == "2026-08-20")
+    assert (first["period_start"], first["period_end"]) == ("2026-08-01", "2026-08-15")
+    # A frequency Cartograph's column has no value for is sent as null, not as a word it rejects.
+    from app.services.cartograph.adapter import _cartograph_frequency
+    assert _cartograph_frequency("quarterly") is None and _cartograph_frequency("Biweekly") == "biweekly"

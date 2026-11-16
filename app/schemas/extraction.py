@@ -143,6 +143,11 @@ class PayStubEntry(BaseModel):
     employeeId: Optional[str] = None
     grossPay: Optional[str] = None
     payDate: Optional[str] = None
+    # The pay period the stub covers, when it prints one. A period's length
+    # names the pay frequency on its own, and the start of the first period
+    # of the year anchors a year-to-date projection.
+    periodStart: Optional[str] = None
+    periodEnd: Optional[str] = None
     payInterval: Optional[str] = None
     ytdGross: Optional[str] = None
     # Provenance: the packet pages this record was read from (set by the

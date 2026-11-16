@@ -578,6 +578,8 @@ def validate_income(data: dict) -> dict:
         stub["socialSecurityNumber"] = normalize_ssn(stub.get("socialSecurityNumber"))
         stub["grossPay"] = normalize_money(stub.get("grossPay"))
         stub["payDate"] = normalize_date(stub.get("payDate"))
+        stub["periodStart"] = normalize_date(stub.get("periodStart"))
+        stub["periodEnd"] = normalize_date(stub.get("periodEnd"))
         stub["payInterval"] = _canonical_frequency(stub.get("payInterval"))
 
     for vi in si.get("verificationIncome", []):

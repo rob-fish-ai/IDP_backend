@@ -365,9 +365,42 @@ def _first_paycheck_start(paystubs: list[PayStubEntry]) -> date | None:
         if ytd is None or gross is None or pay_date is None or gross <= 0:
             continue
         if abs(ytd - gross) <= max(0.01 * gross, 0.02):
+            # The stub's own period start when it prints one; else a
+            # period's length back from the pay date.
+            start = _parse_date(getattr(ps, "periodStart", None))
+            if start and start <= pay_date:
+                return start
             days = _PERIOD_DAYS.get(normalize_frequency(ps.payInterval) or "", 14)
             return pay_date - timedelta(days=days)
         return None
+
+
+def _frequency_from_period(paystubs: list[PayStubEntry]) -> str | None:
+    """The pay frequency the stubs' printed pay periods imply, or None.
+
+    A period's length is the frequency: seven days is weekly, fourteen is
+    bi-weekly, fifteen or sixteen is semi-monthly (1st–15th, 16th–31st),
+    a month is monthly. Thirteen days (a February half-month) is left
+    undecided. The most common answer across the stubs wins.
+    """
+    found: list[str] = []
+    for ps in paystubs:
+        start = _parse_date(getattr(ps, "periodStart", None))
+        end = _parse_date(getattr(ps, "periodEnd", None))
+        if not start or not end or end < start:
+            continue
+        days = (end - start).days + 1
+        if 6 <= days <= 8:
+            found.append("weekly")
+        elif days == 14:
+            found.append("bi-weekly")
+        elif 15 <= days <= 16:
+            found.append("semi-monthly")
+        elif 28 <= days <= 31:
+            found.append("monthly")
+    if not found:
+        return None
+    return max(set(found), key=found.count)
     return None
 
 
@@ -405,7 +438,9 @@ def calculate_paystub_based(
     inferred = _infer_periodicity(dates) if len(dates) >= 3 else None
     note = ""
     if multiplier is None:
-        # The stubs' own dates say how often the person is paid.
+        # The stubs' own dates say how often the person is paid: the
+        # spacing of three or more pay dates, else the printed period.
+        inferred = inferred or _frequency_from_period(paystubs)
         if inferred:
             freq, multiplier = inferred, FREQUENCY_MULTIPLIERS[inferred]
         else:

@@ -370,6 +370,9 @@ PAYSTUB FIELDS:
 - socialSecurityNumber: exactly as printed on the stub
 - grossPay: exact dollar amount with cents, numeric string ("1250.00"), no $ or commas
 - payDate: YYYY-MM-DD
+- periodStart / periodEnd: the pay period the stub covers ("Pay Period 08/31/26 -
+  09/06/26", "Period Beginning" / "Period Ending"), YYYY-MM-DD. null when the stub
+  prints no period; never derive them from the pay date.
 - payInterval: lowercase (weekly / bi-weekly / semi-monthly / monthly)
 - ytdGross: year-to-date gross on the stub ("YTD Gross", "YTD Earnings"),
   numeric string, no $ or commas. null if the document shows no YTD figure
@@ -393,7 +396,8 @@ For EACH employer record ("RECORD 1 OF 1", "Employer: …") return:
       "Inquiry Date". Prior years' annual totals are history, not the rate.
   (b) payStub entries for the 6 most recent rows of the pay period history, each
       with payDate = the Pay Date, grossPay = Gross Earnings, payInterval = the pay
-      period, ytdGross null (the rows print none).
+      period, periodStart / periodEnd = the Period Start / Period End columns when
+      the report prints them, ytdGross null (the rows print none).
 Both halves name the same employer so they attach to one income source.
 - Child support and other benefit payments are NEVER pay stubs — they belong in the
   verificationIncome entry's paymentHistory

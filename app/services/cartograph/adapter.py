@@ -1071,6 +1071,22 @@ def _calc_for(calculations: dict, member: str | None, source: str | None, income
 
 _PAY_FREQUENCIES = ("weekly", "bi-weekly", "semi-monthly", "monthly", "quarterly")
 
+# Cartograph's paystub_frequency vocabulary, keyed by the engine's canonical
+# spelling. The engine keeps its hyphens internally; the column takes none.
+# A period the column has no value for (quarterly, hourly) is sent as null.
+_CARTOGRAPH_FREQUENCIES = {
+    "weekly": "weekly",
+    "bi-weekly": "biweekly",
+    "semi-monthly": "semimonthly",
+    "monthly": "monthly",
+}
+
+
+def _cartograph_frequency(value: str | None) -> str | None:
+    """A pay frequency in the spelling Cartograph's income record stores."""
+    from app.services.income_calculator import normalize_frequency
+    return _CARTOGRAPH_FREQUENCIES.get(normalize_frequency(value) or "")
+
 
 def _frequency_out(entry, stubs: list | None = None) -> str | None:
     """How often the person is paid.
@@ -1226,9 +1242,11 @@ def build_income_records(
         paystubs = [
             {
                 "pay_date": _iso_date(stub.payDate),
+                "period_start": _iso_date(stub.periodStart),
+                "period_end": _iso_date(stub.periodEnd),
                 "gross_pay": _money(stub.grossPay),
                 "ytd_amount": _money(stub.ytdGross),
-                "pay_frequency": stub.payInterval,
+                "pay_frequency": _cartograph_frequency(stub.payInterval),
                 "pages": _pages_of(stub),
             }
             for stub in _deliverable_stubs(grouped.get(index, []), reference, warnings, context)
@@ -1271,7 +1289,7 @@ def build_income_records(
                 aliases=settings.cartograph_type_aliases,
             ),
             "source_name": entry.sourceName,
-            "frequency_of_pay": _frequency_out(entry, grouped.get(index, [])),
+            "frequency_of_pay": _cartograph_frequency(_frequency_out(entry, grouped.get(index, []))),
             "rate_unit": normalize_rate_unit(entry.rateUnit),
             "date_received": _iso_date(entry.dateReceived),
             "employment_start_date": _iso_date(entry.hireDate),
@@ -1341,8 +1359,8 @@ def build_income_records(
                     aliases=settings.cartograph_type_aliases,
                 ),
                 "source_name": source_name or None,
-                "frequency_of_pay": next(
-                    (s.payInterval for s in stubs if s.payInterval), None,
+                "frequency_of_pay": _cartograph_frequency(
+                    next((s.payInterval for s in stubs if s.payInterval), None),
                 ),
                 "date_received": None,
                 "employment_start_date": None,
@@ -1361,9 +1379,11 @@ def build_income_records(
                 "paystubs": [
                     {
                         "pay_date": _iso_date(s.payDate),
+                        "period_start": _iso_date(s.periodStart),
+                        "period_end": _iso_date(s.periodEnd),
                         "gross_pay": _money(s.grossPay),
                         "ytd_amount": _money(s.ytdGross),
-                        "pay_frequency": s.payInterval,
+                        "pay_frequency": _cartograph_frequency(s.payInterval),
                         "pages": _pages_of(s),
                     }
                     for s in stubs
