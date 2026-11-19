@@ -190,6 +190,23 @@ that carries `manually_corrected` (true/false) and an id lands in
 statements a reviewer had to fix by hand, which is where the engine's
 reading needs work.
 
+### Checklist rows and document types
+
+Each checklist row Cartograph sends is mapped to one taxonomy label
+(`cartograph/checklist.py: document_type_for`): by form number first
+("HUD9887", "9887a" and "9887-A" are read alike), then by a label or alias
+printed in the row, then by words in common. Rows phrased as a kind of
+document rather than one form ("Benefit or Budget Letter", "Lease
+provided", "Asset under 50,000 Form", "Third Party Verification ... for
+Asset") belong to a row family: any label in the family satisfies the row
+and the one found is named in the note. Rows that ask a question about a
+form rather than for the form (correct limits, within 120 days, matches
+the TIC) are left to the findings. The labels and families are pinned by
+`tests/test_taxonomy_coverage.py` against every row label the job store
+has received (`tests/fixtures/checklist_row_labels.json`): a new row that
+maps nowhere, or a taxonomy label with a form number and no printed title
+or hint, fails the suite rather than silently reporting a form missing.
+
 ### DOB and SSN rows (`verification_methods`)
 
 A checklist row about a member's date of birth or SSN is judged per member
@@ -617,6 +634,11 @@ baseline when the job store is present.
   scoring, payload) over every stored extraction and diffs against
   `tests/corpus_baseline.json`. OCR, classification and the model reads need
   a live run.
+- `scripts/taxonomy_sweep.py` — reads the job store and prints the taxonomy
+  labels never assigned, the page titles the classifier could only
+  nearest-match and where they landed, and the checklist row labels no type
+  answers. Run it after a batch of new properties: a title that keeps landing
+  in a fallback bucket wants an alias or a label of its own.
 - `eval/run_eval.py` — scores a packet against gold values in `eval/gold/`;
   see [`eval/README.md`](eval/README.md).
 

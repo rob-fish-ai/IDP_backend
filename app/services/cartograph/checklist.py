@@ -32,7 +32,9 @@ def _base(document_type: str | None) -> str:
 
 logger = logging.getLogger(__name__)
 
-_FORM_TOKEN_RE = re.compile(r"\b(\d{3,5}(?:[-/]?[a-z0-9]{1,2})?)\b", re.IGNORECASE)
+# A number may follow its prefix without a space ("HUD9887"): the only
+# boundary required is that the number is not part of a longer number.
+_FORM_TOKEN_RE = re.compile(r"(?<!\d)(\d{3,5}(?:[-/]?[a-z0-9]{1,2})?)\b", re.IGNORECASE)
 _STOP = frozenset({
     "and", "the", "of", "for", "a", "an", "to", "on", "in", "is", "are", "form", "forms", "hud",
     "completed", "accurate", "signed", "dated", "present", "required", "copy", "current", "all",
@@ -45,8 +47,9 @@ def _form_tokens(text: str) -> set[str]:
     """Form numbers as a form prints them: 50059, 9887, 9887-a, 92006, 3560-8."""
     out = set()
     for tok in _FORM_TOKEN_RE.findall(text or ""):
-        t = tok.lower().replace("/", "-")
-        out.add(t)
+        # "9887-A", "9887/A" and "9887a" are one form: the separator is
+        # dropped on both the row and the label.
+        out.add(re.sub(r"[-/]", "", tok.lower()))
     return out
 
 
@@ -80,6 +83,7 @@ _ATTRIBUTE_WORDS = frozenset({
     "includes", "include", "correct", "within", "days", "consecutive", "calculation", "calculated",
     "properly", "limits", "limit", "allowance", "rate", "balance", "value", "accurately", "changes",
     "terminated", "closed", "reminder", "reminders", "counted", "treated", "determined", "used",
+    "indicate", "indicates", "match", "matches", "overpayment",
 })
 
 
@@ -132,11 +136,16 @@ def normalise_rows(payload: dict) -> list[dict]:
     return rows
 
 
+# Types the audit sets aside that a checklist still asks about by name:
+# their presence is answered, their content is not read.
+ASKABLE_IGNORED: frozenset[str] = frozenset({"Background Screening Report"})
+
+
 def _candidate_labels() -> list[tuple[str, set[str], set[str]]]:
     """(label, form tokens, words) for every document type a checklist can name."""
     out = []
     for label, spec in TAXONOMY.items():
-        if spec["category"] not in (INCLUDE, COMPLIANCE):
+        if spec["category"] not in (INCLUDE, COMPLIANCE) and label not in ASKABLE_IGNORED:
             continue
         names = [label, *spec["aliases"]]
         out.append((label, set().union(*(_form_tokens(n) for n in names)), set().union(*(_words(n) for n in names))))
@@ -167,6 +176,9 @@ def document_type_for(row: dict) -> tuple[str | None, str | None]:
             best = max(exact, key=lambda lw: (len(lw[1] & rw), -len(lw[0])))
             return best[0], "form_number"
     low = (row.get("label") or "").lower()
+    fam = _family_for(row)
+    if fam:
+        return fam[0], "title"
     titled = [label for label, _, _ in candidates
               for n in (label, re.sub(r"\s*\([^)]*\)\s*$", "", label), *TAXONOMY[label]["aliases"])
               if len(n) >= 8 and n.lower() in low]
@@ -174,14 +186,69 @@ def document_type_for(row: dict) -> tuple[str | None, str | None]:
         return max(titled, key=len), "title"
     rw = _words(row.get("label") or "")
     if rw:
-        scored = [(_shared_words(rw, w) / len(rw), label) for label, _, w in candidates]
-        scored.sort(reverse=True)
+        # Share of the row's words a label carries; on a tie, the label
+        # with the fewest words of its own that the row does not name
+        # ("Lease provided" is the Lease Agreement, not the VAWA Lease
+        # Addendum, which shares the one word but carries two more).
+        scored = [(_shared_words(rw, w) / len(rw), _shared_words(rw, w) / max(len(w), 1), label)
+                  for label, _, w in candidates]
+        scored.sort(key=lambda t: (t[0], t[1], -len(t[2])), reverse=True)
         if scored and scored[0][0] >= 0.5:
-            return scored[0][1], "words"
+            return scored[0][2], "words"
     return None, None
 
 
 _BASE_CONFIDENCE = {"form_number": 0.9, "title": 0.8, "words": 0.6}
+
+# Row wording that names a kind of document rather than one taxonomy
+# label. The first label is the one reported; the row is satisfied by any
+# label in the family (a benefit letter from the VA answers "benefit or
+# budget letter" as well as one from Social Security).
+_ROW_FAMILIES: dict[str, tuple[str, ...]] = {
+    "benefit letter": ("SSA Benefit Letter", "VA Benefit Letter", "Pension Statement",
+                       "TANF / Public Assistance Verification", "TANF Verification"),
+    "budget letter": ("SSA Benefit Letter", "VA Benefit Letter", "Pension Statement",
+                      "TANF / Public Assistance Verification", "TANF Verification"),
+    "award letter": ("SSA Benefit Letter", "VA Benefit Letter", "Pension Statement"),
+    # HOTMA's self-certification of assets under the threshold, whichever
+    # figure the row prints.
+    "under 50,000": ("Asset Self-Certification", "Debit Card Asset Self-Certification"),
+    "under $50,000": ("Asset Self-Certification", "Debit Card Asset Self-Certification"),
+    "under 5,000": ("Asset Self-Certification", "Debit Card Asset Self-Certification"),
+    "under $5,000": ("Asset Self-Certification", "Debit Card Asset Self-Certification"),
+    "under 5000": ("Asset Self-Certification", "Debit Card Asset Self-Certification"),
+    # The tenant's signed acknowledgement of the EIV report, or of the
+    # EIV brochure with the other HUD handouts.
+    "eiv acknowledgment": ("EIV Income Report Confirmation", "Acknowledgement of Receipt"),
+    "eiv acknowledgement": ("EIV Income Report Confirmation", "Acknowledgement of Receipt"),
+    # "Lease provided / signed": the lease, which on a HUD property is the
+    # model lease — not the VAWA addendum that shares the word.
+    "lease provided": ("Lease Agreement", "HUD Model Lease"),
+    "lease signed": ("Lease Agreement", "HUD Model Lease"),
+}
+_THIRD_PARTY_RE = re.compile(r"\b(third|3rd)[\s-]*party\s+verification\b")
+
+
+def _family_for(row: dict) -> tuple[str, ...] | None:
+    low = (row.get("label") or "").lower()
+    for phrase, labels in _ROW_FAMILIES.items():
+        if phrase in low:
+            return labels
+    if _THIRD_PARTY_RE.search(low):
+        # "Third party verification" is the VOA or the VOI, by what the
+        # row says it verifies — not the authorization that requested it.
+        if "asset" in low:
+            return ("Verification of Assets (VOA)", "Bank Statement")
+        if "income" in low:
+            return ("Verification of Income (VOI)", "Work Number / Equifax Report")
+    return None
+
+
+def labels_satisfying(row: dict, label: str) -> tuple[str, ...]:
+    """The labels whose presence answers the row: the one it maps to and,
+    for a row phrased as a kind of document, the family it belongs to."""
+    fam = _family_for(row)
+    return tuple(dict.fromkeys((label, *(fam or ()))))
 
 
 def _member_matches(person_name: str | None, subject_label: str | None) -> bool:
@@ -210,7 +277,8 @@ def match_checklist(rows: list[dict], extraction, expect_previous: bool = False,
     """
     from app.services.cartograph.identity import concepts_of, identity_rows
     all_groups = list(getattr(extraction, "document_groups", None) or [])
-    groups = [g for g in all_groups if g.category != "ignore" and not is_previous_certification(g.document_type)]
+    groups = [g for g in all_groups if (g.category != "ignore" or canonical_label(g.document_type)[0] in ASKABLE_IGNORED)
+              and not is_previous_certification(g.document_type)]
     previous = [g for g in all_groups if is_previous_certification(g.document_type)]
     incomplete = {}
     for f in getattr(extraction, "finding_records", None) or []:
@@ -242,7 +310,8 @@ def match_checklist(rows: list[dict], extraction, expect_previous: bool = False,
                 out.append({"finding_id": row["finding_id"], "found": False, "pages": [],
                             "confidence": round(_BASE_CONFIDENCE[how], 2), "note": f"No previous {label} in the packet."})
             continue
-        mine = [g for g in groups if canonical_label(g.document_type)[0] == label]
+        wanted = labels_satisfying(row, label)
+        mine = [g for g in groups if canonical_label(g.document_type)[0] in wanted]
         if row.get("subject_label"):
             named = [g for g in mine if _member_matches(g.person_name, row["subject_label"])]
             mine = named or mine
@@ -257,6 +326,7 @@ def match_checklist(rows: list[dict], extraction, expect_previous: bool = False,
         placed_approx = any("nearest match" in (g.notes or "") or "relabelled" in (g.notes or "") for g in mine)
         if placed_approx:
             confidence -= 0.15
+        label = canonical_label(mine[0].document_type)[0]
         entries = [e for e in inventory if (e.documentType or "") == label and _member_matches(e.personName, row.get("subject_label"))]
         note = f"{label} present, page{'s' if len(pages) > 1 else ''} {_page_span(pages)}."
         signed = next((e for e in entries if e.isSigned == "Yes"), None)

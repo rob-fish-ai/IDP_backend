@@ -27,7 +27,7 @@ _EXCLUDE_FROM_FINANCIAL: set[str] = {
 
 # System-generated forms (not signed)
 _SYSTEM_GENERATED: set[str] = {
-    "EIV Summary Report", "EIV Income Report",
+    "EIV Summary Report", "EIV Income Report", "EIV Existing Tenant Search",
 }
 
 
