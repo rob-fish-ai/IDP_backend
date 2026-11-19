@@ -151,8 +151,8 @@ Body fields the engine reads (`AuditRequest` in `app/routers/integration.py`):
 optional `filename`, `job_document_id`, `document_class`), `cert_type`,
 `program`, `job_id`, `community_id`, `unit_number`, `effective_date`,
 `requirements` / `checklist_rows`, `existing_records_manifest`,
-`rent_extraction_contract`. Unknown top-level keys are logged, never
-rejected. The raw request is stored on the job row (`cartograph_request`)
+`rent_extraction_contract`, `verification_methods`. Unknown top-level keys
+are logged, never rejected. The raw request is stored on the job row (`cartograph_request`)
 with the checklist rows read out of it. Cartograph's cert types (`initial`,
 `annual`, `interim`, `ar_self_cert`) are translated to the engine's (`MI`,
 `AR`, `IR`, `AR-SC`); an unrecognised value is ignored and the type is read
@@ -184,6 +184,42 @@ deliberate re-run. `0` turns the guard off.
 `finding_verdicts` / `missed_findings` mapped onto the documented names);
 rows land in the `finding_feedback` table keyed on (case, source, finding
 key, description), a later verdict on the same key replacing the earlier one.
+A row under `paystubs[]`, `bank_statements[]`, `records[]` or `corrections[]`
+that carries `manually_corrected` (true/false) and an id lands in
+`record_corrections`, keyed on (case, record type, record id): the stubs and
+statements a reviewer had to fix by hand, which is where the engine's
+reading needs work.
+
+### DOB and SSN rows (`verification_methods`)
+
+A checklist row about a member's date of birth or SSN is judged per member
+against the proofs the case's program accepts, not by a form being
+present. The request may carry the accepted list:
+
+```json
+"verification_methods": {"dob": ["birth_certificate", "passport", "naturalization_papers"],
+                         "ssn": ["ssn_card"]}
+```
+
+Vocabulary: `ssn_card`, `birth_certificate`, `naturalization_papers`,
+`passport`, `drivers_license`, `state_id`, `self_declaration`. Without the
+key the engine uses Scott's defaults: HUD programs take the SSN card, a
+birth certificate, naturalization papers or a passport; other programs
+take the application's self-declaration or a driver's license (a stronger
+proof is accepted wherever a declaration is). The classifier labels each
+kind of identity proof separately (`Social Security Card`, `Birth
+Certificate`, `Driver License / State ID`, `Passport`, `Naturalization /
+Immigration Document`; any other photo ID stays `Identity Document`), and
+`cartograph/identity.py` attributes each page to a member by the name the
+classifier read on it or by the member's own number or birth date printed
+there. The row that comes back (`checklist_matches[]`) carries
+`household_member_id` (Cartograph's), `member_ref` (ours), `found`,
+`accepted` (every proof is on the program's list), `document_type` (one
+concept) or `proofs[]` (a combined DOB-and-SSN row, one entry per
+concept), `document_id` (the request's `job_document_id`), `pages`,
+`confidence` and a note. A proof that is not accepted for the program is
+still reported, marked as such; an identity page that matches no member is
+named in the note of the rows it could have satisfied.
 
 ---
 

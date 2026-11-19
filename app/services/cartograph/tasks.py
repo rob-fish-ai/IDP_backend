@@ -104,6 +104,7 @@ def audit_case(
     existing_records_manifest: dict | list | None = None,
     fallback_packet: str | Path | None = None,
     environment: str | None = None,
+    verification_methods: dict | None = None,
 ) -> None:
     """Run one notified case end to end, for the environment it came from.
 
@@ -125,7 +126,7 @@ def audit_case(
             program=program, job_id=job_id, community_id=community_id,
             unit_number=unit_number, effective_date=effective_date, checklist_rows=checklist_rows,
             existing_records_manifest=existing_records_manifest, fallback_packet=fallback_packet,
-            environment=environment,
+            environment=environment, verification_methods=verification_methods,
         )
     except Exception as exc:
         logger.exception("Unhandled failure auditing case_ref=%s", case_ref)
@@ -157,6 +158,7 @@ def _audit_case(
     existing_records_manifest: dict | list | None = None,
     fallback_packet: str | Path | None = None,
     environment: str | None = None,
+    verification_methods: dict | None = None,
 ) -> None:
     job = job_key(settings, environment, case_ref)
 
@@ -275,6 +277,8 @@ def _audit_case(
         checklist_rows=checklist_rows,
         document_spans=document_spans,
         existing_records_manifest=existing_records_manifest,
+        program=program,
+        verification_methods=verification_methods,
     )
 
     # An attachment left out of the packet is something the reviewer must

@@ -105,7 +105,45 @@ CREATE TABLE IF NOT EXISTS finding_feedback (
     PRIMARY KEY (case_id, source, finding_key, description)
 );
 CREATE INDEX IF NOT EXISTS idx_feedback_code ON finding_feedback(code);
+CREATE TABLE IF NOT EXISTS record_corrections (
+    case_id TEXT NOT NULL,
+    scan_id TEXT,
+    record_type TEXT NOT NULL,         -- 'paystub' | 'bank_statement' | ...
+    record_id TEXT NOT NULL,           -- Cartograph's id for the row
+    manually_corrected INTEGER NOT NULL,
+    raw TEXT NOT NULL,                 -- the row as received
+    received_at REAL NOT NULL,
+    PRIMARY KEY (case_id, record_type, record_id)
+);
 """
+
+
+# Lists in a findings_feedback event whose rows may carry Cartograph's
+# manually_corrected flag: a stub or statement a reviewer had to fix by hand.
+_CORRECTION_LISTS = {
+    "paystubs": "paystub", "bank_statements": "bank_statement", "statements": "bank_statement",
+    "records": None, "corrections": None,
+}
+
+
+def _record_corrections(payload: dict) -> list[tuple[str, str, bool, dict]]:
+    """(record type, record id, manually_corrected, row) for every row of
+    the event that states the flag. The type comes from the row when it
+    says it, else from the list it sits in; a row with no id is skipped."""
+    out = []
+    for key, default_type in _CORRECTION_LISTS.items():
+        for row in payload.get(key) or []:
+            if not isinstance(row, dict) or "manually_corrected" not in row:
+                continue
+            record_id = row.get("id") or row.get("record_id") or row.get("paystub_id") or row.get("statement_id")
+            record_type = row.get("record_type") or default_type
+            if record_id is None or not record_type:
+                continue
+            flag = row.get("manually_corrected")
+            if isinstance(flag, str):
+                flag = flag.strip().lower() in ("true", "1", "yes")
+            out.append((str(record_type), str(record_id), bool(flag), row))
+    return out
 
 
 class JobStore:
@@ -350,7 +388,14 @@ class JobStore:
         scan_id = str(scan_id) if scan_id is not None else None
         verdicts = [v for v in (payload.get("verdicts") or []) if isinstance(v, dict)]
         manual = [m for m in (payload.get("manual_findings") or []) if isinstance(m, dict)]
+        corrections = _record_corrections(payload)
         with self._lock, self._connect() as conn:
+            for record_type, record_id, flag, row in corrections:
+                conn.execute(
+                    "INSERT OR REPLACE INTO record_corrections (case_id, scan_id, record_type, record_id, "
+                    "manually_corrected, raw, received_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (case_id, scan_id, record_type, record_id, int(flag), json.dumps(row, default=str), now),
+                )
             for v in verdicts:
                 key = str(v.get("finding_key") or "").strip()
                 if not key:
@@ -375,7 +420,7 @@ class JobStore:
                      m.get("subject_label"), json.dumps(item, default=str) if item is not None else None,
                      json.dumps(m, default=str), now),
                 )
-        return {"verdicts": len(verdicts), "manual_findings": len(manual)}
+        return {"verdicts": len(verdicts), "manual_findings": len(manual), "corrections": len(corrections)}
 
     def feedback_summary(self) -> list[dict[str, Any]]:
         """Per finding code: how many verdicts, how many valid, and the

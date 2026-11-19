@@ -197,13 +197,18 @@ def _member_matches(person_name: str | None, subject_label: str | None) -> bool:
     return len(shared) >= 2 or (bool(shared) and (len(a) == 1 or len(b) == 1))
 
 
-def match_checklist(rows: list[dict], extraction, expect_previous: bool = False) -> list[dict]:
+def match_checklist(rows: list[dict], extraction, expect_previous: bool = False, *,
+                    members: list[dict] | None = None, document_spans: list[dict] | None = None,
+                    verification_methods=None, program: str | None = None) -> list[dict]:
     """One entry per checklist row the packet can answer.
 
     Rows asking for a previous form are answered only when the packet is
     expected to carry one (``expect_previous``); otherwise they are left
-    out, and Cartograph leaves the row alone.
+    out, and Cartograph leaves the row alone. Rows about a member's date
+    of birth or SSN are judged per member against the program's accepted
+    proofs (cartograph.identity) rather than by a form being present.
     """
+    from app.services.cartograph.identity import concepts_of, identity_rows
     all_groups = list(getattr(extraction, "document_groups", None) or [])
     groups = [g for g in all_groups if g.category != "ignore" and not is_previous_certification(g.document_type)]
     previous = [g for g in all_groups if is_previous_certification(g.document_type)]
@@ -216,7 +221,7 @@ def match_checklist(rows: list[dict], extraction, expect_previous: bool = False)
     cert = getattr(extraction, "certification_info", None)
     out: list[dict] = []
     for row in rows:
-        if is_attribute_row(row):
+        if is_attribute_row(row) or concepts_of(row):
             continue
         label, how = document_type_for(row)
         if not label:
@@ -271,6 +276,7 @@ def match_checklist(rows: list[dict], extraction, expect_previous: bool = False)
             note += f" Incomplete: missing its {missing.group(1)}." if missing else " Incomplete."
         out.append({"finding_id": row["finding_id"], "found": True, "pages": pages,
                     "confidence": round(max(0.0, min(1.0, confidence)), 2), "note": note})
+    out.extend(identity_rows(rows, extraction, members, document_spans, verification_methods, program))
     for m in out:
         m["note_source"] = NOTE_SOURCE
     return out

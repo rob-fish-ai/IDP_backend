@@ -109,8 +109,8 @@ def test_cartograph_nightly_feedback_batch_is_stored_case_by_case(tmp_path, monk
     out = integration._store_findings_feedback(body, b"{}")
     assert out["ok"] is True
     assert out["received"] == ["J-VRC-06406", "J-VRC-06407"]
-    assert out["stored"]["J-VRC-06406"] == {"verdicts": 1, "manual_findings": 1}
-    assert out["stored"]["J-VRC-06407"] == {"verdicts": 1, "manual_findings": 0}
+    assert out["stored"]["J-VRC-06406"] == {"verdicts": 1, "manual_findings": 1, "corrections": 0}
+    assert out["stored"]["J-VRC-06407"] == {"verdicts": 1, "manual_findings": 0, "corrections": 0}
     assert out["skipped"] == 1
 
     with store._connect() as conn:
@@ -134,7 +134,7 @@ def test_cartograph_nightly_feedback_batch_is_stored_case_by_case(tmp_path, monk
     out = integration._store_findings_feedback(
         {"event_type": "findings_feedback", "case_ref": "J-VRC-06406", "scan_id": 42,
          "verdicts": [{"finding_key": "AR_PREVIOUS_CERT_MISSING:case", "verdict": "valid"}]}, b"{}")
-    assert out == {"ok": True, "received": "J-VRC-06406", "stored": {"verdicts": 1, "manual_findings": 0}}
+    assert out == {"ok": True, "received": "J-VRC-06406", "stored": {"verdicts": 1, "manual_findings": 0, "corrections": 0}}
 
 
 def test_attachments_are_assembled_by_what_they_are_not_what_they_are_called():

@@ -74,6 +74,10 @@ class AuditRequest(BaseModel):
     # every rent figure with its source whatever the version says, so the
     # contract is recorded, not interpreted.
     rent_extraction_contract: dict | None = None
+    # The proofs the case's program accepts for a member's DOB and SSN,
+    # as {"dob": [...], "ssn": [...]} in cartograph.identity's vocabulary.
+    # Absent, the engine uses its defaults by program.
+    verification_methods: dict | None = None
 
 
 def _document_keys(documents: list | None) -> list[tuple]:
@@ -232,6 +236,7 @@ async def receive_case(
         effective_date=payload.effective_date,
         checklist_rows=checklist_rows,
         existing_records_manifest=payload.existing_records_manifest,
+        verification_methods=payload.verification_methods,
     )
 
     return {"status": "accepted", "case_ref": payload.case_ref, "environment": environment}
@@ -393,8 +398,8 @@ def _store_one_feedback_case(case: dict, environment: str | None = None) -> tupl
         logger.exception("Could not store findings feedback for case_ref=%s", case_ref)
         raise HTTPException(status_code=500, detail="could not store feedback")
     logger.info(
-        "Findings feedback case_ref=%s scan_id=%s verdicts=%d manual=%d",
-        case_ref, case.get("scan_id"), counts["verdicts"], counts["manual_findings"],
+        "Findings feedback case_ref=%s scan_id=%s verdicts=%d manual=%d corrections=%d",
+        case_ref, case.get("scan_id"), counts["verdicts"], counts["manual_findings"], counts.get("corrections", 0),
     )
     return str(case_ref), counts
 

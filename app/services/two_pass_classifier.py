@@ -299,9 +299,13 @@ CRITICAL CLASSIFICATION RULES:
   date where the certification's belong, and an unsigned certification then
   reads as signed.
 
-- PHOTO IDs AND SOCIAL SECURITY CARDS: pages showing driver licenses,
-  state IDs, passports, or Social Security cards = "Identity Document",
-  INCLUDE. These carry the authoritative DOB and SSN for household members.
+- PHOTO IDs AND SOCIAL SECURITY CARDS: each kind of identity proof has its
+  own type — "Social Security Card", "Birth Certificate", "Driver License /
+  State ID", "Passport", "Naturalization / Immigration Document" — and any
+  other photo ID is "Identity Document". All INCLUDE. One group per card or
+  certificate, with person_name = the person it is issued to: a page
+  showing two members' cards is two groups on the same page. These carry
+  the authoritative DOB and SSN for household members.
 
 - Criminal history / sex offender affidavits, registry search results,
   credit reports, background screening authorizations = "Background

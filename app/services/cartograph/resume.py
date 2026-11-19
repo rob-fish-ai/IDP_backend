@@ -79,6 +79,7 @@ def resume_kwargs(row: dict, settings) -> dict | None:
         "effective_date": body.get("effective_date"),
         "checklist_rows": normalise_rows(body),
         "existing_records_manifest": body.get("existing_records_manifest"),
+        "verification_methods": body.get("verification_methods") if isinstance(body.get("verification_methods"), dict) else None,
         "fallback_packet": str(packet) if packet else None,
     }
 

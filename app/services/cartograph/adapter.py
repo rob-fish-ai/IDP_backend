@@ -1737,6 +1737,8 @@ def build_payload(
     checklist_rows: list[dict] | None = None,
     document_spans: list[dict] | None = None,
     existing_records_manifest: dict | list | None = None,
+    program: str | None = None,
+    verification_methods: dict | None = None,
 ) -> AdapterResult:
     """Build the ingest body for one audited case.
 
@@ -1776,6 +1778,8 @@ def build_payload(
         "checklist_matches": match_checklist(
             checklist_rows or [], extraction,
             expect_previous=settings.report_previous_cert_missing,
+            members=members, document_spans=document_spans,
+            verification_methods=verification_methods, program=program,
         ),
     }
     # Cartograph's own ids on the rows that correspond to records it already
