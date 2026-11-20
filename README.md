@@ -230,13 +230,21 @@ Immigration Document`; any other photo ID stays `Identity Document`), and
 `cartograph/identity.py` attributes each page to a member by the name the
 classifier read on it or by the member's own number or birth date printed
 there. The row that comes back (`checklist_matches[]`) carries
-`household_member_id` (Cartograph's), `member_ref` (ours), `found`,
-`accepted` (every proof is on the program's list), `document_type` (one
+`household_member_id` (Cartograph's), `member_ref` (ours), `found` (the
+row is satisfied: every concept proved by a document the program
+accepts), `accepted` (the same, kept for readers of `proofs[]`),
+`document_found` (a proof exists, accepted or not), `document_type` (one
 concept) or `proofs[]` (a combined DOB-and-SSN row, one entry per
 concept), `document_id` (the request's `job_document_id`), `pages`,
-`confidence` and a note. A proof that is not accepted for the program is
-still reported, marked as such; an identity page that matches no member is
-named in the note of the rows it could have satisfied.
+`confidence` and a note. A proof that is not accepted for the program
+leaves `found` false and is named in the note, so staff see what the file
+holds; an identity page that matches no member is named in the note of
+the rows it could have satisfied. A row naming no member (a community
+default) is judged for every member the request lists and is met only
+when each has a proof; its `proofs[]` carry `member_ref` and its note
+names who lacks one. A packet certified on a current HUD 50059 takes
+HUD's proofs whatever the program field says, as the rest of the audit
+does.
 
 ---
 

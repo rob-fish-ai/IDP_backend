@@ -451,7 +451,7 @@ def test_a_voi_row_is_sent_only_when_a_verification_stated_something():
     assert all(s["pay_frequency"] == "biweekly" and s["period_start"] is None for s in records[0]["paystubs"])
     voi = records[1]["vois"][0]
     assert voi["voi_type"] == "Work Number" and voi["rate_of_pay"] == "21.00" and voi["rate_unit"] == "hourly"
-    assert voi["frequency_of_pay"] == "bi-weekly" and voi["ytd_amount"] == "9701.07" and voi["employment_start_date"] == "2026-03-13"
+    assert voi["frequency_of_pay"] == "biweekly" and voi["ytd_amount"] == "9701.07" and voi["employment_start_date"] == "2026-03-13"
 
 
 def test_a_value_on_no_page_is_red_and_the_overall_weights_headline_figures_and_coverage():
@@ -722,4 +722,5 @@ def test_stub_periods_reach_cartograph_in_its_spelling_and_decide_a_frequency_th
     assert (first["period_start"], first["period_end"]) == ("2026-08-01", "2026-08-15")
     # A frequency Cartograph's column has no value for is sent as null, not as a word it rejects.
     from app.services.cartograph.adapter import _cartograph_frequency
-    assert _cartograph_frequency("quarterly") is None and _cartograph_frequency("Biweekly") == "biweekly"
+    assert _cartograph_frequency("quarterly") == "quarterly" and _cartograph_frequency("Biweekly") == "biweekly"
+    assert _cartograph_frequency("hourly") is None

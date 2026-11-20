@@ -114,6 +114,7 @@ def normalise_rows(payload: dict) -> list[dict]:
             "subject_type": r.get("subject_type"),
             "subject_id": r.get("subject_id"),
             "subject_label": r.get("subject_label"),
+            "funding_program": r.get("funding_program") or r.get("program"),
         })
     for req in payload.get("requirements") or []:
         if not isinstance(req, dict):

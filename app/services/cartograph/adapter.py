@@ -950,8 +950,13 @@ _EIV_BENEFIT_TYPES = (
     ("wage", "employment_wages"),
     ("employment", "employment_wages"),
 )
-_EIV_FREQUENCIES = {"weekly": "weekly", "bi-weekly": "biweekly", "semi-monthly": "semimonthly",
-                    "monthly": "monthly", "quarterly": "quarterly", "annually": "annually"}
+# Cartograph's pay-frequency vocabulary, keyed by the engine's canonical
+# spelling: the engine keeps its hyphens internally, the columns take
+# none. One table for the EIV rows, the VOI rows, the stubs and the income
+# record, so the spellings cannot drift apart within a payload.
+_CARTOGRAPH_FREQUENCIES = {"weekly": "weekly", "bi-weekly": "biweekly", "semi-monthly": "semimonthly",
+                           "monthly": "monthly", "quarterly": "quarterly", "annually": "annually"}
+_EIV_FREQUENCIES = _CARTOGRAPH_FREQUENCIES
 
 
 _EIV_SECTION_HEADINGS = {
@@ -1070,17 +1075,6 @@ def _calc_for(calculations: dict, member: str | None, source: str | None, income
 
 
 _PAY_FREQUENCIES = ("weekly", "bi-weekly", "semi-monthly", "monthly", "quarterly")
-
-# Cartograph's paystub_frequency vocabulary, keyed by the engine's canonical
-# spelling. The engine keeps its hyphens internally; the column takes none.
-# A period the column has no value for (quarterly, hourly) is sent as null.
-_CARTOGRAPH_FREQUENCIES = {
-    "weekly": "weekly",
-    "bi-weekly": "biweekly",
-    "semi-monthly": "semimonthly",
-    "monthly": "monthly",
-}
-
 
 def _cartograph_frequency(value: str | None) -> str | None:
     """A pay frequency in the spelling Cartograph's income record stores."""
@@ -1271,7 +1265,7 @@ def build_income_records(
                 "rate_of_pay": _money(entry.rateOfPay),
                 "rate_unit": normalize_rate_unit(entry.rateUnit),
                 "hours_per_pay_period": entry.hoursPerPayPeriod,
-                "frequency_of_pay": _frequency_out(entry, grouped.get(index, [])),
+                "frequency_of_pay": _cartograph_frequency(_frequency_out(entry, grouped.get(index, []))),
                 "ytd_amount": _money(entry.ytdAmount),
                 "ytd_start_date": _iso_date(entry.ytdStartDate),
                 "ytd_end_date": _iso_date(entry.ytdEndDate),

@@ -401,7 +401,6 @@ def _frequency_from_period(paystubs: list[PayStubEntry]) -> str | None:
     if not found:
         return None
     return max(set(found), key=found.count)
-    return None
 
 
 def calculate_paystub_based(

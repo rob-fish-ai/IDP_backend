@@ -59,9 +59,11 @@ def test_hud_rows_want_the_card_and_the_certificate_and_say_which_page_and_docum
     ssn = out[2]
     assert ssn["found"] and ssn["document_type"] == "ssn_card" and ssn["pages"] == [38] and ssn["document_id"] == 502
     assert "matched by number" in ssn["note"]
-    # A license is found but is not a HUD proof of DOB; it is reported, not hidden.
+    # A license is in the file but is not a HUD proof of DOB: the row is
+    # not met, and the license is reported rather than hidden.
     lic = out[3]
-    assert lic["found"] and not lic["accepted"] and lic["document_type"] == "drivers_license" and lic["pages"] == [40]
+    assert not lic["found"] and not lic["accepted"] and lic["document_found"]
+    assert lic["document_type"] == "drivers_license" and lic["pages"] == [40]
     assert "not an accepted proof" in lic["note"]
     # No SSN proof for Wilbur; the stray card on page 41 is pointed out.
     assert not out[4]["found"] and out[4]["pages"] == [] and "page 41 shows a Social Security card that could not be matched" in out[4]["note"]
@@ -120,3 +122,37 @@ def test_the_request_model_reads_verification_methods_and_the_store_keeps_manual
     with store._connect() as conn:
         rows = conn.execute("SELECT record_type, record_id, manually_corrected FROM record_corrections ORDER BY record_id").fetchall()
     assert [tuple(r) for r in rows] == [("paystub", "900", 1), ("paystub", "901", 0), ("bank_statement", "bs-5", 0)]
+
+
+def test_a_row_naming_no_member_needs_every_member_and_names_who_lacks_proof():
+    from app.services.cartograph.checklist import match_checklist
+    rows = [{"finding_id": 20, "label": "Copy of SSN Card or Other Approved SSN Verification"}]
+    out = match_checklist(rows, _extraction(), members=MEMBERS, document_spans=SPANS, program="Section 8")[0]
+    # Clerida's card is on page 38; Wilbur and Ana have none.
+    assert not out["found"] and not out["document_found"] and out["member_ref"] is None
+    assert [(p["member_ref"], p["document_type"]) for p in out["proofs"]] == [("m1", "ssn_card")]
+    assert "Wilbur Perez Matos: SSN: no accepted proof" in out["note"] and "Ana Jaramillo: SSN: no accepted proof" in out["note"]
+    # With one member the row is judged for that member alone and met.
+    out = match_checklist(rows, _extraction(), members=MEMBERS[:1], document_spans=SPANS, program="Section 8")[0]
+    assert out["found"] and out["document_type"] == "ssn_card" and out["pages"] == [38]
+
+
+def test_self_declaration_points_at_the_application_not_another_affidavit():
+    from app.services.cartograph.identity import _declaration_pages
+    ext = _extraction()
+    assert _declaration_pages(ext) == [3, 4, 5]
+    ext.document_groups = [g("Tenant Income Certification (TIC)", [1, 2]), g("Asset Self-Certification", [22])]
+    assert _declaration_pages(ext) == [1, 2]
+
+
+def test_rows_about_age_or_a_50059_packet_are_read_as_the_audit_reads_them():
+    from app.services.cartograph.checklist import normalise_rows
+    from app.services.cartograph.identity import accepted_methods, concepts_of
+    assert concepts_of({"label": "Student Status Certification for Members Age 18 and Over"}) == frozenset()
+    assert concepts_of({"label": "Copy of Passport or Birth Certificate Provided"}) == {"dob"}
+    assert concepts_of({"label": "Proof of Age Provided"}) == {"dob"}
+    # A tax-credit request whose packet certifies on a HUD 50059 takes HUD's proofs.
+    assert accepted_methods(None, "LIHTC", ["HUD 50059", "Paystub"])["ssn"] == ("ssn_card",)
+    assert "self_declaration" in accepted_methods(None, "LIHTC", ["HUD 50059 (Previous)"])["ssn"]
+    rows = normalise_rows({"checklist_rows": [{"finding_id": 1, "label": "SSN Provided", "funding_program": "LIHTC "}]})
+    assert rows[0]["funding_program"] == "LIHTC "

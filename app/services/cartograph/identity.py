@@ -23,7 +23,10 @@ from __future__ import annotations
 import re
 from datetime import date
 
-from app.services.doc_taxonomy import FAMILY_DECLARATION, _split_suffix, family_of, is_current_certification_form
+from typing import Iterable
+
+from app.services.cartograph.checklist import _page_span
+from app.services.doc_taxonomy import _split_suffix, canonical_label, is_current_certification_form
 from app.services.program import is_hud_property
 
 # Cartograph's vocabulary for a proof of identity, by the engine's label.
@@ -73,7 +76,10 @@ _METHOD_SPELLINGS = {
 }
 
 _SSN_WORDS = re.compile(r"\bssn\b|social security (?:number|card|#|no\.?)|\bss#", re.IGNORECASE)
-_DOB_WORDS = re.compile(r"date of birth|\bdob\b|\bbirth\b|\bage\b", re.IGNORECASE)
+# "Age 18 and over" on a student or income row is not a question about a
+# birth date: only the proof-of-age wordings count.
+_DOB_WORDS = re.compile(r"date of birth|\bdob\b|birth certificate|certificate of birth|birth record|\bpassport\b"
+                        r"|proof of age|verification of age|age (?:documentation|verification|verified)", re.IGNORECASE)
 _NOT_IDENTITY = re.compile(r"benefit|award|income|letter|statement|verification of|\bvoi\b", re.IGNORECASE)
 _LICENSE = re.compile(r"driver", re.IGNORECASE)
 _ID_CARD = re.compile(r"identification card|\bid card\b|non-?driver", re.IGNORECASE)
@@ -86,8 +92,12 @@ NOTE_SOURCE = "scan"
 _HOME = re.compile(r"\bhome\b", re.IGNORECASE)
 
 
-def _wants_hud_proofs(program: str | None) -> bool:
-    return is_hud_property(program) or bool(program and _HOME.search(program))
+def _wants_hud_proofs(program: str | None, document_types: Iterable[str] = ()) -> bool:
+    """HUD's proofs apply to a HUD or USDA program, to HOME, and to any
+    packet certified on a current HUD 50059 whatever the program field
+    says — the same reading of a mixed-finance file the rest of the audit
+    makes."""
+    return is_hud_property(program, document_types) or bool(program and _HOME.search(program))
 
 
 def concepts_of(row: dict) -> frozenset:
@@ -112,9 +122,11 @@ def normalise_method(value) -> str | None:
         t.replace(" ", "_") if t.replace(" ", "_") in PROVES else None)
 
 
-def accepted_methods(verification_methods, program: str | None) -> dict[str, tuple[str, ...]]:
+def accepted_methods(verification_methods, program: str | None,
+                     document_types: Iterable[str] = ()) -> dict[str, tuple[str, ...]]:
     """The proofs each concept accepts for this case: the request's lists
-    when it sends them, else the defaults for the program."""
+    when it sends them, else the defaults for the program (a packet
+    carrying a current HUD 50059 takes HUD's)."""
     out: dict[str, tuple[str, ...]] = {}
     if isinstance(verification_methods, dict):
         for concept in ("dob", "ssn"):
@@ -123,7 +135,7 @@ def accepted_methods(verification_methods, program: str | None) -> dict[str, tup
                 methods = tuple(m for m in (normalise_method(v) for v in raw) if m)
                 if methods:
                     out[concept] = methods
-    defaults = DEFAULT_METHODS["hud" if _wants_hud_proofs(program) else "other"]
+    defaults = DEFAULT_METHODS["hud" if _wants_hud_proofs(program, document_types) else "other"]
     for concept in ("dob", "ssn"):
         out.setdefault(concept, defaults[concept])
     return out
@@ -223,27 +235,24 @@ def _document_id_for(page: int | None, spans: list[dict] | None):
     return None
 
 
+_APPLICATION = "Application / Housing Questionnaire"
+
+
 def _declaration_pages(extraction) -> list[int]:
     """Where the household itself stated who it is: the application or
-    questionnaire, else the certification form."""
+    questionnaire, else the certification form. Other declarations (an
+    asset self-certification, a zero-income affidavit) say nothing about
+    identity and are not it."""
     groups = [g for g in (getattr(extraction, "document_groups", None) or []) if g.category != "ignore"]
-    declared = [g for g in groups if family_of(g.document_type) == FAMILY_DECLARATION]
+    declared = [g for g in groups if canonical_label(g.document_type)[0] == _APPLICATION]
     if not declared:
         declared = [g for g in groups if is_current_certification_form(g.document_type)]
-    return sorted({p for g in declared for p in g.pages})
-
-
-def _page_span(pages: list[int]) -> str:
-    """Pages as runs: 6-11, 18."""
-    if not pages:
-        return ""
-    runs: list[list[int]] = [[pages[0], pages[0]]]
-    for p in pages[1:]:
-        if p == runs[-1][1] + 1:
-            runs[-1][1] = p
-        else:
-            runs.append([p, p])
-    return ", ".join(f"{a}-{b}" if a != b else str(a) for a, b in runs)
+    if not declared:
+        return []
+    # One document, not every copy in the file: the first application in
+    # page order is the one the row points at.
+    first = min(declared, key=lambda g: min(g.pages) if g.pages else 10**6)
+    return sorted(set(first.pages))
 
 
 _PRETTY = {
@@ -254,12 +263,75 @@ _PRETTY = {
 _CONCEPT = {"dob": "DOB", "ssn": "SSN"}
 
 
+def _an(noun: str) -> str:
+    return f"an {noun}" if noun[:1].lower() in "aeiou" else f"a {noun}"
+
+
+def _judge(concept: str, target: dict | None, subject: str | None, id_groups: list, accepted: dict,
+           declaration_pages: list[int], document_spans, orphans: list, program_name: str | None) -> tuple[dict | None, str]:
+    """The best proof of one concept for one member, and the note for it.
+    Accepted proofs beat others, then the surer attribution."""
+    best = None
+    for g in id_groups:
+        method = method_of_group(g)
+        if concept not in PROVES[method]:
+            continue
+        how = _attribution(g, target, subject)
+        if not how:
+            continue
+        ok = method in accepted[concept]
+        cand = (ok, how[1], g, method, how[0])
+        if best is None or cand[:2] > best[:2]:
+            best = cand
+    def document_proof():
+        ok, conf, g, method, how = best
+        pages = sorted(g.pages)
+        proof = {"concept": concept, "document_type": method, "accepted": ok,
+                 "document_id": _document_id_for(pages[0] if pages else None, document_spans),
+                 "pages": pages, "confidence": round(conf, 2)}
+        note = (f"{_CONCEPT[concept]}: {_PRETTY[method]} page {_page_span(pages)}, matched by {how}"
+                + ("." if ok else f" (not an accepted proof for {program_name or 'this program'})."))
+        return proof, note
+
+    if best and best[0]:
+        return document_proof()
+    # No accepted document: the household's own declaration, where the
+    # program takes it, meets the row; a document the program does not
+    # accept is reported only when nothing else answers.
+    declared = bool((target or {}).get("date_of_birth") if concept == "dob" else (target or {}).get("ssn_last4"))
+    if declared and "self_declaration" in accepted[concept]:
+        proof = {"concept": concept, "document_type": "self_declaration", "accepted": True,
+                 "document_id": _document_id_for(declaration_pages[0] if declaration_pages else None, document_spans),
+                 "pages": declaration_pages, "confidence": 0.6}
+        note = (f"{_CONCEPT[concept]}: self-declared on the application"
+                + (f", page {_page_span(declaration_pages)}" if declaration_pages else "")
+                + (f"; page {_page_span(sorted(best[2].pages))} also shows {_an(_PRETTY[best[3]])}" if best else "") + ".")
+        return proof, note
+    if best:
+        return document_proof()
+    hint = next((g for g in orphans if concept in PROVES[method_of_group(g)]), None)
+    note = (f"{_CONCEPT[concept]}: no accepted proof in the packet"
+            + (f" (for {subject})" if subject and not target else "")
+            + (f"; page {_page_span(sorted(hint.pages))} shows {_an(_PRETTY[method_of_group(hint)])} "
+               f"that could not be matched to a member" if hint else "") + ".")
+    return None, note
+
+
 def identity_rows(rows: list[dict], extraction, members: list[dict] | None, document_spans: list[dict] | None,
                   verification_methods=None, program: str | None = None) -> list[dict]:
-    """One entry per DOB / SSN checklist row, judged per member."""
+    """One entry per DOB / SSN checklist row, judged per member.
+
+    A row naming a member is judged for that member. A row naming nobody
+    (a community default) is judged for every member the request lists,
+    and is met only when each of them has a proof. ``found`` means the row
+    is satisfied: every concept proved by a document the program accepts.
+    A proof the program does not accept is still reported, under
+    ``document_found`` and in the note, so staff see what the file holds.
+    """
     members = members or []
     id_groups = _identity_groups(extraction)
     declaration_pages = _declaration_pages(extraction)
+    document_types = [g.document_type for g in (getattr(extraction, "document_groups", None) or [])]
     out: list[dict] = []
 
     # Pages that belong to nobody the engine can name, mentioned on the
@@ -273,59 +345,38 @@ def identity_rows(rows: list[dict], extraction, members: list[dict] | None, docu
         if not concepts:
             continue
         program_name = (row.get("funding_program") or program or "").strip() or None
-        accepted = accepted_methods(verification_methods, program_name)
+        accepted = accepted_methods(verification_methods, program_name, document_types)
         member = _member_for(row, members)
         subject = row.get("subject_label")
-        targets = [member] if member or subject else (members or [None])
+        if member or subject:
+            targets: list[dict | None] = [member]
+        else:
+            targets = list(members) or [None]
+        per_member = len(targets) > 1
         proofs: list[dict] = []
         notes: list[str] = []
-        for concept in sorted(concepts):
-            best = None
-            for target in targets:
-                for g in id_groups:
-                    method = method_of_group(g)
-                    if concept not in PROVES[method]:
-                        continue
-                    how = _attribution(g, target, subject)
-                    if not how:
-                        continue
-                    ok = method in accepted[concept]
-                    cand = (ok, how[1], g, method, how[0])
-                    if best is None or cand[:2] > best[:2]:
-                        best = cand
-            if best:
-                ok, conf, g, method, how = best
-                pages = sorted(g.pages)
-                proofs.append({"concept": concept, "document_type": method, "accepted": ok,
-                               "document_id": _document_id_for(pages[0] if pages else None, document_spans),
-                               "pages": pages, "confidence": round(conf, 2)})
-                notes.append(f"{_CONCEPT[concept]}: {_PRETTY[method]} page {_page_span(pages)}, matched by {how}"
-                             + ("." if ok else f" (not an accepted proof for {program_name or 'this program'})."))
-                continue
-            declared = any(((t or {}).get("date_of_birth") if concept == "dob" else (t or {}).get("ssn_last4"))
-                           for t in targets if t)
-            if declared and "self_declaration" in accepted[concept]:
-                proofs.append({"concept": concept, "document_type": "self_declaration", "accepted": True,
-                               "document_id": _document_id_for(declaration_pages[0] if declaration_pages else None, document_spans),
-                               "pages": declaration_pages, "confidence": 0.6})
-                notes.append(f"{_CONCEPT[concept]}: self-declared on the application"
-                             + (f", page {_page_span(declaration_pages)}." if declaration_pages else "."))
-                continue
-            hint = next((g for g in orphans if concept in PROVES[method_of_group(g)]), None)
-            notes.append(f"{_CONCEPT[concept]}: no accepted proof in the packet"
-                         + (f" (for {subject})" if subject else "")
-                         + (f"; page {_page_span(sorted(hint.pages))} shows a {_PRETTY[method_of_group(hint)]} "
-                            f"that could not be matched to a member" if hint else "") + ".")
-        found = len(proofs) == len(concepts)
+        needed = len(concepts) * len(targets)
+        for target in targets:
+            for concept in sorted(concepts):
+                proof, note = _judge(concept, target, subject, id_groups, accepted, declaration_pages,
+                                     document_spans, orphans, program_name)
+                if proof:
+                    if per_member:
+                        proof["member_ref"] = (target or {}).get("ref")
+                    proofs.append(proof)
+                notes.append(f"{_member_name(target)}: {note}" if per_member and target else note)
+        complete = len(proofs) == needed
+        accepted_all = complete and all(pr["accepted"] for pr in proofs)
         pages = sorted({p for pr in proofs for p in pr["pages"]})
         confidence = min((pr["confidence"] for pr in proofs), default=0.8)
         out.append({
             "finding_id": row["finding_id"],
             "household_member_id": row.get("subject_id"),
             "member_ref": (member or {}).get("ref"),
-            "found": found,
-            "accepted": all(pr["accepted"] for pr in proofs) if found else False,
-            "document_type": proofs[0]["document_type"] if len(proofs) == 1 and len(concepts) == 1 else None,
+            "found": accepted_all,
+            "accepted": accepted_all,
+            "document_found": complete,
+            "document_type": proofs[0]["document_type"] if len(proofs) == 1 and needed == 1 else None,
             "document_id": proofs[0]["document_id"] if proofs else None,
             "pages": pages,
             "proofs": proofs,
