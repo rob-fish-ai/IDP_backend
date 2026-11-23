@@ -2607,6 +2607,13 @@ def _same_member(a: str | None, b: str | None) -> bool:
     return False
 
 
+def _same_surname(a: str | None, b: str | None) -> bool:
+    """The two names end in the same surname (one letter of OCR allowed)."""
+    ta = [t for t in re.split(r"[\s\-]+", (a or "").strip().lower()) if t]
+    tb = [t for t in re.split(r"[\s\-]+", (b or "").strip().lower()) if t]
+    return bool(ta and tb) and _surname_token_match(ta[-1], tb[-1])
+
+
 def _surname_token_match(x: str, y: str) -> bool:
     if x == y:
         return True
@@ -3774,7 +3781,7 @@ def _distinctive_amount(value) -> bool:
     return round(v % 1, 2) not in (0.0, 1.0) or v % 50 != 0
 
 
-def _reconcile_assets(records: list[dict], declared: list[dict]) -> None:
+def _reconcile_assets(records: list[dict], declared: list[dict], household_names: list[str] | None = None) -> None:
     """Merge each declared asset into the verified record it describes, or
     keep it as a claim when nothing backs it.
 
@@ -3789,6 +3796,17 @@ def _reconcile_assets(records: list[dict], declared: list[dict]) -> None:
     for rec in records:
         if rec.get("verificationStatus") is None:
             rec["verificationStatus"] = "verified"
+
+    # In a one-person household a declaration and a record that agree on
+    # the surname are the same person's however the card or statement
+    # spells the given name ("LYDIA Y HURST" embossed, Lynda Hurst on the
+    # 50059): there is nobody else the account could belong to.
+    one_member = len([n for n in (household_names or []) if (n or "").strip()]) == 1
+
+    def _owners_differ(a: str | None, b: str | None) -> bool:
+        if not a or not b or _same_member(a, b):
+            return False
+        return not (one_member and _same_surname(a, b))
 
     kept_declared = _drop_total_rows(declared, "Declared assets")
     zero_lines = 0
@@ -3813,7 +3831,7 @@ def _reconcile_assets(records: list[dict], declared: list[dict]) -> None:
         for rec in records:
             if rec.get("verificationStatus") == "declared_only":
                 continue
-            if d.get("assetOwner") and rec.get("assetOwner") and not _same_member(rec.get("assetOwner"), d.get("assetOwner")):
+            if _owners_differ(rec.get("assetOwner"), d.get("assetOwner")):
                 continue
             r_last4 = _digits_last4(rec.get("accountNumber"))
             if d_last4 and r_last4:
@@ -4224,7 +4242,7 @@ def extract_assets(
     logger.info("Extracted %d asset records from %d source document(s)", len(records), len(source_groups))
 
     declared = _extract_declared_assets(decl_groups, settings, certification_type, household_names)
-    _reconcile_assets(records, declared)
+    _reconcile_assets(records, declared, household_names)
 
     zero_lines = sum(
         1 for d in declared

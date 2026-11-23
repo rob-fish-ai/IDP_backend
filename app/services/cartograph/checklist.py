@@ -179,7 +179,10 @@ def document_type_for(row: dict) -> tuple[str | None, str | None]:
     low = (row.get("label") or "").lower()
     fam = _family_for(row)
     if fam:
-        return fam[0], "title"
+        # A family member the row names outright ("HUD Model Lease Provided
+        # (at least, Lease Term and Signature Pages)") is the one reported.
+        named = [l for l in fam if len(l) >= 8 and l.lower() in low]
+        return (named[0] if named else fam[0]), "title"
     titled = [label for label, _, _ in candidates
               for n in (label, re.sub(r"\s*\([^)]*\)\s*$", "", label), *TAXONOMY[label]["aliases"])
               if len(n) >= 8 and n.lower() in low]
@@ -220,12 +223,22 @@ _ROW_FAMILIES: dict[str, tuple[str, ...]] = {
     "under 5000": ("Asset Self-Certification", "Debit Card Asset Self-Certification"),
     # The tenant's signed acknowledgement of the EIV report, or of the
     # EIV brochure with the other HUD handouts.
-    "eiv acknowledgment": ("EIV Income Report Confirmation", "Acknowledgement of Receipt"),
-    "eiv acknowledgement": ("EIV Income Report Confirmation", "Acknowledgement of Receipt"),
-    # "Lease provided / signed": the lease, which on a HUD property is the
-    # model lease — not the VAWA addendum that shares the word.
+    "eiv acknowledgment": ("EIV Acknowledgement Form", "EIV Income Report Confirmation", "Acknowledgement of Receipt"),
+    "eiv acknowledgement": ("EIV Acknowledgement Form", "EIV Income Report Confirmation", "Acknowledgement of Receipt"),
+    # The tenant's acknowledgement of the HUD handouts (EIV & You, Is Fraud
+    # Worth It, Resident Rights & Responsibilities), however the row names them.
+    "brochure": ("Acknowledgement of Receipt",),
+    "pamphlet": ("Acknowledgement of Receipt",),
+    "hud handout": ("Acknowledgement of Receipt",),
+    # "Lease provided / signed / term": the lease, which on a HUD property is
+    # the model lease — not the VAWA addendum that shares the word.
     "lease provided": ("Lease Agreement", "HUD Model Lease"),
     "lease signed": ("Lease Agreement", "HUD Model Lease"),
+    "lease term": ("Lease Agreement", "HUD Model Lease"),
+    # The lead-based paint disclosure, whichever construction-year clause
+    # the row adds ("Built Pre-1978 Only" carries a number that is not a form).
+    "lead based paint": ("Lead-Based Paint Certification",),
+    "lead-based paint": ("Lead-Based Paint Certification",),
 }
 _THIRD_PARTY_RE = re.compile(r"\b(third|3rd)[\s-]*party\s+verification\b")
 

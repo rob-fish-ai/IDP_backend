@@ -1331,3 +1331,20 @@ def test_a_verification_request_with_no_reply_is_not_sent_as_an_asset():
                                   Settings(cartograph_asset_types=["checking", "savings"]), warnings)
     assert [(r["asset_type"], r["institution_name"]) for r in records] == [("checking", "Chase"), ("checking", "Wells Fargo")]
     assert any("#7468" in w and "no figure" in w for w in warnings)
+
+
+def test_one_member_household_merges_a_declaration_whose_given_name_the_card_misspells():
+    # The Direct Express card is embossed "LYDIA Y HURST"; the 50059 declares
+    # it under Lynda Hurst, the only member. One account, one record.
+    recs = [_asset("Lydia Y Hurst", "Direct Express", "934.46", "1398")]
+    _reconcile_assets(recs, [_decl("Lynda Hurst", "Direct Express", "934.00")], ["Lynda Hurst"])
+    assert len(recs) == 1 and recs[0]["selfDeclaredAmount"] == "934.00"
+    # With a second member the given name has to agree: the declaration
+    # stays a claim of its own.
+    recs = [_asset("Lydia Y Hurst", "Direct Express", "934.46", "1398")]
+    _reconcile_assets(recs, [_decl("Lynda Hurst", "Direct Express", "934.00")], ["Lynda Hurst", "Marcus Hurst"])
+    assert len(recs) == 2
+    # And the surname has to agree even in a one-person household.
+    recs = [_asset("Lydia Y Hearst", "Direct Express", "934.46", "1398")]
+    _reconcile_assets(recs, [_decl("Lynda Hurst", "Direct Express", "934.00")], ["Lynda Hurst"])
+    assert len(recs) == 2

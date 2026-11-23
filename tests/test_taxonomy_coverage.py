@@ -54,7 +54,12 @@ EXPECTED = {
     "Screening Report Completed": "Background Screening Report",
     "Third Party Verification Completed for Asset Source": "Verification of Assets (VOA)",
     "Third Party Verification of Income Provided or Proof of Exhaustion": "Verification of Income (VOI)",
-    "EIV Acknowledgment Form completed": "EIV Income Report Confirmation",
+    "EIV Acknowledgment Form completed": "EIV Acknowledgement Form",
+    "Lease Term and Signature Pages ONLY": "Lease Agreement",
+    "HUD Model Lease Provided (at least, Lease Term and Signature Pages)": "HUD Model Lease",
+    "Lead Based Paint Disclosure (Built Pre-1978 Only) Included/Accurate": "Lead-Based Paint Certification",
+    "Lead Based Paint Disclosure (Pre - 1978 Construction)": "Lead-Based Paint Certification",
+    "Acknowledgement of HUD Brochures/Pamphlets-Included/Accurate": "Acknowledgement of Receipt",
     "Acknowledgement of HUD Handouts": "Acknowledgement of Receipt",
     "Disposal of Assets Form Completed and Signed": "Disposal of Assets Certification",
     "General Release Form Signed by All Adult Members": "Third-Party Authorization / Release",
@@ -99,7 +104,9 @@ def test_numbered_labels_carry_a_printed_title_or_hint():
 
 def test_known_labels_include_the_new_forms():
     for l in ("HUD 92006", "EIV Existing Tenant Search", "HOTMA Note to File",
-              "HUD 92458 Rent Schedule", "Authorization to Assist with Forms"):
+              "HUD 92458 Rent Schedule", "Authorization to Assist with Forms",
+              "EIV Acknowledgement Form", "Certification Clarification Record", "HOME Lease Compliance Form",
+              "Charges, Deposits and Fees Disclosure", "State Lease Disclosure", "Applicant Appeal Rights Notice"):
         assert l in known_labels()
 
 
@@ -111,6 +118,22 @@ def test_92006_printed_title_relabels_the_generic_form():
     assert _label_by_printed_title("Compliance — Other Signed HUD Form", page)[0] == "HUD 92006"
     tenant_match = "EIV Existing Tenant Search ... PIH/MF Tenant Match Results for the household"
     assert _label_by_printed_title("EIV Income Report", tenant_match)[0] == "EIV Existing Tenant Search"
+    eiv_ack = ("EIV Acknowledgement Form Community: Catalpa Shade Household: Hurst Effective Date: 7.1.23 "
+               "The above named property accesses the Enterprise Income Verification system ...")
+    assert _label_by_printed_title("Compliance — Other Signed HUD Form", eiv_ack)[0] == "EIV Acknowledgement Form"
+    for title in ("CERTIFICATION CLARIFICATION RECORD Property: Catalpa Shade Applicant/Resident: Jay Robbins",
+                  "HOME LEASE COMPLIANCE FORM Property: Catalpa Shade Units are: Fixed - OR - Floating",
+                  "Applicable Charges, Deposits and Fees Disclosure for HUD Units Cascade Management"):
+        assert _label_by_printed_title("Compliance — Other Signed HUD Form", title)[0] != "Compliance — Other Signed HUD Form", title
+
+
+def test_lease_family_reports_the_label_the_row_names():
+    row = {"label": "Lease Term and Signature Pages ONLY"}
+    assert labels_satisfying(row, document_type_for(row)[0]) == ("Lease Agreement", "HUD Model Lease")
+    row = {"label": "HUD Model Lease Provided (at least, Lease Term and Signature Pages)"}
+    assert labels_satisfying(row, document_type_for(row)[0]) == ("HUD Model Lease", "Lease Agreement")
+    row = {"label": "EIV Acknowledgment Form completed"}
+    assert labels_satisfying(row, document_type_for(row)[0])[0] == "EIV Acknowledgement Form"
 
 
 def test_row_family_is_satisfied_by_a_sibling_and_a_screening_report_counts():

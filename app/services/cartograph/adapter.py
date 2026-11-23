@@ -671,12 +671,28 @@ def _resolve_member_ref(
             best_ref, best_score = member["ref"], score
 
     if best_score < _NAME_MATCH_THRESHOLD:
+        # A one-person household leaves no one else the record could belong
+        # to: a card embossed "LYDIA Y HURST" is Lynda Hurst's when she is
+        # the only member and the surname agrees. Two members who share a
+        # surname stay ambiguous and the record goes out unreferenced.
+        if len(members) == 1 and _surname(name) and _surname(name) == _surname(members[0].get("last_name")):
+            warnings.append(
+                f"{context}: '{name}' matched the only household member by surname "
+                f"(closest {best_score:.2f}); check the first name on the document"
+            )
+            return members[0]["ref"]
         warnings.append(
             f"{context}: '{name}' did not match any household member "
             f"(closest {best_score:.2f}); sent without a member reference"
         )
         return None
     return best_ref
+
+
+def _surname(name: str | None) -> str:
+    """The last alphabetic word of a name, lower-cased, suffixes dropped."""
+    words = [w for w in re.findall(r"[a-z]+", (name or "").lower()) if w not in {"jr", "sr", "ii", "iii", "iv"}]
+    return words[-1] if words else ""
 
 
 # The only values this field is defined to hold. Anything else is prose that

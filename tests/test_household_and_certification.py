@@ -645,3 +645,19 @@ def test_arithmetic_settles_within_one_form_never_between_forms():
     assert _labelled_cert_amounts([one])["utilityAllowance"] == "46.00"
     # A field ambiguous and unsettled on one form is not read even when another form prints it once.
     assert "tenantRent" not in _labelled_cert_amounts(["Tenant Rent $500", "Tenant Rent $500 Tenant Rent $510"])
+
+
+def test_single_member_household_claims_a_record_by_surname():
+    from app.services.cartograph.adapter import _resolve_member_ref
+    lynda = {"ref": "m01", "first_name": "Lynda", "last_name": "Hurst"}
+    warnings: list[str] = []
+    assert _resolve_member_ref("Lydia Y Hurst", [lynda], warnings, "asset_records[0]") == "m01"
+    assert warnings and "by surname" in warnings[0]
+    # A different surname is still nobody's.
+    warnings.clear()
+    assert _resolve_member_ref("Lydia Y Hearst", [lynda], warnings, "asset_records[0]") is None
+    assert "did not match" in warnings[0]
+    # Two members who share the surname keep the record unreferenced.
+    warnings.clear()
+    two = [lynda, {"ref": "m02", "first_name": "Marcus", "last_name": "Hurst"}]
+    assert _resolve_member_ref("Lydia Y Hurst", two, warnings, "asset_records[0]") is None

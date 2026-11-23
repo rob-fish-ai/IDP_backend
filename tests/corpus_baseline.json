@@ -6052,7 +6052,7 @@
     "declared_only",
     null,
     "Social Security (declared)",
-    null,
+    5702,
     null,
     "18346.92"
    ],
@@ -6070,7 +6070,7 @@
     "verified",
     null,
     "Social Security Administration",
-    5702,
+    null,
     null,
     "48434.40"
    ]
@@ -6094,7 +6094,7 @@
   "score": 0.66,
   "warnings": [
    "income_records[4]: type 'Other Income' is not in the configured pickli",
-   "income_records[5]: 'Margaret Mahoney' did not match any household memb"
+   "income_records[5]: 'Margaret Mahoney' matched the only household membe"
   ]
  },
  "J-BEAC-08693@1793322997": {
@@ -8912,6 +8912,4776 @@
   ],
   "score": 0.84,
   "warnings": []
+ },
+ "J-BEAC-09414@1794234720": {
+  "assets": [
+   [
+    "prepaid_debit_card",
+    "Direct Express",
+    null,
+    null,
+    null,
+    "declared_only",
+    null,
+    "10.00",
+    "0.00",
+    null,
+    null,
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "10.00",
+   "annual_income": "24154.00",
+   "cert_type": "annual",
+   "effective_date": "2026-09-01",
+   "gross_rent": "594.00",
+   "hh_size": 1,
+   "tenant_rent": "489.00",
+   "utility_allowance": "105.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 1,
+   "CERT_SUMMARY_INCOME_MISMATCH": 1,
+   "INCOME_DECLARED_NOT_VERIFIED": 1,
+   "INCOME_METHODS_DISAGREE": 1,
+   "INCOME_VERIFIED_NOT_DECLARED": 1,
+   "NAME_VARIANT": 1,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "declared_only",
+    null,
+    "SSA",
+    6404,
+    null,
+    "16456.20"
+   ],
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "",
+    null,
+    "300.00",
+    "7698.08"
+   ],
+   [
+    "wages_and_salaries",
+    "verified_not_declared",
+    null,
+    "Restauranteur Inc.",
+    6405,
+    null,
+    null
+   ]
+  ],
+  "members": [
+   [
+    "Venita",
+    "Washington",
+    "Head of Household",
+    7021,
+    null,
+    []
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Income source 'Restauranteur Inc.' (Venita L. Washington): projected a",
+   "Pages 42-43: 'HUD 50059 (Previous)' detected \u2014 excluded from data extr",
+   "Pages 44-45: 'Tenant Income Certification (TIC) (Previous)' detected \u2014",
+   "Pages 6: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
+   "Pages 9: 'Income Calculation Worksheet' detected \u2014 excluded from data "
+  ],
+  "score": 0.64,
+  "warnings": [
+   "asset_records[0]: Venita L. Washington Direct Express at Direct Expres",
+   "income_records[0]: 6 quarterly wage-history row(s) not sent as pay stu"
+  ]
+ },
+ "J-BEAC-11089@1794853498": {
+  "assets": [],
+  "cert_review": {
+   "annual_assets": null,
+   "annual_income": "0.00",
+   "cert_type": "annual",
+   "effective_date": "2025-09-01",
+   "gross_rent": "11.00",
+   "hh_size": 4,
+   "tenant_rent": "0.00",
+   "utility_allowance": "10.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 1,
+   "MEMBER_IDENTITY_CONFLICT": 1,
+   "NAME_VARIANT": 1,
+   "SIGNATURE_DATE_MISSING": 1
+  },
+  "income": [],
+  "members": [
+   [
+    "Kimberly",
+    "Coward",
+    "Head of Household",
+    8818,
+    null,
+    []
+   ],
+   [
+    "Kim'Nia",
+    "Coles",
+    "Minor Child",
+    null,
+    null,
+    []
+   ],
+   [
+    "Don'Lee",
+    "Coles",
+    "Minor Child",
+    null,
+    null,
+    []
+   ],
+   [
+    "Jarrel",
+    "Porter Jr.",
+    "Minor Child",
+    null,
+    null,
+    []
+   ]
+  ],
+  "notes": [
+   "HUD 50059 must be signed and dated; a signature could not be verified ",
+   "Income source 'Adecco USA, Inc.': latest pay date 2023-06-30 is 27 mon",
+   "Income source 'Fat Kat Investments': latest pay date 2024-03-31 is 18 ",
+   "Income source 'Onin Staffing LLC': wage history only (3 period total(s",
+   "Self-declared income amounts not extracted from questionnaire/applicat"
+  ],
+  "score": 0.73,
+  "warnings": [
+   "household_members[1] 'Kim'Nia Coles' matches none of the 3 member(s) C",
+   "household_members[2] 'Don'Lee Coles' matches none of the 3 member(s) C",
+   "household_members[3] 'Jarrel Porter Jr.' matches none of the 3 member(",
+   "income_records[0]: 'Onin Staffing LLC' is wage history only (not decla",
+   "income_records[1]: 'Fat Kat Investments' is wage history only (not dec",
+   "income_records[2]: 'Adecco USA, Inc.' is wage history only (not declar"
+  ]
+ },
+ "J-BOZZ-10762@1794598889": {
+  "assets": [
+   [
+    "cash_on_hand",
+    "",
+    null,
+    null,
+    null,
+    "declared_only",
+    7066,
+    "150.00",
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "checking",
+    "BANKCORP",
+    null,
+    "122.00",
+    null,
+    "declared_only",
+    7064,
+    "122.00",
+    null,
+    "0.00",
+    "0.00",
+    null,
+    null,
+    []
+   ],
+   [
+    "checking",
+    "Bank Corp",
+    null,
+    "12.00",
+    null,
+    "declared_only",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "prepaid_debit_card",
+    "Cash App",
+    null,
+    "300.00",
+    null,
+    "declared_only",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "savings",
+    "Chimco",
+    null,
+    "4.00",
+    null,
+    "declared_only",
+    7065,
+    "4.00",
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "588.00",
+   "annual_income": "6929.00",
+   "cert_type": "initial",
+   "effective_date": null,
+   "gross_rent": "1003.00",
+   "hh_size": 1,
+   "tenant_rent": "845.00",
+   "utility_allowance": "158.00"
+  },
+  "codes": {
+   "CERT_SUMMARY_INCOME_MISMATCH": 1,
+   "INCOME_VERIFIED_NOT_DECLARED": 2,
+   "MEMBER_IDENTITY_CONFLICT": 1,
+   "NAME_VARIANT": 1,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "child_support",
+    "verified_not_declared",
+    null,
+    "Amaya, Anthony Francescol",
+    7295,
+    null,
+    null
+   ],
+   [
+    "other",
+    "verified",
+    null,
+    "Margaret Stevenson",
+    null,
+    null,
+    "3549.00"
+   ],
+   [
+    "other",
+    "verified_not_declared",
+    null,
+    "Hector Rivera",
+    7296,
+    null,
+    null
+   ]
+  ],
+  "members": [
+   [
+    "Natalie",
+    "Hall",
+    "Head of Household",
+    8360,
+    5843,
+    []
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 13: 'Income Calculation Worksheet' detected \u2014 excluded from data",
+   "Self-declared income amounts not extracted from questionnaire/applicat"
+  ],
+  "score": 0.82,
+  "warnings": [
+   "income_records[0]: type 'Other Income' is not in the configured pickli",
+   "income_records[1]: type 'Other Income' is not in the configured pickli"
+  ]
+ },
+ "J-BOZZ-10763@1794599140": {
+  "assets": [
+   [
+    "checking",
+    "CHIME",
+    null,
+    "0.00",
+    null,
+    "declared_only",
+    7069,
+    "0.00",
+    null,
+    null,
+    "0.00",
+    null,
+    null,
+    []
+   ],
+   [
+    "prepaid_debit_card",
+    "EBT",
+    null,
+    "289.00",
+    null,
+    "declared_only",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "prepaid_debit_card",
+    "EBT",
+    null,
+    "549.00",
+    null,
+    "declared_only",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "prepaid_debit_card",
+    "EBT CASH",
+    null,
+    null,
+    null,
+    "declared_only",
+    null,
+    "549.00",
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "1387.00",
+   "annual_income": "12204.00",
+   "cert_type": "initial",
+   "effective_date": null,
+   "gross_rent": "1477.00",
+   "hh_size": 2,
+   "tenant_rent": "75.00",
+   "utility_allowance": "187.00"
+  },
+  "codes": {
+   "INCOME_VERIFIED_NOT_DECLARED": 1,
+   "MEMBER_IDENTITY_CONFLICT": 1,
+   "NAME_VARIANT": 2,
+   "RENT_IDENTITY_MISMATCH": 1,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "other",
+    "verified_not_declared",
+    null,
+    "State of Connecticut Departmen",
+    null,
+    null,
+    null
+   ],
+   [
+    "public_assistance",
+    "verified",
+    null,
+    "State of Connecticut Departmen",
+    7298,
+    null,
+    "2772.00"
+   ],
+   [
+    "social_security",
+    "verified",
+    null,
+    "Social Security Administration",
+    7297,
+    null,
+    "9432.00"
+   ]
+  ],
+  "members": [
+   [
+    "Jason",
+    "Rodriguez",
+    "Head of Household",
+    8361,
+    5844,
+    []
+   ],
+   [
+    "Nicole",
+    "Rousseau",
+    "Co-Head",
+    8362,
+    null,
+    []
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Head of household 'Jason Rodriguez' has no income records but the cert",
+   "Pages 26: 'Income Calculation Worksheet' detected \u2014 excluded from data",
+   "Self-declared income amounts not extracted from questionnaire/applicat"
+  ],
+  "score": 0.84,
+  "warnings": [
+   "income_records[1]: type 'Other Income' is not in the configured pickli"
+  ]
+ },
+ "J-BOZZ-10764@1794599266": {
+  "assets": [],
+  "cert_review": {
+   "annual_assets": null,
+   "annual_income": "3600.00",
+   "cert_type": "initial",
+   "effective_date": null,
+   "gross_rent": "1372.00",
+   "hh_size": 1,
+   "tenant_rent": "0.00",
+   "utility_allowance": "158.00"
+  },
+  "codes": {
+   "CERT_SUMMARY_INCOME_MISMATCH": 1,
+   "MEMBER_IDENTITY_CONFLICT": 1,
+   "RENT_IDENTITY_MISMATCH": 1
+  },
+  "income": [
+   [
+    "other",
+    "verified",
+    null,
+    "Robert Lopez Jr.",
+    7300,
+    "30.00",
+    null
+   ]
+  ],
+  "members": [
+   [
+    "Laura",
+    "Ambuehl",
+    "Head of Household",
+    8363,
+    5845,
+    []
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 32: 'Income Calculation Worksheet' detected \u2014 excluded from data"
+  ],
+  "score": 0.76,
+  "warnings": [
+   "income_records[0]: type 'Other Income' is not in the configured pickli"
+  ]
+ },
+ "J-BOZZ-10767@1794600495": {
+  "assets": [
+   [
+    "checking",
+    "CONNEX",
+    null,
+    "11.18",
+    null,
+    "declared_only",
+    7077,
+    "11.18",
+    null,
+    "0.00",
+    "0.00",
+    null,
+    null,
+    []
+   ],
+   [
+    "savings",
+    "CONNEX",
+    null,
+    null,
+    null,
+    "declared_only",
+    null,
+    "90.00",
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "savings",
+    "CONNEX",
+    null,
+    null,
+    null,
+    "declared_only",
+    7078,
+    "25.00",
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "126.18",
+   "annual_income": "46212.53",
+   "cert_type": "initial",
+   "effective_date": null,
+   "gross_rent": "1204.00",
+   "hh_size": 1,
+   "tenant_rent": "1046.00",
+   "utility_allowance": "158.00"
+  },
+  "codes": {
+   "INCOME_METHODS_DISAGREE": 1,
+   "NAME_VARIANT": 1,
+   "QUESTIONNAIRE_EMPLOYER_UNVERIFIED": 1,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "",
+    null,
+    null,
+    null
+   ],
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Tracy K Weiss, LLC",
+    null,
+    null,
+    "46212.53"
+   ]
+  ],
+  "members": [
+   [
+    "Jhi-Esha",
+    "Davis",
+    "Head of Household",
+    8364,
+    5846,
+    [
+     "Jhi-Esha Davis"
+    ]
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 13: 'Income Calculation Worksheet' detected \u2014 excluded from data",
+   "Pages 25: Unrecognized document type \u2014 manual review required",
+   "Self-declared income amounts not extracted from questionnaire/applicat"
+  ],
+  "score": 0.64,
+  "warnings": []
+ },
+ "J-BOZZ-10768@1794600969": {
+  "assets": [
+   [
+    "checking",
+    "Cranon DOT",
+    null,
+    "0.10",
+    null,
+    "declared_only",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "checking",
+    "GREEN DOT",
+    null,
+    "86.10",
+    null,
+    "declared_only",
+    7081,
+    "86.10",
+    null,
+    "0.00",
+    "0.00",
+    null,
+    null,
+    []
+   ],
+   [
+    "other",
+    "cranon APP",
+    null,
+    "0.30",
+    null,
+    "declared_only",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "86.50",
+   "annual_income": "45613.75",
+   "cert_type": "initial",
+   "effective_date": null,
+   "gross_rent": "1549.00",
+   "hh_size": 2,
+   "tenant_rent": "1296.00",
+   "utility_allowance": "253.00"
+  },
+  "codes": {
+   "MEMBER_IDENTITY_CONFLICT": 2,
+   "NAME_VARIANT": 2,
+   "TIC_TOTAL_MINOR_DIFF": 1
+  },
+  "income": [
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "The Connection Inc.",
+    7305,
+    "1553.00",
+    "45613.75"
+   ],
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "The Mary Wade Home Incorporate",
+    7306,
+    null,
+    null
+   ]
+  ],
+  "members": [
+   [
+    "Tamara",
+    "Wilfong",
+    "Head of Household",
+    8365,
+    5847,
+    []
+   ],
+   [
+    "Blaire",
+    "Wilfong",
+    "Minor Child",
+    8366,
+    null,
+    []
+   ]
+  ],
+  "notes": [
+   "Income source 'The Mary Wade Home Incorporated' (Tamara Wilfong): voi-",
+   "Pages 12: 'Income Calculation Worksheet' detected \u2014 excluded from data"
+  ],
+  "score": 0.84,
+  "warnings": []
+ },
+ "J-BOZZ-10769@1794600782": {
+  "assets": [
+   [
+    "checking",
+    "JP MORGAN CHASE",
+    null,
+    "1000.00",
+    null,
+    "declared_only",
+    null,
+    "1000.00",
+    null,
+    "0.00",
+    "0.00",
+    null,
+    null,
+    []
+   ],
+   [
+    "checking",
+    "Temomcame",
+    null,
+    "1000.00",
+    null,
+    "declared_only",
+    null,
+    null,
+    null,
+    null,
+    "0.01",
+    null,
+    null,
+    []
+   ],
+   [
+    "prepaid_debit_card",
+    "Clot card",
+    null,
+    "300.00",
+    null,
+    "declared_only",
+    null,
+    null,
+    null,
+    null,
+    "0.00",
+    null,
+    null,
+    []
+   ],
+   [
+    "prepaid_debit_card",
+    "EBT",
+    null,
+    null,
+    null,
+    "declared_only",
+    null,
+    "300.00",
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "savings",
+    "JP MORGAN CHASE",
+    null,
+    "4000.00",
+    null,
+    "declared_only",
+    null,
+    "4000.00",
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "6600.00",
+   "annual_income": "51461.30",
+   "cert_type": "initial",
+   "effective_date": "2025-12-31",
+   "gross_rent": "1789.00",
+   "hh_size": 4,
+   "tenant_rent": "1469.00",
+   "utility_allowance": "320.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 1,
+   "INCOME_DECLARED_NOT_VERIFIED": 2,
+   "MEMBER_IDENTITY_CONFLICT": 1,
+   "NAME_VARIANT": 4,
+   "NEAR_DUPLICATE_INCOME": 1,
+   "QUESTIONNAIRE_EMPLOYER_UNVERIFIED": 1,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "child_support",
+    "declared_only",
+    null,
+    "DSS",
+    7309,
+    "300.00",
+    null
+   ],
+   [
+    "child_support",
+    "verified",
+    null,
+    "Child Support (ccses)",
+    null,
+    "148.19",
+    null
+   ],
+   [
+    "child_support",
+    "verified",
+    null,
+    "Child Support (ccses)",
+    null,
+    "148.19",
+    "1778.28"
+   ],
+   [
+    "other",
+    "declared_only",
+    null,
+    "Other Income (declared)",
+    null,
+    null,
+    "1778.28"
+   ],
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "",
+    null,
+    null,
+    null
+   ],
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "J Morrissey & Company Inc.",
+    null,
+    null,
+    null
+   ],
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Physicians For Womens Health L",
+    7308,
+    "1800.00",
+    null
+   ]
+  ],
+  "members": [
+   [
+    "Haria",
+    "STOVAIL",
+    "Head of Household",
+    8367,
+    5848,
+    [
+     "Haria STOVAIL"
+    ]
+   ],
+   [
+    "Rah'nai",
+    "Christy",
+    "Minor Child",
+    null,
+    null,
+    []
+   ],
+   [
+    "Robert",
+    "Christy, Jr.",
+    "Minor Child",
+    8369,
+    null,
+    [
+     "Robert Christy, Jr."
+    ]
+   ],
+   [
+    "Lauren",
+    "Godfrey",
+    "Minor Child",
+    8370,
+    null,
+    []
+   ]
+  ],
+  "notes": [
+   "1 page(s) could not be read by OCR (pages 38) \u2014 content unavailable to",
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Income source 'J Morrissey & Company Inc.' (Haria STOVAIL): voi-based ",
+   "Pages 12: 'Income Calculation Worksheet' detected \u2014 excluded from data"
+  ],
+  "score": 0.72,
+  "warnings": [
+   "household_members[1] 'Rah'nai Christy' matches none of the 4 member(s)",
+   "income_records[5]: type 'Other Income' is not in the configured pickli"
+  ]
+ },
+ "J-BOZZ-10770@1794600982": {
+  "assets": [
+   [
+    "checking",
+    "CHIME",
+    null,
+    "100.00",
+    null,
+    "declared_only",
+    7083,
+    "100.00",
+    null,
+    "0.00",
+    "0.00",
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "100.00",
+   "annual_income": "42154.10",
+   "cert_type": "initial",
+   "effective_date": "2026-02-02",
+   "gross_rent": "1789.00",
+   "hh_size": 3,
+   "tenant_rent": "1469.00",
+   "utility_allowance": "320.00"
+  },
+  "codes": {
+   "INCOME_METHODS_DISAGREE": 2,
+   "MEMBER_IDENTITY_CONFLICT": 1,
+   "NAME_VARIANT": 1,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Gusto",
+    null,
+    null,
+    null
+   ],
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Opg MGT1 LLC",
+    null,
+    "700.00",
+    null
+   ],
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "UPS Inc. (Ohio)",
+    7313,
+    null,
+    null
+   ]
+  ],
+  "members": [
+   [
+    "Damaris",
+    "Ojeda",
+    "Head of Household",
+    8371,
+    5849,
+    []
+   ],
+   [
+    "Jonathan",
+    "Velez Jr.",
+    "Minor Child",
+    8372,
+    null,
+    [
+     "Jonathan Velez Jr."
+    ]
+   ],
+   [
+    "Amelia",
+    "Velez",
+    "Minor Child",
+    8373,
+    null,
+    [
+     "Amelia Velez"
+    ]
+   ]
+  ],
+  "notes": [
+   "Income source 'Opg MGT1 LLC' (Damaris Ojeda): voi-based calculation re",
+   "Pages 12: 'Income Calculation Worksheet' detected \u2014 excluded from data"
+  ],
+  "score": 0.85,
+  "warnings": []
+ },
+ "J-BOZZ-10781@1794601557": {
+  "assets": [
+   [
+    "checking",
+    "BANK OF AMERICA",
+    null,
+    "100.00",
+    null,
+    "declared_only",
+    7085,
+    "100.00",
+    null,
+    "0.00",
+    "0.00",
+    null,
+    null,
+    []
+   ],
+   [
+    "savings",
+    "BANK OF AMERICA",
+    null,
+    "75.00",
+    null,
+    "declared_only",
+    7086,
+    "75.00",
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "175.00",
+   "annual_income": "27559.81",
+   "cert_type": "initial",
+   "effective_date": null,
+   "gross_rent": "1003.00",
+   "hh_size": 1,
+   "tenant_rent": "845.00",
+   "utility_allowance": "158.00"
+  },
+  "codes": {
+   "INCOME_METHODS_DISAGREE": 1,
+   "NAME_VARIANT": 1
+  },
+  "income": [
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Whispering Pines Rehabilitatio",
+    null,
+    null,
+    "27559.81"
+   ]
+  ],
+  "members": [
+   [
+    "Deandre",
+    "Walker II",
+    "Head of Household",
+    8376,
+    5851,
+    [
+     "Deandre Walker II"
+    ]
+   ]
+  ],
+  "notes": [
+   "Pages 17: 'Income Calculation Worksheet' detected \u2014 excluded from data"
+  ],
+  "score": 0.83,
+  "warnings": []
+ },
+ "J-BOZZ-10783@1794601444": {
+  "assets": [
+   [
+    "checking",
+    "Chime",
+    null,
+    "500.00",
+    null,
+    "declared_only",
+    7087,
+    "500.00",
+    null,
+    "0.00",
+    "0.00",
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "500.00",
+   "annual_income": "14346.41",
+   "cert_type": "initial",
+   "effective_date": null,
+   "gross_rent": "645.00",
+   "hh_size": 2,
+   "tenant_rent": "458.00",
+   "utility_allowance": "187.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 1,
+   "INCOME_METHODS_DISAGREE": 1,
+   "MEMBER_IDENTITY_CONFLICT": 1,
+   "NAME_VARIANT": 1
+  },
+  "income": [
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Apple Rehab Shelton Lakes",
+    7318,
+    null,
+    "14346.41"
+   ]
+  ],
+  "members": [
+   [
+    "Katherine",
+    "Rogers",
+    "Head of Household",
+    8377,
+    5852,
+    []
+   ],
+   [
+    "Brianna",
+    "Hicks",
+    "Other Adult",
+    8378,
+    null,
+    []
+   ]
+  ],
+  "notes": [
+   "Pages 13: 'Income Calculation Worksheet' detected \u2014 excluded from data"
+  ],
+  "score": 0.84,
+  "warnings": []
+ },
+ "J-BOZZ-10784@1794601480": {
+  "assets": [
+   [
+    "cash_on_hand",
+    "Department of Social Serv",
+    null,
+    "36.82",
+    null,
+    "declared_only",
+    7092,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "checking",
+    "ABLE CT/Fifth Thirds Bank",
+    null,
+    null,
+    null,
+    "declared_only",
+    null,
+    "4999.99",
+    null,
+    null,
+    "0.01",
+    null,
+    null,
+    []
+   ],
+   [
+    "checking",
+    "GE CREDIT UNION",
+    null,
+    "1249.79",
+    null,
+    "declared_only",
+    null,
+    "1249.79",
+    null,
+    "0.00",
+    "0.05",
+    null,
+    null,
+    []
+   ],
+   [
+    "other",
+    "EBT Card",
+    null,
+    "36.82",
+    null,
+    "declared_only",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "savings",
+    "GE CREDIT UNION",
+    null,
+    null,
+    null,
+    "declared_only",
+    7091,
+    "136.46",
+    null,
+    null,
+    "0.05",
+    null,
+    null,
+    []
+   ],
+   [
+    "savings",
+    "N/a",
+    null,
+    "272.00",
+    null,
+    "declared_only",
+    null,
+    "272.00",
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "6731.88",
+   "annual_income": "11928.00",
+   "cert_type": "initial",
+   "effective_date": null,
+   "gross_rent": "602.00",
+   "hh_size": 1,
+   "tenant_rent": "444.00",
+   "utility_allowance": "158.00"
+  },
+  "codes": {
+   "NAME_VARIANT": 1,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "public_assistance",
+    "verified",
+    null,
+    "Connecticut Department of Soci",
+    null,
+    "298.00",
+    null
+   ],
+   [
+    "ssi",
+    "verified",
+    null,
+    "Social Security Administration",
+    null,
+    "994.00",
+    null
+   ]
+  ],
+  "members": [
+   [
+    "Rachel",
+    "Knight",
+    "Head of Household",
+    8379,
+    5853,
+    []
+   ]
+  ],
+  "notes": [
+   "Pages 13: 'Income Calculation Worksheet' detected \u2014 excluded from data"
+  ],
+  "score": 0.84,
+  "warnings": []
+ },
+ "J-BOZZ-10789@1794602417": {
+  "assets": [
+   [
+    "cash_on_hand",
+    "",
+    null,
+    null,
+    null,
+    "declared_only",
+    7097,
+    "20.00",
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "checking",
+    "M&T BANK",
+    null,
+    "104.00",
+    null,
+    "declared_only",
+    7095,
+    "104.00",
+    null,
+    "0.00",
+    "0.00",
+    null,
+    null,
+    []
+   ],
+   [
+    "checking",
+    "M+1 Bank",
+    null,
+    "39.00",
+    null,
+    "declared_only",
+    null,
+    "39.00",
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "163.00",
+   "annual_income": "18224.68",
+   "cert_type": "initial",
+   "effective_date": null,
+   "gross_rent": "1003.00",
+   "hh_size": 1,
+   "tenant_rent": "845.00",
+   "utility_allowance": "158.00"
+  },
+  "codes": {
+   "CERT_SUMMARY_INCOME_MISMATCH": 1,
+   "INCOME_METHODS_DISAGREE": 1,
+   "MEMBER_IDENTITY_CONFLICT": 1,
+   "NAME_VARIANT": 1
+  },
+  "income": [
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Big y Foods Inc.",
+    7323,
+    null,
+    "18224.68"
+   ]
+  ],
+  "members": [
+   [
+    "Denisha",
+    "Martinez",
+    "Head of Household",
+    8381,
+    5855,
+    []
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 13: 'Income Calculation Worksheet' detected \u2014 excluded from data",
+   "Pages 20: Unrecognized document type \u2014 manual review required"
+  ],
+  "score": 0.8,
+  "warnings": []
+ },
+ "J-BOZZ-10790@1794602378": {
+  "assets": [],
+  "cert_review": {
+   "annual_assets": null,
+   "annual_income": "2541.00",
+   "cert_type": "initial",
+   "effective_date": "2026-04-20",
+   "gross_rent": "158.00",
+   "hh_size": 1,
+   "tenant_rent": "0.00",
+   "utility_allowance": "158.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 1,
+   "MEMBER_IDENTITY_CONFLICT": 1,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "other",
+    "verified",
+    null,
+    "Connecticut Department of Soci",
+    7322,
+    "293.00",
+    null
+   ]
+  ],
+  "members": [
+   [
+    "Octavia",
+    "Moore",
+    "Head of Household",
+    8380,
+    5854,
+    []
+   ]
+  ],
+  "notes": [
+   "Pages 33: 'Income Calculation Worksheet' detected \u2014 excluded from data"
+  ],
+  "score": 0.89,
+  "warnings": [
+   "income_records[0]: type 'Other Income' is not in the configured pickli"
+  ]
+ },
+ "J-BOZZ-10791@1794602648": {
+  "assets": [
+   [
+    "prepaid_debit_card",
+    "DIRECT EXPRESS",
+    null,
+    "996.00",
+    null,
+    "declared_only",
+    7100,
+    "996.00",
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "prepaid_debit_card",
+    "EBT CASH",
+    null,
+    null,
+    null,
+    "declared_only",
+    null,
+    "1260.00",
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "prepaid_debit_card",
+    "TNFA",
+    null,
+    "1260.00",
+    null,
+    "declared_only",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "3516.00",
+   "annual_income": "27048.00",
+   "cert_type": "initial",
+   "effective_date": "2026-04-08",
+   "gross_rent": "618.00",
+   "hh_size": 6,
+   "tenant_rent": "298.00",
+   "utility_allowance": "320.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "CERT_SUMMARY_INCOME_MISMATCH": 1,
+   "INCOME_VERIFIED_NOT_DECLARED": 1,
+   "NAME_VARIANT": 4
+  },
+  "income": [
+   [
+    "public_assistance",
+    "verified",
+    null,
+    "Connecticut Department of Soci",
+    null,
+    "996.00",
+    null
+   ],
+   [
+    "ssi",
+    "verified_not_declared",
+    null,
+    "Social Security Administration",
+    null,
+    null,
+    null
+   ]
+  ],
+  "members": [
+   [
+    "Jessica",
+    "Fortin",
+    "Head of Household",
+    8383,
+    5857,
+    []
+   ],
+   [
+    "Jayla",
+    "Roman",
+    "Minor Child",
+    8384,
+    null,
+    []
+   ],
+   [
+    "Noel",
+    "Berrios",
+    "Minor Child",
+    8385,
+    null,
+    []
+   ],
+   [
+    "Ellie",
+    "Berrios",
+    "Minor Child",
+    8386,
+    null,
+    []
+   ],
+   [
+    "Gino",
+    "Berrios",
+    "Minor Child",
+    8387,
+    null,
+    []
+   ],
+   [
+    "J'Ana",
+    "Berrios",
+    "Minor Child",
+    8388,
+    null,
+    []
+   ]
+  ],
+  "notes": [
+   "Pages 28: Unrecognized document type \u2014 manual review required",
+   "Pages 5: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
+   "Pages 6: Unrecognized document type \u2014 manual review required",
+   "Pages 7: 'Tenant Income Certification (TIC) (Previous)' detected \u2014 exc"
+  ],
+  "score": 0.84,
+  "warnings": []
+ },
+ "J-BOZZ-10792@1794966580": {
+  "assets": [
+   [
+    "checking",
+    "BANK CORP",
+    null,
+    "0.00",
+    null,
+    "declared_only",
+    7363,
+    null,
+    null,
+    "0.00",
+    "0.00",
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "0.00",
+   "annual_income": null,
+   "cert_type": "initial",
+   "effective_date": "2026-06-01",
+   "gross_rent": "1046.00",
+   "hh_size": 1,
+   "tenant_rent": "1046.00",
+   "utility_allowance": null
+  },
+  "codes": {
+   "CERT_SUMMARY_INCOME_MISMATCH": 1,
+   "MEMBER_IDENTITY_CONFLICT": 1,
+   "NAME_VARIANT": 1,
+   "TIC_TOTAL_NOT_EXTRACTED": 1
+  },
+  "income": [
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Arden Care Center",
+    7564,
+    "1330.00",
+    null
+   ]
+  ],
+  "members": [
+   [
+    "She-Roniyea",
+    "Thomas",
+    "Head of Household",
+    8382,
+    5856,
+    []
+   ]
+  ],
+  "notes": [
+   "Missing required certification form: no current TIC / HUD 50059 / RD 3",
+   "Pages 12: 'Income Calculation Worksheet' detected \u2014 excluded from data",
+   "Pages 2: Unrecognized document type \u2014 manual review required"
+  ],
+  "score": 0.62,
+  "warnings": []
+ },
+ "J-BOZZ-10793@1794602709": {
+  "assets": [
+   [
+    "cash_on_hand",
+    "",
+    null,
+    "40.00",
+    null,
+    "declared_only",
+    7104,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "checking",
+    "CHASE BANK",
+    null,
+    null,
+    null,
+    "declared_only",
+    7102,
+    "100.00",
+    null,
+    null,
+    "0.00",
+    null,
+    null,
+    []
+   ],
+   [
+    "retirement",
+    "EMPOWER 401K",
+    null,
+    null,
+    null,
+    "declared_only",
+    7105,
+    "1329.00",
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "savings",
+    "CHASE BANK",
+    null,
+    null,
+    null,
+    "declared_only",
+    7103,
+    "200.00",
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "1669.00",
+   "annual_income": "49852.35",
+   "cert_type": "initial",
+   "effective_date": null,
+   "gross_rent": "1549.00",
+   "hh_size": 3,
+   "tenant_rent": "1296.00",
+   "utility_allowance": "253.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 1,
+   "CERT_SUMMARY_INCOME_MISMATCH": 1,
+   "INCOME_METHODS_DISAGREE": 1,
+   "MEMBER_IDENTITY_CONFLICT": 1,
+   "NAME_VARIANT": 3,
+   "QUESTIONNAIRE_PENSION_UNVERIFIED": 1
+  },
+  "income": [
+   [
+    "child_support",
+    "verified",
+    null,
+    "Asume",
+    null,
+    "311.00",
+    null
+   ],
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "United Electric Controls Co.",
+    null,
+    "1893.00",
+    null
+   ]
+  ],
+  "members": [
+   [
+    "Angelik",
+    "Robles",
+    "Head of Household",
+    8389,
+    5858,
+    []
+   ],
+   [
+    "Kalani",
+    "Santiago",
+    "Minor Child",
+    null,
+    null,
+    []
+   ],
+   [
+    "Melany",
+    "Chiclana",
+    "Minor Child",
+    null,
+    null,
+    []
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Income source 'United Electric Controls Co.' (Angelik Robles): project",
+   "Pages 12: 'Income Calculation Worksheet' detected \u2014 excluded from data"
+  ],
+  "score": 0.79,
+  "warnings": [
+   "household_members[1] 'Kalani Santiago' matches none of the 1 member(s)",
+   "household_members[2] 'Melany Chiclana' matches none of the 1 member(s)"
+  ]
+ },
+ "J-BOZZ-10794@1794602700": {
+  "assets": [
+   [
+    "checking",
+    "BANK OF AMERICA",
+    null,
+    "1737.80",
+    null,
+    "declared_only",
+    null,
+    "1737.00",
+    null,
+    "0.00",
+    "0.00",
+    null,
+    null,
+    []
+   ],
+   [
+    "checking",
+    "Bank of America",
+    null,
+    "173.00",
+    null,
+    "declared_only",
+    7106,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "other",
+    "EBT CARD",
+    null,
+    "104.00",
+    null,
+    "declared_only",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "prepaid_debit_card",
+    "CT DSS",
+    null,
+    "1000.00",
+    null,
+    "declared_only",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "prepaid_debit_card",
+    "EBT",
+    null,
+    null,
+    null,
+    "declared_only",
+    7107,
+    "104.00",
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "3118.80",
+   "annual_income": "22107.60",
+   "cert_type": "initial",
+   "effective_date": null,
+   "gross_rent": "1075.00",
+   "hh_size": 1,
+   "tenant_rent": "888.00",
+   "utility_allowance": "187.00"
+  },
+  "codes": {
+   "NAME_VARIANT": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "verified",
+    null,
+    "Social Security Administration",
+    null,
+    "1842.30",
+    "22107.60"
+   ]
+  ],
+  "members": [
+   [
+    "Rameika",
+    "Bentley",
+    "Head of Household",
+    8390,
+    5859,
+    []
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 12: 'Income Calculation Worksheet' detected \u2014 excluded from data"
+  ],
+  "score": 0.84,
+  "warnings": []
+ },
+ "J-BOZZ-10795@1794602960": {
+  "assets": [
+   [
+    "checking",
+    "CAPITAL ONE",
+    null,
+    "14.42",
+    null,
+    "declared_only",
+    7110,
+    "14.42",
+    null,
+    "0.00",
+    "0.00",
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "14.42",
+   "annual_income": "2184.00",
+   "cert_type": "initial",
+   "effective_date": "2026-04-23",
+   "gross_rent": "158.00",
+   "hh_size": 1,
+   "tenant_rent": "0.00",
+   "utility_allowance": "158.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 1,
+   "NAME_VARIANT": 1
+  },
+  "income": [
+   [
+    "other",
+    "verified",
+    null,
+    "Connecticut Department of Labo",
+    7335,
+    "42.00",
+    null
+   ]
+  ],
+  "members": [
+   [
+    "Chrisanne",
+    "Guilbert",
+    "Head of Household",
+    8391,
+    5860,
+    []
+   ]
+  ],
+  "notes": [
+   "Income source 'Connecticut Department of Labor' (Chrisanne Guilbert): "
+  ],
+  "score": 0.89,
+  "warnings": [
+   "income_records[0]: type 'Other Income' is not in the configured pickli"
+  ]
+ },
+ "J-BOZZ-10796@1794603108": {
+  "assets": [
+   [
+    "cash_on_hand",
+    "",
+    null,
+    null,
+    null,
+    "declared_only",
+    7116,
+    "300.00",
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "checking",
+    "M&T BANK",
+    null,
+    "100.00",
+    null,
+    "declared_only",
+    7115,
+    "100.00",
+    null,
+    "0.00",
+    "0.00",
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "400.00",
+   "annual_income": "30897.36",
+   "cert_type": "initial",
+   "effective_date": null,
+   "gross_rent": "1204.00",
+   "hh_size": 1,
+   "tenant_rent": "1046.00",
+   "utility_allowance": "158.00"
+  },
+  "codes": {
+   "INCOME_METHODS_DISAGREE": 1,
+   "PAYSTUB_COUNT_BELOW_GUIDANCE": 1,
+   "TIC_TOTAL_MINOR_DIFF": 1
+  },
+  "income": [
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Compass Group USA, Inc.",
+    7339,
+    "18.00",
+    null
+   ]
+  ],
+  "members": [
+   [
+    "Lisa",
+    "Eaddy",
+    "Head of Household",
+    8395,
+    5863,
+    []
+   ]
+  ],
+  "notes": [
+   "1 page(s) could not be read by OCR (pages 19) \u2014 content unavailable to",
+   "Pages 13: Unrecognized document type \u2014 manual review required"
+  ],
+  "score": 0.83,
+  "warnings": []
+ },
+ "J-BOZZ-10797@1794603113": {
+  "assets": [
+   [
+    "checking",
+    "fifth third bank",
+    null,
+    "0.61",
+    null,
+    "declared_only",
+    7111,
+    null,
+    null,
+    "0.00",
+    "0.00",
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "0.61",
+   "annual_income": "38903.80",
+   "cert_type": "initial",
+   "effective_date": null,
+   "gross_rent": "1204.00",
+   "hh_size": 1,
+   "tenant_rent": "1046.00",
+   "utility_allowance": "158.00"
+  },
+  "codes": {
+   "CERT_SUMMARY_INCOME_MISMATCH": 1,
+   "INCOME_METHODS_DISAGREE": 2,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Atria Senior Living Inc.",
+    7336,
+    "600.00",
+    "38903.80"
+   ],
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Shiftmed LLC",
+    null,
+    null,
+    null
+   ]
+  ],
+  "members": [
+   [
+    "Jasmine",
+    "Snell",
+    "Head of Household",
+    8392,
+    5861,
+    []
+   ]
+  ],
+  "notes": [
+   "Pages 13: 'Income Calculation Worksheet' detected \u2014 excluded from data"
+  ],
+  "score": 0.65,
+  "warnings": []
+ },
+ "J-BOZZ-10798@1794602991": {
+  "assets": [
+   [
+    "checking",
+    "CHASE",
+    null,
+    "20.00",
+    null,
+    "declared_only",
+    7113,
+    "20.00",
+    null,
+    "0.00",
+    "0.00",
+    null,
+    null,
+    []
+   ],
+   [
+    "prepaid_debit_card",
+    "EBT",
+    null,
+    null,
+    null,
+    "declared_only",
+    null,
+    "497.00",
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "prepaid_debit_card",
+    "EBT CASH",
+    null,
+    "497.00",
+    null,
+    "declared_only",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "1014.00",
+   "annual_income": "8508.00",
+   "cert_type": "initial",
+   "effective_date": "2026-04-14",
+   "gross_rent": "253.00",
+   "hh_size": 2,
+   "tenant_rent": "0.00",
+   "utility_allowance": "253.00"
+  },
+  "codes": {
+   "CERT_SUMMARY_INCOME_MISMATCH": 1,
+   "MEMBER_IDENTITY_CONFLICT": 1,
+   "NAME_VARIANT": 1
+  },
+  "income": [
+   [
+    "other",
+    "verified",
+    null,
+    "Department of Social Services",
+    null,
+    null,
+    null
+   ],
+   [
+    "public_assistance",
+    "verified",
+    null,
+    "Department of Social Services",
+    7337,
+    "70.00",
+    null
+   ]
+  ],
+  "members": [
+   [
+    "Semora",
+    "Howell",
+    "Head of Household",
+    8393,
+    5862,
+    []
+   ],
+   [
+    "Aurora",
+    "Kingcade Howell",
+    "Minor Child",
+    null,
+    null,
+    []
+   ]
+  ],
+  "notes": [
+   "Pages 33: 'Income Calculation Worksheet' detected \u2014 excluded from data"
+  ],
+  "score": 0.83,
+  "warnings": [
+   "household_members[1] 'Aurora Kingcade Howell' matches none of the 2 me",
+   "income_records[1]: type 'Other Income' is not in the configured pickli"
+  ]
+ },
+ "J-BOZZ-10799@1794603132": {
+  "assets": [
+   [
+    "cash_on_hand",
+    "",
+    null,
+    null,
+    null,
+    "declared_only",
+    7121,
+    "50.00",
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "checking",
+    "bankcorp",
+    null,
+    "0.00",
+    null,
+    "declared_only",
+    7117,
+    "0.00",
+    null,
+    "0.00",
+    "0.00",
+    null,
+    null,
+    []
+   ],
+   [
+    "prepaid_debit_card",
+    "EBT",
+    null,
+    null,
+    null,
+    "declared_only",
+    7120,
+    "295.00",
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "345.00",
+   "annual_income": "13824.00",
+   "cert_type": "initial",
+   "effective_date": null,
+   "gross_rent": "602.00",
+   "hh_size": 1,
+   "tenant_rent": "444.00",
+   "utility_allowance": "158.00"
+  },
+  "codes": {
+   "NAME_VARIANT": 1,
+   "QUESTIONNAIRE_EMPLOYMENT_UNVERIFIED": 1,
+   "SSA_POSSIBLE_OVERPAYMENT": 2,
+   "TIC_TOTAL_MINOR_DIFF": 1
+  },
+  "income": [
+   [
+    "self_employment",
+    "verified",
+    null,
+    "Care 4 Kids",
+    null,
+    "1152.00",
+    null
+   ]
+  ],
+  "members": [
+   [
+    "Kimberly",
+    "GALLOGHER",
+    "Head of Household",
+    8396,
+    5864,
+    []
+   ]
+  ],
+  "notes": [
+   "Pages 10: 'Income Calculation Worksheet' detected \u2014 excluded from data"
+  ],
+  "score": 0.82,
+  "warnings": []
+ },
+ "J-BOZZ-10800@1794603569": {
+  "assets": [
+   [
+    "checking",
+    "CONNEX",
+    null,
+    "0.00",
+    null,
+    "declared_only",
+    7123,
+    null,
+    null,
+    "0.00",
+    "0.00",
+    null,
+    null,
+    []
+   ],
+   [
+    "savings",
+    "CONNEX",
+    null,
+    "158.20",
+    null,
+    "declared_only",
+    7124,
+    null,
+    null,
+    "0.00",
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "savings",
+    "CONNEX SAVINGS",
+    null,
+    null,
+    null,
+    "declared_only",
+    null,
+    "158.20",
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "316.40",
+   "annual_income": "51749.88",
+   "cert_type": "initial",
+   "effective_date": null,
+   "gross_rent": "1549.00",
+   "hh_size": 2,
+   "tenant_rent": "1296.00",
+   "utility_allowance": "253.00"
+  },
+  "codes": {
+   "INCOME_METHODS_DISAGREE": 1,
+   "MEMBER_IDENTITY_CONFLICT": 1,
+   "NAME_VARIANT": 1,
+   "PAYSTUB_COUNT_BELOW_GUIDANCE": 1
+  },
+  "income": [
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Connecticut Community Care Inc",
+    7342,
+    "26.54",
+    null
+   ]
+  ],
+  "members": [
+   [
+    "Annie",
+    "Hardy",
+    "Head of Household",
+    8398,
+    5866,
+    []
+   ],
+   [
+    "Bene",
+    "Demand",
+    "Minor Child",
+    null,
+    null,
+    []
+   ]
+  ],
+  "notes": [
+   "Pages 10: 'Income Calculation Worksheet' detected \u2014 excluded from data"
+  ],
+  "score": 0.84,
+  "warnings": [
+   "household_members[1] 'Bene Demand' matches none of the 1 member(s) Car"
+  ]
+ },
+ "J-BOZZ-10801@1794603632": {
+  "assets": [
+   [
+    "checking",
+    "COASTAL COMMUNITY BANK",
+    null,
+    "0.00",
+    null,
+    "declared_only",
+    7126,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "checking",
+    "STRIDE BANK",
+    null,
+    "0.19",
+    null,
+    "declared_only",
+    null,
+    "0.19",
+    null,
+    "0.00",
+    "0.00",
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "0.19",
+   "annual_income": "41723.45",
+   "cert_type": "initial",
+   "effective_date": null,
+   "gross_rent": "1290.00",
+   "hh_size": 1,
+   "tenant_rent": "1103.00",
+   "utility_allowance": "187.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "CERT_SUMMARY_INCOME_MISMATCH": 1,
+   "INCOME_DECLARED_NOT_VERIFIED": 1,
+   "INCOME_METHODS_DISAGREE": 1,
+   "NAME_VARIANT": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "declared_only",
+    null,
+    "Disability Income",
+    7344,
+    "1029.00",
+    null
+   ],
+   [
+    "social_security",
+    "verified",
+    null,
+    "Social Security Administration",
+    null,
+    "1232.00",
+    "18943.20"
+   ],
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Cumberland Farms",
+    7343,
+    "16.50",
+    "22780.25"
+   ]
+  ],
+  "members": [
+   [
+    "Theresa",
+    "Torony",
+    "Head of Household",
+    8399,
+    5867,
+    []
+   ]
+  ],
+  "notes": [
+   "Pages 14: 'Income Calculation Worksheet' detected \u2014 excluded from data",
+   "Pages 2: Unrecognized document type \u2014 manual review required"
+  ],
+  "score": 0.69,
+  "warnings": []
+ },
+ "J-BOZZ-10802@1794603202": {
+  "assets": [
+   [
+    "checking",
+    "WELLSFARGO",
+    null,
+    "242.00",
+    null,
+    "declared_only",
+    7122,
+    "242.00",
+    null,
+    null,
+    "0.00",
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "242.00",
+   "annual_income": "37270.57",
+   "cert_type": "initial",
+   "effective_date": null,
+   "gross_rent": "1290.00",
+   "hh_size": 1,
+   "tenant_rent": "1103.00",
+   "utility_allowance": "187.00"
+  },
+  "codes": {
+   "CERT_SUMMARY_INCOME_MISMATCH": 1,
+   "NAME_VARIANT": 1,
+   "PAYSTUB_COUNT_BELOW_GUIDANCE": 1
+  },
+  "income": [
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Carter Mario PC",
+    null,
+    "45000.00",
+    "37270.57"
+   ]
+  ],
+  "members": [
+   [
+    "Kiara",
+    "Cepeda",
+    "Head of Household",
+    8397,
+    5865,
+    []
+   ]
+  ],
+  "notes": [
+   "Pages 11: 'Income Calculation Worksheet' detected \u2014 excluded from data"
+  ],
+  "score": 0.83,
+  "warnings": []
+ },
+ "J-BOZZ-10804@1795311820": {
+  "assets": [
+   [
+    "cash_on_hand",
+    "",
+    null,
+    null,
+    null,
+    "declared_only",
+    7826,
+    "25.00",
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "checking",
+    "M&T BANK",
+    null,
+    null,
+    null,
+    "declared_only",
+    7368,
+    "100.00",
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "checking",
+    "M&T Bank",
+    null,
+    "100.00",
+    null,
+    "declared_only",
+    7824,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "checking",
+    "TD BANK",
+    null,
+    "1400.00",
+    null,
+    "declared_only",
+    7823,
+    "1400.00",
+    null,
+    "0.00",
+    "0.00",
+    null,
+    null,
+    []
+   ],
+   [
+    "savings",
+    "M&T BANK",
+    null,
+    null,
+    null,
+    "declared_only",
+    7825,
+    "500.00",
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "whole_life_insurance",
+    "",
+    null,
+    "100.00",
+    null,
+    "declared_only",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "2225.00",
+   "annual_income": "12172.80",
+   "cert_type": "initial",
+   "effective_date": null,
+   "gross_rent": "1003.00",
+   "hh_size": 1,
+   "tenant_rent": "845.00",
+   "utility_allowance": "158.00"
+  },
+  "codes": {
+   "INCOME_DECLARED_NOT_VERIFIED": 1,
+   "INCOME_SECOND_DECLARATION": 1,
+   "NAME_VARIANT": 1,
+   "QUESTIONNAIRE_LIFE_INSURANCE_UNVERIFIED": 1,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "public_assistance",
+    "declared_only",
+    null,
+    "Temporary Assistance (declared",
+    null,
+    "1100.00",
+    null
+   ],
+   [
+    "social_security",
+    "verified",
+    null,
+    "Social Security Administration",
+    7571,
+    "768.40",
+    null
+   ],
+   [
+    "ssi",
+    "verified",
+    null,
+    "Social Security Administration",
+    null,
+    "246.00",
+    null
+   ]
+  ],
+  "members": [
+   [
+    "Quintessa",
+    "Gousse",
+    "Head of Household",
+    8723,
+    6469,
+    []
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 13: 'Income Calculation Worksheet' detected \u2014 excluded from data"
+  ],
+  "score": 0.77,
+  "warnings": []
+ },
+ "J-BOZZ-10805@1794849376": {
+  "assets": [
+   [
+    "cash_on_hand",
+    "",
+    null,
+    null,
+    null,
+    "declared_only",
+    null,
+    "150.00",
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "checking",
+    "CHIME",
+    null,
+    "0.00",
+    null,
+    "declared_only",
+    7279,
+    null,
+    null,
+    "0.00",
+    "0.00",
+    null,
+    null,
+    []
+   ],
+   [
+    "other",
+    "Cash App",
+    null,
+    "0.00",
+    null,
+    "declared_only",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "other",
+    "Venmo",
+    null,
+    "0.00",
+    null,
+    "declared_only",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "150.00",
+   "annual_income": "35235.20",
+   "cert_type": "initial",
+   "effective_date": null,
+   "gross_rent": "1003.00",
+   "hh_size": 1,
+   "tenant_rent": "845.00",
+   "utility_allowance": "158.00"
+  },
+  "codes": {
+   "MEMBER_IDENTITY_CONFLICT": 1,
+   "NEAR_DUPLICATE_INCOME": 1,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "",
+    null,
+    "16.95",
+    null
+   ],
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Senior Helpers",
+    7644,
+    null,
+    null
+   ]
+  ],
+  "members": [
+   [
+    "Ebony",
+    "Diaz",
+    "Head of Household",
+    8622,
+    5995,
+    []
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Income source 'None' (Ebony Diaz): voi-based calculation rejected \u2014 ho",
+   "Pages 13: 'Income Calculation Worksheet' detected \u2014 excluded from data"
+  ],
+  "score": 0.69,
+  "warnings": []
+ },
+ "J-BOZZ-10808@1794849643": {
+  "assets": [
+   [
+    "checking",
+    "CHIME",
+    null,
+    "200.00",
+    null,
+    "declared_only",
+    7468,
+    "200.00",
+    null,
+    "0.00",
+    "0.00",
+    null,
+    null,
+    []
+   ],
+   [
+    "other",
+    "CASHAPP",
+    null,
+    null,
+    null,
+    "declared_only",
+    7470,
+    "10.00",
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "savings",
+    "CHIME",
+    null,
+    null,
+    null,
+    "declared_only",
+    7469,
+    "100.00",
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "310.00",
+   "annual_income": "38883.78",
+   "cert_type": "initial",
+   "effective_date": null,
+   "gross_rent": "1204.00",
+   "hh_size": 1,
+   "tenant_rent": "1046.00",
+   "utility_allowance": "158.00"
+  },
+  "codes": {
+   "CERT_SUMMARY_INCOME_MISMATCH": 1
+  },
+  "income": [
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Butterdrive LLC",
+    7647,
+    "1200.00",
+    null
+   ]
+  ],
+  "members": [
+   [
+    "Raymond",
+    "Izquierdo",
+    "Head of Household",
+    8404,
+    5871,
+    []
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 13: 'Income Calculation Worksheet' detected \u2014 excluded from data"
+  ],
+  "score": 0.82,
+  "warnings": []
+ },
+ "J-BOZZ-10809@1794603670": {
+  "assets": [
+   [
+    "checking",
+    "Chime",
+    null,
+    "127.98",
+    null,
+    "declared_only",
+    null,
+    "127.98",
+    null,
+    "0.00",
+    "0.00",
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "127.98",
+   "annual_income": "38569.44",
+   "cert_type": "initial",
+   "effective_date": null,
+   "gross_rent": "1204.00",
+   "hh_size": 2,
+   "tenant_rent": "1046.00",
+   "utility_allowance": "158.00"
+  },
+  "codes": {
+   "INCOME_METHODS_DISAGREE": 1,
+   "NAME_VARIANT": 1,
+   "PAYSTUB_COUNT_BELOW_GUIDANCE": 1,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Inter-Con Security Systems Inc",
+    7346,
+    "2000.00",
+    null
+   ]
+  ],
+  "members": [
+   [
+    "Passionique",
+    "Taylor",
+    "Head of Household",
+    8401,
+    5869,
+    []
+   ],
+   [
+    "Samiyah",
+    "Ahmed Taylor",
+    "Minor Child",
+    8402,
+    null,
+    [
+     "Samiyah Ahmed Taylor"
+    ]
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Income source 'Inter-Con Security Systems Inc.' (Passionique Taylor): ",
+   "Pages 13: 'Income Calculation Worksheet' detected \u2014 excluded from data"
+  ],
+  "score": 0.77,
+  "warnings": []
+ },
+ "J-BOZZ-10810@1794604431": {
+  "assets": [
+   [
+    "checking",
+    "Capital One",
+    null,
+    "0.00",
+    null,
+    "declared_only",
+    null,
+    null,
+    null,
+    null,
+    "0.00",
+    null,
+    null,
+    []
+   ],
+   [
+    "checking",
+    "SO FI CHECKING",
+    null,
+    null,
+    null,
+    "declared_only",
+    null,
+    "94.00",
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "checking",
+    "SoFi",
+    null,
+    "94.00",
+    null,
+    "declared_only",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "other",
+    "Cash App",
+    null,
+    "0.00",
+    null,
+    "declared_only",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "other",
+    "Paypal",
+    null,
+    "0.00",
+    null,
+    "declared_only",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "188.00",
+   "annual_income": "16011.06",
+   "cert_type": "initial",
+   "effective_date": null,
+   "gross_rent": "1204.00",
+   "hh_size": 2,
+   "tenant_rent": "1046.00",
+   "utility_allowance": "158.00"
+  },
+  "codes": {
+   "CERT_SUMMARY_INCOME_MISMATCH": 1,
+   "INCOME_METHODS_DISAGREE": 1,
+   "NAME_VARIANT": 1
+  },
+  "income": [
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Bloomingdales LLC, DBA Bloomin",
+    7356,
+    "250.00",
+    null
+   ]
+  ],
+  "members": [
+   [
+    "Shaquana",
+    "Dixon",
+    "Head of Household",
+    8406,
+    5872,
+    []
+   ],
+   [
+    "Zaylee",
+    "Downey",
+    "Minor Child",
+    null,
+    null,
+    []
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Income source 'Bloomingdales LLC, DBA Bloomingdale's and Forty Carrots",
+   "Pages 13: 'Income Calculation Worksheet' detected \u2014 excluded from data"
+  ],
+  "score": 0.83,
+  "warnings": [
+   "asset_records[0].manual_balance: balance -99.00 is negative (overdrawn",
+   "asset_records[4].manual_balance: balance -32.00 is negative (overdrawn",
+   "household_members[0] 'Shaquana Dixon' date of birth read as 1997-08-01",
+   "household_members[1] 'Zaylee Downey' matches none of the 1 member(s) C"
+  ]
+ },
+ "J-BOZZ-10811@1794603883": {
+  "assets": [
+   [
+    "checking",
+    "ST VINCENT CREDIT UNION",
+    null,
+    "400.00",
+    null,
+    "declared_only",
+    null,
+    "400.00",
+    null,
+    "0.00",
+    "0.00",
+    null,
+    null,
+    []
+   ],
+   [
+    "savings",
+    "ST VINCENT CREDIT UNION",
+    null,
+    null,
+    null,
+    "declared_only",
+    null,
+    "1500.00",
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "1900.00",
+   "annual_income": "48180.08",
+   "cert_type": "initial",
+   "effective_date": null,
+   "gross_rent": "1308.00",
+   "hh_size": 1,
+   "tenant_rent": "1046.00",
+   "utility_allowance": "158.00"
+  },
+  "codes": {
+   "NAME_VARIANT": 1,
+   "PAYSTUB_COUNT_BELOW_GUIDANCE": 1,
+   "RENT_IDENTITY_MISMATCH": 1
+  },
+  "income": [
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Dept of Children and Family",
+    null,
+    "49000.00",
+    "48180.08"
+   ]
+  ],
+  "members": [
+   [
+    "Rayvn",
+    "Dawson",
+    "Head of Household",
+    null,
+    null,
+    []
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 27: Unrecognized document type \u2014 manual review required",
+   "Pages 28: Unrecognized document type \u2014 manual review required"
+  ],
+  "score": 0.84,
+  "warnings": [
+   "household_members[0] 'Rayvn Dawson' matches none of the 1 member(s) Ca"
+  ]
+ },
+ "J-BOZZ-10812@1794603842": {
+  "assets": [
+   [
+    "checking",
+    "CHASE",
+    null,
+    "12.00",
+    null,
+    "declared_only",
+    7133,
+    "12.00",
+    null,
+    null,
+    "0.00",
+    null,
+    null,
+    []
+   ],
+   [
+    "other",
+    "CASHAPP",
+    null,
+    "45.00",
+    null,
+    "declared_only",
+    7134,
+    "45.00",
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "prepaid_debit_card",
+    "",
+    null,
+    "298.00",
+    null,
+    "declared_only",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "355.00",
+   "annual_income": "19234.65",
+   "cert_type": "initial",
+   "effective_date": null,
+   "gross_rent": "1204.00",
+   "hh_size": 1,
+   "tenant_rent": "1046.00",
+   "utility_allowance": "158.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "CERT_SUMMARY_INCOME_MISMATCH": 1,
+   "NAME_VARIANT": 1,
+   "PAYSTUB_COUNT_BELOW_GUIDANCE": 1
+  },
+  "income": [
+   [
+    "ssi",
+    "verified",
+    null,
+    "Social Security Administration",
+    null,
+    "557.00",
+    null
+   ],
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Dollar Tree Stores Inc.",
+    7348,
+    "400.00",
+    null
+   ]
+  ],
+  "members": [
+   [
+    "Nicole",
+    "Williams",
+    "Head of Household",
+    8403,
+    5870,
+    []
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 13: 'Income Calculation Worksheet' detected \u2014 excluded from data"
+  ],
+  "score": 0.77,
+  "warnings": []
+ },
+ "J-BOZZ-10813@1794604372": {
+  "assets": [
+   [
+    "checking",
+    "TD BANK",
+    null,
+    "0.00",
+    null,
+    "declared_only",
+    null,
+    null,
+    null,
+    "0.00",
+    "0.00",
+    null,
+    null,
+    []
+   ],
+   [
+    "prepaid_debit_card",
+    "EBT",
+    null,
+    null,
+    null,
+    "declared_only",
+    null,
+    "50.00",
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "prepaid_debit_card",
+    "EBT CASH",
+    null,
+    "50.00",
+    null,
+    "declared_only",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "100.00",
+   "annual_income": "10980.00",
+   "cert_type": "initial",
+   "effective_date": null,
+   "gross_rent": "2420.00",
+   "hh_size": 4,
+   "tenant_rent": "2433.00",
+   "utility_allowance": "320.00"
+  },
+  "codes": {
+   "INCOME_VERIFIED_NOT_DECLARED": 1,
+   "MEMBER_IDENTITY_CONFLICT": 3,
+   "NAME_VARIANT": 3,
+   "RENT_IDENTITY_MISMATCH": 1,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "other",
+    "verified_not_declared",
+    null,
+    "Connecticut Department of Soci",
+    null,
+    null,
+    null
+   ],
+   [
+    "public_assistance",
+    "verified",
+    null,
+    "Connecticut Department of Soci",
+    null,
+    "915.00",
+    null
+   ]
+  ],
+  "members": [
+   [
+    "Lynnette",
+    "Ramos",
+    "Head of Household",
+    8407,
+    5873,
+    [
+     "Lynnette Ramos"
+    ]
+   ],
+   [
+    "Kaylice",
+    "Lawrence",
+    "Minor Child",
+    8408,
+    null,
+    []
+   ],
+   [
+    "Tyron",
+    "Lawrence, Jr.",
+    "Minor Child",
+    8409,
+    null,
+    [
+     "Tyron Lawrence, Jr."
+    ]
+   ],
+   [
+    "Korbyn",
+    "Buchanan",
+    "Minor Child",
+    8410,
+    null,
+    []
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 52: 'Income Calculation Worksheet' detected \u2014 excluded from data"
+  ],
+  "score": 0.83,
+  "warnings": [
+   "income_records[0]: type 'Other Income' is not in the configured pickli"
+  ]
+ },
+ "J-BOZZ-10814@1794604493": {
+  "assets": [
+   [
+    "checking",
+    "BANK OF AMERICA",
+    null,
+    "1100.00",
+    null,
+    "declared_only",
+    7155,
+    "1100.00",
+    null,
+    "0.00",
+    "0.00",
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "1100.00",
+   "annual_income": "41397.59",
+   "cert_type": "initial",
+   "effective_date": null,
+   "gross_rent": "1032.00",
+   "hh_size": 2,
+   "tenant_rent": "845.00",
+   "utility_allowance": "187.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 1,
+   "CERT_SUMMARY_INCOME_MISMATCH": 1,
+   "NAME_VARIANT": 2,
+   "PAYSTUB_COUNT_BELOW_GUIDANCE": 1
+  },
+  "income": [
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Kindercare Education LLC",
+    7378,
+    "300.00",
+    null
+   ]
+  ],
+  "members": [
+   [
+    "Constance",
+    "Thompson",
+    "Head of Household",
+    8411,
+    5874,
+    []
+   ],
+   [
+    "Shiloh",
+    "Irons",
+    "Minor Child",
+    8412,
+    null,
+    []
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir"
+  ],
+  "score": 0.84,
+  "warnings": []
+ },
+ "J-BOZZ-10815@1794604481": {
+  "assets": [
+   [
+    "checking",
+    "CAPITAL ONE",
+    null,
+    "0.00",
+    null,
+    "declared_only",
+    7157,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "checking",
+    "CHIME",
+    null,
+    "4.03",
+    null,
+    "declared_only",
+    null,
+    "4.03",
+    null,
+    "0.00",
+    "0.00",
+    null,
+    null,
+    []
+   ],
+   [
+    "other",
+    "CASHAPP",
+    null,
+    "0.00",
+    null,
+    "declared_only",
+    7159,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "savings",
+    "CAPITAL ONE",
+    null,
+    "0.00",
+    null,
+    "declared_only",
+    7158,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "4.03",
+   "annual_income": "45494.80",
+   "cert_type": "initial",
+   "effective_date": null,
+   "gross_rent": "1204.00",
+   "hh_size": 1,
+   "tenant_rent": "1046.00",
+   "utility_allowance": "158.00"
+  },
+  "codes": {
+   "CERT_SUMMARY_INCOME_MISMATCH": 1,
+   "INCOME_METHODS_DISAGREE": 1,
+   "NAME_VARIANT": 1,
+   "PAYSTUB_AMOUNT_SUSPECT": 1
+  },
+  "income": [
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Sterling Care Home Staffing",
+    7380,
+    null,
+    "45494.80"
+   ]
+  ],
+  "members": [
+   [
+    "Amaya",
+    "Rivas",
+    "Head of Household",
+    8413,
+    5875,
+    []
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 6: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
+   "Self-declared income amounts not extracted from questionnaire/applicat"
+  ],
+  "score": 0.8,
+  "warnings": []
+ },
+ "J-BOZZ-10816@1794878301": {
+  "assets": [
+   [
+    "checking",
+    "THE BANCORP BANK",
+    null,
+    "0.00",
+    null,
+    "declared_only",
+    7232,
+    null,
+    null,
+    "0.00",
+    "0.00",
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "0.00",
+   "annual_income": "60834.97",
+   "cert_type": "initial",
+   "effective_date": "2026-01-21",
+   "gross_rent": "1789.00",
+   "hh_size": 4,
+   "tenant_rent": "1469.00",
+   "utility_allowance": "320.00"
+  },
+  "codes": {
+   "CERT_SUMMARY_INCOME_MISMATCH": 1,
+   "INCOME_METHODS_DISAGREE": 1,
+   "NAME_VARIANT": 5,
+   "SIGNATURE_DATE_MISSING": 1
+  },
+  "income": [
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Port Security Services Inc.",
+    7495,
+    "840.00",
+    null
+   ]
+  ],
+  "members": [
+   [
+    "Jaquiece",
+    "Jacobs",
+    "Head of Household",
+    8556,
+    5989,
+    []
+   ],
+   [
+    "Sky'la",
+    "Gorham",
+    "Minor Child",
+    8557,
+    6003,
+    []
+   ],
+   [
+    "Zya",
+    "Gorham",
+    "Minor Child",
+    8558,
+    6004,
+    []
+   ],
+   [
+    "Taevon",
+    "Gorham",
+    "Minor Child",
+    8559,
+    6005,
+    []
+   ]
+  ],
+  "notes": [
+   "Pages 17: 'Income Calculation Worksheet' detected \u2014 excluded from data"
+  ],
+  "score": 0.92,
+  "warnings": [
+   "household_members[0] 'Jaquiece Jacobs' date of birth read as 1970-11-0"
+  ]
+ },
+ "J-BOZZ-10818@1794849653": {
+  "assets": [
+   [
+    "cash_on_hand",
+    "",
+    null,
+    null,
+    null,
+    "declared_only",
+    null,
+    "525.00",
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "525.00",
+   "annual_income": "34190.00",
+   "cert_type": "initial",
+   "effective_date": null,
+   "gross_rent": "1075.00",
+   "hh_size": 2,
+   "tenant_rent": "888.00",
+   "utility_allowance": "187.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 1,
+   "CERT_SUMMARY_INCOME_MISMATCH": 1,
+   "MEMBER_IDENTITY_CONFLICT": 1,
+   "NAME_VARIANT": 1
+  },
+  "income": [
+   [
+    "self_employment",
+    "verified",
+    null,
+    "Style 2000 Beauty Salon",
+    7645,
+    "30000.00",
+    null
+   ]
+  ],
+  "members": [
+   [
+    "Estelle",
+    "Dickey",
+    "Head of Household",
+    8421,
+    6139,
+    []
+   ],
+   [
+    "Charles",
+    "Moore",
+    "Co-Head",
+    8422,
+    null,
+    [
+     "Charles Moore"
+    ]
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Income source 'Style 2000 Beauty Salon' (Estelle Dickey): history-base",
+   "Pages 6: 'Income Calculation Worksheet' detected \u2014 excluded from data "
+  ],
+  "score": 0.79,
+  "warnings": [
+   "household_members[0] 'Estelle Dickey' date of birth read as 1972-12-12"
+  ]
+ },
+ "J-BOZZ-10990@1794965257": {
+  "assets": [
+   [
+    "prepaid_debit_card",
+    "EBT",
+    null,
+    "800.00",
+    null,
+    "declared_only",
+    7299,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "800.00",
+   "annual_income": "34110.00",
+   "cert_type": "initial",
+   "effective_date": "2026-04-20",
+   "gross_rent": "500.00",
+   "hh_size": 4,
+   "tenant_rent": "247.00",
+   "utility_allowance": "253.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 1,
+   "CERT_SUMMARY_INCOME_MISMATCH": 1,
+   "NAME_VARIANT": 4
+  },
+  "income": [
+   [
+    "other",
+    "verified",
+    null,
+    "Connecticut Department of Soci",
+    null,
+    null,
+    null
+   ],
+   [
+    "public_assistance",
+    "verified",
+    null,
+    "Connecticut Department of Soci",
+    7758,
+    "991.00",
+    null
+   ],
+   [
+    "ssi",
+    "verified",
+    null,
+    "Social Security Administration",
+    null,
+    null,
+    null
+   ]
+  ],
+  "members": [
+   [
+    "Bernesha",
+    "Suggs",
+    "Head of Household",
+    8662,
+    6002,
+    []
+   ],
+   [
+    "Cam'ron",
+    "Mcneill",
+    "Minor Child",
+    8663,
+    6271,
+    [
+     "Cam'ron Mcneill"
+    ]
+   ],
+   [
+    "Jah'Will",
+    "Suggs",
+    "Minor Child",
+    8664,
+    6272,
+    [
+     "Jah'Will Suggs"
+    ]
+   ],
+   [
+    "Raiani",
+    "Keys",
+    "Minor Child",
+    8665,
+    6273,
+    []
+   ]
+  ],
+  "notes": [
+   "Pages 33: 'Income Calculation Worksheet' detected \u2014 excluded from data"
+  ],
+  "score": 0.88,
+  "warnings": [
+   "income_records[1]: type 'Other Income' is not in the configured pickli"
+  ]
+ },
+ "J-BOZZ-10991@1794849210": {
+  "assets": [
+   [
+    "checking",
+    "M&T BANK",
+    null,
+    "104.00",
+    null,
+    "declared_only",
+    7463,
+    null,
+    null,
+    "0.00",
+    "0.00",
+    null,
+    null,
+    []
+   ],
+   [
+    "checking",
+    "M+1 Bank",
+    null,
+    "39.00",
+    null,
+    "declared_only",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "savings",
+    "",
+    null,
+    "20.00",
+    null,
+    "declared_only",
+    7464,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "163.00",
+   "annual_income": null,
+   "cert_type": "initial",
+   "effective_date": null,
+   "gross_rent": null,
+   "hh_size": 1,
+   "tenant_rent": null,
+   "utility_allowance": null
+  },
+  "codes": {
+   "INCOME_METHODS_DISAGREE": 1,
+   "MEMBER_IDENTITY_CONFLICT": 1,
+   "NAME_VARIANT": 1,
+   "TIC_TOTAL_NOT_EXTRACTED": 1
+  },
+  "income": [
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Big y Foods Inc.",
+    7643,
+    null,
+    null
+   ]
+  ],
+  "members": [
+   [
+    "Denisha",
+    "Martinez",
+    "Head of Household",
+    8666,
+    5855,
+    []
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 13: 'Income Calculation Worksheet' detected \u2014 excluded from data",
+   "Pages 20: Unrecognized document type \u2014 manual review required",
+   "Self-declared income amounts not extracted from questionnaire/applicat"
+  ],
+  "score": 0.49,
+  "warnings": [
+   "household_members[0] 'Denisha Martinez' date of birth read as 1961-08-"
+  ]
+ },
+ "J-BOZZ-11221@1794966348": {
+  "assets": [
+   [
+    "checking",
+    "JP MORGAN CHECKING",
+    null,
+    "0.00",
+    null,
+    "declared_only",
+    7625,
+    null,
+    null,
+    "0.00",
+    "0.00",
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "0.00",
+   "annual_income": "51505.26",
+   "cert_type": "initial",
+   "effective_date": null,
+   "gross_rent": "1549.00",
+   "hh_size": 2,
+   "tenant_rent": "1296.00",
+   "utility_allowance": "253.00"
+  },
+  "codes": {
+   "INCOME_METHODS_DISAGREE": 1,
+   "MEMBER_IDENTITY_CONFLICT": 1,
+   "NAME_VARIANT": 2,
+   "PAYSTUB_COUNT_BELOW_GUIDANCE": 1,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "CJR",
+    null,
+    "1713.60",
+    null
+   ],
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Connecticut Junior Republic As",
+    null,
+    null,
+    null
+   ]
+  ],
+  "members": [
+   [
+    "Anika",
+    "Atkins-Kerr",
+    "Head of Household",
+    8884,
+    5842,
+    [
+     "Anika Atkins-Kerr"
+    ]
+   ],
+   [
+    "Meilahni",
+    "Jackman",
+    "Minor Child",
+    8885,
+    null,
+    []
+   ]
+  ],
+  "notes": [
+   "Missing required certification form: no current TIC / HUD 50059 / RD 3",
+   "Pages 14: 'Income Calculation Worksheet' detected \u2014 excluded from data"
+  ],
+  "score": 0.71,
+  "warnings": []
+ },
+ "J-CASC-11287@1795113279": {
+  "assets": [
+   [
+    "cash_on_hand",
+    "",
+    null,
+    "2000.00",
+    null,
+    "declared_only",
+    7704,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "2000.00",
+   "annual_income": null,
+   "cert_type": "initial",
+   "effective_date": null,
+   "gross_rent": null,
+   "hh_size": 1,
+   "tenant_rent": null,
+   "utility_allowance": null
+  },
+  "codes": {
+   "NAME_VARIANT": 2,
+   "QUESTIONNAIRE_EMPLOYER_UNVERIFIED": 1,
+   "TIC_TOTAL_NOT_EXTRACTED": 1
+  },
+  "income": [
+   [
+    "self_employment",
+    "verified",
+    null,
+    "A & E Pro- Painting and Constr",
+    null,
+    null,
+    null
+   ]
+  ],
+  "members": [
+   [
+    "Gustavo",
+    "Garcia",
+    null,
+    8924,
+    6411,
+    [
+     "Gustavo Garcia"
+    ]
+   ]
+  ],
+  "notes": [
+   "Missing required certification form: no current TIC / HUD 50059 / RD 3",
+   "Pages 19: Unrecognized document type \u2014 manual review required",
+   "Pages 2: 'Income Calculation Worksheet' detected \u2014 excluded from data ",
+   "Self-declared income amounts not extracted from questionnaire/applicat"
+  ],
+  "score": 0.42,
+  "warnings": [
+   "household_members[0].relationship not extracted; left unset"
+  ]
+ },
+ "J-CASC-11419@1795405227": {
+  "assets": [
+   [
+    "cash_on_hand",
+    "",
+    null,
+    null,
+    null,
+    "declared_only",
+    7856,
+    "930.00",
+    "0.00",
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "checking",
+    "",
+    "683.36",
+    null,
+    null,
+    "verified",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      1
+     ],
+     [
+      null,
+      null,
+      1
+     ],
+     [
+      null,
+      null,
+      1
+     ],
+     [
+      null,
+      null,
+      1
+     ],
+     [
+      null,
+      null,
+      1
+     ],
+     [
+      null,
+      null,
+      1
+     ]
+    ]
+   ],
+   [
+    "checking",
+    "Embark",
+    "0.87",
+    null,
+    "0.87",
+    "verified",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      1
+     ],
+     [
+      "0.00",
+      null,
+      1
+     ]
+    ]
+   ],
+   [
+    "prepaid_debit_card",
+    "Netspend/Pathward",
+    null,
+    null,
+    null,
+    "declared_only",
+    null,
+    "748.15",
+    "0.00",
+    null,
+    null,
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "2362.38",
+   "annual_income": "26937.00",
+   "cert_type": "initial",
+   "effective_date": "2024-02-16",
+   "gross_rent": "751.00",
+   "hh_size": 2,
+   "tenant_rent": "592.00",
+   "utility_allowance": "71.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "CERT_SUMMARY_INCOME_MISMATCH": 1,
+   "HOMELESS_APPLICANT_INDICATED": 2,
+   "HUD_9887A_INCOMPLETE": 1,
+   "INCOME_AMOUNT_NOT_IN_SOURCE": 1,
+   "INCOME_DECLARED_NOT_VERIFIED": 2,
+   "MEMBER_IDENTITY_CONFLICT": 4,
+   "MI_CITIZENSHIP_DECLARATION_MISSING": 1,
+   "MI_HUD_92006_MISSING": 1,
+   "MI_OWNER_SUMMARY_MISSING": 1,
+   "NAME_VARIANT": 2,
+   "SSA_POSSIBLE_OVERPAYMENT": 1,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "other",
+    "declared_only",
+    null,
+    "employment",
+    null,
+    "5500.00",
+    null
+   ],
+   [
+    "social_security",
+    "declared_only",
+    null,
+    "Social Security Disability (de",
+    null,
+    "1208.00",
+    null
+   ],
+   [
+    "social_security",
+    "verified",
+    null,
+    "Social Security Administration",
+    8022,
+    "1208.00",
+    "14496.00"
+   ],
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "Oia Nan",
+    8021,
+    "500.00",
+    "12441.00"
+   ]
+  ],
+  "members": [
+   [
+    "Jay",
+    "Robbins",
+    "Head of Household",
+    9049,
+    6502,
+    []
+   ],
+   [
+    "Alicia",
+    "Ortiz",
+    "Co-Head",
+    9050,
+    null,
+    []
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir"
+  ],
+  "score": 0.64,
+  "warnings": [
+   "income_records[3]: type 'Other Income' is not in the configured pickli"
+  ]
+ },
+ "J-CASC-11420@1795405250": {
+  "assets": [
+   [
+    "checking",
+    "OCCU",
+    null,
+    null,
+    null,
+    "declared_only",
+    7858,
+    "2192.00",
+    "0.00",
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "checking",
+    "Oregon Community Credit U",
+    "0.00",
+    null,
+    null,
+    "verified",
+    null,
+    null,
+    null,
+    null,
+    "17.49",
+    null,
+    null,
+    [
+     [
+      null,
+      "17.49",
+      1
+     ]
+    ]
+   ],
+   [
+    "checking",
+    "Oregon Community Credit U",
+    "1469.10",
+    null,
+    null,
+    "verified",
+    null,
+    null,
+    null,
+    null,
+    "0.05",
+    null,
+    null,
+    [
+     [
+      "0.11",
+      "0.05",
+      1
+     ],
+     [
+      "0.63",
+      "0.05",
+      1
+     ]
+    ]
+   ],
+   [
+    "checking",
+    "Rogue CU",
+    null,
+    null,
+    null,
+    "declared_only",
+    null,
+    "51.00",
+    "0.00",
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "checking",
+    "Rogue CU CK",
+    null,
+    null,
+    null,
+    "declared_only",
+    7860,
+    "61.25",
+    "0.00",
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "checking",
+    "Rogue Credit Union",
+    "0.50",
+    null,
+    "61.25",
+    "verified",
+    null,
+    null,
+    null,
+    null,
+    "0.00",
+    "0.00",
+    null,
+    []
+   ],
+   [
+    "savings",
+    "Occu",
+    "24.99",
+    null,
+    null,
+    "verified",
+    7859,
+    "25.00",
+    "0.00",
+    null,
+    "0.05",
+    null,
+    null,
+    [
+     [
+      "0.00",
+      "0.05",
+      1
+     ],
+     [
+      null,
+      "0.05",
+      1
+     ]
+    ]
+   ],
+   [
+    "savings",
+    "Rogue CU",
+    null,
+    null,
+    null,
+    "declared_only",
+    7861,
+    "20.00",
+    "1.00",
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "savings",
+    "Rogue Credit Union",
+    "0.00",
+    null,
+    null,
+    "verified",
+    null,
+    null,
+    null,
+    null,
+    "0.00",
+    "0.00",
+    null,
+    []
+   ],
+   [
+    "savings",
+    "Rogue Credit Union",
+    "20.23",
+    null,
+    null,
+    "verified",
+    null,
+    "20.28",
+    "1.22",
+    null,
+    "5.00",
+    "5.00",
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "3839.07",
+   "annual_income": "16321.00",
+   "cert_type": "initial",
+   "effective_date": "2023-10-02",
+   "gross_rent": "719.00",
+   "hh_size": 1,
+   "tenant_rent": "327.00",
+   "utility_allowance": "71.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "HOMELESS_APPLICANT_INDICATED": 1,
+   "INCOME_AMOUNT_NOT_IN_SOURCE": 1,
+   "INCOME_DECLARED_NOT_VERIFIED": 1,
+   "MEMBER_IDENTITY_CONFLICT": 2,
+   "NAME_VARIANT": 1,
+   "TIC_TOTAL_MISMATCH": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "declared_only",
+    null,
+    "Social Security (declared)",
+    8023,
+    "1320.00",
+    null
+   ],
+   [
+    "social_security",
+    "verified",
+    null,
+    "Social Security Administration",
+    null,
+    "1360.70",
+    "16320.00"
+   ]
+  ],
+  "members": [
+   [
+    "Bradlee",
+    "Frasure",
+    "Head of Household",
+    9051,
+    6503,
+    []
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir"
+  ],
+  "score": 0.72,
+  "warnings": []
+ },
+ "J-CASC-11421@1795405060": {
+  "assets": [
+   [
+    "prepaid_debit_card",
+    "Comerica Bank",
+    null,
+    null,
+    null,
+    "verified",
+    null,
+    "934.46",
+    "0.00",
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "prepaid_debit_card",
+    "Direct Express Debit Card",
+    null,
+    null,
+    null,
+    "declared_only",
+    7863,
+    "934.00",
+    "0.00",
+    null,
+    null,
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "1868.46",
+   "annual_income": "12091.00",
+   "cert_type": "initial",
+   "effective_date": "2023-07-01",
+   "gross_rent": "722.00",
+   "hh_size": 1,
+   "tenant_rent": "218.00",
+   "utility_allowance": "74.00"
+  },
+  "codes": {
+   "HOMELESS_APPLICANT_INDICATED": 2,
+   "MEMBER_IDENTITY_CONFLICT": 1,
+   "NAME_VARIANT": 2
+  },
+  "income": [
+   [
+    "social_security",
+    "verified",
+    null,
+    "Social Security Administration",
+    8024,
+    "1007.60",
+    "12091.00"
+   ]
+  ],
+  "members": [
+   [
+    "Lynda",
+    "Hurst",
+    "Head of Household",
+    9052,
+    6504,
+    []
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 34: Unrecognized document type \u2014 manual review required"
+  ],
+  "score": 0.92,
+  "warnings": [
+   "asset_records[0]: 'Lydia y Hurst' matched the only household member by",
+   "asset_records[0]: balance arrived with no statement or verification of"
+  ]
  },
  "J-CCAC-06733@1790653606": {
   "assets": [
@@ -13122,7 +17892,7 @@
   ],
   "score": 0.86,
   "warnings": [
-   "asset_records[0]: 'Pierrette Mccoy' did not match any household member",
+   "asset_records[0]: 'Pierrette Mccoy' matched the only household member ",
    "income_records[1]: 'HR Service Group LLC' is wage history only (not de"
   ]
  },
@@ -30239,6 +35009,202 @@
   ],
   "score": 0.92,
   "warnings": []
+ },
+ "J-HDC-11254@1795107848": {
+  "assets": [
+   [
+    "checking",
+    "Fifth Third Bank",
+    "1137.54",
+    null,
+    null,
+    "verified",
+    7693,
+    "1138.00",
+    "0.00",
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      1
+     ]
+    ]
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "1137.54",
+   "annual_income": "12168.00",
+   "cert_type": "initial",
+   "effective_date": "2026-12-01",
+   "gross_rent": "1330.00",
+   "hh_size": 1,
+   "tenant_rent": "214.00",
+   "utility_allowance": "80.00"
+  },
+  "codes": {
+   "HUD_9887A_INCOMPLETE": 1,
+   "MI_HUD_92006_MISSING": 1,
+   "MI_OWNER_SUMMARY_MISSING": 1,
+   "NAME_VARIANT": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "verified",
+    null,
+    "Social Security Administration",
+    7824,
+    null,
+    "6924.00"
+   ],
+   [
+    "ssi",
+    "verified",
+    null,
+    "Social Security Administration",
+    7825,
+    null,
+    "5244.00"
+   ]
+  ],
+  "members": [
+   [
+    "Maria",
+    "Boyas",
+    "Head of Household",
+    8919,
+    6405,
+    []
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Self-declared income amounts not extracted from questionnaire/applicat"
+  ],
+  "score": 0.93,
+  "warnings": []
+ },
+ "J-HDC-11289@1795116384": {
+  "assets": [
+   [
+    "checking",
+    "U.S. Bank",
+    "0.00",
+    null,
+    "1976.61",
+    "verified",
+    null,
+    null,
+    null,
+    null,
+    "0.00",
+    "0.00",
+    null,
+    []
+   ],
+   [
+    "checking",
+    "U.S. Bank",
+    "128.96",
+    null,
+    "1181.60",
+    "verified",
+    null,
+    null,
+    null,
+    null,
+    "0.0001",
+    "0.0001",
+    null,
+    []
+   ],
+   [
+    "checking",
+    "US Bank",
+    null,
+    null,
+    null,
+    "declared_only",
+    7708,
+    "184.00",
+    "0.02",
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "savings",
+    "U.S. Bank",
+    "50.10",
+    null,
+    "50.03",
+    "verified",
+    null,
+    "50.00",
+    "0.50",
+    null,
+    "0.995",
+    "0.995",
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "363.06",
+   "annual_income": "13295.00",
+   "cert_type": "annual",
+   "effective_date": "2026-11-01",
+   "gross_rent": "32.00",
+   "hh_size": 1,
+   "tenant_rent": "221.00",
+   "utility_allowance": "11.00"
+  },
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "CERT_SIGNATURE_DATE_IMPLAUSIBLE": 1,
+   "HUD_9887_INCOMPLETE": 1,
+   "NAME_VARIANT": 1,
+   "RENT_IDENTITY_MISMATCH": 1
+  },
+  "income": [
+   [
+    "wages_and_salaries",
+    "verified",
+    null,
+    "State of Illinois (Comptroller",
+    7837,
+    null,
+    "53.92"
+   ]
+  ],
+  "members": [
+   [
+    "Miriam",
+    "Davila Lopez",
+    "Head of Household",
+    8931,
+    6418,
+    [
+     "Miriam Davila Lopez"
+    ]
+   ]
+  ],
+  "notes": [
+   "HUD 50059 must be signed and dated; a signature could not be verified ",
+   "Income source 'Department of Human Services \u2013 Hou': latest pay date 20",
+   "Pages 4-5: 'HUD 50059 (Previous)' detected \u2014 excluded from data extrac",
+   "Student status is null for all household members \u2014 verify against HUD "
+  ],
+  "score": 0.75,
+  "warnings": [
+   "income_records[1]: 'Department of Human Services \u2013 Hou' is wage histor"
+  ]
  },
  "J-KHA-08417@1793050597": {
   "assets": [

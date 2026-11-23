@@ -197,9 +197,12 @@ Each checklist row Cartograph sends is mapped to one taxonomy label
 ("HUD9887", "9887a" and "9887-A" are read alike), then by a label or alias
 printed in the row, then by words in common. Rows phrased as a kind of
 document rather than one form ("Benefit or Budget Letter", "Lease
-provided", "Asset under 50,000 Form", "Third Party Verification ... for
-Asset") belong to a row family: any label in the family satisfies the row
-and the one found is named in the note. Rows that ask a question about a
+provided", "Lease Term and Signature Pages", "Asset under 50,000 Form",
+"EIV Acknowledgment Form", "HUD Brochures", "Lead Based Paint Disclosure",
+"Third Party Verification ... for Asset") belong to a row family: any
+label in the family satisfies the row, the one found is named in the
+note, and a family member the row names outright ("HUD Model Lease
+Provided (... Lease Term ...)") is the one reported as missing. Rows that ask a question about a
 form rather than for the form (correct limits, within 120 days, matches
 the TIC) are left to the findings. The labels and families are pinned by
 `tests/test_taxonomy_coverage.py` against every row label the job store
