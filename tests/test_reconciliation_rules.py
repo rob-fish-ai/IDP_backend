@@ -198,6 +198,31 @@ def test_only_declared_account_of_a_kind_merges_into_the_only_verified_one():
     assert recs[0]["certificationForm"] == "HUD 50059" and "incomeAmount" not in recs[0]
 
 
+def test_two_reads_of_one_account_still_count_as_the_only_verified_account():
+    """Two statements of one Huntington checking account were read as two
+    records; the reconcile step counted two checking accounts and wrote the
+    50059's only checking line out as an orphan record, which Cartograph
+    showed as a second asset holding nothing but the certified value.
+    Records whose numbers name one account are one account here."""
+    recs = [_asset("Gerzon Vasquez", "Checking", "52.51", "8553"), _asset("Gerzon Vasquez", "Checking", "257.41", "8553")]
+    _reconcile_assets(recs, [_decl("Gerzon Vasquez Benavente", "Checking", "354.00", income="0.00")])
+    assert len(recs) == 2 and all(r["verificationStatus"] == "verified" for r in recs)
+    assert [r.get("certificationCashValue") for r in recs].count("354.00") == 1
+    # One printed whole, the other masked to its last four: one account.
+    recs = [_asset("A B", "Checking", "52.51", "1234568553"), _asset("A B", "Checking", "257.41", "xxxx8553")]
+    _reconcile_assets(recs, [_decl("A B", "Checking", "354.00")])
+    assert len(recs) == 2
+    # Two full numbers that only share their last four are two accounts,
+    # and the line is kept apart as it always was.
+    recs = [_asset("A B", "Checking", "52.51", "1234568553"), _asset("A B", "Checking", "257.41", "9876548553")]
+    _reconcile_assets(recs, [_decl("A B", "Checking", "354.00")])
+    assert len(recs) == 3
+    # Two numberless records are still two accounts.
+    recs = [_asset("A B", "Checking", "52.51"), _asset("A B", "Checking", "257.41")]
+    _reconcile_assets(recs, [_decl("A B", "Checking", "354.00")])
+    assert len(recs) == 3
+
+
 def test_two_declared_accounts_of_a_kind_do_not_merge_into_one_verified():
     recs = [_asset("A B", "Savings", "100.00")]
     _reconcile_assets(recs, [_decl("A B", "Savings", "50.00"), _decl("A B", "Savings", "75.00")])

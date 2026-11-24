@@ -3733,6 +3733,20 @@ def _account_numbers_one_edit_apart(a: str | None, b: str | None) -> bool:
     return short[i:] == long_[i + 1:]
 
 
+def _same_account_number(a: str | None, b: str | None) -> bool:
+    """Two printed account numbers that name one account: the same digits,
+    one OCR slip apart, or one printed whole and the other masked to its
+    last four with the tails agreeing. Two numbers each printed whole that
+    differ in more than one place are two accounts even when their last
+    four match: the last four alone are not an identity."""
+    da, db = re.sub(r"\D", "", a or ""), re.sub(r"\D", "", b or "")
+    if len(da) < 4 or len(db) < 4:
+        return False
+    if da == db or _account_numbers_one_edit_apart(a, b):
+        return True
+    return (len(da) < 8 or len(db) < 8) and da[-4:] == db[-4:]
+
+
 def _digits_last4(value: str | None) -> str | None:
     d = re.sub(r"\D", "", value or "")
     return d[-4:] if len(d) >= 4 else None
@@ -3925,14 +3939,32 @@ def _reconcile_assets(records: list[dict], declared: list[dict], household_names
                     and _asset_kind(o.get("accountType")) == kind and _owners_ok(o)
                     and o.get("documentType") == d.get("documentType")
                 ]
-                if len(same_kind) == 1 and not declared_same:
+                # Two statements of one account are read as two records
+                # until the pipeline merges them by account number, which
+                # runs after this step. Counted as records they looked like
+                # two checking accounts, and the 50059's only checking line
+                # was written out as an orphan record beside the account it
+                # described. Records whose numbers name one account are one
+                # account here; a record with no number stands alone.
+                accounts: list[list[dict]] = []
+                for rec in same_kind:
+                    group = next((g for g in accounts if rec.get("accountNumber")
+                                  and any(_same_account_number(rec.get("accountNumber"), o.get("accountNumber")) for o in g)), None)
+                    if group is None:
+                        accounts.append([rec])
+                    else:
+                        group.append(rec)
+                if len(accounts) == 1 and not declared_same:
+                    # The line lands on the fullest read; the merge that
+                    # follows carries it onto the single record.
+                    best = max(accounts[0], key=lambda rec: sum(1 for v in rec.values() if v not in (None, "", [])))
                     logger.info(
                         "Declared assets: the only %s account declared (%s) is the only %s account "
-                        "verified (%s) — treated as the same account",
+                        "verified (%s%s) — treated as the same account",
                         kind, d.get("amount"), kind,
-                        same_kind[0].get("currentBalance") or same_kind[0].get("averageSixMonthBalance"),
+                        best.get("currentBalance") or best.get("averageSixMonthBalance"),
+                        f", read as {len(accounts[0])} records" if len(accounts[0]) > 1 else "",
                     )
-                    best = same_kind[0]
         from_certification = is_certification_source(d.get("documentType"))
         if best is not None:
             d["matched"] = True
