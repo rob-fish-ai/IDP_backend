@@ -286,9 +286,11 @@ def test_checklist_rows_about_a_forms_properties_or_its_previous_version_are_han
     assert 2 not in {m["finding_id"] for m in match_checklist(rows, ex)}
 
 
-def test_checklist_note_says_whether_a_missing_signature_date_is_unreadable_or_absent():
-    """"Date not read" covered two different things: handwriting the OCR
-    could not resolve and a date slot left blank. The note says which."""
+def test_checklist_note_calls_out_a_blank_signature_date_but_not_one_it_could_not_read():
+    """A date slot left blank is a defect in the file, so the note says
+    "undated". Handwriting the OCR could not resolve is the engine's
+    limit, not the file's, and the note just says "Signed": Cartograph
+    found the old "date unclear" on most rows and asked for it to go."""
     from types import SimpleNamespace
     from app.schemas.extraction import DocumentGroup, DocumentInventory, DocumentInventoryEntry
     from app.services.cartograph.checklist import match_checklist
@@ -305,7 +307,7 @@ def test_checklist_note_says_whether_a_missing_signature_date_is_unreadable_or_a
     rows = [{"finding_id": 1, "item_code": "HUDS8-FORM-92006", "label": "HUD 92006"},
             {"finding_id": 2, "item_code": "HUDS8-FORM-9887", "label": "HUD 9887"}]
     out = {m["finding_id"]: m for m in match_checklist(rows, ex)}
-    assert out[1]["note"].endswith("Signed, date unclear.")
+    assert out[1]["note"].endswith("HUD 92006 present, page 40. Signed.")
     assert out[2]["note"].endswith("Signed, undated.")
     read = _build_entry(g("HUD 9887", [1], "Signature of Head of Household: Yolanda Bribiesca   Date: 09/16/2026"))
     assert (read.signatureDate, read.signatureDateState) == ("2026-09-16", "read")

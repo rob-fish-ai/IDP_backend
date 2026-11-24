@@ -39,7 +39,7 @@ def _db_path() -> Path:
 def load_cases(db_path: Path) -> list[dict]:
     c = sqlite3.connect(str(db_path)); c.row_factory = sqlite3.Row
     rows = c.execute(
-        "SELECT case_id, funding_program, cert_type, extracted_at, extraction_result, cartograph_request FROM audit_jobs "
+        "SELECT case_id, funding_program, cert_type, extracted_at, extraction_result, cartograph_request, checklist_rows FROM audit_jobs "
         "WHERE extraction_result IS NOT NULL ORDER BY case_id"
     ).fetchall()
     return [dict(r) for r in rows]

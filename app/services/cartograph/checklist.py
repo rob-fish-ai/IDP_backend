@@ -398,18 +398,16 @@ NOTE_SOURCE = "scan"
 
 
 def _signed_when(entry) -> str:
-    """The date half of "Signed by X on Y". A date the entry carries is
-    given; otherwise the entry says whether the date slot was written in
-    (the handwriting could not be read) or left blank — two different
-    things for the file, one a reading problem and the other a missing date."""
+    """The date half of "Signed by X on Y". A date the entry read is
+    given and a date slot left blank is called out, since that is a
+    defect in the file. A date the engine could not read says nothing:
+    that is the engine's limit, not the file's, and staff asked for the
+    note to speak only to signed or not signed."""
     if entry.signatureDate:
         return f" on {entry.signatureDate}"
-    state = getattr(entry, "signatureDateState", None)
-    if state == "unclear":
-        return ", date unclear"
-    if state == "blank":
+    if getattr(entry, "signatureDateState", None) == "blank":
         return ", undated"
-    return ", date not read"
+    return ""
 
 
 def _page_span(pages: list[int]) -> str:
