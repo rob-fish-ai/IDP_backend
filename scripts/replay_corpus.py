@@ -130,13 +130,26 @@ def replay_case(row: dict) -> dict:
         request = json.loads(row.get("cartograph_request") or "{}")
     except ValueError:
         request = {}
+    try:
+        checklist_rows = json.loads(row.get("checklist_rows") or "[]")
+    except ValueError:
+        checklist_rows = []
     adapted = build_payload(
         replayed, Settings(), case_ref=row["case_id"],
+        checklist_rows=checklist_rows,
+        document_spans=(request or {}).get("document_spans"),
         existing_records_manifest=(request or {}).get("existing_records_manifest"),
+        program=(request or {}).get("program"),
+        verification_methods=(request or {}).get("verification_methods"),
     )
     p = adapted.payload
     cr = p.get("cert_review") or {}
+    # The checklist answers are digested by row label rather than finding
+    # id, so a case Cartograph re-sent with rebuilt rows still compares.
+    labels = {r.get("finding_id"): (r.get("label") or "")[:45] for r in checklist_rows}
     return {
+        "checklist": _sorted_rows((labels.get(m.get("finding_id")), m.get("member_ref"), m.get("found"), m.get("accepted"),
+                                   tuple(m.get("pages") or []), (m.get("note") or "")[:45]) for m in p.get("checklist_matches", [])),
         "codes": dict(sorted(Counter(f.code for f in replayed.finding_records).items())),
         "notes": sorted(t[:70] for t in replayed.findings if not t.startswith("[") and not any(t == f.text for f in replayed.finding_records)),
         "cert_review": {k: cr.get(k) for k in ("cert_type", "effective_date", "annual_income", "annual_assets", "tenant_rent", "gross_rent", "utility_allowance", "hh_size")},

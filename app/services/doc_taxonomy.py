@@ -227,6 +227,10 @@ TAXONOMY: dict[str, dict] = {
     "HOME Lease Compliance Form": _t(COMPLIANCE, FAMILY_COMPLIANCE,
                                      aliases=("HOME Lease Compliance", "HOME Lease Addendum"),
                                      hint="the HOME program's lease compliance form: fixed or floating unit, lease term offered, termination-of-tenancy rules — not the lease itself"),
+    "HOME Eligibility Release Form": _t(COMPLIANCE, FAMILY_COMPLIANCE,
+                                        aliases=("HOME Eligibility Release", "HOME Program Eligibility Release Form",
+                                                 "HOME Program Release Form", "HOME Release Form"),
+                                        hint="the HOME program's tenant release authorising the owner to verify eligibility — not the HUD 9887 consent and not the HOME lease compliance form"),
     "Charges, Deposits and Fees Disclosure": _t(COMPLIANCE, FAMILY_COMPLIANCE,
                                                 aliases=("Applicable Charges, Deposits and Fees Disclosure",
                                                          "Applicable Charges, Deposits and Fees Disclosure for HUD Units",
@@ -236,8 +240,30 @@ TAXONOMY: dict[str, dict] = {
                                  aliases=("Standardized Rental Terms Summary Form", "Rental Terms Summary Form",
                                           "DOH Form AM-011", "Landlord Notice to Tenants"),
                                  hint="a state-mandated lease cover page or landlord-tenant notice (rental terms summary, tenant rights notice) attached to the lease — not a HUD form"),
+    # The annual recertification notices by HUD's schedule (4350.3 ch. 7):
+    # the initial notice 120 days before the anniversary, reminders at 90
+    # and 60 days, the final reminder at 30. Properties number the reminders
+    # differently ("First Reminder" is the 90-day one in Boston, "Second
+    # Reminder" in Oregon), so each label is the notice's place in the
+    # schedule and the printed titles of every numbering are its aliases.
     "Initial Notice of Recertification": _t(COMPLIANCE, FAMILY_COMPLIANCE,
-                                            aliases=("Recertification Notice", "Annual Certification Reminder Notice")),
+                                            aliases=("Initial Notice of Annual Recertification", "Recertification Notice",
+                                                     "Initial Recertification Notice", "First Recertification Notice",
+                                                     "120 Day Notice"),
+                                            hint="the owner's first (120-day) notice that the annual recertification is due — not a later reminder notice"),
+    "Recertification Reminder Notice": _t(COMPLIANCE, FAMILY_COMPLIANCE,
+                                          aliases=("Annual Recertification First Reminder Notice",
+                                                   "Annual Recertification Second Reminder Notice",
+                                                   "Reminder Notice of Annual Recertification", "Annual Certification Reminder Notice",
+                                                   "First Reminder Notice", "Second Reminder Notice",
+                                                   "90 Day Notice", "60 Day Notice"),
+                                          hint="the 90- or 60-day reminder (first or second reminder) that the annual recertification is due — not the initial 120-day notice and not the final 30-day reminder"),
+    "Final Notice of Recertification": _t(COMPLIANCE, FAMILY_COMPLIANCE,
+                                          aliases=("Annual Recertification Final (Third) Reminder Notice",
+                                                   "Annual Recertification Third Reminder Notice",
+                                                   "Final Notice of Annual Recertification", "Final Reminder Notice",
+                                                   "Third Reminder Notice", "30 Day Notice of Recertification"),
+                                          hint="the final (30-day, third) reminder that the annual recertification is due, often warning that assistance ends if the household does not respond — not the earlier notices"),
     "EIV Existing Tenant Search": _t(COMPLIANCE, FAMILY_COMPLIANCE,
                                      aliases=("Existing Tenant Search", "EIV Tenant Match Results",
                                               "PIH/MF Tenant Match Results", "Tenant Match Results"),

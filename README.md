@@ -69,7 +69,12 @@ State is persisted in a SQLite job store (`IDP_AUDIT_JOB_DB`, default
 | `comparison_failed` | Delivery failed, was rejected by the ingest, or delivery is not configured |
 
 A row in `queued`/`extracting`/`extracted` is *owned*; a second notification
-for the same case while owned is answered `already_in_progress`. The intake
+for the same case while owned is answered `already_in_progress` when it
+repeats the request being worked from (same documents, checklist rows,
+program and `verification_methods`; the presigned links may differ), and
+`rerun_scheduled` when it changes it: the new request replaces the stored
+one and the case is audited against it once the current run ends, or from
+it if the case was still waiting in line. The intake
 keeps a heartbeat on waiting rows and the audit touches the row as it works,
 so the watchdog measures time since the last sign of life, not time since
 the case started. The legacy constants `pending`, `comparing` and
@@ -163,7 +168,8 @@ Responses (all HTTP 202):
 | `status` | When |
 |---|---|
 | `accepted` | The case joined the intake line |
-| `already_in_progress` | A row for `case_ref` is already owned (`state` included) |
+| `already_in_progress` | A row for `case_ref` is already owned and the request repeats the stored one (`state` included) |
+| `rerun_scheduled` | A row is owned and the request differs: it is stored, and the case runs again against it when the current run ends |
 | `already_delivered` | The repeat guard fired (`delivered_seconds_ago` included) |
 
 **Repeat guard** (`repeat_of_delivered`): a notification for a case already
@@ -202,7 +208,12 @@ provided", "Lease Term and Signature Pages", "Asset under 50,000 Form",
 "Third Party Verification ... for Asset") belong to a row family: any
 label in the family satisfies the row, the one found is named in the
 note, and a family member the row names outright ("HUD Model Lease
-Provided (... Lease Term ...)") is the one reported as missing. Rows that ask a question about a
+Provided (... Lease Term ...)") is the one reported as missing. The annual
+recertification notices are three labels by their place in HUD's schedule
+(Initial Notice at 120 days, Recertification Reminder Notice at 90 and 60,
+Final Notice of Recertification at 30); a row's day count picks the label,
+its ordinal only when it prints no day count, and a row asking for the
+whole series is met by any of them. Rows that ask a question about a
 form rather than for the form (correct limits, within 120 days, matches
 the TIC) are left to the findings. The labels and families are pinned by
 `tests/test_taxonomy_coverage.py` against every row label the job store
@@ -642,7 +653,8 @@ baseline when the job store is present.
 
 - `scripts/replay_corpus.py update | check [-v]` — replays the deterministic
   post-model stages (merges, identity, income calculations, findings,
-  scoring, payload) over every stored extraction and diffs against
+  scoring, payload, the checklist answers against the rows the case was
+  sent with) over every stored extraction and diffs against
   `tests/corpus_baseline.json`. OCR, classification and the model reads need
   a live run.
 - `scripts/taxonomy_sweep.py` — reads the job store and prints the taxonomy

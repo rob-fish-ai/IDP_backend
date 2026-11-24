@@ -65,6 +65,13 @@ EXPECTED = {
     "General Release Form Signed by All Adult Members": "Third-Party Authorization / Release",
     "Signed Copy of VAWA Lease Addendum Provided": "VAWA Lease Addendum",
     "Previous HUD 50059 Certification Form": "HUD 50059",
+    "120 Day/First Recertification Notice Provided": "Initial Notice of Recertification",
+    "Initial Notice of Recertification Provided and Accurate": "Initial Notice of Recertification",
+    "90 Day/Second Reminder Notice Provided (If Required)": "Recertification Reminder Notice",
+    "60 Day/Third Reminder Notice Provided (If Required)": "Recertification Reminder Notice",
+    "30 Day/Final Notice of Recertification Provided (If Required)": "Final Notice of Recertification",
+    "HOME Eligibility Release Form": "HOME Eligibility Release Form",
+    "Notice of Rent Change": "Notice of Rent Change",
 }
 
 
@@ -106,7 +113,8 @@ def test_known_labels_include_the_new_forms():
     for l in ("HUD 92006", "EIV Existing Tenant Search", "HOTMA Note to File",
               "HUD 92458 Rent Schedule", "Authorization to Assist with Forms",
               "EIV Acknowledgement Form", "Certification Clarification Record", "HOME Lease Compliance Form",
-              "Charges, Deposits and Fees Disclosure", "State Lease Disclosure", "Applicant Appeal Rights Notice"):
+              "Charges, Deposits and Fees Disclosure", "State Lease Disclosure", "Applicant Appeal Rights Notice",
+              "Recertification Reminder Notice", "Final Notice of Recertification", "HOME Eligibility Release Form"):
         assert l in known_labels()
 
 
@@ -156,3 +164,60 @@ def test_row_family_is_satisfied_by_a_sibling_and_a_screening_report_counts():
     assert out[2]["found"] is True and out[2]["pages"] == [9]
     assert out[3]["found"] is True and out[3]["note"].startswith("HUD Model Lease present, pages 12-13")
     assert out[4]["found"] is False and out[4]["note"] == "No HUD 92006 in the packet."
+
+
+def test_recertification_notices_are_told_apart_by_their_place_in_the_schedule():
+    """On every annual recertification of 2026-11-23 the row "30 Day/Final
+    Notice of Recertification" came back present, pointing at the initial
+    120-day notice: one label covered the whole series. The 90- and 60-day
+    rows were silent only because "reminder" sat on the attribute-word
+    list. Each notice is now its own label, the row's day count picks it,
+    and a notice is reported only when that notice is in the packet."""
+    from types import SimpleNamespace
+    from app.schemas.extraction import DocumentGroup, DocumentInventory
+
+    def g(label, pages):
+        return DocumentGroup(document_type=label, category="compliance", pages=pages, page_range=str(pages[0]), combined_text="x")
+    rows = [{"finding_id": 1, "label": "120 Day/First Recertification Notice Provided"},
+            {"finding_id": 2, "label": "90 Day/Second Reminder Notice Provided (If Required)"},
+            {"finding_id": 3, "label": "60 Day/Third Reminder Notice Provided (If Required)"},
+            {"finding_id": 4, "label": "30 Day/Final Notice of Recertification Provided (If Required)"},
+            {"finding_id": 5, "label": "120, 90, 60, and 30 Day AR Reminder Notices"},
+            {"finding_id": 6, "label": "30 Day Notice of Rent Increase Provided"}]
+    only_initial = SimpleNamespace(document_groups=[g("Initial Notice of Recertification", [24])],
+                                   document_inventory_hud=DocumentInventory(documents=[]),
+                                   document_inventory_financial=DocumentInventory(documents=[]), certification_info=None)
+    by_id = {m["finding_id"]: m for m in match_checklist(rows, only_initial)}
+    assert by_id[1]["found"] is True and by_id[1]["pages"] == [24]
+    assert by_id[2]["found"] is False and "Recertification Reminder Notice" in by_id[2]["note"]
+    assert by_id[3]["found"] is False
+    assert by_id[4]["found"] is False and "Final Notice of Recertification" in by_id[4]["note"]
+    assert by_id[5]["found"] is True                      # the series row is met by any notice of it
+    assert by_id[6]["found"] is False and "Rent Change" in by_id[6]["note"]
+
+    full_series = SimpleNamespace(document_groups=[g("Initial Notice of Recertification", [24]),
+                                                   g("Recertification Reminder Notice", [25]),
+                                                   g("Final Notice of Recertification", [26])],
+                                  document_inventory_hud=DocumentInventory(documents=[]),
+                                  document_inventory_financial=DocumentInventory(documents=[]), certification_info=None)
+    by_id = {m["finding_id"]: m for m in match_checklist(rows, full_series)}
+    assert by_id[2]["pages"] == [25] and by_id[3]["pages"] == [25] and by_id[4]["pages"] == [26]
+    assert not is_attribute_row({"label": "90 Day/Second Reminder Notice Provided (If Required)"})
+
+
+def test_reminder_and_final_notice_titles_relabel_the_initial_notice():
+    """The Boston 202 PRAC packets print "Annual Recertification Second
+    Reminder Notice" and "Final (Third) Reminder Notice"; 724 such pages in
+    the job store were labelled as the initial notice."""
+    header = "Boston, MA 02127 Ph No: (617) 268-2160 TTY: 711 "
+    assert _label_by_printed_title("Initial Notice of Recertification",
+                                   header + "# Annual Recertification Second Reminder Notice 05/01/2026")[0] == "Recertification Reminder Notice"
+    assert _label_by_printed_title("Initial Notice of Recertification",
+                                   "# Annual Recertification First Reminder Notice - 202 PRACs 05/01/2026")[0] == "Recertification Reminder Notice"
+    assert _label_by_printed_title("Initial Notice of Recertification",
+                                   header + "# Annual Recertification Final (Third) Reminder Notice 06/01/2026")[0] == "Final Notice of Recertification"
+    # the initial notice keeps its label although its body promises reminders
+    assert _label_by_printed_title("Initial Notice of Recertification",
+                                   "# INITIAL NOTICE OF ANNUAL RECERTIFICATION Property Name: X. We will send you a reminder notice when it is time") is None
+    assert _label_by_printed_title("Compliance — Other Signed HUD Form",
+                                   "# HOME Program Eligibility Release Form I authorize the owner")[0] == "HOME Eligibility Release Form"

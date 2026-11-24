@@ -648,3 +648,82 @@ def test_preflight_names_what_a_new_host_is_missing(tmp_path):
     assert storage["job store"] == ("ok", f"{tmp_path / 'data' / 'jobs.db'}: new")
     assert all(s == "ok" for s, _ in storage.values())
     assert preflight.run_all(settings(), network=False)[0][0] == "cartograph"
+
+
+def test_a_case_notified_again_with_a_changed_request_is_audited_against_the_new_one(monkeypatch, tmp_path):
+    """J-CASC-11421, 2026-11-23: Cartograph rebuilt the checklist rows and
+    re-sent the case while the first run was extracting. The second
+    notification was dropped as a duplicate, the result answered the old
+    rows, and seven of them no longer existed on import. A re-send that
+    changes the request now replaces the stored one; a case still in line
+    starts from it, a case mid-run is run again when it ends. A re-send
+    that repeats the request is still a duplicate."""
+    import json
+    from fastapi.testclient import TestClient
+    from app.core.config import Settings
+    from app.core.dependencies import get_settings
+    from app.main import app
+    from app.routers import integration
+    from app.services.audit import job_store as js
+    from app.services.cartograph import tasks
+    from app.services.cartograph.signing import SIGNATURE_HEADER, TIMESTAMP_HEADER, sign
+    s = Settings(audit_job_db=tmp_path / "jobs.db", output_dir=tmp_path, cartograph_environments={},
+                 cartograph_ingest_url="https://carto.example/in", cartograph_ingest_secret="out", cartograph_callback_secret="in")
+    app.dependency_overrides[get_settings] = lambda: s
+    monkeypatch.setattr("app.main.get_settings", lambda: s)
+    monkeypatch.setattr("app.services.cartograph.maintenance.get_settings", lambda: s)
+    monkeypatch.setattr(js, "_SINGLETON", js.JobStore(s.audit_job_db))
+    store = js.get_job_store(s.audit_job_db)
+    queued = []
+    monkeypatch.setattr(integration, "enqueue_case", lambda **kw: queued.append(kw))
+    docs = [{"url": "https://x/1.pdf?sig=a", "filename": "p.pdf", "job_document_id": 1}]
+    first = {"case_ref": "J-1", "documents": docs, "checklist_rows": [{"finding_id": 10, "label": "HUD 50059 Completed and Accurate"}]}
+    rebuilt = {"case_ref": "J-1", "documents": [{**docs[0], "url": "https://x/1.pdf?sig=b"}],
+               "checklist_rows": [{"finding_id": 10, "label": "HUD 50059 Completed and Accurate"},
+                                  {"finding_id": 11, "label": "HUD 92006 Form Completed, Signed, and Dated"}]}
+
+    def post(body):
+        b = json.dumps(body).encode()
+        ts, sig = sign(b, "in")
+        return client.post("/integration/case", content=b, headers={"Content-Type": "application/json", TIMESTAMP_HEADER: ts, SIGNATURE_HEADER: sig})
+
+    try:
+        with TestClient(app) as client:
+            assert post(first).json()["status"] == "accepted"
+            store.mark_extracting("J-1")
+            # the same request again, fresh links: a duplicate
+            assert post({**first, "documents": rebuilt["documents"]}).json()["status"] == "already_in_progress"
+            assert not store.take_rerun("J-1")
+            # the rebuilt checklist: stored, and a rerun marked
+            r = post(rebuilt).json()
+            assert r["status"] == "rerun_scheduled" and r["state"] == "extracting"
+            assert [x["finding_id"] for x in json.loads(store.get("J-1")["checklist_rows"])] == [10, 11]
+            assert len(queued) == 1
+    finally:
+        app.dependency_overrides.clear()
+
+    # a case re-sent while still waiting in line starts from the new request, once
+    ran, requeued = [], []
+    monkeypatch.setattr(tasks, "get_settings", lambda: s)
+    monkeypatch.setattr(tasks, "get_job_store", lambda _p: store)
+    def fake_audit(store_, settings_, **kw):
+        ran.append(kw)
+        store_.mark_extracted("J-1", {}); store_.mark_done("J-1", findings_text="", confidence=1.0)
+    monkeypatch.setattr(tasks, "_audit_case", fake_audit)
+    monkeypatch.setattr("app.services.cartograph.intake.enqueue_case", lambda **kw: requeued.append(kw))
+    tasks.audit_case(**queued[0])
+    assert [x["finding_id"] for x in ran[0]["checklist_rows"]] == [10, 11] and requeued == []
+    assert not store.take_rerun("J-1")
+
+    # a case re-sent during its run is put back in line against the new request when the run ends
+    ran.clear()
+    def audit_during_which_cartograph_resends(store_, settings_, **kw):
+        ran.append(kw)
+        store_.request_rerun("J-1")
+        store_.mark_extracted("J-1", {}); store_.mark_done("J-1", findings_text="", confidence=1.0)
+    monkeypatch.setattr(tasks, "_audit_case", audit_during_which_cartograph_resends)
+    tasks.audit_case(**queued[0])
+    assert [x["finding_id"] for x in ran[0]["checklist_rows"]] == [10]       # the run under way answered the old rows
+    assert len(requeued) == 1 and [x["finding_id"] for x in requeued[0]["checklist_rows"]] == [10, 11]
+    assert requeued[0]["documents"][0]["url"].endswith("sig=b")
+    assert store.get("J-1")["state"] == "queued" and not store.take_rerun("J-1")

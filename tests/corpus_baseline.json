@@ -11,6 +11,7 @@
    "tenant_rent": null,
    "utility_allowance": null
   },
+  "checklist": [],
   "codes": {
    "NO_ASSET_CERT_MISSING": 1
   },
@@ -36,6 +37,7 @@
    "tenant_rent": null,
    "utility_allowance": null
   },
+  "checklist": [],
   "codes": {
    "NO_ASSET_CERT_MISSING": 1
   },
@@ -94,6 +96,7 @@
    "tenant_rent": "1857.00",
    "utility_allowance": "47.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 3,
    "INCOME_METHODS_DISAGREE": 1,
@@ -180,6 +183,7 @@
    "tenant_rent": "541.00",
    "utility_allowance": "0.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "INCOME_METHODS_DISAGREE": 1,
@@ -358,6 +362,7 @@
    "tenant_rent": "904.00",
    "utility_allowance": "137.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 3,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -494,6 +499,7 @@
    "tenant_rent": "0.00",
    "utility_allowance": "107.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "CERT_AMOUNT_UNACCOUNTED": 2,
@@ -705,6 +711,7 @@
    "tenant_rent": "1401.00",
    "utility_allowance": "138.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 3,
    "CERT_SUMMARY_INCOME_MISMATCH": 2,
@@ -959,6 +966,7 @@
    "tenant_rent": "949.00",
    "utility_allowance": "107.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "CERT_SUMMARY_INCOME_MISMATCH": 2,
@@ -1072,6 +1080,7 @@
    "tenant_rent": null,
    "utility_allowance": null
   },
+  "checklist": [],
   "codes": {
    "NO_ASSET_CERT_MISSING": 1
   },
@@ -1130,6 +1139,7 @@
    "tenant_rent": "0.00",
    "utility_allowance": "76.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "INCOME_METHODS_DISAGREE": 1,
@@ -1245,6 +1255,7 @@
    "tenant_rent": "0.00",
    "utility_allowance": "86.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "INCOME_VERIFIED_NOT_DECLARED": 1,
@@ -1348,6 +1359,7 @@
    "tenant_rent": "50.00",
    "utility_allowance": "148.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 3,
    "INCOME_AMOUNT_NOT_IN_SOURCE": 1,
@@ -1505,6 +1517,7 @@
    "tenant_rent": "1275.00",
    "utility_allowance": "86.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "INCOME_METHODS_DISAGREE": 1,
@@ -1721,6 +1734,7 @@
    "tenant_rent": "1444.00",
    "utility_allowance": "117.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 2,
    "CERT_AMOUNT_UNACCOUNTED": 2,
@@ -1914,6 +1928,7 @@
    "tenant_rent": "0.00",
    "utility_allowance": "117.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_OVERDRAWN": 1,
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
@@ -2076,6 +2091,7 @@
    "tenant_rent": "1563.00",
    "utility_allowance": "117.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 3,
    "CERT_SUMMARY_INCOME_MISMATCH": 2,
@@ -2328,6 +2344,7 @@
    "tenant_rent": "384.00",
    "utility_allowance": "148.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "CERT_AMOUNT_UNACCOUNTED": 3,
@@ -2639,6 +2656,7 @@
    "tenant_rent": "773.00",
    "utility_allowance": "117.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "CERT_AMOUNT_UNACCOUNTED": 2,
@@ -2827,6 +2845,7 @@
    "tenant_rent": "1523.00",
    "utility_allowance": "117.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "INCOME_METHODS_DISAGREE": 1,
@@ -2936,6 +2955,7 @@
    "tenant_rent": "234.00",
    "utility_allowance": "117.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -3091,6 +3111,7 @@
    "tenant_rent": "288.00",
    "utility_allowance": "86.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "CERT_AMOUNT_UNACCOUNTED": 2,
@@ -3210,6 +3231,7 @@
    "tenant_rent": "528.00",
    "utility_allowance": "117.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 2,
    "CERT_AMOUNT_UNACCOUNTED": 2,
@@ -3359,6 +3381,7 @@
    "tenant_rent": "51.00",
    "utility_allowance": "86.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "NAME_VARIANT": 1
@@ -3567,6 +3590,7 @@
    "tenant_rent": "2118.00",
    "utility_allowance": "148.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -3736,6 +3760,7 @@
    "tenant_rent": "2047.00",
    "utility_allowance": "148.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 2,
    "CERT_AMOUNT_UNACCOUNTED": 2,
@@ -3814,6 +3839,7 @@
    "tenant_rent": "0.00",
    "utility_allowance": "117.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "HH_SIZE_MISMATCH": 1,
@@ -3935,6 +3961,7 @@
    "tenant_rent": "204.00",
    "utility_allowance": "86.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "INCOME_DECLARED_NOT_VERIFIED": 1,
@@ -4023,6 +4050,7 @@
    "tenant_rent": "1121.00",
    "utility_allowance": "86.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 3,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -4108,6 +4136,7 @@
    "tenant_rent": "340.00",
    "utility_allowance": "117.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 3,
    "MEMBER_IDENTITY_CONFLICT": 1,
@@ -4246,6 +4275,7 @@
    "tenant_rent": "1182.00",
    "utility_allowance": "86.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 3,
    "INCOME_METHODS_DISAGREE": 1,
@@ -4373,6 +4403,7 @@
    "tenant_rent": "175.00",
    "utility_allowance": "117.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "HH_SIZE_MISMATCH": 1,
@@ -4444,6 +4475,7 @@
    "tenant_rent": "0.00",
    "utility_allowance": "148.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "INCOME_DECLARED_NOT_VERIFIED": 1,
@@ -4574,6 +4606,7 @@
    "tenant_rent": "236.00",
    "utility_allowance": "86.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 3,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -4666,6 +4699,7 @@
    "tenant_rent": "2060.00",
    "utility_allowance": "117.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "MEMBER_IDENTITY_CONFLICT": 1,
@@ -4809,6 +4843,7 @@
    "tenant_rent": "1496.00",
    "utility_allowance": "117.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -4910,6 +4945,7 @@
    "tenant_rent": "984.00",
    "utility_allowance": "118.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "INCOME_DECLARED_NOT_VERIFIED": 2,
@@ -5043,6 +5079,7 @@
    "tenant_rent": "156.00",
    "utility_allowance": "87.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "MEMBER_IDENTITY_CONFLICT": 1,
@@ -5107,6 +5144,7 @@
    "tenant_rent": "24.00",
    "utility_allowance": "87.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "INCOME_DECLARED_NOT_VERIFIED": 1,
@@ -5203,6 +5241,7 @@
    "tenant_rent": "838.00",
    "utility_allowance": "118.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "INCOME_AMOUNT_NOT_IN_SOURCE": 1,
@@ -5327,6 +5366,7 @@
    "tenant_rent": "1263.00",
    "utility_allowance": "87.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 3,
    "INCOME_METHODS_DISAGREE": 1,
@@ -5448,6 +5488,7 @@
    "tenant_rent": "169.00",
    "utility_allowance": "118.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -5603,6 +5644,7 @@
    "tenant_rent": "1314.00",
    "utility_allowance": "149.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "NAME_VARIANT": 1,
@@ -5818,6 +5860,7 @@
    "tenant_rent": "0.00",
    "utility_allowance": "118.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -5912,6 +5955,7 @@
    "tenant_rent": "1539.00",
    "utility_allowance": "149.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 3,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -6011,6 +6055,7 @@
    "tenant_rent": "1282.00",
    "utility_allowance": "118.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 3,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -6142,6 +6187,7 @@
    "tenant_rent": "455.00",
    "utility_allowance": "149.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -6398,6 +6444,7 @@
    "tenant_rent": "554.00",
    "utility_allowance": "149.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 3,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -6508,6 +6555,7 @@
    "tenant_rent": "803.00",
    "utility_allowance": "118.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "INCOME_METHODS_DISAGREE": 2,
@@ -6660,6 +6708,7 @@
    "tenant_rent": "367.00",
    "utility_allowance": "87.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -6800,6 +6849,7 @@
    "tenant_rent": "2200.00",
    "utility_allowance": "118.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "CERT_SUMMARY_INCOME_MISMATCH": 2,
@@ -6941,6 +6991,7 @@
    "tenant_rent": "51.00",
    "utility_allowance": "87.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 3,
    "SIGNATURE_DATE_MISSING": 1
@@ -7004,6 +7055,7 @@
    "tenant_rent": "377.00",
    "utility_allowance": "118.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 3,
    "HH_SIZE_MISMATCH": 1,
@@ -7088,6 +7140,7 @@
    "tenant_rent": "233.00",
    "utility_allowance": "118.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 3,
    "NAME_VARIANT": 1,
@@ -7195,6 +7248,7 @@
    "tenant_rent": "533.00",
    "utility_allowance": "118.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 3,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -7311,6 +7365,7 @@
    "tenant_rent": "2336.00",
    "utility_allowance": "118.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "NAME_VARIANT": 1,
@@ -7447,6 +7502,7 @@
    "tenant_rent": "202.00",
    "utility_allowance": "87.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "INCOME_DECLARED_NOT_VERIFIED": 1,
@@ -7541,6 +7597,7 @@
    "tenant_rent": "334.00",
    "utility_allowance": "87.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2
   },
@@ -7619,6 +7676,7 @@
    "tenant_rent": "1530.00",
    "utility_allowance": "87.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 3,
    "INCOME_METHODS_DISAGREE": 1,
@@ -7763,6 +7821,7 @@
    "tenant_rent": "1621.00",
    "utility_allowance": "118.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "INCOME_METHODS_DISAGREE": 1,
@@ -8088,6 +8147,7 @@
    "tenant_rent": "243.00",
    "utility_allowance": "210.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "CERT_SUMMARY_INCOME_MISMATCH": 2,
@@ -8379,6 +8439,7 @@
    "tenant_rent": "0.00",
    "utility_allowance": "118.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "HH_SIZE_MISMATCH": 1,
@@ -8537,6 +8598,7 @@
    "tenant_rent": "1509.00",
    "utility_allowance": "118.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -8643,6 +8705,7 @@
    "tenant_rent": "1121.00",
    "utility_allowance": "87.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "SIGNATURE_DATE_MISSING": 1,
@@ -8723,6 +8786,7 @@
    "tenant_rent": "0.00",
    "utility_allowance": "104.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "INCOME_DECLARED_NOT_VERIFIED": 1,
@@ -8877,6 +8941,7 @@
    "tenant_rent": "1263.00",
    "utility_allowance": "87.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "INCOME_METHODS_DISAGREE": 1,
@@ -8942,6 +9007,7 @@
    "tenant_rent": "489.00",
    "utility_allowance": "105.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -9016,6 +9082,7 @@
    "tenant_rent": "0.00",
    "utility_allowance": "10.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "MEMBER_IDENTITY_CONFLICT": 1,
@@ -9167,6 +9234,7 @@
    "tenant_rent": "845.00",
    "utility_allowance": "158.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "INCOME_VERIFIED_NOT_DECLARED": 2,
@@ -9301,6 +9369,7 @@
    "tenant_rent": "75.00",
    "utility_allowance": "187.00"
   },
+  "checklist": [],
   "codes": {
    "INCOME_VERIFIED_NOT_DECLARED": 1,
    "MEMBER_IDENTITY_CONFLICT": 1,
@@ -9378,6 +9447,7 @@
    "tenant_rent": "0.00",
    "utility_allowance": "158.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "MEMBER_IDENTITY_CONFLICT": 1,
@@ -9474,6 +9544,7 @@
    "tenant_rent": "1046.00",
    "utility_allowance": "158.00"
   },
+  "checklist": [],
   "codes": {
    "INCOME_METHODS_DISAGREE": 1,
    "NAME_VARIANT": 1,
@@ -9582,6 +9653,7 @@
    "tenant_rent": "1296.00",
    "utility_allowance": "253.00"
   },
+  "checklist": [],
   "codes": {
    "MEMBER_IDENTITY_CONFLICT": 2,
    "NAME_VARIANT": 2,
@@ -9725,6 +9797,7 @@
    "tenant_rent": "1469.00",
    "utility_allowance": "320.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "INCOME_DECLARED_NOT_VERIFIED": 2,
@@ -9878,6 +9951,7 @@
    "tenant_rent": "1469.00",
    "utility_allowance": "320.00"
   },
+  "checklist": [],
   "codes": {
    "INCOME_METHODS_DISAGREE": 2,
    "MEMBER_IDENTITY_CONFLICT": 1,
@@ -9995,6 +10069,7 @@
    "tenant_rent": "845.00",
    "utility_allowance": "158.00"
   },
+  "checklist": [],
   "codes": {
    "INCOME_METHODS_DISAGREE": 1,
    "NAME_VARIANT": 1
@@ -10057,6 +10132,7 @@
    "tenant_rent": "458.00",
    "utility_allowance": "187.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "INCOME_METHODS_DISAGREE": 1,
@@ -10207,6 +10283,7 @@
    "tenant_rent": "444.00",
    "utility_allowance": "158.00"
   },
+  "checklist": [],
   "codes": {
    "NAME_VARIANT": 1,
    "TIC_TOTAL_MISMATCH": 1
@@ -10308,6 +10385,7 @@
    "tenant_rent": "845.00",
    "utility_allowance": "158.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "INCOME_METHODS_DISAGREE": 1,
@@ -10355,6 +10433,7 @@
    "tenant_rent": "0.00",
    "utility_allowance": "158.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "MEMBER_IDENTITY_CONFLICT": 1,
@@ -10450,6 +10529,7 @@
    "tenant_rent": "298.00",
    "utility_allowance": "320.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -10564,6 +10644,7 @@
    "tenant_rent": "1046.00",
    "utility_allowance": null
   },
+  "checklist": [],
   "codes": {
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "MEMBER_IDENTITY_CONFLICT": 1,
@@ -10676,6 +10757,7 @@
    "tenant_rent": "1296.00",
    "utility_allowance": "253.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -10834,6 +10916,7 @@
    "tenant_rent": "888.00",
    "utility_allowance": "187.00"
   },
+  "checklist": [],
   "codes": {
    "NAME_VARIANT": 1
   },
@@ -10894,6 +10977,7 @@
    "tenant_rent": "0.00",
    "utility_allowance": "158.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "NAME_VARIANT": 1
@@ -10972,6 +11056,7 @@
    "tenant_rent": "1046.00",
    "utility_allowance": "158.00"
   },
+  "checklist": [],
   "codes": {
    "INCOME_METHODS_DISAGREE": 1,
    "PAYSTUB_COUNT_BELOW_GUIDANCE": 1,
@@ -11034,6 +11119,7 @@
    "tenant_rent": "1046.00",
    "utility_allowance": "158.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "INCOME_METHODS_DISAGREE": 2,
@@ -11136,6 +11222,7 @@
    "tenant_rent": "0.00",
    "utility_allowance": "253.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "MEMBER_IDENTITY_CONFLICT": 1,
@@ -11249,6 +11336,7 @@
    "tenant_rent": "444.00",
    "utility_allowance": "158.00"
   },
+  "checklist": [],
   "codes": {
    "NAME_VARIANT": 1,
    "QUESTIONNAIRE_EMPLOYMENT_UNVERIFIED": 1,
@@ -11343,6 +11431,7 @@
    "tenant_rent": "1296.00",
    "utility_allowance": "253.00"
   },
+  "checklist": [],
   "codes": {
    "INCOME_METHODS_DISAGREE": 1,
    "MEMBER_IDENTITY_CONFLICT": 1,
@@ -11431,6 +11520,7 @@
    "tenant_rent": "1103.00",
    "utility_allowance": "187.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -11513,6 +11603,7 @@
    "tenant_rent": "1103.00",
    "utility_allowance": "187.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "NAME_VARIANT": 1,
@@ -11654,6 +11745,7 @@
    "tenant_rent": "845.00",
    "utility_allowance": "158.00"
   },
+  "checklist": [],
   "codes": {
    "INCOME_DECLARED_NOT_VERIFIED": 1,
    "INCOME_SECOND_DECLARATION": 1,
@@ -11784,6 +11876,7 @@
    "tenant_rent": "845.00",
    "utility_allowance": "158.00"
   },
+  "checklist": [],
   "codes": {
    "MEMBER_IDENTITY_CONFLICT": 1,
    "NEAR_DUPLICATE_INCOME": 1,
@@ -11888,6 +11981,7 @@
    "tenant_rent": "1046.00",
    "utility_allowance": "158.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_SUMMARY_INCOME_MISMATCH": 1
   },
@@ -11948,6 +12042,7 @@
    "tenant_rent": "1046.00",
    "utility_allowance": "158.00"
   },
+  "checklist": [],
   "codes": {
    "INCOME_METHODS_DISAGREE": 1,
    "NAME_VARIANT": 1,
@@ -12086,6 +12181,7 @@
    "tenant_rent": "1046.00",
    "utility_allowance": "158.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "INCOME_METHODS_DISAGREE": 1,
@@ -12178,6 +12274,7 @@
    "tenant_rent": "1046.00",
    "utility_allowance": "158.00"
   },
+  "checklist": [],
   "codes": {
    "NAME_VARIANT": 1,
    "PAYSTUB_COUNT_BELOW_GUIDANCE": 1,
@@ -12275,6 +12372,7 @@
    "tenant_rent": "1046.00",
    "utility_allowance": "158.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -12379,6 +12477,7 @@
    "tenant_rent": "2433.00",
    "utility_allowance": "320.00"
   },
+  "checklist": [],
   "codes": {
    "INCOME_VERIFIED_NOT_DECLARED": 1,
    "MEMBER_IDENTITY_CONFLICT": 3,
@@ -12482,6 +12581,7 @@
    "tenant_rent": "845.00",
    "utility_allowance": "187.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -12600,6 +12700,7 @@
    "tenant_rent": "1046.00",
    "utility_allowance": "158.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "INCOME_METHODS_DISAGREE": 1,
@@ -12664,6 +12765,7 @@
    "tenant_rent": "1469.00",
    "utility_allowance": "320.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "INCOME_METHODS_DISAGREE": 1,
@@ -12752,6 +12854,7 @@
    "tenant_rent": "888.00",
    "utility_allowance": "187.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -12828,6 +12931,7 @@
    "tenant_rent": "247.00",
    "utility_allowance": "253.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -12969,6 +13073,7 @@
    "tenant_rent": null,
    "utility_allowance": null
   },
+  "checklist": [],
   "codes": {
    "INCOME_METHODS_DISAGREE": 1,
    "MEMBER_IDENTITY_CONFLICT": 1,
@@ -13036,6 +13141,7 @@
    "tenant_rent": "1296.00",
    "utility_allowance": "253.00"
   },
+  "checklist": [],
   "codes": {
    "INCOME_METHODS_DISAGREE": 1,
    "MEMBER_IDENTITY_CONFLICT": 1,
@@ -13119,6 +13225,7 @@
    "tenant_rent": null,
    "utility_allowance": null
   },
+  "checklist": [],
   "codes": {
    "NAME_VARIANT": 2,
    "QUESTIONNAIRE_EMPLOYER_UNVERIFIED": 1,
@@ -13158,7 +13265,7 @@
    "household_members[0].relationship not extracted; left unset"
   ]
  },
- "J-CASC-11419@1795405227": {
+ "J-CASC-11419@1795468976": {
   "assets": [
    [
     "cash_on_hand",
@@ -13167,7 +13274,7 @@
     null,
     null,
     "declared_only",
-    7856,
+    null,
     "930.00",
     "0.00",
     null,
@@ -13183,7 +13290,7 @@
     null,
     null,
     "verified",
-    null,
+    7865,
     null,
     null,
     null,
@@ -13191,31 +13298,6 @@
     null,
     null,
     [
-     [
-      null,
-      null,
-      1
-     ],
-     [
-      null,
-      null,
-      1
-     ],
-     [
-      null,
-      null,
-      1
-     ],
-     [
-      null,
-      null,
-      1
-     ],
-     [
-      null,
-      null,
-      1
-     ],
      [
       null,
       null,
@@ -13225,12 +13307,12 @@
    ],
    [
     "checking",
-    "Embark",
+    "Embark Checking",
     "0.87",
     null,
-    "0.87",
+    null,
     "verified",
-    null,
+    7864,
     null,
     null,
     null,
@@ -13239,12 +13321,7 @@
     null,
     [
      [
-      null,
-      null,
-      1
-     ],
-     [
-      "0.00",
+      "0.87",
       null,
       1
      ]
@@ -13257,7 +13334,7 @@
     null,
     null,
     "declared_only",
-    null,
+    7867,
     "748.15",
     "0.00",
     null,
@@ -13277,29 +13354,30 @@
    "tenant_rent": "592.00",
    "utility_allowance": "71.00"
   },
+  "checklist": [],
   "codes": {
-   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "CERT_AMOUNT_UNACCOUNTED": 1,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "HOMELESS_APPLICANT_INDICATED": 2,
    "HUD_9887A_INCOMPLETE": 1,
    "INCOME_AMOUNT_NOT_IN_SOURCE": 1,
    "INCOME_DECLARED_NOT_VERIFIED": 2,
+   "INCOME_METHODS_DISAGREE": 1,
    "MEMBER_IDENTITY_CONFLICT": 4,
    "MI_CITIZENSHIP_DECLARATION_MISSING": 1,
    "MI_HUD_92006_MISSING": 1,
    "MI_OWNER_SUMMARY_MISSING": 1,
    "NAME_VARIANT": 2,
-   "SSA_POSSIBLE_OVERPAYMENT": 1,
-   "TIC_TOTAL_MISMATCH": 1
+   "SSA_POSSIBLE_OVERPAYMENT": 1
   },
   "income": [
    [
     "other",
     "declared_only",
     null,
-    "employment",
-    null,
-    "5500.00",
+    "Other Income (declared)",
+    8027,
+    "4000.00",
     null
    ],
    [
@@ -13307,7 +13385,7 @@
     "declared_only",
     null,
     "Social Security Disability (de",
-    null,
+    8026,
     "1208.00",
     null
    ],
@@ -13316,7 +13394,7 @@
     "verified",
     null,
     "Social Security Administration",
-    8022,
+    8065,
     "1208.00",
     "14496.00"
    ],
@@ -13324,8 +13402,8 @@
     "wages_and_salaries",
     "verified",
     null,
-    "Oia Nan",
-    8021,
+    "Oia",
+    null,
     "500.00",
     "12441.00"
    ]
@@ -13349,24 +13427,25 @@
    ]
   ],
   "notes": [
-   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir"
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Income source 'Oia' (Alicia Ortiz): projected annual $2,527.20 (voi-ba"
   ],
-  "score": 0.64,
+  "score": 0.72,
   "warnings": [
    "income_records[3]: type 'Other Income' is not in the configured pickli"
   ]
  },
- "J-CASC-11420@1795405250": {
+ "J-CASC-11420@1795469014": {
   "assets": [
    [
     "checking",
-    "OCCU",
+    "OCCU CK",
     null,
     null,
     null,
     "declared_only",
-    7858,
-    "2192.00",
+    7892,
+    "2192.23",
     "0.00",
     null,
     null,
@@ -13376,22 +13455,47 @@
    ],
    [
     "checking",
-    "Oregon Community Credit U",
-    "0.00",
+    "Occu",
+    "3011.09",
     null,
-    null,
+    "2192.23",
     "verified",
+    7858,
     null,
     null,
     null,
     null,
-    "17.49",
     null,
     null,
     [
      [
       null,
-      "17.49",
+      null,
+      1
+     ],
+     [
+      null,
+      null,
+      1
+     ],
+     [
+      null,
+      null,
+      1
+     ],
+     [
+      null,
+      null,
+      1
+     ],
+     [
+      null,
+      null,
+      1
+     ],
+     [
+      null,
+      null,
       1
      ]
     ]
@@ -13399,7 +13503,29 @@
    [
     "checking",
     "Oregon Community Credit U",
-    "1469.10",
+    "0.00",
+    null,
+    null,
+    "verified",
+    7871,
+    null,
+    null,
+    null,
+    "17.74",
+    null,
+    null,
+    [
+     [
+      null,
+      "17.74",
+      1
+     ]
+    ]
+   ],
+   [
+    "checking",
+    "Oregon Community Credit U",
+    "36.43",
     null,
     null,
     "verified",
@@ -13407,37 +13533,16 @@
     null,
     null,
     null,
-    "0.05",
+    null,
     null,
     null,
     [
      [
-      "0.11",
-      "0.05",
-      1
-     ],
-     [
-      "0.63",
-      "0.05",
+      "0.02",
+      "0.08",
       1
      ]
     ]
-   ],
-   [
-    "checking",
-    "Rogue CU",
-    null,
-    null,
-    null,
-    "declared_only",
-    null,
-    "51.00",
-    "0.00",
-    null,
-    null,
-    null,
-    null,
-    []
    ],
    [
     "checking",
@@ -13446,7 +13551,7 @@
     null,
     null,
     "declared_only",
-    7860,
+    7894,
     "61.25",
     "0.00",
     null,
@@ -13462,7 +13567,7 @@
     null,
     "61.25",
     "verified",
-    null,
+    7870,
     null,
     null,
     null,
@@ -13478,11 +13583,58 @@
     null,
     null,
     "verified",
-    7859,
-    "25.00",
-    "0.00",
+    7893,
+    "24.99",
+    "0.01",
     null,
-    "0.05",
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      1
+     ],
+     [
+      null,
+      null,
+      1
+     ],
+     [
+      null,
+      null,
+      1
+     ],
+     [
+      null,
+      null,
+      1
+     ],
+     [
+      null,
+      null,
+      1
+     ],
+     [
+      null,
+      null,
+      1
+     ]
+    ]
+   ],
+   [
+    "savings",
+    "Oregon Community Credit U",
+    "5.00",
+    null,
+    null,
+    "verified",
+    null,
+    null,
+    null,
+    null,
+    null,
     null,
     null,
     [
@@ -13490,29 +13642,8 @@
       "0.00",
       "0.05",
       1
-     ],
-     [
-      null,
-      "0.05",
-      1
      ]
     ]
-   ],
-   [
-    "savings",
-    "Rogue CU",
-    null,
-    null,
-    null,
-    "declared_only",
-    7861,
-    "20.00",
-    "1.00",
-    null,
-    null,
-    null,
-    null,
-    []
    ],
    [
     "savings",
@@ -13521,7 +13652,7 @@
     null,
     null,
     "verified",
-    null,
+    7869,
     null,
     null,
     null,
@@ -13537,7 +13668,7 @@
     null,
     null,
     "verified",
-    null,
+    7861,
     "20.28",
     "1.22",
     null,
@@ -13548,21 +13679,24 @@
    ]
   ],
   "cert_review": {
-   "annual_assets": "3839.07",
+   "annual_assets": "5351.72",
    "annual_income": "16321.00",
    "cert_type": "initial",
    "effective_date": "2023-10-02",
-   "gross_rent": "719.00",
+   "gross_rent": "32.00",
    "hh_size": 1,
    "tenant_rent": "327.00",
-   "utility_allowance": "71.00"
+   "utility_allowance": "31.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "HOMELESS_APPLICANT_INDICATED": 1,
    "INCOME_AMOUNT_NOT_IN_SOURCE": 1,
    "INCOME_DECLARED_NOT_VERIFIED": 1,
+   "INCOME_SECOND_DECLARATION": 1,
    "MEMBER_IDENTITY_CONFLICT": 2,
+   "MI_OWNER_SUMMARY_MISSING": 1,
    "NAME_VARIANT": 1,
    "TIC_TOTAL_MISMATCH": 1
   },
@@ -13572,7 +13706,7 @@
     "declared_only",
     null,
     "Social Security (declared)",
-    8023,
+    8064,
     "1320.00",
     null
    ],
@@ -13581,8 +13715,8 @@
     "verified",
     null,
     "Social Security Administration",
+    8028,
     null,
-    "1360.70",
     "16320.00"
    ]
   ],
@@ -13599,10 +13733,12 @@
   "notes": [
    "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir"
   ],
-  "score": 0.72,
-  "warnings": []
+  "score": 0.73,
+  "warnings": [
+   "household_members[0] 'Bradlee Frasure' date of birth read as 2000-03-1"
+  ]
  },
- "J-CASC-11421@1795405060": {
+ "J-CASC-11421@1795468692": {
   "assets": [
    [
     "prepaid_debit_card",
@@ -13612,22 +13748,6 @@
     null,
     "verified",
     null,
-    "934.46",
-    "0.00",
-    null,
-    null,
-    null,
-    null,
-    []
-   ],
-   [
-    "prepaid_debit_card",
-    "Direct Express Debit Card",
-    null,
-    null,
-    null,
-    "declared_only",
-    7863,
     "934.00",
     "0.00",
     null,
@@ -13638,7 +13758,7 @@
    ]
   ],
   "cert_review": {
-   "annual_assets": "1868.46",
+   "annual_assets": "934.00",
    "annual_income": "12091.00",
    "cert_type": "initial",
    "effective_date": "2023-07-01",
@@ -13647,18 +13767,30 @@
    "tenant_rent": "218.00",
    "utility_allowance": "74.00"
   },
+  "checklist": [],
   "codes": {
    "HOMELESS_APPLICANT_INDICATED": 2,
+   "INCOME_DECLARED_NOT_VERIFIED": 1,
    "MEMBER_IDENTITY_CONFLICT": 1,
-   "NAME_VARIANT": 2
+   "NAME_VARIANT": 1,
+   "TIC_TOTAL_MINOR_DIFF": 1
   },
   "income": [
+   [
+    "social_security",
+    "declared_only",
+    null,
+    "S.S.O.T",
+    null,
+    "1007.00",
+    null
+   ],
    [
     "social_security",
     "verified",
     null,
     "Social Security Administration",
-    8024,
+    null,
     "1007.60",
     "12091.00"
    ]
@@ -13674,14 +13806,737 @@
    ]
   ],
   "notes": [
-   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
-   "Pages 34: Unrecognized document type \u2014 manual review required"
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir"
   ],
-  "score": 0.92,
+  "score": 0.82,
   "warnings": [
-   "asset_records[0]: 'Lydia y Hurst' matched the only household member by",
    "asset_records[0]: balance arrived with no statement or verification of"
   ]
+ },
+ "J-CASC-11454@1795468626": {
+  "assets": [
+   [
+    "prepaid_debit_card",
+    "DIRECT EXPRESS",
+    null,
+    null,
+    null,
+    "declared_only",
+    7890,
+    "0.09",
+    "0.00",
+    null,
+    null,
+    null,
+    null,
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "0.09",
+   "annual_income": "11929.00",
+   "cert_type": "initial",
+   "effective_date": "2026-01-16",
+   "gross_rent": "799.00",
+   "hh_size": 1,
+   "tenant_rent": "214.00",
+   "utility_allowance": "74.00"
+  },
+  "checklist": [],
+  "codes": {
+   "HOMELESS_APPLICANT_INDICATED": 1,
+   "MEMBER_IDENTITY_CONFLICT": 1,
+   "MI_CITIZENSHIP_DECLARATION_MISSING": 1,
+   "MI_OWNER_SUMMARY_MISSING": 1,
+   "NAME_VARIANT": 1
+  },
+  "income": [
+   [
+    "ssi",
+    "verified",
+    null,
+    "Social Security Administration",
+    8057,
+    "994.08",
+    "11929.00"
+   ]
+  ],
+  "members": [
+   [
+    "Justin",
+    "Karren",
+    "Head of Household",
+    9084,
+    6542,
+    []
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir"
+  ],
+  "score": 0.92,
+  "warnings": []
+ },
+ "J-CASC-11455@1795469079": {
+  "assets": [
+   [
+    "cash_on_hand",
+    "",
+    null,
+    null,
+    null,
+    "declared_only",
+    null,
+    "5.00",
+    "0.00",
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "checking",
+    "Cascade Management, Inc.",
+    "95.47",
+    null,
+    "95.47",
+    "verified",
+    7899,
+    null,
+    null,
+    null,
+    "0.00",
+    "0.00",
+    "0.00",
+    []
+   ],
+   [
+    "savings",
+    "Cascade Management, Inc.",
+    "0.00",
+    null,
+    "0.00",
+    "verified",
+    null,
+    null,
+    null,
+    null,
+    "0.00",
+    "0.00",
+    "0.00",
+    []
+   ],
+   [
+    "savings",
+    "Cascade Management, Inc.",
+    "0.04",
+    null,
+    "0.04",
+    "verified",
+    null,
+    null,
+    null,
+    null,
+    "6.00",
+    "6.00",
+    "0.00",
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "100.51",
+   "annual_income": "11316.00",
+   "cert_type": "initial",
+   "effective_date": "2024-05-31",
+   "gross_rent": "754.00",
+   "hh_size": 1,
+   "tenant_rent": "209.00",
+   "utility_allowance": "74.00"
+  },
+  "checklist": [],
+  "codes": {
+   "CERT_SUMMARY_INCOME_MISMATCH": 1,
+   "HOMELESS_APPLICANT_INDICATED": 1,
+   "MEMBER_IDENTITY_CONFLICT": 1,
+   "MI_CITIZENSHIP_DECLARATION_MISSING": 1,
+   "NAME_VARIANT": 1
+  },
+  "income": [
+   [
+    "ssi",
+    "verified",
+    null,
+    "Social Security Administration",
+    null,
+    "943.00",
+    null
+   ]
+  ],
+  "members": [
+   [
+    "Holly",
+    "Johnson",
+    "Head of Household",
+    9086,
+    6543,
+    []
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 32: Unrecognized document type \u2014 manual review required"
+  ],
+  "score": 0.86,
+  "warnings": [
+   "household_members[0] 'Holly Johnson' date of birth read as 1962-12-20;"
+  ]
+ },
+ "J-CASC-11456@1795478643": {
+  "assets": [
+   [
+    "cash_on_hand",
+    "",
+    null,
+    "20.00",
+    null,
+    "declared_only",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "checking",
+    "",
+    "2299.55",
+    null,
+    "1942.63",
+    "verified",
+    null,
+    "1942.63",
+    "0.00",
+    null,
+    "0.00",
+    "0.00",
+    "0.00",
+    []
+   ],
+   [
+    "savings",
+    "",
+    "37.83",
+    null,
+    "37.34",
+    "verified",
+    null,
+    "37.83",
+    "1.94",
+    null,
+    "5.13",
+    "5.13",
+    "0.31",
+    []
+   ],
+   [
+    "savings",
+    "",
+    "38.34",
+    null,
+    "43.90",
+    "verified",
+    null,
+    "38.24",
+    "0.00",
+    null,
+    "0.00",
+    "0.00",
+    "0.00",
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "2395.72",
+   "annual_income": "17090.00",
+   "cert_type": "annual",
+   "effective_date": "2025-01-01",
+   "gross_rent": "417.00",
+   "hh_size": 1,
+   "tenant_rent": "343.00",
+   "utility_allowance": "74.00"
+  },
+  "checklist": [],
+  "codes": {
+   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "INCOME_DECLARED_NOT_VERIFIED": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "declared_only",
+    null,
+    "Social Security (declared)",
+    null,
+    null,
+    "17088.00"
+   ]
+  ],
+  "members": [
+   [
+    "Jodie",
+    "Henshaw",
+    "Head of Household",
+    9087,
+    6544,
+    [
+     "Jodie Henshaw"
+    ]
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir"
+  ],
+  "score": 0.75,
+  "warnings": []
+ },
+ "J-CASC-11457@1795479156": {
+  "assets": [
+   [
+    "cash_on_hand",
+    "",
+    null,
+    null,
+    null,
+    "declared_only",
+    null,
+    "5.00",
+    "0.00",
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "checking",
+    "RCU",
+    null,
+    null,
+    null,
+    "declared_only",
+    null,
+    "107.01",
+    "0.00",
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "checking",
+    "Verification of Deposits",
+    "11.26",
+    null,
+    "107.01",
+    "verified",
+    null,
+    null,
+    null,
+    null,
+    null,
+    "0.00",
+    "0.00",
+    []
+   ],
+   [
+    "savings",
+    "Verification of Deposits",
+    "0.00",
+    null,
+    "0.00",
+    "verified",
+    null,
+    "0.04",
+    "0.00",
+    null,
+    null,
+    "0.00",
+    "0.00",
+    []
+   ],
+   [
+    "savings",
+    "Verification of Deposits",
+    "0.04",
+    null,
+    "0.04",
+    "verified",
+    null,
+    null,
+    null,
+    null,
+    "5.13",
+    "5.13",
+    "0.00",
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "123.31",
+   "annual_income": "11316.00",
+   "cert_type": "annual",
+   "effective_date": "2025-06-01",
+   "gross_rent": "799.00",
+   "hh_size": 1,
+   "tenant_rent": "0.00",
+   "utility_allowance": "74.00"
+  },
+  "checklist": [],
+  "codes": {
+   "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
+   "CERT_AMOUNT_UNACCOUNTED": 2,
+   "INCOME_DECLARED_NOT_VERIFIED": 1,
+   "INCOME_SECOND_DECLARATION": 1
+  },
+  "income": [
+   [
+    "ssi",
+    "declared_only",
+    null,
+    "SSA",
+    null,
+    null,
+    "11316.00"
+   ]
+  ],
+  "members": [
+   [
+    "Holly",
+    "Johnson",
+    "Head of Household",
+    9088,
+    6543,
+    []
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 2-4: 'HUD 50059 (Previous)' detected \u2014 excluded from data extrac"
+  ],
+  "score": 0.72,
+  "warnings": [
+   "household_members[0] 'Holly Johnson' date of birth read as 1962-12-20;"
+  ]
+ },
+ "J-CASC-11458@1795479901": {
+  "assets": [
+   [
+    "checking",
+    "Pathward",
+    null,
+    null,
+    null,
+    "declared_only",
+    null,
+    "448.00",
+    "0.00",
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "checking",
+    "Umpqua",
+    null,
+    null,
+    null,
+    "declared_only",
+    null,
+    "226.00",
+    "0.00",
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "checking",
+    "Umpqua Bank",
+    "7.02",
+    null,
+    "198.03",
+    "verified",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      "7.02",
+      null,
+      1
+     ],
+     [
+      "0.00",
+      null,
+      1
+     ]
+    ]
+   ],
+   [
+    "prepaid_debit_card",
+    "Netspend",
+    "1099.41",
+    null,
+    null,
+    "verified",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+     [
+      null,
+      null,
+      1
+     ]
+    ]
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "1780.43",
+   "annual_income": "14868.00",
+   "cert_type": "annual",
+   "effective_date": "2025-02-01",
+   "gross_rent": "796.00",
+   "hh_size": 2,
+   "tenant_rent": "291.00",
+   "utility_allowance": "71.00"
+  },
+  "checklist": [],
+  "codes": {
+   "INCOME_DECLARED_NOT_VERIFIED": 1,
+   "NAME_VARIANT": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "declared_only",
+    null,
+    "Social Security (declared)",
+    8084,
+    "12394.00",
+    null
+   ],
+   [
+    "social_security",
+    "verified",
+    null,
+    "Social Security Administration",
+    null,
+    null,
+    "14868.00"
+   ]
+  ],
+  "members": [
+   [
+    "Jay",
+    "Robbins",
+    "Head of Household",
+    9089,
+    6502,
+    []
+   ],
+   [
+    "Alicia",
+    "Ortiz",
+    "Co-Head",
+    9090,
+    null,
+    []
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 4: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti"
+  ],
+  "score": 0.83,
+  "warnings": []
+ },
+ "J-CASC-11459@1795480232": {
+  "assets": [
+   [
+    "cash_on_hand",
+    "",
+    null,
+    "5.00",
+    null,
+    "declared_only",
+    7923,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "checking",
+    "Cascade Management, Inc.",
+    "31.82",
+    null,
+    "243.79",
+    "verified",
+    null,
+    null,
+    null,
+    null,
+    "0.05",
+    "0.05",
+    null,
+    []
+   ],
+   [
+    "checking",
+    "OCCU",
+    null,
+    null,
+    null,
+    "declared_only",
+    null,
+    "244.00",
+    "0.00",
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "checking",
+    "Rogue",
+    null,
+    null,
+    null,
+    "declared_only",
+    null,
+    "10.00",
+    "0.00",
+    null,
+    null,
+    null,
+    null,
+    []
+   ],
+   [
+    "savings",
+    "Cascade Management, Inc.",
+    "12.07",
+    null,
+    null,
+    "verified",
+    null,
+    "12.00",
+    "0.00",
+    null,
+    "0.05",
+    "0.05",
+    null,
+    []
+   ],
+   [
+    "savings",
+    "Verification of Deposits",
+    "0.00",
+    null,
+    "0.00",
+    "verified",
+    null,
+    null,
+    null,
+    null,
+    "0.00",
+    "0.00",
+    "0.00",
+    []
+   ],
+   [
+    "savings",
+    "Verification of Deposits",
+    "23.13",
+    null,
+    "22.77",
+    "verified",
+    null,
+    null,
+    null,
+    null,
+    "6.00",
+    "6.00",
+    "0.00",
+    []
+   ]
+  ],
+  "cert_review": {
+   "annual_assets": "326.02",
+   "annual_income": "16849.00",
+   "cert_type": "annual",
+   "effective_date": "2024-10-01",
+   "gross_rent": "751.00",
+   "hh_size": 1,
+   "tenant_rent": "332.00",
+   "utility_allowance": "71.00"
+  },
+  "checklist": [],
+  "codes": {
+   "INCOME_DECLARED_NOT_VERIFIED": 1,
+   "MEMBER_IDENTITY_CONFLICT": 2,
+   "QUESTIONNAIRE_EMPLOYMENT_UNVERIFIED": 1,
+   "QUESTIONNAIRE_SSA_UNVERIFIED": 1
+  },
+  "income": [
+   [
+    "social_security",
+    "declared_only",
+    null,
+    "Social Security (declared)",
+    null,
+    null,
+    "16848.00"
+   ]
+  ],
+  "members": [
+   [
+    "Bradlee",
+    "Frasure",
+    "Head of Household",
+    9091,
+    6503,
+    []
+   ]
+  ],
+  "notes": [
+   "Certification form (TIC/HUD 50059) is NOT signed \u2014 resubmission requir",
+   "Pages 14: Blank verification form detected \u2014 excluded per Section 14 (",
+   "Pages 4: 'HUD 50059 (Previous)' detected \u2014 excluded from data extracti"
+  ],
+  "score": 0.79,
+  "warnings": []
  },
  "J-CCAC-06733@1790653606": {
   "assets": [
@@ -13744,6 +14599,7 @@
    "tenant_rent": "250.00",
    "utility_allowance": "44.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
@@ -13854,6 +14710,7 @@
    "tenant_rent": "261.00",
    "utility_allowance": "44.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1
   },
@@ -13918,6 +14775,7 @@
    "tenant_rent": "247.00",
    "utility_allowance": "48.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "NAME_VARIANT": 1
@@ -13993,6 +14851,7 @@
    "tenant_rent": "244.00",
    "utility_allowance": "44.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -14120,6 +14979,7 @@
    "tenant_rent": "324.00",
    "utility_allowance": "48.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_OVERDRAWN": 1,
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
@@ -14235,6 +15095,7 @@
    "tenant_rent": "275.00",
    "utility_allowance": "44.00"
   },
+  "checklist": [],
   "codes": {
    "HH_SIZE_MISMATCH": 1
   },
@@ -14335,6 +15196,7 @@
    "tenant_rent": "250.00",
    "utility_allowance": "44.00"
   },
+  "checklist": [],
   "codes": {},
   "income": [
    [
@@ -14506,6 +15368,7 @@
    "tenant_rent": "695.00",
    "utility_allowance": "44.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "NAME_VARIANT": 1
@@ -14622,6 +15485,7 @@
    "tenant_rent": "424.00",
    "utility_allowance": "44.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
@@ -14797,6 +15661,7 @@
    "tenant_rent": "255.00",
    "utility_allowance": "44.00"
   },
+  "checklist": [],
   "codes": {},
   "income": [
    [
@@ -14875,6 +15740,7 @@
    "tenant_rent": "250.00",
    "utility_allowance": "44.00"
   },
+  "checklist": [],
   "codes": {
    "JOINT_ACCOUNT_OWNERSHIP_PCT": 1
   },
@@ -14993,6 +15859,7 @@
    "tenant_rent": "424.00",
    "utility_allowance": "44.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -15081,6 +15948,7 @@
    "tenant_rent": "244.00",
    "utility_allowance": "44.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "INCOME_DECLARED_NOT_VERIFIED": 1,
@@ -15225,6 +16093,7 @@
    "tenant_rent": "176.00",
    "utility_allowance": "44.00"
   },
+  "checklist": [],
   "codes": {
    "TIC_TOTAL_NOT_EXTRACTED": 1
   },
@@ -15292,6 +16161,7 @@
    "tenant_rent": "257.00",
    "utility_allowance": "48.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887_INCOMPLETE": 1,
    "NAME_VARIANT": 1
@@ -15629,6 +16499,7 @@
    "tenant_rent": "326.00",
    "utility_allowance": "44.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_OWNER_NOT_IN_ROSTER": 2,
    "MEMBER_IDENTITY_CONFLICT": 1
@@ -15714,6 +16585,7 @@
    "tenant_rent": "244.00",
    "utility_allowance": "44.00"
   },
+  "checklist": [],
   "codes": {},
   "income": [
    [
@@ -15756,6 +16628,7 @@
    "tenant_rent": "230.00",
    "utility_allowance": "50.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -15838,6 +16711,7 @@
    "tenant_rent": "244.00",
    "utility_allowance": "44.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -15960,6 +16834,7 @@
    "tenant_rent": "244.00",
    "utility_allowance": "44.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
@@ -16035,6 +16910,7 @@
    "tenant_rent": "244.00",
    "utility_allowance": "44.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887_INCOMPLETE": 1
   },
@@ -16112,6 +16988,7 @@
    "tenant_rent": "240.00",
    "utility_allowance": "48.00"
   },
+  "checklist": [],
   "codes": {
    "NAME_VARIANT": 1
   },
@@ -16199,6 +17076,7 @@
    "tenant_rent": "244.00",
    "utility_allowance": "44.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887_INCOMPLETE": 1,
    "NAME_VARIANT": 1
@@ -16268,6 +17146,7 @@
    "tenant_rent": "236.00",
    "utility_allowance": "50.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887_INCOMPLETE": 1
   },
@@ -16382,6 +17261,7 @@
    "tenant_rent": "272.00",
    "utility_allowance": "40.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -16464,6 +17344,7 @@
    "tenant_rent": "1665.00",
    "utility_allowance": null
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -16583,6 +17464,7 @@
    "tenant_rent": "386.00",
    "utility_allowance": "50.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887_INCOMPLETE": 1,
    "QUESTIONNAIRE_LIFE_INSURANCE_UNVERIFIED": 1
@@ -16662,6 +17544,7 @@
    "tenant_rent": "1665.00",
    "utility_allowance": null
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -16781,6 +17664,7 @@
    "tenant_rent": "562.00",
    "utility_allowance": "50.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887_INCOMPLETE": 1,
    "MEMBER_IDENTITY_CONFLICT": 2
@@ -16905,6 +17789,7 @@
    "tenant_rent": "251.00",
    "utility_allowance": "50.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -16985,6 +17870,7 @@
    "tenant_rent": "353.00",
    "utility_allowance": "50.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_OWNER_NOT_IN_ROSTER": 1,
    "CERT_AMOUNT_UNACCOUNTED": 3,
@@ -17050,6 +17936,7 @@
    "tenant_rent": "236.00",
    "utility_allowance": "50.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "HUD_9887_INCOMPLETE": 1
@@ -17131,6 +18018,7 @@
    "tenant_rent": "230.00",
    "utility_allowance": "50.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887_INCOMPLETE": 1
   },
@@ -17214,6 +18102,7 @@
    "tenant_rent": "349.00",
    "utility_allowance": "50.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -17338,6 +18227,7 @@
    "tenant_rent": "241.00",
    "utility_allowance": "50.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887_INCOMPLETE": 1
   },
@@ -17402,6 +18292,7 @@
    "tenant_rent": "237.00",
    "utility_allowance": "50.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887_INCOMPLETE": 1
   },
@@ -17528,6 +18419,7 @@
    "tenant_rent": "340.00",
    "utility_allowance": "50.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887_INCOMPLETE": 1,
    "JOINT_ACCOUNT_OWNERSHIP_PCT": 2,
@@ -17603,6 +18495,7 @@
    "tenant_rent": "206.00",
    "utility_allowance": "50.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -17743,6 +18636,7 @@
    "tenant_rent": null,
    "utility_allowance": "50.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "CERT_AMOUNT_UNACCOUNTED": 2,
@@ -17858,6 +18752,7 @@
    "tenant_rent": "306.00",
    "utility_allowance": "44.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887_INCOMPLETE": 1,
    "NAME_VARIANT": 2
@@ -17925,6 +18820,7 @@
    "tenant_rent": "303.00",
    "utility_allowance": "44.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "HUD_9887_INCOMPLETE": 1
@@ -18053,6 +18949,7 @@
    "tenant_rent": "439.00",
    "utility_allowance": "44.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_OVERDRAWN": 1,
    "HUD_9887_INCOMPLETE": 1
@@ -18166,6 +19063,7 @@
    "tenant_rent": "244.00",
    "utility_allowance": "44.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887_INCOMPLETE": 1,
    "MEMBER_IDENTITY_CONFLICT": 1
@@ -18241,6 +19139,7 @@
    "tenant_rent": "246.00",
    "utility_allowance": "48.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1
@@ -18361,6 +19260,7 @@
    "tenant_rent": "258.00",
    "utility_allowance": "48.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887_INCOMPLETE": 1,
    "INCOME_DECLARED_NOT_VERIFIED": 1,
@@ -18447,6 +19347,7 @@
    "tenant_rent": "240.00",
    "utility_allowance": "48.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1
@@ -18509,6 +19410,7 @@
    "tenant_rent": "244.00",
    "utility_allowance": "50.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -18574,6 +19476,7 @@
    "tenant_rent": "244.00",
    "utility_allowance": "44.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -18662,6 +19565,7 @@
    "tenant_rent": "276.00",
    "utility_allowance": "44.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1
@@ -18756,6 +19660,7 @@
    "tenant_rent": "250.00",
    "utility_allowance": "44.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887_INCOMPLETE": 1,
    "QUESTIONNAIRE_LIFE_INSURANCE_UNVERIFIED": 1,
@@ -18864,6 +19769,7 @@
    "tenant_rent": "250.00",
    "utility_allowance": "44.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "HUD_9887_INCOMPLETE": 1,
@@ -19016,6 +19922,7 @@
    "tenant_rent": "443.00",
    "utility_allowance": "44.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887_INCOMPLETE": 1,
    "INCOME_DECLARED_NOT_VERIFIED": 1,
@@ -19092,6 +19999,7 @@
    "tenant_rent": "285.00",
    "utility_allowance": "48.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1
@@ -19152,6 +20060,7 @@
    "tenant_rent": "228.00",
    "utility_allowance": "48.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "HUD_9887_INCOMPLETE": 1,
@@ -19232,6 +20141,7 @@
    "tenant_rent": "551.00",
    "utility_allowance": "44.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -19318,6 +20228,7 @@
    "tenant_rent": "246.00",
    "utility_allowance": "48.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887_INCOMPLETE": 1
   },
@@ -19405,6 +20316,7 @@
    "tenant_rent": "244.00",
    "utility_allowance": "44.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887_INCOMPLETE": 1
   },
@@ -19515,6 +20427,7 @@
    "tenant_rent": "236.00",
    "utility_allowance": "44.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "CERT_AMOUNT_UNACCOUNTED": 1,
@@ -19598,6 +20511,7 @@
    "tenant_rent": "612.00",
    "utility_allowance": "44.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887_INCOMPLETE": 1,
    "QUESTIONNAIRE_PENSION_UNVERIFIED": 1
@@ -19699,6 +20613,7 @@
    "tenant_rent": "560.00",
    "utility_allowance": "44.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -19769,6 +20684,7 @@
    "tenant_rent": "53.00",
    "utility_allowance": "48.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887_INCOMPLETE": 1,
    "TIC_TOTAL_MISMATCH": 1
@@ -19845,6 +20761,7 @@
    "tenant_rent": "809.00",
    "utility_allowance": "48.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -19945,6 +20862,7 @@
    "tenant_rent": "807.00",
    "utility_allowance": "50.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887_INCOMPLETE": 1,
    "SIGNATURE_DATE_MISSING": 1
@@ -20048,6 +20966,7 @@
    "tenant_rent": "214.00",
    "utility_allowance": "44.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887_INCOMPLETE": 1,
    "MEMBER_IDENTITY_CONFLICT": 2,
@@ -20207,6 +21126,7 @@
    "tenant_rent": "255.00",
    "utility_allowance": "50.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "CERT_AMOUNT_UNACCOUNTED": 2,
@@ -20290,6 +21210,7 @@
    "tenant_rent": "240.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
@@ -20377,6 +21298,7 @@
    "tenant_rent": "286.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
@@ -20503,6 +21425,7 @@
    "tenant_rent": "498.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -20633,6 +21556,7 @@
    "tenant_rent": "218.00",
    "utility_allowance": "41.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -20790,6 +21714,7 @@
    "tenant_rent": "694.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_SUMMARY_INCOME_MISMATCH": 2,
    "INCOME_DECLARED_NOT_VERIFIED": 1
@@ -20888,6 +21813,7 @@
    "tenant_rent": "559.00",
    "utility_allowance": "41.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -20995,6 +21921,7 @@
    "tenant_rent": "248.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -21070,6 +21997,7 @@
    "tenant_rent": null,
    "utility_allowance": null
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -21162,6 +22090,7 @@
    "tenant_rent": "257.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "HUD_9887A_INCOMPLETE": 1,
@@ -21311,6 +22240,7 @@
    "tenant_rent": "309.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
@@ -21429,6 +22359,7 @@
    "tenant_rent": "316.00",
    "utility_allowance": "41.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
@@ -21530,6 +22461,7 @@
    "tenant_rent": "292.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -21628,6 +22560,7 @@
    "tenant_rent": "377.00",
    "utility_allowance": "41.00"
   },
+  "checklist": [],
   "codes": {},
   "income": [
    [
@@ -21690,6 +22623,7 @@
    "tenant_rent": "458.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2
   },
@@ -21779,6 +22713,7 @@
    "tenant_rent": "257.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "HUD_9887A_INCOMPLETE": 1,
@@ -21977,6 +22912,7 @@
    "tenant_rent": "316.00",
    "utility_allowance": "41.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
@@ -22032,6 +22968,7 @@
    "tenant_rent": "258.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -22118,6 +23055,7 @@
    "tenant_rent": "457.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "QUESTIONNAIRE_PENSION_UNVERIFIED": 1
   },
@@ -22181,6 +23119,7 @@
    "tenant_rent": "248.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "NAME_VARIANT": 1
   },
@@ -22255,6 +23194,7 @@
    "tenant_rent": "683.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
@@ -22333,6 +23273,7 @@
    "tenant_rent": "476.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "HUD_9887A_INCOMPLETE": 1,
@@ -22413,6 +23354,7 @@
    "tenant_rent": "280.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "INCOME_METHODS_DISAGREE": 1,
    "MEMBER_IDENTITY_CONFLICT": 1,
@@ -22519,6 +23461,7 @@
    "tenant_rent": "1195.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "INCOME_AMOUNT_NOT_IN_SOURCE": 1,
@@ -22623,6 +23566,7 @@
    "tenant_rent": "804.00",
    "utility_allowance": "41.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "HUD_9887A_INCOMPLETE": 1,
@@ -22698,6 +23642,7 @@
    "tenant_rent": "247.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "INCOME_DECLARED_NOT_VERIFIED": 1,
    "MEMBER_IDENTITY_CONFLICT": 1,
@@ -22777,6 +23722,7 @@
    "tenant_rent": "247.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -22870,6 +23816,7 @@
    "tenant_rent": "541.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "HUD_9887A_INCOMPLETE": 2,
@@ -22977,6 +23924,7 @@
    "tenant_rent": "180.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
@@ -23026,6 +23974,7 @@
    "tenant_rent": "242.00",
    "utility_allowance": "41.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
@@ -23121,6 +24070,7 @@
    "tenant_rent": "484.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -23224,6 +24174,7 @@
    "tenant_rent": "360.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
@@ -23383,6 +24334,7 @@
    "tenant_rent": "222.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
@@ -23452,6 +24404,7 @@
    "tenant_rent": "502.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
@@ -23517,6 +24470,7 @@
    "tenant_rent": "314.00",
    "utility_allowance": "41.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
@@ -23606,6 +24560,7 @@
    "tenant_rent": "572.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
@@ -23732,6 +24687,7 @@
    "tenant_rent": "470.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "HUD_9887A_INCOMPLETE": 1,
@@ -23832,6 +24788,7 @@
    "tenant_rent": "111.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
@@ -23904,6 +24861,7 @@
    "tenant_rent": "407.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -24075,6 +25033,7 @@
    "tenant_rent": "204.00",
    "utility_allowance": "41.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
@@ -24154,6 +25113,7 @@
    "tenant_rent": "279.00",
    "utility_allowance": "41.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
@@ -24291,6 +25251,7 @@
    "tenant_rent": "263.00",
    "utility_allowance": "41.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
@@ -24391,6 +25352,7 @@
    "tenant_rent": "469.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "FIXED_INCOME_PAYSTUB": 1,
@@ -24527,6 +25489,7 @@
    "tenant_rent": "387.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "MEMBER_IDENTITY_CONFLICT": 1
@@ -24610,6 +25573,7 @@
    "tenant_rent": "216.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -24674,6 +25638,7 @@
    "tenant_rent": "963.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -24750,6 +25715,7 @@
    "tenant_rent": "298.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "HUD_9887A_INCOMPLETE": 1,
@@ -24854,6 +25820,7 @@
    "tenant_rent": "248.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -24926,6 +25893,7 @@
    "tenant_rent": "474.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
@@ -25005,6 +25973,7 @@
    "tenant_rent": "248.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "HUD_9887A_INCOMPLETE": 1,
@@ -25094,6 +26063,7 @@
    "tenant_rent": "586.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
@@ -25185,6 +26155,7 @@
    "tenant_rent": "303.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -25254,6 +26225,7 @@
    "tenant_rent": "239.00",
    "utility_allowance": "41.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -25478,6 +26450,7 @@
    "tenant_rent": "201.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_OVERDRAWN": 1
   },
@@ -25573,6 +26546,7 @@
    "tenant_rent": "387.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -25654,6 +26628,7 @@
    "tenant_rent": "401.00",
    "utility_allowance": "41.00"
   },
+  "checklist": [],
   "codes": {
    "MEMBER_IDENTITY_CONFLICT": 1
   },
@@ -25719,6 +26694,7 @@
    "tenant_rent": "260.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
@@ -25856,6 +26832,7 @@
    "tenant_rent": "1829.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 3,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -25964,6 +26941,7 @@
    "tenant_rent": "326.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "QUESTIONNAIRE_STUDENT_UNVERIFIED": 1,
    "SSA_POSSIBLE_OVERPAYMENT": 1
@@ -26033,6 +27011,7 @@
    "tenant_rent": "260.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
@@ -26144,6 +27123,7 @@
    "tenant_rent": "248.00",
    "utility_allowance": "41.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
@@ -26253,6 +27233,7 @@
    "tenant_rent": "608.00",
    "utility_allowance": "41.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
@@ -26521,6 +27502,7 @@
    "tenant_rent": "448.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "CERT_SIGNED_AFTER_EFFECTIVE_DATE": 1,
@@ -26608,6 +27590,7 @@
    "tenant_rent": "475.00",
    "utility_allowance": "41.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "CERT_AMOUNT_UNACCOUNTED": 1,
@@ -26699,6 +27682,7 @@
    "tenant_rent": "242.00",
    "utility_allowance": "31.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
@@ -26762,6 +27746,7 @@
    "tenant_rent": "453.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -26929,6 +27914,7 @@
    "tenant_rent": "367.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
@@ -27010,6 +27996,7 @@
    "tenant_rent": "975.00",
    "utility_allowance": "31.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "HUD_9887A_INCOMPLETE": 1,
@@ -27092,6 +28079,7 @@
    "tenant_rent": "248.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -27190,6 +28178,7 @@
    "tenant_rent": "239.00",
    "utility_allowance": "41.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
@@ -27295,6 +28284,7 @@
    "tenant_rent": "235.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -27361,6 +28351,7 @@
    "tenant_rent": "461.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1
   },
@@ -27442,6 +28433,7 @@
    "tenant_rent": "242.00",
    "utility_allowance": "242.00"
   },
+  "checklist": [],
   "codes": {},
   "income": [
    [
@@ -27519,6 +28511,7 @@
    "tenant_rent": "248.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -27615,6 +28608,7 @@
    "tenant_rent": "261.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "HUD_9887_INCOMPLETE": 1
@@ -27679,6 +28673,7 @@
    "tenant_rent": "671.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "HUD_9887A_INCOMPLETE": 1,
@@ -27749,6 +28744,7 @@
    "tenant_rent": "293.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {},
   "income": [
    [
@@ -27807,6 +28803,7 @@
    "tenant_rent": "367.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "INCOME_DECLARED_NOT_VERIFIED": 1,
@@ -27878,6 +28875,7 @@
    "tenant_rent": "282.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {},
   "income": [
    [
@@ -27936,6 +28934,7 @@
    "tenant_rent": "237.00",
    "utility_allowance": "49.00"
   },
+  "checklist": [],
   "codes": {},
   "income": [
    [
@@ -28005,6 +29004,7 @@
    "tenant_rent": "346.00",
    "utility_allowance": "49.00"
   },
+  "checklist": [],
   "codes": {
    "MEMBER_IDENTITY_CONFLICT": 1,
    "SSA_POSSIBLE_OVERPAYMENT": 1
@@ -28083,6 +29083,7 @@
    "tenant_rent": "489.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {
    "INCOME_DECLARED_NOT_VERIFIED": 1,
    "NAME_VARIANT": 1,
@@ -28211,6 +29212,7 @@
    "tenant_rent": "1343.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {
    "INCOME_DECLARED_NOT_VERIFIED": 1,
    "MEMBER_IDENTITY_CONFLICT": 1,
@@ -28322,6 +29324,7 @@
    "tenant_rent": "292.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {},
   "income": [
    [
@@ -28399,6 +29402,7 @@
    "tenant_rent": "422.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {},
   "income": [
    [
@@ -28480,6 +29484,7 @@
    "tenant_rent": "248.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 3
   },
@@ -28558,6 +29563,7 @@
    "tenant_rent": "248.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2
   },
@@ -28646,6 +29652,7 @@
    "tenant_rent": "248.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1
   },
@@ -28783,6 +29790,7 @@
    "tenant_rent": "383.00",
    "utility_allowance": "1409.00"
   },
+  "checklist": [],
   "codes": {
    "SSA_POSSIBLE_OVERPAYMENT": 2
   },
@@ -28899,6 +29907,7 @@
    "tenant_rent": "414.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "INCOME_DECLARED_NOT_VERIFIED": 1
@@ -29090,6 +30099,7 @@
    "tenant_rent": "515.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {},
   "income": [
    [
@@ -29156,6 +30166,7 @@
    "tenant_rent": "675.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "INCOME_AMOUNT_NOT_IN_SOURCE": 1,
@@ -29255,6 +30266,7 @@
    "tenant_rent": "358.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "MEMBER_IDENTITY_CONFLICT": 1
@@ -29349,6 +30361,7 @@
    "tenant_rent": "248.00",
    "utility_allowance": "11.00"
   },
+  "checklist": [],
   "codes": {
    "NAME_VARIANT": 1
   },
@@ -29491,6 +30504,7 @@
    "tenant_rent": "409.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "JOINT_ACCOUNT_OWNERSHIP_PCT": 1
   },
@@ -29582,6 +30596,7 @@
    "tenant_rent": "302.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {},
   "income": [
    [
@@ -29643,6 +30658,7 @@
    "tenant_rent": "921.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -29735,6 +30751,7 @@
    "tenant_rent": "242.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {},
   "income": [
    [
@@ -29928,6 +30945,7 @@
    "tenant_rent": "242.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "NAME_VARIANT": 1
@@ -29992,6 +31010,7 @@
    "tenant_rent": "248.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "MEMBER_IDENTITY_CONFLICT": 1
   },
@@ -30109,6 +31128,7 @@
    "tenant_rent": "392.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "NAME_VARIANT": 1
   },
@@ -30201,6 +31221,7 @@
    "tenant_rent": "1009.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {
    "NAME_VARIANT": 1,
    "SSA_POSSIBLE_OVERPAYMENT": 1
@@ -30257,6 +31278,7 @@
    "tenant_rent": "299.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {
    "NAME_VARIANT": 1
   },
@@ -30382,6 +31404,7 @@
    "tenant_rent": "340.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {},
   "income": [
    [
@@ -30525,6 +31548,7 @@
    "tenant_rent": "242.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "NAME_VARIANT": 1
   },
@@ -30619,6 +31643,7 @@
    "tenant_rent": "465.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 3
   },
@@ -30734,6 +31759,7 @@
    "tenant_rent": "393.00",
    "utility_allowance": "49.00"
   },
+  "checklist": [],
   "codes": {
    "INCOME_DECLARED_NOT_VERIFIED": 1
   },
@@ -30810,6 +31836,7 @@
    "tenant_rent": "560.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {},
   "income": [
    [
@@ -30931,6 +31958,7 @@
    "tenant_rent": "689.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {
    "INCOME_AMOUNT_NOT_IN_SOURCE": 1
   },
@@ -31007,6 +32035,7 @@
    "tenant_rent": "405.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "NAME_VARIANT": 1,
    "SSA_POSSIBLE_OVERPAYMENT": 1
@@ -31099,6 +32128,7 @@
    "tenant_rent": "387.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "CERT_AMOUNT_UNACCOUNTED": 1,
@@ -31227,6 +32257,7 @@
    "tenant_rent": "248.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "HUD_9887_INCOMPLETE": 1,
@@ -31316,6 +32347,7 @@
    "tenant_rent": "310.00",
    "utility_allowance": "49.00"
   },
+  "checklist": [],
   "codes": {},
   "income": [
    [
@@ -31377,6 +32409,7 @@
    "tenant_rent": "679.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {
    "NAME_VARIANT": 1,
    "SSA_POSSIBLE_OVERPAYMENT": 2
@@ -31429,6 +32462,7 @@
    "tenant_rent": "271.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {
    "MEMBER_IDENTITY_CONFLICT": 1
   },
@@ -31506,6 +32540,7 @@
    "tenant_rent": "250.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "INCOME_VERIFIED_NOT_DECLARED": 1,
    "MEMBER_IDENTITY_CONFLICT": 1,
@@ -31641,6 +32676,7 @@
    "tenant_rent": "483.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_SUMMARY_INCOME_MISMATCH": 1
   },
@@ -31725,6 +32761,7 @@
    "tenant_rent": "281.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 3,
    "CERT_SUMMARY_INCOME_MISMATCH": 1
@@ -31820,6 +32857,7 @@
    "tenant_rent": "365.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {
    "MEMBER_IDENTITY_CONFLICT": 1,
    "QUESTIONNAIRE_PENSION_UNVERIFIED": 1,
@@ -31932,6 +32970,7 @@
    "tenant_rent": "386.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {
    "SSA_POSSIBLE_OVERPAYMENT": 2
   },
@@ -32025,6 +33064,7 @@
    "tenant_rent": "209.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "TIC_TOTAL_MISMATCH": 1
@@ -32104,6 +33144,7 @@
    "tenant_rent": "1044.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "CERT_SUMMARY_INCOME_MISMATCH": 1
@@ -32201,6 +33242,7 @@
    "tenant_rent": "456.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {
    "NAME_VARIANT": 1
   },
@@ -32297,6 +33339,7 @@
    "tenant_rent": "1104.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -32444,6 +33487,7 @@
    "tenant_rent": "286.00",
    "utility_allowance": "49.00"
   },
+  "checklist": [],
   "codes": {
    "MEMBER_IDENTITY_CONFLICT": 1,
    "TIC_TOTAL_MISMATCH": 1
@@ -32573,6 +33617,7 @@
    "tenant_rent": "252.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {},
   "income": [
    [
@@ -32710,6 +33755,7 @@
    "tenant_rent": "255.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {},
   "income": [
    [
@@ -32823,6 +33869,7 @@
    "tenant_rent": "413.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2
   },
@@ -32888,6 +33935,7 @@
    "tenant_rent": "316.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {},
   "income": [
    [
@@ -32981,6 +34029,7 @@
    "tenant_rent": "567.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {},
   "income": [
    [
@@ -33082,6 +34131,7 @@
    "tenant_rent": "566.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {},
   "income": [
    [
@@ -33157,6 +34207,7 @@
    "tenant_rent": "244.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {
    "MEMBER_IDENTITY_CONFLICT": 1
   },
@@ -33228,6 +34279,7 @@
    "tenant_rent": "542.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "CERT_AMOUNT_UNACCOUNTED": 1,
@@ -33415,6 +34467,7 @@
    "tenant_rent": "381.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "INCOME_AMOUNT_NOT_IN_SOURCE": 1
@@ -33470,6 +34523,7 @@
    "tenant_rent": "303.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {},
   "income": [
    [
@@ -33594,6 +34648,7 @@
    "tenant_rent": "284.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {},
   "income": [
    [
@@ -33649,6 +34704,7 @@
    "tenant_rent": "310.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {
    "TIC_TOTAL_MISMATCH": 1
   },
@@ -33723,6 +34779,7 @@
    "tenant_rent": "244.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {
    "NAME_VARIANT": 1,
    "QUESTIONNAIRE_CHECKING_UNVERIFIED": 1,
@@ -33818,6 +34875,7 @@
    "tenant_rent": "383.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {},
   "income": [
    [
@@ -33928,6 +34986,7 @@
    "tenant_rent": "275.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {
    "FIXED_INCOME_PAYSTUB": 1,
    "NAME_VARIANT": 1,
@@ -34043,6 +35102,7 @@
    "tenant_rent": "244.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1
   },
@@ -34116,6 +35176,7 @@
    "tenant_rent": "309.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {
    "NAME_VARIANT": 1
   },
@@ -34161,6 +35222,7 @@
    "tenant_rent": "242.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {
    "SSA_POSSIBLE_OVERPAYMENT": 2
   },
@@ -34253,6 +35315,7 @@
    "tenant_rent": "255.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "MEMBER_IDENTITY_CONFLICT": 1
@@ -34348,6 +35411,7 @@
    "tenant_rent": "302.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {
    "NAME_VARIANT": 1
   },
@@ -34424,6 +35488,7 @@
    "tenant_rent": "791.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "SSA_POSSIBLE_OVERPAYMENT": 2
@@ -34527,6 +35592,7 @@
    "tenant_rent": "681.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "INCOME_AMOUNT_NOT_IN_SOURCE": 1,
@@ -34631,6 +35697,7 @@
    "tenant_rent": "324.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "NAME_VARIANT": 1
   },
@@ -34696,6 +35763,7 @@
    "tenant_rent": "311.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "MEMBER_IDENTITY_CONFLICT": 1
@@ -34762,6 +35830,7 @@
    "tenant_rent": "246.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {},
   "income": [
    [
@@ -34829,6 +35898,7 @@
    "tenant_rent": "248.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {},
   "income": [
    [
@@ -34906,6 +35976,7 @@
    "tenant_rent": "293.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {},
   "income": [
    [
@@ -34981,6 +36052,7 @@
    "tenant_rent": "242.00",
    "utility_allowance": "46.00"
   },
+  "checklist": [],
   "codes": {},
   "income": [
    [
@@ -35045,6 +36117,7 @@
    "tenant_rent": "214.00",
    "utility_allowance": "80.00"
   },
+  "checklist": [],
   "codes": {
    "HUD_9887A_INCOMPLETE": 1,
    "MI_HUD_92006_MISSING": 1,
@@ -35165,6 +36238,7 @@
    "tenant_rent": "221.00",
    "utility_allowance": "11.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "CERT_SIGNATURE_DATE_IMPLAUSIBLE": 1,
@@ -35694,6 +36768,7 @@
    "tenant_rent": "1325.00",
    "utility_allowance": "0.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 4,
    "CERT_AMOUNT_UNACCOUNTED": 1,
@@ -36196,6 +37271,7 @@
    "tenant_rent": "1325.00",
    "utility_allowance": "0.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 6,
    "CERT_AMOUNT_UNACCOUNTED": 1,
@@ -36907,6 +37983,7 @@
    "tenant_rent": "1325.00",
    "utility_allowance": "0.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 4,
    "CERT_AMOUNT_UNACCOUNTED": 1,
@@ -37056,6 +38133,7 @@
    "tenant_rent": "1247.00",
    "utility_allowance": "0.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "HH_SIZE_MISMATCH": 1,
@@ -37204,6 +38282,7 @@
    "tenant_rent": "1395.00",
    "utility_allowance": "177.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "CERT_SUMMARY_INCOME_MISMATCH": 2,
@@ -37396,6 +38475,7 @@
    "tenant_rent": "1795.00",
    "utility_allowance": "0.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "INCOME_AMOUNT_NOT_IN_SOURCE": 1,
@@ -37600,6 +38680,7 @@
    "tenant_rent": "1675.00",
    "utility_allowance": "0.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -37762,6 +38843,7 @@
    "tenant_rent": "1247.00",
    "utility_allowance": "0.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2
   },
@@ -37890,6 +38972,7 @@
    "tenant_rent": "1247.00",
    "utility_allowance": "0.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2
   },
@@ -37953,6 +39036,7 @@
    "tenant_rent": "869.00",
    "utility_allowance": "0.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "HH_SIZE_MISMATCH": 1,
@@ -38091,6 +39175,7 @@
    "tenant_rent": "1247.00",
    "utility_allowance": "0.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -38312,6 +39397,7 @@
    "tenant_rent": "1675.00",
    "utility_allowance": "0.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_OVERDRAWN": 1,
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
@@ -38523,6 +39609,7 @@
    "tenant_rent": "1247.00",
    "utility_allowance": "0.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 2,
    "CERT_AMOUNT_UNACCOUNTED": 1,
@@ -38780,6 +39867,7 @@
    "tenant_rent": "1247.00",
    "utility_allowance": "0.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_OVERDRAWN": 1,
    "ASSET_SELF_DECLARED_VS_VERIFIED": 2,
@@ -38985,6 +40073,7 @@
    "tenant_rent": "1247.00",
    "utility_allowance": "0.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "CERT_AMOUNT_UNACCOUNTED": 1,
@@ -39233,6 +40322,7 @@
    "tenant_rent": "1675.00",
    "utility_allowance": "0.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "CERT_AMOUNT_UNACCOUNTED": 1,
@@ -39400,6 +40490,7 @@
    "tenant_rent": "1395.00",
    "utility_allowance": "177.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_OWNER_NOT_IN_ROSTER": 1,
    "ASSET_SELF_DECLARED_VS_VERIFIED": 2,
@@ -39692,6 +40783,7 @@
    "tenant_rent": "1675.00",
    "utility_allowance": "0.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_OVERDRAWN": 1,
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
@@ -39935,6 +41027,7 @@
    "tenant_rent": "1675.00",
    "utility_allowance": "0.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_OWNER_NOT_IN_ROSTER": 1,
    "ASSET_SELF_DECLARED_VS_VERIFIED": 2,
@@ -40083,6 +41176,7 @@
    "tenant_rent": "1675.00",
    "utility_allowance": "0.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "NAME_VARIANT": 2
@@ -40302,6 +41396,7 @@
    "tenant_rent": "1675.00",
    "utility_allowance": "0.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "CERT_AMOUNT_UNACCOUNTED": 1,
@@ -40470,6 +41565,7 @@
    "tenant_rent": "1675.00",
    "utility_allowance": "0.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "CERT_SUMMARY_INCOME_MISMATCH": 2,
@@ -40673,6 +41769,7 @@
    "tenant_rent": "1135.00",
    "utility_allowance": "0.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_OVERDRAWN": 1,
    "ASSET_SELF_DECLARED_VS_VERIFIED": 2,
@@ -40891,6 +41988,7 @@
    "tenant_rent": "1135.00",
    "utility_allowance": "0.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_OWNER_NOT_IN_ROSTER": 1,
    "CERT_AMOUNT_UNACCOUNTED": 1,
@@ -41008,6 +42106,7 @@
    "tenant_rent": "1135.00",
    "utility_allowance": "0.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "MEMBER_IDENTITY_CONFLICT": 1,
@@ -41352,6 +42451,7 @@
    "tenant_rent": "1550.00",
    "utility_allowance": "0.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "CERT_AMOUNT_UNACCOUNTED": 1,
@@ -41474,6 +42574,7 @@
    "tenant_rent": "1550.00",
    "utility_allowance": "0.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "CERT_AMOUNT_UNACCOUNTED": 1,
@@ -41719,6 +42820,7 @@
    "tenant_rent": "1550.00",
    "utility_allowance": "0.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "CERT_AMOUNT_UNACCOUNTED": 1,
@@ -42150,6 +43252,7 @@
    "tenant_rent": "1135.00",
    "utility_allowance": "0.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 5,
    "CERT_AMOUNT_UNACCOUNTED": 1,
@@ -42389,6 +43492,7 @@
    "tenant_rent": "1135.00",
    "utility_allowance": "0.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_OVERDRAWN": 1,
    "ASSET_OWNER_NOT_IN_ROSTER": 1,
@@ -42787,6 +43891,7 @@
    "tenant_rent": "1015.00",
    "utility_allowance": "0.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 2,
    "CERT_AMOUNT_UNACCOUNTED": 1,
@@ -43116,6 +44221,7 @@
    "tenant_rent": "1015.00",
    "utility_allowance": "0.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_OWNER_NOT_IN_ROSTER": 1,
    "ASSET_SELF_DECLARED_VS_VERIFIED": 2,
@@ -43436,6 +44542,7 @@
    "tenant_rent": "1395.00",
    "utility_allowance": "0.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_OVERDRAWN": 1,
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
@@ -43796,6 +44903,7 @@
    "tenant_rent": "1395.00",
    "utility_allowance": "0.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 2,
    "CERT_AMOUNT_UNACCOUNTED": 1,
@@ -44104,6 +45212,7 @@
    "tenant_rent": "1395.00",
    "utility_allowance": "0.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_OVERDRAWN": 2,
    "ASSET_OWNER_NOT_IN_ROSTER": 1,
@@ -44322,6 +45431,7 @@
    "tenant_rent": "1675.00",
    "utility_allowance": "0.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "CERT_SUMMARY_INCOME_MISMATCH": 2,
@@ -44503,6 +45613,7 @@
    "tenant_rent": "1550.00",
    "utility_allowance": "0.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "CERT_AMOUNT_UNACCOUNTED": 2,
@@ -44622,6 +45733,7 @@
    "tenant_rent": "1314.00",
    "utility_allowance": "111.00"
   },
+  "checklist": [],
   "codes": {
    "INCOME_DECLARED_NOT_VERIFIED": 1,
    "NAME_VARIANT": 1,
@@ -44708,6 +45820,7 @@
    "tenant_rent": "980.00",
    "utility_allowance": "114.00"
   },
+  "checklist": [],
   "codes": {
    "INCOME_DECLARED_NOT_VERIFIED": 1,
    "NAME_VARIANT": 1,
@@ -44786,6 +45899,7 @@
    "tenant_rent": "980.00",
    "utility_allowance": "114.00"
   },
+  "checklist": [],
   "codes": {
    "MEMBER_IDENTITY_CONFLICT": 1,
    "NO_ASSET_CERT_MISSING": 1,
@@ -44866,6 +45980,7 @@
    "tenant_rent": "855.00",
    "utility_allowance": "91.00"
   },
+  "checklist": [],
   "codes": {
    "INCOME_AMOUNT_NOT_IN_SOURCE": 1,
    "INCOME_METHODS_DISAGREE": 1,
@@ -44931,6 +46046,7 @@
    "tenant_rent": "921.00",
    "utility_allowance": "91.00"
   },
+  "checklist": [],
   "codes": {
    "NAME_VARIANT": 2,
    "NO_ASSET_CERT_MISSING": 1,
@@ -44997,6 +46113,7 @@
    "tenant_rent": "921.00",
    "utility_allowance": "90.00"
   },
+  "checklist": [],
   "codes": {
    "INCOME_DECLARED_NOT_VERIFIED": 1,
    "NAME_VARIANT": 2,
@@ -45063,6 +46180,7 @@
    "tenant_rent": "855.00",
    "utility_allowance": "91.00"
   },
+  "checklist": [],
   "codes": {
    "INCOME_DECLARED_NOT_VERIFIED": 1,
    "NO_ASSET_CERT_MISSING": 1
@@ -45145,6 +46263,7 @@
    "tenant_rent": "855.00",
    "utility_allowance": "91.00"
   },
+  "checklist": [],
   "codes": {
    "NAME_VARIANT": 2,
    "TIC_TOTAL_NO_CALCULATIONS": 1
@@ -45207,6 +46326,7 @@
    "tenant_rent": "462.00",
    "utility_allowance": "69.00"
   },
+  "checklist": [],
   "codes": {
    "MEMBER_IDENTITY_CONFLICT": 1,
    "NO_ASSET_CERT_MISSING": 1,
@@ -45279,6 +46399,7 @@
    "tenant_rent": "384.00",
    "utility_allowance": "91.00"
   },
+  "checklist": [],
   "codes": {
    "ARSC_TIC_IS_SOURCE_OF_TRUTH": 1,
    "QUESTIONNAIRE_CHECKING_UNVERIFIED": 1,
@@ -45332,6 +46453,7 @@
    "tenant_rent": "0.00",
    "utility_allowance": "90.00"
   },
+  "checklist": [],
   "codes": {
    "ARSC_TIC_IS_SOURCE_OF_TRUTH": 1,
    "NAME_VARIANT": 1,
@@ -45404,6 +46526,7 @@
    "tenant_rent": "0.00",
    "utility_allowance": null
   },
+  "checklist": [],
   "codes": {
    "ARSC_CERT_FORM_MISSING": 1,
    "ARSC_TIC_IS_SOURCE_OF_TRUTH": 1,
@@ -45488,6 +46611,7 @@
    "tenant_rent": "577.00",
    "utility_allowance": null
   },
+  "checklist": [],
   "codes": {
    "ARSC_CERT_FORM_MISSING": 1,
    "ARSC_TIC_IS_SOURCE_OF_TRUTH": 1,
@@ -45583,6 +46707,7 @@
    "tenant_rent": "980.00",
    "utility_allowance": "114.00"
   },
+  "checklist": [],
   "codes": {
    "INCOME_DECLARED_NOT_VERIFIED": 2,
    "MI_APPLICATION_MISSING": 1
@@ -45670,6 +46795,7 @@
    "tenant_rent": "980.00",
    "utility_allowance": "114.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -45779,6 +46905,7 @@
    "tenant_rent": "1115.00",
    "utility_allowance": "112.00"
   },
+  "checklist": [],
   "codes": {
    "ARSC_TIC_IS_SOURCE_OF_TRUTH": 1,
    "NAME_VARIANT": 3,
@@ -45876,6 +47003,7 @@
    "tenant_rent": "1164.00",
    "utility_allowance": "112.00"
   },
+  "checklist": [],
   "codes": {
    "ARSC_CERT_FORM_MISSING": 1,
    "ARSC_TIC_IS_SOURCE_OF_TRUTH": 1,
@@ -45972,6 +47100,7 @@
    "tenant_rent": "1164.00",
    "utility_allowance": "112.00"
   },
+  "checklist": [],
   "codes": {
    "ARSC_CERT_FORM_MISSING": 1,
    "ARSC_TIC_IS_SOURCE_OF_TRUTH": 1,
@@ -46069,6 +47198,7 @@
    "tenant_rent": "1277.00",
    "utility_allowance": "208.00"
   },
+  "checklist": [],
   "codes": {
    "ARSC_TIC_IS_SOURCE_OF_TRUTH": 1,
    "MEMBER_IDENTITY_CONFLICT": 1,
@@ -46153,6 +47283,7 @@
    "tenant_rent": "1417.00",
    "utility_allowance": "174.00"
   },
+  "checklist": [],
   "codes": {
    "ARSC_TIC_IS_SOURCE_OF_TRUTH": 1,
    "MEMBER_IDENTITY_CONFLICT": 1,
@@ -46244,6 +47375,7 @@
    "tenant_rent": "900.00",
    "utility_allowance": "85.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "INCOME_METHODS_DISAGREE": 1,
@@ -46338,6 +47470,7 @@
    "tenant_rent": "790.00",
    "utility_allowance": "86.00"
   },
+  "checklist": [],
   "codes": {
    "INCOME_DECLARED_NOT_VERIFIED": 1,
    "MEMBER_IDENTITY_CONFLICT": 1,
@@ -46412,6 +47545,7 @@
    "tenant_rent": "900.00",
    "utility_allowance": "85.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -46531,6 +47665,7 @@
    "tenant_rent": "822.00",
    "utility_allowance": "69.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_OWNER_NOT_IN_ROSTER": 1,
    "NAME_VARIANT": 1,
@@ -46587,6 +47722,7 @@
    "tenant_rent": "854.00",
    "utility_allowance": "92.00"
   },
+  "checklist": [],
   "codes": {},
   "income": [
    [
@@ -46630,6 +47766,7 @@
    "tenant_rent": "790.00",
    "utility_allowance": "69.00"
   },
+  "checklist": [],
   "codes": {
    "INCOME_DECLARED_NOT_VERIFIED": 1,
    "INCOME_METHODS_DISAGREE": 1,
@@ -46707,6 +47844,7 @@
    "tenant_rent": "790.00",
    "utility_allowance": "69.00"
   },
+  "checklist": [],
   "codes": {
    "MEMBER_IDENTITY_CONFLICT": 1,
    "NAME_VARIANT": 1,
@@ -46775,6 +47913,7 @@
    "tenant_rent": "158.00",
    "utility_allowance": "69.00"
   },
+  "checklist": [],
   "codes": {
    "INCOME_DECLARED_NOT_VERIFIED": 1,
    "NAME_VARIANT": 1,
@@ -46835,6 +47974,7 @@
    "tenant_rent": "162.00",
    "utility_allowance": "91.00"
   },
+  "checklist": [],
   "codes": {
    "ARSC_TIC_IS_SOURCE_OF_TRUTH": 1,
    "NAME_VARIANT": 1,
@@ -46893,6 +48033,7 @@
    "tenant_rent": "230.00",
    "utility_allowance": "91.00"
   },
+  "checklist": [],
   "codes": {
    "ARSC_TIC_IS_SOURCE_OF_TRUTH": 1,
    "MEMBER_IDENTITY_CONFLICT": 1,
@@ -46964,6 +48105,7 @@
    "tenant_rent": "689.00",
    "utility_allowance": "53.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "INCOME_METHODS_DISAGREE": 1,
@@ -47076,6 +48218,7 @@
    "tenant_rent": "953.00",
    "utility_allowance": "953.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -47223,6 +48366,7 @@
    "tenant_rent": "421.00",
    "utility_allowance": "58.00"
   },
+  "checklist": [],
   "codes": {
    "INCOME_DECLARED_NOT_VERIFIED": 1,
    "SIGNATURE_DATE_MISSING": 1
@@ -47332,6 +48476,7 @@
    "tenant_rent": "421.00",
    "utility_allowance": "58.00"
   },
+  "checklist": [],
   "codes": {
    "INCOME_DECLARED_NOT_VERIFIED": 1,
    "INCOME_SECOND_DECLARATION": 1,
@@ -47425,6 +48570,7 @@
    "tenant_rent": "1059.00",
    "utility_allowance": "42.00"
   },
+  "checklist": [],
   "codes": {
    "MEMBER_IDENTITY_CONFLICT": 1,
    "NAME_VARIANT": 1,
@@ -47522,6 +48668,7 @@
    "tenant_rent": "1643.00",
    "utility_allowance": "64.00"
   },
+  "checklist": [],
   "codes": {
    "INCOME_DECLARED_NOT_VERIFIED": 2,
    "INCOME_VERIFIED_NOT_DECLARED": 1,
@@ -47671,6 +48818,7 @@
    "tenant_rent": "1643.00",
    "utility_allowance": "64.00"
   },
+  "checklist": [],
   "codes": {
    "INCOME_DECLARED_NOT_VERIFIED": 5,
    "NAME_VARIANT": 3,
@@ -47918,6 +49066,7 @@
    "tenant_rent": "961.00",
    "utility_allowance": "222.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "CERT_AMOUNT_UNACCOUNTED": 1,
@@ -48131,6 +49280,7 @@
    "tenant_rent": "1179.00",
    "utility_allowance": "0.00"
   },
+  "checklist": [],
   "codes": {
    "TIC_TOTAL_MINOR_DIFF": 1
   },
@@ -48208,6 +49358,7 @@
    "tenant_rent": "975.00",
    "utility_allowance": "221.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -48303,6 +49454,7 @@
    "tenant_rent": "975.00",
    "utility_allowance": "221.00"
   },
+  "checklist": [],
   "codes": {
    "TIC_TOTAL_MISMATCH": 1
   },
@@ -48383,6 +49535,7 @@
    "tenant_rent": null,
    "utility_allowance": "222.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "MEMBER_IDENTITY_CONFLICT": 1,
@@ -48521,6 +49674,7 @@
    "tenant_rent": "978.00",
    "utility_allowance": "222.00"
   },
+  "checklist": [],
   "codes": {},
   "income": [
    [
@@ -48709,6 +49863,7 @@
    "tenant_rent": "269.00",
    "utility_allowance": null
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 2,
    "HUD_9887_INCOMPLETE": 1,
@@ -48810,6 +49965,7 @@
    "tenant_rent": "1250.00",
    "utility_allowance": "106.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 2,
    "CERT_AMOUNT_UNACCOUNTED": 1,
@@ -48949,6 +50105,7 @@
    "tenant_rent": null,
    "utility_allowance": "106.00"
   },
+  "checklist": [],
   "codes": {
    "INCOME_DECLARED_NOT_VERIFIED": 1,
    "QUESTIONNAIRE_CHILD_SUPPORT_UNVERIFIED": 1,
@@ -49025,6 +50182,7 @@
    "tenant_rent": "520.00",
    "utility_allowance": "106.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "INCOME_DECLARED_NOT_VERIFIED": 3,
@@ -49153,6 +50311,7 @@
    "tenant_rent": "54.00",
    "utility_allowance": "158.00"
   },
+  "checklist": [],
   "codes": {
    "CONFIRMATION_WITHOUT_REPORT": 1,
    "NAME_VARIANT": 4,
@@ -49255,6 +50414,7 @@
    "tenant_rent": "260.00",
    "utility_allowance": "106.00"
   },
+  "checklist": [],
   "codes": {
    "HH_SIZE_MISMATCH": 1,
    "HUD_9887_INCOMPLETE": 1,
@@ -49386,6 +50546,7 @@
    "tenant_rent": "177.00",
    "utility_allowance": "106.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -49468,6 +50629,7 @@
    "tenant_rent": "170.00",
    "utility_allowance": "2414.00"
   },
+  "checklist": [],
   "codes": {
    "HH_SIZE_MISMATCH": 1,
    "INCOME_AMOUNT_NOT_IN_SOURCE": 1,
@@ -49577,6 +50739,7 @@
    "tenant_rent": "634.00",
    "utility_allowance": "158.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "CERT_AMOUNT_UNACCOUNTED": 1,
@@ -49679,6 +50842,7 @@
    "tenant_rent": "55.00",
    "utility_allowance": "158.00"
   },
+  "checklist": [],
   "codes": {
    "HH_SIZE_MISMATCH": 1,
    "INCOME_DECLARED_NOT_VERIFIED": 1,
@@ -49776,6 +50940,7 @@
    "tenant_rent": "0.00",
    "utility_allowance": "2013.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "INCOME_AMOUNT_NOT_IN_SOURCE": 1,
@@ -49861,6 +51026,7 @@
    "tenant_rent": "390.00",
    "utility_allowance": "106.00"
   },
+  "checklist": [],
   "codes": {
    "TIC_TOTAL_MISMATCH": 1
   },
@@ -49982,6 +51148,7 @@
    "tenant_rent": "263.00",
    "utility_allowance": "2013.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "INCOME_DECLARED_NOT_VERIFIED": 1,
@@ -50071,6 +51238,7 @@
    "tenant_rent": null,
    "utility_allowance": "443.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_OVERDRAWN": 1,
    "CERT_AMOUNT_UNACCOUNTED": 1,
@@ -50195,6 +51363,7 @@
    "tenant_rent": "2.00",
    "utility_allowance": "106.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 1,
    "INCOME_DECLARED_NOT_VERIFIED": 1,
@@ -50292,6 +51461,7 @@
    "tenant_rent": "2110.00",
    "utility_allowance": "158.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 3,
    "CERT_AMOUNT_UNACCOUNTED": 2,
@@ -50396,6 +51566,7 @@
    "tenant_rent": "349.00",
    "utility_allowance": "158.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "INCOME_METHODS_DISAGREE": 1,
@@ -50500,6 +51671,7 @@
    "tenant_rent": "349.00",
    "utility_allowance": "158.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "INCOME_METHODS_DISAGREE": 1,
@@ -50616,6 +51788,7 @@
    "tenant_rent": "222.00",
    "utility_allowance": "106.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "CONFIRMATION_WITHOUT_REPORT": 1,
@@ -50748,6 +51921,7 @@
    "tenant_rent": "277.00",
    "utility_allowance": "106.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_SELF_DECLARED_VS_VERIFIED": 1,
    "CONFIRMATION_WITHOUT_REPORT": 1,
@@ -50836,6 +52010,7 @@
    "tenant_rent": "260.00",
    "utility_allowance": "106.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "CONFIRMATION_WITHOUT_REPORT": 1,
@@ -50917,6 +52092,7 @@
    "tenant_rent": "634.00",
    "utility_allowance": "158.00"
   },
+  "checklist": [],
   "codes": {
    "ASSET_OVERDRAWN": 1,
    "CONFIRMATION_WITHOUT_REPORT": 1,
@@ -51069,6 +52245,7 @@
    "tenant_rent": "304.00",
    "utility_allowance": "158.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "CONFIRMATION_WITHOUT_REPORT": 1,
@@ -51151,6 +52328,7 @@
    "tenant_rent": "257.00",
    "utility_allowance": "106.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
    "CONFIRMATION_WITHOUT_REPORT": 1,
@@ -51225,6 +52403,7 @@
    "tenant_rent": "520.00",
    "utility_allowance": "106.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "CONFIRMATION_WITHOUT_REPORT": 1,
@@ -51310,6 +52489,7 @@
    "tenant_rent": "520.00",
    "utility_allowance": "106.00"
   },
+  "checklist": [],
   "codes": {
    "CONFIRMATION_WITHOUT_REPORT": 1,
    "HH_SIZE_MISMATCH": 1,
@@ -51436,6 +52616,7 @@
    "tenant_rent": "0.00",
    "utility_allowance": "154.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_SIGNED_AFTER_EFFECTIVE_DATE": 1,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,
@@ -51495,6 +52676,7 @@
    "tenant_rent": "135.00",
    "utility_allowance": "100.00"
   },
+  "checklist": [],
   "codes": {
    "INCOME_DECLARED_NOT_VERIFIED": 1,
    "MEMBER_IDENTITY_CONFLICT": 2,
@@ -51577,6 +52759,7 @@
    "tenant_rent": "104.00",
    "utility_allowance": "193.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_AMOUNT_UNACCOUNTED": 2,
    "CERT_SIGNED_AFTER_EFFECTIVE_DATE": 1,
@@ -51679,6 +52862,7 @@
    "tenant_rent": "580.00",
    "utility_allowance": "1106.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_SIGNED_AFTER_EFFECTIVE_DATE": 1,
    "INCOME_METHODS_DISAGREE": 1,
@@ -51742,6 +52926,7 @@
    "tenant_rent": "0.00",
    "utility_allowance": "193.00"
   },
+  "checklist": [],
   "codes": {
    "CERT_SIGNATURE_DATE_IMPLAUSIBLE": 1,
    "CERT_SUMMARY_INCOME_MISMATCH": 1,

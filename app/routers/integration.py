@@ -80,6 +80,20 @@ class AuditRequest(BaseModel):
     verification_methods: dict | None = None
 
 
+def request_fingerprint(body: dict | None) -> tuple:
+    """What a notification asks the engine to audit, independent of how the
+    links were minted: the documents, the checklist rows, the program and
+    the accepted identity proofs. Two notifications with the same
+    fingerprint are the same request."""
+    body = body if isinstance(body, dict) else {}
+    return (
+        _document_keys(body.get("documents")),
+        json.dumps(normalise_rows(body), sort_keys=True, default=str),
+        body.get("program"),
+        json.dumps(body.get("verification_methods"), sort_keys=True, default=str),
+    )
+
+
 def _document_keys(documents: list | None) -> list[tuple]:
     """What identifies a case's documents across two notifications. The
     presigned URL is minted afresh for every send, so it is left out."""
@@ -189,17 +203,6 @@ async def receive_case(
         # most likely.
         claimed=True,
     )
-    if upsert.get("deduplicated"):
-        logger.info(
-            "Case %s already in state %s — ignoring duplicate notification",
-            payload.case_ref, upsert.get("state"),
-        )
-        return {
-            "status": "already_in_progress",
-            "case_ref": payload.case_ref,
-            "state": upsert.get("state"),
-        }
-
     # The request as received is kept with the job, and any top-level key
     # the model does not know is logged: the shape is Cartograph's to
     # change, and a field the engine ignores must never disappear quietly.
@@ -208,11 +211,52 @@ async def receive_case(
         body = json.loads(raw) if raw else {}
     except ValueError:
         body = {}
-    unknown = sorted(set(body) - set(AuditRequest.model_fields)) if isinstance(body, dict) else []
+    if not isinstance(body, dict):
+        body = {}
+    checklist_rows = normalise_rows(body)
+
+    if upsert.get("deduplicated"):
+        # A worker owns the case. A notification repeating the request it
+        # is working from costs nothing more; one that changes it (Cartograph
+        # rebuilt the checklist rows, or swapped a document, while the scan
+        # ran) replaces the stored request, and the worker audits the case
+        # again against it when the current run ends — or from it, if the
+        # case was still waiting in line. Before this, the second
+        # notification was dropped and the result went back against rows
+        # that no longer existed (J-CASC-11421, 2026-11-23: seven rows
+        # skipped on import).
+        stored = store.get(job) or {}
+        try:
+            stored_body = json.loads(stored.get("cartograph_request") or "{}")
+        except ValueError:
+            stored_body = {}
+        if request_fingerprint(stored_body) == request_fingerprint(body):
+            logger.info(
+                "Case %s already in state %s — ignoring duplicate notification",
+                payload.case_ref, upsert.get("state"),
+            )
+            return {
+                "status": "already_in_progress",
+                "case_ref": payload.case_ref,
+                "state": upsert.get("state"),
+            }
+        store.record_request(job, raw, checklist_rows)
+        store.request_rerun(job)
+        logger.warning(
+            "Case %s notified again in state %s with a different request (%d checklist rows) — "
+            "it will be audited again against the new request when the current run ends",
+            payload.case_ref, upsert.get("state"), len(checklist_rows),
+        )
+        return {
+            "status": "rerun_scheduled",
+            "case_ref": payload.case_ref,
+            "state": upsert.get("state"),
+        }
+
+    unknown = sorted(set(body) - set(AuditRequest.model_fields))
     if unknown:
         logger.warning("Cartograph audit request case_ref=%s carries keys the engine does not read: %s",
                        payload.case_ref, unknown)
-    checklist_rows = normalise_rows(body if isinstance(body, dict) else {})
     try:
         store.record_request(job, raw, checklist_rows)
     except Exception:

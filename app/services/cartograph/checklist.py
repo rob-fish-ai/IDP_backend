@@ -82,7 +82,7 @@ def _shared_words(row_words: set[str], label_words: set[str]) -> int:
 _ATTRIBUTE_WORDS = frozenset({
     "includes", "include", "correct", "within", "days", "consecutive", "calculation", "calculated",
     "properly", "limits", "limit", "allowance", "rate", "balance", "value", "accurately", "changes",
-    "terminated", "closed", "reminder", "reminders", "counted", "treated", "determined", "used",
+    "terminated", "closed", "counted", "treated", "determined", "used",
     "indicate", "indicates", "match", "matches", "overpayment",
 })
 
@@ -239,6 +239,30 @@ _ROW_FAMILIES: dict[str, tuple[str, ...]] = {
     # the row adds ("Built Pre-1978 Only" carries a number that is not a form).
     "lead based paint": ("Lead-Based Paint Certification",),
     "lead-based paint": ("Lead-Based Paint Certification",),
+    # The annual recertification notices, by HUD's schedule: the initial
+    # notice at 120 days, the reminders at 90 and 60, the final at 30.
+    # Rows name a notice by day count or by ordinal, and properties count
+    # the ordinals differently ("Third Reminder" is the 60-day notice on
+    # one checklist and the final 30-day one on another), so the day count
+    # decides whenever the row prints one; the ordinal only when it does
+    # not. A row asking for the whole series is met by any of them. A rent
+    # notice with a day count in its name is a rent notice, not one of these.
+    "rent change": ("Notice of Rent Change",),
+    "rent increase": ("Notice of Rent Change",),
+    "120, 90, 60, and 30 day": ("Initial Notice of Recertification", "Recertification Reminder Notice",
+                                "Final Notice of Recertification"),
+    "reminder notices": ("Initial Notice of Recertification", "Recertification Reminder Notice",
+                         "Final Notice of Recertification"),
+    "120 day": ("Initial Notice of Recertification",),
+    "initial notice": ("Initial Notice of Recertification",),
+    "first recertification notice": ("Initial Notice of Recertification",),
+    "90 day": ("Recertification Reminder Notice",),
+    "60 day": ("Recertification Reminder Notice",),
+    "30 day": ("Final Notice of Recertification",),
+    "final notice": ("Final Notice of Recertification",),
+    "final reminder": ("Final Notice of Recertification",),
+    "third reminder": ("Final Notice of Recertification",),
+    "reminder notice": ("Recertification Reminder Notice",),
 }
 _THIRD_PARTY_RE = re.compile(r"\b(third|3rd)[\s-]*party\s+verification\b")
 

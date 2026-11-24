@@ -79,7 +79,12 @@ CREATE TABLE IF NOT EXISTS audit_jobs (
     -- The Cartograph environment the case came from (dev, staging, prod).
     -- Rows of the default environment are keyed by bare case_ref, the
     -- others "<environment>:<case_ref>" (cartograph.environments.job_key).
-    environment TEXT
+    environment TEXT,
+    -- Set when the case was notified again, with different documents or
+    -- checklist rows, while a worker owned it. The stored request is then
+    -- the new one, and the worker audits the case again against it when
+    -- the current run ends (or starts from it, if it had not begun).
+    rerun_requested INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE INDEX IF NOT EXISTS idx_state ON audit_jobs(state);
@@ -192,6 +197,7 @@ class JobStore:
                 ("cartograph_request", "TEXT"),
                 ("checklist_rows", "TEXT"),
                 ("environment", "TEXT"),
+                ("rerun_requested", "INTEGER NOT NULL DEFAULT 0"),
             ):
                 if column not in existing_cols:
                     conn.execute(
@@ -275,7 +281,8 @@ class JobStore:
                     updated_at = excluded.updated_at,
                     extracted_at = NULL,
                     mulesoft_done_at = NULL,
-                    completed_at = NULL
+                    completed_at = NULL,
+                    rerun_requested = 0
             """, (
                 case_id, case_number, initial_state, cert_type, funding_program,
                 content_document_id, source, environment, now, now,
@@ -343,6 +350,23 @@ class JobStore:
                 "UPDATE audit_jobs SET cartograph_request = ?, checklist_rows = ?, updated_at = ? WHERE case_id = ?",
                 (text, json.dumps(checklist_rows or [], default=str), time.time(), case_id),
             )
+
+    def request_rerun(self, case_id: str) -> None:
+        """Mark that the case was notified again with a different request
+        while a worker owned it, so it is audited again against the request
+        now stored once the current run ends."""
+        with self._lock, self._connect() as conn:
+            conn.execute("UPDATE audit_jobs SET rerun_requested = 1 WHERE case_id = ?", (case_id,))
+
+    def take_rerun(self, case_id: str) -> bool:
+        """Whether a rerun was requested; clears the mark, so one request
+        is honoured once."""
+        with self._lock, self._connect() as conn:
+            row = conn.execute("SELECT rerun_requested FROM audit_jobs WHERE case_id = ?", (case_id,)).fetchone()
+            if not row or not row["rerun_requested"]:
+                return False
+            conn.execute("UPDATE audit_jobs SET rerun_requested = 0 WHERE case_id = ?", (case_id,))
+            return True
 
     def record_delivery(self, case_id: str, response: dict[str, Any]) -> None:
         """Store what the consumer returned when the extraction was handed over.

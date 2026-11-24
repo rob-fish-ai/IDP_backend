@@ -120,14 +120,22 @@ def audit_case(
     settings = get_settings()
     store = get_job_store(settings.audit_job_db)
     job = job_key(settings, environment, case_ref)
+    kwargs = dict(
+        case_ref=case_ref, documents=documents, cert_type=cert_type,
+        program=program, job_id=job_id, community_id=community_id,
+        unit_number=unit_number, effective_date=effective_date, checklist_rows=checklist_rows,
+        existing_records_manifest=existing_records_manifest, fallback_packet=fallback_packet,
+        environment=environment, verification_methods=verification_methods,
+    )
+    if store.take_rerun(job):
+        # Notified again, with a different request, while it waited in
+        # line: the run that has not started yet is the one to use it.
+        fresh = _latest_request(store, settings, job)
+        if fresh:
+            logger.info("case_ref=%s audited from the request re-sent while it waited in line", case_ref)
+            kwargs.update(fresh)
     try:
-        _audit_case(
-            store, settings, case_ref=case_ref, documents=documents, cert_type=cert_type,
-            program=program, job_id=job_id, community_id=community_id,
-            unit_number=unit_number, effective_date=effective_date, checklist_rows=checklist_rows,
-            existing_records_manifest=existing_records_manifest, fallback_packet=fallback_packet,
-            environment=environment, verification_methods=verification_methods,
-        )
+        _audit_case(store, settings, **kwargs)
     except Exception as exc:
         logger.exception("Unhandled failure auditing case_ref=%s", case_ref)
         row = store.get(job) or {}
@@ -140,6 +148,37 @@ def audit_case(
             post_failure(case_ref, reason, settings, error_code="engine_error", environment=environment)
         except Exception:
             logger.exception("Could not report the failure of case_ref=%s to Cartograph", case_ref)
+    if store.take_rerun(job):
+        _run_again(store, settings, job, case_ref)
+
+
+def _latest_request(store, settings, job: str) -> dict | None:
+    """The audit arguments rebuilt from the request now stored for the job
+    (the one Cartograph sent last), or None when none is kept."""
+    from app.services.cartograph.resume import resume_kwargs
+    row = store.get(job)
+    return resume_kwargs(row, settings) if row else None
+
+
+def _run_again(store, settings, job: str, case_ref: str) -> None:
+    """Put the case back in line, to be audited against the request
+    Cartograph re-sent while this run was under way. The result just
+    delivered answered the rows of the earlier request; the re-run answers
+    the new ones, and Cartograph keeps the later scan."""
+    from app.services.cartograph.intake import enqueue_case
+    fresh = _latest_request(store, settings, job)
+    if not fresh:
+        logger.error("case_ref=%s was re-notified during its audit but no request is stored — not run again", case_ref)
+        return
+    row = store.get(job) or {}
+    store.upsert_pending(
+        case_id=job, case_number=case_ref, environment=row.get("environment"),
+        cert_type=fresh.get("cert_type"), funding_program=fresh.get("program"),
+        content_document_id=None, source="cartograph", claimed=True,
+    )
+    logger.warning("case_ref=%s audited again against the request re-sent during its run (%d checklist rows)",
+                   case_ref, len(fresh.get("checklist_rows") or []))
+    enqueue_case(**fresh)
 
 
 def _audit_case(
